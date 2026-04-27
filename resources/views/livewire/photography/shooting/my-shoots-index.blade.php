@@ -1,0 +1,53 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h1 style="font-size:24px; font-weight:600; color:var(--text1); margin:0;">I Miei Shooting</h1>
+    </div>
+
+    <x-panel padded>
+        <div style="display:flex; gap:16px; margin-bottom:24px;">
+            <input type="text" wire:model.live.debounce.300ms="search" class="form-in" placeholder="Cerca per titolo o codice..." style="max-width:300px;">
+            <select wire:model.live="status" class="form-in" style="max-width:200px;">
+                <option value="">Tutti gli stati</option>
+                @foreach($statuses as $st)
+                    <option value="{{ $st->value }}">{{ $st->labelForContext('photography') }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <table class="t-table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>Codice</th>
+                    <th>Titolo / Progetto</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($shoots as $shoot)
+                    <tr>
+                        <td style="font-weight:600; color:var(--purple);">{{ $shoot->code }}</td>
+                        <td>
+                            <div style="font-weight:500; color:var(--text1);">{{ $shoot->title }}</div>
+                            <div style="font-size:12px; color:var(--text3);">{{ $shoot->project->name }}</div>
+                        </td>
+                        <td>
+                            <x-shooting.status-badge :status="$shoot->status" context="photography" />
+                        </td>
+                        <td>
+                            <a href="{{ route('photography.shooting.show', $shoot) }}" class="btn btn-outline" style="padding:4px 8px; font-size:12px;">Dettaglio</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding:32px; color:var(--text3);">Nessuno shooting trovato.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+        
+        <div style="margin-top:24px;">
+            {{ $shoots->links() }}
+        </div>
+    </x-panel>
+</div>

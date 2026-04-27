@@ -1,0 +1,86 @@
+.t-table { width: 100%; border-collapse: collapse; }
+.t-table thead tr {
+  border-bottom: 1px solid var(--line);
+}
+.t-table thead th {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text3); font-weight: 400;
+  padding: 10px 18px; text-align: left;
+}
+.t-table tbody tr {
+  border-bottom: 1px solid var(--line); cursor: pointer;
+  transition: background .12s;
+}
+.t-table tbody tr:last-child { border-bottom: none; }
+.t-table tbody tr:hover { background: var(--bg2); }
+.t-table tbody td {
+  padding: 11px 18px; font-size: 12px; color: var(--text2);
+  vertical-align: middle;
+}
+.t-table tbody td.name-col {
+  font-family: var(--sans); font-weight: 600; color: var(--text);
+  font-size: 13px;
+}
+.t-table tbody td.mono-col {
+  font-family: var(--mono); font-size: 11px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TASK LIST — MINIMAL
+═══════════════════════════════════════════════════════════════════ */
+.task-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px; border-bottom: 1px solid var(--line);
+  cursor: pointer; transition: background .12s;
+}
+.task-item:last-child { border-bottom: none; }
+.task-item:hover { background: var(--bg2); }
+.task-check {
+  width: 16px; height: 16px; border: 1.5px solid var(--line3);
+  border-radius: 3px; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center;
+  transition: all .15s; cursor: pointer;
+}
+.task-check.done { background: var(--teal); border-color: var(--teal); }
+.task-check.done::after { content: '✓'; color: var(--bg); font-size: 9px; font-weight: 700; }
+.task-text { flex: 1; font-size: 12px; color: var(--text2); }
+.task-text.done { text-decoration: line-through; color: var(--text3); }
+.task-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ACTIVITY FEED
+═══════════════════════════════════════════════════════════════════ */
+.feed-item {
+  display: flex; gap: 10px; padding: 10px 18px;
+  border-bottom: 1px solid var(--line); font-size: 11px;
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-av {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: #fff;
+}
+.feed-body { flex: 1; color: var(--text2); line-height: 1.5; }
+.feed-body b { color: var(--text); font-weight: 600; }
+.feed-body em { color: var(--accent); font-style: normal; }
+.feed-time { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   AUDIT LOG
+═══════════════════════════════════════════════════════════════════ */
+.audit-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 18px; border-bottom: 1px solid var(--line);
+  transition: background .12s;
+}
+.audit-item:hover { background: var(--bg2); }
+.audit-time { font-family: var(--mono); font-size: 9px; color: var(--text3); min-width: 56px; padding-top: 1px; }
+.audit-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; flex-shrink: 0; margin-top: 1px;
+}
+.audit-body { flex: 1; font-size: 11px; line-height: 1.6; color: var(--text2); }
+.audit-body b { color: var(--text); font-weight: 600; }
+.audit-body .ent { color: var(--accent); }
+.audit-foot { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 1px; }

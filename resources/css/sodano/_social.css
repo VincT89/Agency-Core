@@ -1,0 +1,291 @@
+/* ═══════════════════════════════════════════════════════════
+   SOCIAL MODULE STYLES
+   Specific styles for the Social Module UI components.
+═══════════════════════════════════════════════════════════ */
+
+/* Header Link */
+.social-header-link {
+    font-size: 12px;
+    color: var(--text2);
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+}
+.social-header-link:hover {
+    background: var(--bg3);
+    color: var(--text1);
+}
+
+/* KPI Grid */
+.social-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+/* Section Title */
+.social-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Attention List */
+.social-post-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+.social-post-meta {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: normal;
+}
+.social-empty-state {
+    padding: 16px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+    background: var(--bg3);
+    border-radius: 8px;
+}
+.social-action-btn {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--teal);
+    background: color-mix(in srgb, var(--teal) 15%, transparent);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Alerts */
+.social-alerts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.social-alert-card {
+    padding: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.social-alert-card:hover {
+    filter: brightness(1.1);
+}
+.social-alert-card.yellow {
+    background: rgba(234, 179, 8, 0.1);
+    border-left: 3px solid var(--yellow);
+}
+.social-alert-card.red {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--red);
+}
+.social-alert-card.purple {
+    background: rgba(147, 51, 234, 0.1);
+    border-left: 3px solid var(--purple);
+}
+
+.social-alert-title {
+    font-weight: 600;
+    font-size: 12px;
+}
+.social-alert-title.yellow { color: var(--yellow); }
+.social-alert-title.red { color: var(--red); }
+.social-alert-title.purple { color: var(--purple); }
+
+.social-alert-link {
+    font-size: 12px;
+    margin-top: 4px;
+    color: var(--text);
+}
+
+.social-left-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.social-left-panel .panel-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Social Post Show Specifics */
+.social-media-preview-container {
+    flex: 2;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 20px;
+    overflow: hidden;
+}
+.social-media-preview-img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    object-fit: contain;
+}
+
+.social-btn-regenerate {
+    width: 100%;
+    border-color: var(--purple) !important;
+    color: var(--purple) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.social-btn-regenerate:hover {
+    background: rgba(167, 139, 250, 0.1) !important;
+}
+
+.social-btn-ready {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.social-btn-client {
+    width: 100%;
+    background: var(--teal) !important;
+    border-color: var(--teal) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.social-btn-client:hover {
+    background: color-mix(in srgb, var(--teal) 80%, black) !important;
+    border-color: color-mix(in srgb, var(--teal) 80%, black) !important;
+}
+
+.social-btn-client-active {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.social-panel-section {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.social-panel-section.bordered {
+    border-top: 1px solid var(--line);
+    background: var(--bg2);
+}
+
+.social-detail-section {
+    padding: 20px;
+    border-top: 1px solid var(--line);
+}
+.social-caption-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.social-empty-preview {
+    padding: 60px 0;
+    color: var(--text3);
+}
+.social-caption-box {
+    padding: 20px;
+    background: var(--bg3);
+    border-radius: 8px;
+    white-space: pre-wrap;
+    flex: 1;
+    overflow-y: auto;
+}
+.social-prompt-box {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--purple);
+    background: rgba(147, 51, 234, 0.1);
+    padding: 10px;
+    border-radius: 4px;
+}
+.social-regenerating-banner {
+    padding: 15px;
+    background: rgba(147, 51, 234, 0.1);
+    border: 1px dashed var(--purple);
+    color: var(--purple);
+    border-radius: 8px;
+    text-align: center;
+}
+.social-comments-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.social-comment-card {
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 8px;
+}
+.social-comment-card.client {
+    background: rgba(45, 212, 191, 0.1);
+    border-left: 3px solid var(--teal);
+}
+.social-comment-card.internal {
+    background: var(--bg3);
+    border-left: 3px solid var(--blue);
+}
+.social-comment-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: var(--text2);
+}
+.social-comment-change-req {
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--orange);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+.social-comment-body {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Social Posts Index */
+.social-index-preview {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.social-index-preview-empty {
+    width: 40px;
+    height: 40px;
+    background: var(--bg3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.social-index-meta {
+    font-size: 11px;
+    color: var(--text3);
+}

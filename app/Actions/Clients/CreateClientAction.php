@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Actions\Clients;
+
+use App\Models\Client;
+use Illuminate\Support\Str;
+
+class CreateClientAction
+{
+    public function execute(array $data): Client
+    {
+        // Genera uno slug univoco basato sul nome
+        $baseSlug = Str::slug($data['name']);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (Client::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        $data['slug'] = $slug;
+
+        // Imposta lo status di default se non fornito
+        if (empty($data['status'])) {
+            $data['status'] = 'active';
+        }
+
+        return Client::create($data);
+    }
+}

@@ -1,0 +1,165 @@
+/* ═══════════════════════════════════════════════════════════════════
+   FLOW STRIP
+═══════════════════════════════════════════════════════════════════ */
+.flow {
+  display: flex; margin-bottom: 20px;
+  border: 1px solid var(--line); border-radius: var(--r); overflow: hidden;
+}
+.flow-step {
+  flex: 1; padding: 12px 14px; border-right: 1px solid var(--line);
+  cursor: pointer; transition: background .15s; position: relative;
+}
+.flow-step:last-child { border-right: none; }
+.flow-step:hover { background: var(--bg2); }
+.flow-step.on { background: var(--bg2); }
+.flow-step.on::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--accent);
+}
+.flow-n {
+  font-family: var(--sans); font-weight: 800; font-size: 22px;
+  letter-spacing: -.04em; color: var(--accent); line-height: 1;
+  margin-bottom: 3px;
+}
+.flow-l { font-size: 11px; font-weight: 600; color: var(--text); }
+.flow-s { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   KANBAN
+═══════════════════════════════════════════════════════════════════ */
+.kanban {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; min-height: 320px;
+}
+.k-col {
+  background: var(--bg1); border: 1px solid var(--line);
+  border-radius: var(--r2); padding: 12px;
+}
+.k-col-title {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text3);
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.k-card {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 10px; margin-bottom: 8px;
+  cursor: pointer; transition: all .15s;
+}
+.k-card:hover { border-color: var(--line3); transform: translateY(-1px); }
+.k-card-title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.k-card-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CALENDAR
+═══════════════════════════════════════════════════════════════════ */
+.cal-week {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 0; border: 1px solid var(--line); border-radius: var(--r2);
+  overflow: hidden; margin-bottom: 20px;
+}
+.cal-day {
+  border-right: 1px solid var(--line); padding: 12px;
+  background: var(--bg1);
+}
+.cal-day:last-child { border-right: none; }
+.cal-day-name { font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 4px; }
+.cal-day-num {
+  font-family: var(--sans); font-weight: 800; font-size: 18px;
+  letter-spacing: -.03em; color: var(--text2); margin-bottom: 8px;
+}
+.cal-day-num.today { color: var(--accent); }
+.cal-ev {
+  font-size: 10px; padding: 4px 7px; border-radius: 3px;
+  margin-bottom: 3px; background: var(--bg2); color: var(--text2);
+  border-left: 2px solid var(--line3);
+}
+.cal-ev.busy { background: rgba(232,91,42,.1); border-left-color: var(--accent); color: var(--text); }
+.cal-ev.med { background: rgba(245,200,66,.08); border-left-color: var(--yellow); color: var(--text2); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   WORKLOAD BAR / PROGRESS
+═══════════════════════════════════════════════════════════════════ */
+.wl-track { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.wl-fill { height: 100%; border-radius: 2px; transition: width .4s ease; background: var(--teal); }
+.wl-fill.warn { background: var(--accent); }
+
+.prog-track { height: 2px; background: var(--bg3); border-radius: 1px; overflow: hidden; margin-top: 4px; }
+.prog-fill { height: 100%; border-radius: 1px; background: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   INTEGRATIONS
+═══════════════════════════════════════════════════════════════════ */
+.int-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.int-card {
+  background: var(--bg1); border: 1px solid var(--line);
+  border-radius: var(--r2); padding: 16px 18px;
+  transition: border-color .15s;
+}
+.int-card:hover { border-color: var(--line2); }
+.int-name { font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 3px; }
+.int-type { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-bottom: 12px; }
+.int-status { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.int-pulse {
+  width: 7px; height: 7px; border-radius: 50%; position: relative;
+}
+.int-pulse.ok { background: var(--teal); }
+.int-pulse.ok::after {
+  content: ''; position: absolute; inset: -3px;
+  border-radius: 50%; background: rgba(45,212,170,.3);
+  animation: pulse 2s ease infinite;
+}
+.int-pulse.err { background: var(--accent); }
+.int-pulse.off { background: var(--text3); }
+.int-ping { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 6px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════════════════════════════ */
+.settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.settings-panel { background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r2); padding: 18px; }
+.settings-panel-title { font-weight: 700; font-size: 12px; color: var(--text); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.toggle-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { flex: 1; font-size: 11px; color: var(--text2); }
+.toggle {
+  width: 32px; height: 18px; background: var(--bg3); border-radius: 9px;
+  cursor: pointer; position: relative; transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--teal); }
+.toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; background: #fff; border-radius: 50%;
+  transition: transform .2s;
+}
+.toggle.on::after { transform: translateX(14px); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   DASHBOARD WELCOME AREA
+═══════════════════════════════════════════════════════════════════ */
+.welcome {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.welcome-greeting {
+  font-family: var(--serif); font-style: italic; font-size: 36px;
+  letter-spacing: -.02em; line-height: 1; color: var(--text);
+}
+.welcome-greeting em { color: var(--accent); font-style: normal; font-family: var(--sans); font-weight: 800; }
+.welcome-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 6px; letter-spacing: .03em; }
+.welcome-quick { display: flex; gap: 8px; }
+
+/* Pagination — stile coerente */
+.pagination {
+  display: flex; gap: 4px; margin-top: 16px;
+  padding: 0 18px 14px; justify-content: flex-end;
+}
+.pagination .page-link {
+  font-family: var(--mono); font-size: 10px; padding: 5px 10px;
+  background: var(--bg2); color: var(--text2); border: 1px solid var(--line2);
+  border-radius: 4px; text-decoration: none; transition: all .15s;
+}
+.pagination .page-link:hover { background: var(--bg3); color: var(--text); }
+.pagination .page-item.active .page-link { background: var(--accent); color: #fff; border-color: var(--accent); }

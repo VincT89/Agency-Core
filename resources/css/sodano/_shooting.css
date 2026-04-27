@@ -1,0 +1,54 @@
+/* ── Mini stat card shooting (usata in shooting-overview Livewire) ── */
+.shoot-stat-card {
+  border-radius: var(--r2); padding: 16px; text-align: center;
+  border: 1px solid var(--line);
+}
+.shoot-stat-val {
+  font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 4px;
+}
+.shoot-stat-lbl {
+  font-size: 12px; text-transform: uppercase; font-weight: 600;
+  letter-spacing: 0.05em; color: var(--text3);
+}
+
+/* Varianti semantiche */
+.shoot-stat-card.neutral {
+  background: var(--bg3);
+}
+.shoot-stat-card.warn {
+  background: rgba(249,115,22,0.05);   /* --orange a bassa opacità */
+  border-color: rgba(249,115,22,0.2);
+}
+.shoot-stat-card.warn .shoot-stat-val { color: var(--orange); }
+.shoot-stat-card.warn .shoot-stat-lbl { color: var(--text2); }
+
+.shoot-stat-card.danger {
+  background: rgba(245,75,75,0.05);    /* --red a bassa opacità */
+  border-color: rgba(245,75,75,0.1);
+}
+.shoot-stat-card.danger .shoot-stat-val { color: var(--red); }
+.shoot-stat-card.danger .shoot-stat-lbl { color: var(--text2); }
+
+.shoot-stat-card.success {
+  background: rgba(62,207,142,0.05);
+  border-color: rgba(62,207,142,0.2);
+}
+.shoot-stat-card.success .shoot-stat-val { color: var(--green); }
+.shoot-stat-card.success .shoot-stat-lbl { color: var(--text2); }
+
+/* Note testuali in shoot show */
+.shoot-note-box {
+  font-size: 13px; color: var(--text2); line-height: 1.5;
+  padding: 12px; background: var(--bg2); border-radius: var(--r);
+  border: 1px solid var(--line);
+}
+.shoot-note-box.purple {
+  background: color-mix(in srgb, var(--purple) 8%, transparent);
+  border-color: color-mix(in srgb, var(--purple) 15%, transparent);
+}
+
+.shoot-kpi-row {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0;
+}

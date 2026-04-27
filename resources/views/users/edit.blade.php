@@ -1,0 +1,61 @@
+<x-app-layout title="Modifica Utente">
+    <x-page-header
+        eyebrow="Modulo · Admin"
+        
+    >
+    <x-slot:title><strong>Modifica</strong> utente</x-slot:title>
+        <x-slot:actions>
+            <a href="{{ route('users.index') }}" class="btn btn-g">← Indietro</a>
+        </x-slot:actions>
+    </x-page-header>
+
+    <x-panel padded>
+        <form action="{{ route('users.update', $user) }}" method="POST">
+            @csrf
+            @method('PATCH')
+            
+            <div class="form-row">
+                <x-form-group label="Nome Completo" name="name" required>
+                    <input name="name" class="form-in @error('name') is-invalid @enderror"
+                           value="{{ old('name', $user->name) }}">
+                </x-form-group>
+                <x-form-group label="Email" name="email" required>
+                    <input type="email" name="email" class="form-in @error('email') is-invalid @enderror"
+                           value="{{ old('email', $user->email) }}">
+                </x-form-group>
+            </div>
+
+            <div class="form-row">
+                <x-form-group label="Ruolo" name="role" required>
+                    <select name="role" class="form-sel @error('role') is-invalid @enderror">
+                        @foreach($roles as $role)
+                            <option value="{{ $role->value }}" {{ old('role', $user->role->value) == $role->value ? 'selected' : '' }}>{{ ucfirst($role->value) }}</option>
+                        @endforeach
+                    </select>
+                </x-form-group>
+                <x-form-group label="Telefono (opzionale)" name="phone">
+                    <input name="phone" class="form-in @error('phone') is-invalid @enderror"
+                           value="{{ old('phone', $user->phone) }}">
+                </x-form-group>
+            </div>
+
+            <div class="form-row">
+                <x-form-group label="Specializzazione Principale (opzionale)" name="primary_specialization">
+                    <input name="primary_specialization" class="form-in @error('primary_specialization') is-invalid @enderror"
+                           value="{{ old('primary_specialization', $user->primary_specialization) }}">
+                </x-form-group>
+                <x-form-group label="Stato Account" name="status" required>
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                        <option value="active" {{ old('status', $user->status) === 'active' ? 'selected' : '' }}>Attivo</option>
+                        <option value="inactive" {{ old('status', $user->status) === 'inactive' ? 'selected' : '' }}>Inattivo (sospeso)</option>
+                    </select>
+                </x-form-group>
+            </div>
+
+            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+                <a href="{{ route('users.index') }}" class="btn btn-g">Annulla</a>
+                <button type="submit" class="btn btn-p">Aggiorna Utente</button>
+            </div>
+        </form>
+    </x-panel>
+</x-app-layout>

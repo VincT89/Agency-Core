@@ -1,0 +1,21 @@
+/* ═══════════════════════════════════════════════════════════
+   SODANO CONSULTING — Design System v2
+   Ogni modulo è indipendente e manutenibile separatamente.
+   Vite compila tutto in un unico bundle ottimizzato.
+═══════════════════════════════════════════════════════════ */
+
+@import './sodano/_variables.css';
+@import './sodano/_reset.css';
+@import './sodano/_shell.css';
+@import './sodano/_typography.css';
+@import './sodano/_buttons.css';
+@import './sodano/_components.css';
+@import './sodano/_tables.css';
+@import './sodano/_forms.css';
+@import './sodano/_layouts.css';
+@import './sodano/_shooting.css';
+@import './sodano/_pages.css';
+@import './sodano/_animations.css';
+@import './sodano/_canvas-bg.css';
+@import './sodano/_auth.css';
+@import './sodano/_social.css';

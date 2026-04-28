@@ -6,16 +6,16 @@
         </x-slot>
     </x-page-header>
 
-    <div class="filters-row">
-        <input type="text" wire:model.live="search" class="form-in" placeholder="Cerca per titolo o cliente...">
-        <select wire:model.live="filterStatus" class="form-in">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+        <input type="text" wire:model.live="search" class="form-in" placeholder="Cerca progetto o cliente..." style="padding:5px 10px;font-size:11px;width:250px">
+        <select wire:model.live="filterStatus" class="form-in" style="padding:5px 10px;font-size:11px;width:160px">
             <option value="">Tutti gli stati</option>
             @foreach(\App\Enums\Social\MarketingProjectStatus::cases() as $status)
                 <option value="{{ $status->value }}">{{ $status->label() }}</option>
             @endforeach
         </select>
         @if($search || $filterStatus)
-            <button wire:click="$set('search', ''); $set('filterStatus', '')" class="btn btn-g">Reset</button>
+            <button wire:click="$set('search', ''); $set('filterStatus', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
         @endif
     </div>
 

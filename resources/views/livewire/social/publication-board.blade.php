@@ -1,13 +1,17 @@
 <div>
     <x-page-header eyebrow="Social">
         <x-slot:title><strong>Bacheca Pubblicazioni</strong></x-slot:title>
-        <x-slot:actions>
-            <div style="position: relative;">
-                <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 14px; height: 14px; color: var(--text3);"></i>
-                <input type="text" wire:model.live="search" class="form-in" placeholder="Cerca post o cliente..." style="padding-left: 32px; width: 250px; padding-top: 8px; padding-bottom: 8px;">
-            </div>
-        </x-slot:actions>
     </x-page-header>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+        <div style="position: relative;">
+            <i data-lucide="search" style="position: absolute; left: 10px; top: 7px; width: 14px; height: 14px; color: var(--text3);"></i>
+            <input type="text" wire:model.live="search" class="form-in" placeholder="Cerca post o cliente..." style="padding-left: 32px; width: 250px; padding-top: 5px; padding-bottom: 5px; font-size: 11px;">
+        </div>
+        @if($search)
+            <button wire:click="$set('search', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
+        @endif
+    </div>
 
     <x-panel>
         <table class="t-table">
@@ -85,10 +89,16 @@
                                     </div>
                                 @endforeach
                             </div>
-                            @if(!$allReady)
+                            @if($requiresMeta && ! $isMetaReady)
+                                <div style="margin-top: 6px; font-size: 10px; color: var(--red); display: flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="alert-octagon" style="width: 10px; height: 10px;"></i>
+                                    Pubblicazione bloccata: accessi Meta Business incompleti.
+                                </div>
+                            @endif
+                            @if(in_array('tiktok', $platforms ?? []) && ! $client?->socialAccountFor('tiktok')?->isReadyToPublish())
                                 <div style="margin-top: 6px; font-size: 10px; color: var(--orange); display: flex; align-items: center; gap: 4px;">
                                     <i data-lucide="alert-triangle" style="width: 10px; height: 10px;"></i>
-                                    Attenzione: piattaforme non pronte.
+                                    TikTok non pronto: pubblicazione consentita perché opzionale.
                                 </div>
                             @endif
                         </td>
@@ -102,8 +112,8 @@
                                 @endif
                                 
                                 @if($post->currentVersion?->preview_url)
-                                    <a href="{{ $post->currentVersion->preview_url }}" download class="btn btn-sm btn-secondary" style="padding: 4px 6px;" target="_blank" title="Scarica Media">
-                                        <i data-lucide="download" style="width: 12px; height: 12px;"></i>
+                                    <a href="{{ $post->currentVersion->preview_url }}" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" target="_blank" title="Apri / Scarica media">
+                                        <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
                                     </a>
                                 @endif
                                 

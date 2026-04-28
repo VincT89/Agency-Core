@@ -10,25 +10,22 @@
     </x-page-header>
 
     <div class="g-1col">
-        <div class="pills" style="margin-bottom: 16px;">
-            <div class="filter-group" style="display:inline-block; margin-right: 12px;">
-                <label class="filter-lbl">Filtra Progetto</label>
-                <select wire:model.live="projectFilter" class="form-sel project-sel">
-                    <option value="">Tutti i Progetti</option>
-                    @foreach($projects as $project)
-                        <option value="{{ $project->id }}">{{ $project->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="filter-group" style="display:inline-block;">
-                <label class="filter-lbl">Filtra Piattaforma</label>
-                <select wire:model.live="platformFilter" class="form-sel platform-sel">
-                    <option value="">Tutte le Piattaforme</option>
-                    @foreach($platforms as $platform)
-                        <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
-                    @endforeach
-                </select>
-            </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+            <select wire:model.live="projectFilter" class="form-in" style="padding:5px 10px;font-size:11px;width:200px">
+                <option value="">Tutti i Progetti</option>
+                @foreach($projects as $project)
+                    <option value="{{ $project->id }}">{{ $project->name }}</option>
+                @endforeach
+            </select>
+            <select wire:model.live="platformFilter" class="form-in" style="padding:5px 10px;font-size:11px;width:160px">
+                <option value="">Tutte le Piattaforme</option>
+                @foreach($platforms as $platform)
+                    <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
+                @endforeach
+            </select>
+            @if($projectFilter || $platformFilter)
+                <button wire:click="$set('projectFilter', ''); $set('platformFilter', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
+            @endif
         </div>
 
         <x-panel>

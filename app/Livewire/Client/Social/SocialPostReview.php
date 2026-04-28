@@ -47,7 +47,7 @@ class SocialPostReview extends Component
             clientEmail: $this->clientEmail
         );
         
-        $this->tokenObj->update(['used_at' => now()]);
+
 
         $this->refreshData();
         session()->flash('success', 'Grazie! Il post è stato approvato con successo.');
@@ -72,7 +72,7 @@ class SocialPostReview extends Component
             clientEmail: $this->clientEmail
         );
         
-        $this->tokenObj->update(['used_at' => now()]);
+
 
         $this->refreshData();
         session()->flash('success', 'Richiesta di modifica inviata con successo. Il nostro team ti aggiornerà presto.');
@@ -109,6 +109,7 @@ class SocialPostReview extends Component
 
     protected function refreshData()
     {
+        $this->tokenObj->refresh();
         $this->post->refresh();
         $this->post->load(['clientComments']);
         $this->commentBody = '';

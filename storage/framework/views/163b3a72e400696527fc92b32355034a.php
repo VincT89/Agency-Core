@@ -26,16 +26,16 @@
 <?php unset($__componentOriginalf8d4ea307ab1e58d4e472a43c8548d8e); ?>
 <?php endif; ?>
 
-    <div class="filters-row">
-        <input type="text" wire:model.live="search" class="form-in" placeholder="Cerca per titolo o cliente...">
-        <select wire:model.live="filterStatus" class="form-in">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+        <input type="text" wire:model.live="search" class="form-in" placeholder="Cerca progetto o cliente..." style="padding:5px 10px;font-size:11px;width:250px">
+        <select wire:model.live="filterStatus" class="form-in" style="padding:5px 10px;font-size:11px;width:160px">
             <option value="">Tutti gli stati</option>
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = \App\Enums\Social\MarketingProjectStatus::cases(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                 <option value="<?php echo e($status->value); ?>"><?php echo e($status->label()); ?></option>
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
         </select>
         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($search || $filterStatus): ?>
-            <button wire:click="$set('search', ''); $set('filterStatus', '')" class="btn btn-g">Reset</button>
+            <button wire:click="$set('search', ''); $set('filterStatus', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
     </div>
 

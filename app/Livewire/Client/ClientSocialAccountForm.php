@@ -64,19 +64,20 @@ class ClientSocialAccountForm extends Component
             return;
         }
 
+        $data = $this->forms[$platform];
+        
+        // Normalize URL prima della validazione
+        if (!empty($data['account_url']) && !preg_match('~^(?:f|ht)tps?://~i', $data['account_url'])) {
+            $data['account_url'] = 'https://' . $data['account_url'];
+            $this->forms[$platform]['account_url'] = $data['account_url'];
+        }
+
         // Validate basic fields
         $this->validate([
             "forms.$platform.account_url" => 'nullable|url',
         ], [
             "forms.$platform.account_url.url" => 'L\'URL inserito non è valido (es. https://...)',
         ]);
-
-        $data = $this->forms[$platform];
-        
-        // Normalize URL
-        if (!empty($data['account_url']) && !preg_match('~^(?:f|ht)tps?://~i', $data['account_url'])) {
-            $data['account_url'] = 'https://' . $data['account_url'];
-        }
         
         $action->execute($this->client, $platform, $data);
 

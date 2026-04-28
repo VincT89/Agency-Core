@@ -33,7 +33,7 @@ class GenerateTaskForApprovedSocialPost
             if (!$assignedTo) $assignedTo = \App\Models\User::where('status', 'active')->where('role', \App\Enums\UserRole::Admin)->first()?->id;
             if (!$assignedTo) \Illuminate\Support\Facades\Log::warning('Nessun utente assegnabile trovato per il task del progetto ' . $post->marketingProject->id);
 
-            $this->action->execute($post->marketingProject, $assignedTo);
+            $this->action->execute($post->marketingProject, $post, $assignedTo);
         } else {
             $assignedTo = $post->created_by;
             if (!$assignedTo) $assignedTo = \App\Models\User::where('status', 'active')->where('role', \App\Enums\UserRole::Marketing)->first()?->id;

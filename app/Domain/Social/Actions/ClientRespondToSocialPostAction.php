@@ -61,6 +61,7 @@ class ClientRespondToSocialPostAction
                 $post->update([
                     'status' => SocialPostStatus::ClientApproved,
                     'client_approved_at' => now(),
+                    'publication_status' => \App\Enums\Social\PublicationStatus::Ready,
                 ]);
 
                 if ($post->editorial_plan_slot_id) {

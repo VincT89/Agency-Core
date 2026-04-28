@@ -177,7 +177,13 @@
         {{-- RIGHT COLUMN: ACTIONS & HISTORY --}}
         <div class="review-action-col">
             
-            @if($post->status->value === 'sent_to_client')
+            @if($tokenObj->used_at)
+                <div class="review-status-card" style="padding: 20px;">
+                    <div style="background: rgba(0, 200, 83, 0.1); border: 1px solid var(--green); color: var(--green); padding: 12px; border-radius: 8px; text-align: center; font-weight: 600; font-size: 13px;">
+                        Risposta già inviata. Questa pagina resta visibile solo in consultazione.
+                    </div>
+                </div>
+            @elseif($post->status->value === 'sent_to_client')
                 <div class="review-form-card">
                     <h3 style="font-size: 16px; margin-bottom: 16px; font-weight: 600;">Lascia il tuo feedback</h3>
                     

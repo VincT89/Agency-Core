@@ -4,21 +4,25 @@
         :meta="$posts->total() . ' totali'"
     >
         <x-slot:title><strong>Archivio Social Post</strong></x-slot:title>
-        <x-slot:actions>
-            <select wire:model.live="statusFilter" class="form-in" style="width: 200px; padding: 6px 12px; font-size: 12px; background-color: var(--bg); border: 1px solid var(--line2); border-radius: var(--r); color: var(--text);">
-                <option value="">Tutti gli stati</option>
-                @foreach(\App\Enums\Social\SocialPostStatus::cases() as $status)
-                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                @endforeach
-            </select>
-        </x-slot:actions>
     </x-page-header>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+        <select wire:model.live="statusFilter" class="form-in" style="padding:5px 10px;font-size:11px;width:200px">
+            <option value="">Tutti gli stati</option>
+            @foreach(\App\Enums\Social\SocialPostStatus::cases() as $status)
+                <option value="{{ $status->value }}">{{ $status->label() }}</option>
+            @endforeach
+        </select>
+        @if($statusFilter)
+            <button wire:click="$set('statusFilter', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
+        @endif
+    </div>
 
     <x-panel>
         <table class="t-table">
             <thead>
                 <tr>
-                    <th style="width: 60px;">Preview</th>
+                    <th style="width: 80px;">Media</th>
                     <th>Titolo</th>
                     <th>Progetto</th>
                     <th>Stato</th>
@@ -30,12 +34,10 @@
                 @forelse($posts as $post)
                     <tr onclick="window.location='{{ route('social.posts.show', $post) }}'" style="cursor:pointer">
                         <td>
-                            @if($post->currentVersion && $post->currentVersion->image_path)
-                                <img src="{{ Storage::url($post->currentVersion->image_path) }}" alt="Preview" class="social-index-preview">
+                            @if($post->currentVersion?->preview_url)
+                                <span class="badge" style="background:var(--bg2);color:var(--text2);border:1px solid var(--line2);font-size:10px;padding:3px 6px;">Media presente</span>
                             @else
-                                <div class="social-index-preview-empty">
-                                    <i data-lucide="image" style="width:16px;height:16px;opacity:0.5;"></i>
-                                </div>
+                                <span class="badge" style="background:transparent;color:var(--text3);border:1px dashed var(--line2);font-size:10px;padding:3px 6px;">No media</span>
                             @endif
                         </td>
                         <td class="name-col">

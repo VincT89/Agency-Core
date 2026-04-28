@@ -27,10 +27,6 @@ class SocialPostVersion extends Model
 
     public function getPreviewUrlAttribute(): ?string
     {
-        if ($this->image_path) {
-            return \Illuminate\Support\Facades\Storage::disk('public')->url($this->image_path);
-        }
-
         return $this->original_image_url;
     }
 

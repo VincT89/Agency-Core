@@ -33,8 +33,9 @@ class PublicationBoard extends Component
     {
         $posts = SocialPost::with(['marketingProject.client.socialAccounts', 'editorialPlanSlot', 'currentVersion', 'creator'])
             ->where('status', SocialPostStatus::ClientApproved->value)
-            ->where('publication_status', '!=', \App\Enums\Social\PublicationStatus::Published->value)
+            ->where('publication_status', \App\Enums\Social\PublicationStatus::Ready->value)
             ->where('publication_mode', PublicationMode::Manual->value)
+            ->whereNull('published_at')
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('title', 'like', '%' . $this->search . '%')

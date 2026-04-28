@@ -6,7 +6,6 @@ use App\Models\SocialPost;
 use App\Models\SocialPostVersion;
 use App\Enums\Social\SocialPostStatus;
 use App\Enums\Social\SocialPostSource;
-use App\Services\Social\SocialImageStorageService;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -14,7 +13,6 @@ use Exception;
 class ReceiveSocialPostFromN8nAction
 {
     public function __construct(
-        protected SocialImageStorageService $storageService,
         protected AuditLogService $auditLogger
     ) {}
 
@@ -48,15 +46,9 @@ class ReceiveSocialPostFromN8nAction
             $projectId = $mp->project_id;
             $clientId = $mp->client_id;
 
-            // 3. Download image
-            $imagePath = null;
-            if (!empty($data['image_url'])) {
-                $imagePath = $this->storageService->downloadAndStore($data['image_url']);
-            }
-
             $post = null;
 
-            // 4. Create or reuse Social Post
+            // 3. Create or reuse Social Post
             if (!empty($data['editorial_plan_slot_id'])) {
                 $post = SocialPost::where('editorial_plan_slot_id', $data['editorial_plan_slot_id'])->first();
                 
@@ -109,7 +101,7 @@ class ReceiveSocialPostFromN8nAction
                     'external_id' => $data['n8n_execution_id'],
                     'version_number' => 1,
                     'caption' => $data['caption'] ?? '',
-                    'image_path' => $imagePath,
+                    'image_path' => null,
                     'original_image_url' => $data['image_url'] ?? null,
                     'source' => SocialPostSource::N8n,
                 ]);

@@ -115,7 +115,7 @@ class MarketingProjectCreate extends Component
     ) {
         $project = $createProjectAction->execute([
             'client_id' => $this->client_id,
-            'project_id' => $this->project_id ?: null,
+            'project_id' => $this->project_id,
             'title' => $this->title,
             'brief' => $this->brief,
             'description' => $this->brief,

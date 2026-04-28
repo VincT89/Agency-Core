@@ -42,13 +42,20 @@
 
                     @if($client_id)
                     <div class="form-g mb-3">
-                        <label class="form-lbl">Progetto Gestionale Associato (Opzionale)</label>
-                        <select wire:model="project_id" class="form-in">
-                            <option value="">Nessuno (Generico Cliente)</option>
-                            @foreach($projects as $proj)
-                                <option value="{{ $proj->id }}">{{ $proj->name }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-lbl">Progetto Gestionale Associato *</label>
+                        @if(count($projects) > 0)
+                            <select wire:model="project_id" class="form-in" required>
+                                <option value="">Seleziona...</option>
+                                @foreach($projects as $proj)
+                                    <option value="{{ $proj->id }}">{{ $proj->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('project_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                        @else
+                            <div style="padding:15px; background:var(--bg); border:1px solid var(--line2); border-radius:var(--r); color:var(--text2); font-size:14px;">
+                                Questo cliente non ha progetti attivi. <a href="{{ route('projects.create') }}" style="color:var(--brand); text-decoration:underline;">Crea prima un progetto gestionale</a>.
+                            </div>
+                        @endif
                     </div>
                     @endif
                 </div>

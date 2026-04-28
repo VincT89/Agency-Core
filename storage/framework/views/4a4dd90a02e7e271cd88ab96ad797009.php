@@ -42,10 +42,10 @@
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
                 <div class="social-media-preview-container">
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion && $post->currentVersion->image_path): ?>
-                        <img src="<?php echo e(Storage::url($post->currentVersion->image_path)); ?>" alt="Preview" class="social-media-preview-img">
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion?->preview_url): ?>
+                        <img src="<?php echo e($post->currentVersion->preview_url); ?>" alt="Preview" class="social-media-preview-img w-full rounded-lg">
                     <?php else: ?>
-                        <div class="social-empty-preview">Nessuna immagine disponibile per questa versione.</div>
+                        <div class="social-empty-preview text-gray-400 text-sm">Nessuna immagine disponibile per questa versione.</div>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </div>
                 

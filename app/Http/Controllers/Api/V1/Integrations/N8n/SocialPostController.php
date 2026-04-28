@@ -52,6 +52,8 @@ class SocialPostController extends Controller
                 'status' => $result->status->value,
             ], 201);
             
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->error('Validazione fallita', $e->errors(), 422);
         } catch (Exception $e) {
             return $this->error('Errore durante la creazione del Social Post: ' . $e->getMessage(), [], 500);
         }

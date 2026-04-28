@@ -36,10 +36,12 @@ class PublicationBoard extends Component
             ->where('publication_status', '!=', \App\Enums\Social\PublicationStatus::Published->value)
             ->where('publication_mode', PublicationMode::Manual->value)
             ->when($this->search, function ($query) {
-                $query->where('title', 'like', '%' . $this->search . '%')
-                      ->orWhereHas('marketingProject.client', function ($q) {
-                          $q->where('name', 'like', '%' . $this->search . '%');
+                $query->where(function ($q) {
+                    $q->where('title', 'like', '%' . $this->search . '%')
+                      ->orWhereHas('marketingProject.client', function ($q2) {
+                          $q2->where('name', 'like', '%' . $this->search . '%');
                       });
+                });
             })
             ->orderBy('created_at', 'asc')
             ->paginate(15);

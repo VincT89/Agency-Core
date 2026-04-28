@@ -38,6 +38,13 @@ class ReceiveSocialPostFromN8nAction
 
             // 2. Fetch Marketing Project Context
             $mp = \App\Models\MarketingProject::findOrFail($data['marketing_project_id']);
+            
+            if (! $mp->project_id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'marketing_project_id' => 'Il progetto marketing non è collegato a un progetto gestionale.',
+                ]);
+            }
+
             $projectId = $mp->project_id;
             $clientId = $mp->client_id;
 
@@ -71,6 +78,7 @@ class ReceiveSocialPostFromN8nAction
                         'format' => $data['format'] ?? '1080x1350',
                         'source' => SocialPostSource::N8n,
                         'status' => SocialPostStatus::InternalReview,
+                        'publication_mode' => $mp->publication_mode ?? \App\Enums\Social\PublicationMode::Manual,
                     ]
                 );
 
@@ -90,6 +98,7 @@ class ReceiveSocialPostFromN8nAction
                     'format' => $data['format'] ?? '1080x1350',
                     'source' => SocialPostSource::N8n,
                     'status' => SocialPostStatus::InternalReview,
+                    'publication_mode' => $mp->publication_mode ?? \App\Enums\Social\PublicationMode::Manual,
                 ]);
             }
 

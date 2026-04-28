@@ -43,7 +43,7 @@ class MarketingProjectCreate extends Component
         if ($this->step == 1) {
             $this->validate([
                 'client_id' => 'required|exists:clients,id',
-                'project_id' => 'nullable|exists:projects,id',
+                'project_id' => 'required|exists:projects,id',
             ]);
         } elseif ($this->step == 2) {
             $this->validate([
@@ -138,7 +138,7 @@ class MarketingProjectCreate extends Component
         }
 
         session()->flash('success', 'Progetto creato con successo e pronto per l\'invio a n8n.');
-        return $this->redirectRoute('marketing-projects.show', ['project' => $project->id], navigate: true);
+        return $this->redirectRoute('marketing-projects.show', ['project' => $project->id]);
     }
 
     public function getClientSocialStatusProperty()

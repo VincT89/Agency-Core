@@ -14,10 +14,10 @@
         <div>
             <x-panel title="Media Versione Attuale (v{{ $post->currentVersion->version_number ?? 1 }})" dot="var(--purple)" class="social-left-panel">
                 <div class="social-media-preview-container">
-                    @if($post->currentVersion && $post->currentVersion->image_path)
-                        <img src="{{ Storage::url($post->currentVersion->image_path) }}" alt="Preview" class="social-media-preview-img">
+                    @if($post->currentVersion?->preview_url)
+                        <img src="{{ $post->currentVersion->preview_url }}" alt="Preview" class="social-media-preview-img w-full rounded-lg">
                     @else
-                        <div class="social-empty-preview">Nessuna immagine disponibile per questa versione.</div>
+                        <div class="social-empty-preview text-gray-400 text-sm">Nessuna immagine disponibile per questa versione.</div>
                     @endif
                 </div>
                 

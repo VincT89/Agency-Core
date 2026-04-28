@@ -136,7 +136,7 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                     <div class="mkt-checkbox-group">
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $availablePlatforms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                             <label class="mkt-checkbox-label">
-                                <input type="checkbox" wire:model="platforms" value="<?php echo e($plat); ?>"> <?php echo e(ucfirst($plat)); ?>
+                                <input type="checkbox" wire:model.live="platforms" value="<?php echo e($plat); ?>"> <?php echo e(ucfirst($plat)); ?>
 
                             </label>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
@@ -149,6 +149,60 @@ $message = $__bag->first($__errorArgs[0]); ?> <span class="mkt-text-red"><?php e
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(count($platforms) > 0 && $client_id && $this->clientSocialStatus): ?>
+                        <div style="margin-top:10px; padding:12px; background:var(--bg); border:1px solid var(--line2); border-radius:var(--r);">
+                            <div style="font-family:var(--mono); font-size:10px; color:var(--text3); margin-bottom:8px; text-transform:uppercase;">Stato Accessi Social</div>
+                            
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array('facebook', $platforms) || in_array('instagram', $platforms)): ?>
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--line);">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="facebook" style="width:14px; height:14px; color:var(--text2);"></i>
+                                        <span style="font-size:12px; font-family:var(--sans);">Meta (Facebook / Instagram)</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($this->clientSocialStatus['is_meta_ready']): ?>
+                                            <span style="font-size:10px; font-family:var(--mono); color:var(--green); padding:2px 6px; border:1px solid var(--green)40; border-radius:4px; background:var(--green)15;">PRONTO</span>
+                                            <i data-lucide="check-circle" style="width:14px; height:14px; color:var(--green);" title="Pronto per la pubblicazione"></i>
+                                        <?php else: ?>
+                                            <span style="font-size:10px; font-family:var(--mono); color:var(--orange); padding:2px 6px; border:1px solid var(--orange)40; border-radius:4px; background:var(--orange)15;">INCOMPLETO</span>
+                                            <i data-lucide="alert-triangle" style="width:14px; height:14px; color:var(--orange);" title="Accesso non operativo"></i>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array('tiktok', $platforms)): ?>
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="tiktok" style="width:14px; height:14px; color:var(--text2);"></i>
+                                        <span style="font-size:12px; font-family:var(--sans);">TikTok</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($this->clientSocialStatus['is_tiktok_ready']): ?>
+                                            <span style="font-size:10px; font-family:var(--mono); color:var(--green); padding:2px 6px; border:1px solid var(--green)40; border-radius:4px; background:var(--green)15;">PRONTO</span>
+                                            <i data-lucide="check-circle" style="width:14px; height:14px; color:var(--green);" title="Pronto per la pubblicazione"></i>
+                                        <?php else: ?>
+                                            <span style="font-size:10px; font-family:var(--mono); color:var(--text3); padding:2px 6px; border:1px solid var(--text3)40; border-radius:4px; background:var(--text3)15;">NON CONFIGURATO</span>
+                                            <i data-lucide="alert-circle" style="width:14px; height:14px; color:var(--text3);" title="Accesso non configurato (Opzionale)"></i>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if((in_array('facebook', $platforms) || in_array('instagram', $platforms)) && !$this->clientSocialStatus['is_meta_ready']): ?>
+                                <div style="margin-top:8px; font-size:11px; color:var(--red); display:flex; gap:6px;">
+                                    <i data-lucide="alert-octagon" style="width:14px; height:14px; flex-shrink:0;"></i>
+                                    <span><strong>Attenzione:</strong> Meta Business è richiesto per l'invio al workflow automatico. Il progetto sarà salvato in Bozza e l'invio verrà bloccato finché non configuri gli accessi.</span>
+                                </div>
+                            <?php elseif(in_array('tiktok', $platforms) && !$this->clientSocialStatus['is_tiktok_ready']): ?>
+                                <div style="margin-top:8px; font-size:11px; color:var(--orange); display:flex; gap:6px;">
+                                    <i data-lucide="info" style="width:14px; height:14px; flex-shrink:0;"></i>
+                                    <span>TikTok non è configurato. Potrai comunque inviare il piano (poiché opzionale), ma la pubblicazione andrà gestita manualmente.</span>
+                                </div>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </div>
 
                 <div class="form-g mb-3">

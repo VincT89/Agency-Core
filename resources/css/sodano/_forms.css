@@ -40,6 +40,7 @@
   font-family: var(--mono); font-size: 12px; padding: 9px 11px;
   background: var(--bg2); border: 1px solid var(--line2); color: var(--text);
   border-radius: var(--r); outline: none; transition: border-color .15s;
+  box-sizing: border-box; width: 100%;
 }
 .form-in:focus { border-color: var(--accent); }
 .form-in::placeholder { color: var(--text3); }
@@ -48,6 +49,7 @@
   background: var(--bg2); border: 1px solid var(--line2); color: var(--text);
   border-radius: var(--r); outline: none; cursor: pointer;
   appearance: none; transition: border-color .15s;
+  box-sizing: border-box; width: 100%;
 }
 .form-sel:focus { border-color: var(--accent); }
 .form-ta {
@@ -55,6 +57,7 @@
   background: var(--bg2); border: 1px solid var(--line2); color: var(--text);
   border-radius: var(--r); outline: none; resize: vertical; min-height: 80px;
   transition: border-color .15s;
+  box-sizing: border-box; width: 100%;
 }
 .form-ta:focus { border-color: var(--accent); }
 .form-ta::placeholder { color: var(--text3); }
@@ -62,6 +65,17 @@
   display: flex; justify-content: flex-end; gap: 8px;
   margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
 }
+.form-check-lbl {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--text2);
+}
+.form-actions {
+  display: flex; justify-content: space-between; align-items: center; margin-top: 15px;
+}
+.form-success-msg {
+  color: var(--green); font-size: 13px; font-family: var(--sans);
+}
+.mb-3 { margin-bottom: 16px; }
 
 /* Validation errors */
 .form-in.is-invalid,

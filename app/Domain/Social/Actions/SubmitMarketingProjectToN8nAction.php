@@ -15,6 +15,13 @@ class SubmitMarketingProjectToN8nAction
         if ($project->status->value !== MarketingProjectStatus::Draft->value) {
             throw new \Exception('Il progetto è già stato inviato a n8n o non è in stato Bozza.');
         }
+
+        $requiresMeta = in_array('facebook', $project->platforms) || in_array('instagram', $project->platforms);
+        if ($requiresMeta && !$project->client->isMetaReady()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'social_access' => "Il cliente non ha gli accessi Meta Business configurati o verificati. L'invio a n8n è bloccato.",
+            ]);
+        }
         $project->update([
             'status' => MarketingProjectStatus::SubmittedToN8n->value,
             'n8n_request_id' => Str::uuid()->toString(),

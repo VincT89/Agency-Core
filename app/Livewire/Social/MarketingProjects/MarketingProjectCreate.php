@@ -54,6 +54,7 @@ class MarketingProjectCreate extends Component
                 'title' => 'required|string|max:255',
                 'brief' => 'required|string',
                 'platforms' => 'required|array|min:1',
+                'platforms.*' => 'in:facebook,instagram,tiktok',
                 'publication_mode' => 'required|in:manual,automatic',
             ]);
             
@@ -140,6 +141,20 @@ class MarketingProjectCreate extends Component
         return $this->redirectRoute('marketing-projects.show', ['project' => $project->id], navigate: true);
     }
 
+    public function getClientSocialStatusProperty()
+    {
+        if (!$this->client_id) return null;
+        $client = Client::find($this->client_id);
+        if (!$client) return null;
+
+        $tiktokAccount = $client->socialAccountFor(\App\Enums\Social\SocialPlatform::Tiktok->value);
+
+        return [
+            'is_meta_ready' => $client->isMetaReady(),
+            'is_tiktok_ready' => $tiktokAccount?->isReadyToPublish() ?? false,
+        ];
+    }
+
     public function render()
     {
         $clients = Client::orderBy('name')->get();
@@ -151,7 +166,7 @@ class MarketingProjectCreate extends Component
         return view('livewire.social.marketing-projects.create', [
             'clients' => $clients,
             'projects' => $projects,
-            'availablePlatforms' => ['facebook', 'instagram', 'linkedin', 'tiktok', 'twitter'],
+            'availablePlatforms' => ['facebook', 'instagram', 'tiktok'],
         ]);
     }
 }

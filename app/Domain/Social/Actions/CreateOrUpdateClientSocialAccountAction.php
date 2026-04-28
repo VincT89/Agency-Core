@@ -4,40 +4,45 @@ namespace App\Domain\Social\Actions;
 
 use App\Models\Client;
 use App\Models\ClientSocialAccount;
-use App\Enums\Social\ClientSocialAccessStatus;
-use App\Enums\Social\MetaApiStatus;
 
 class CreateOrUpdateClientSocialAccountAction
 {
-    public function execute(Client $client, array $data): ClientSocialAccount
+    public function execute(Client $client, string $platform, array $data): ClientSocialAccount
     {
-        $provider = $data['provider'] ?? 'meta';
-
-        // Extract enums if they are passed as enum instances or raw strings
-        $accessStatus = isset($data['access_status']) 
-            ? ($data['access_status'] instanceof ClientSocialAccessStatus ? $data['access_status']->value : $data['access_status'])
-            : ClientSocialAccessStatus::Missing->value;
-            
-        $apiStatus = isset($data['api_status'])
-            ? ($data['api_status'] instanceof MetaApiStatus ? $data['api_status']->value : $data['api_status'])
-            : MetaApiStatus::NotConfigured->value;
-
         return ClientSocialAccount::updateOrCreate(
             [
                 'client_id' => $client->id,
-                'provider' => $provider,
+                'platform' => $platform,
             ],
             [
-                'facebook_page_url' => $data['facebook_page_url'] ?? null,
-                'instagram_profile_url' => $data['instagram_profile_url'] ?? null,
-                'meta_business_manager_id' => $data['meta_business_manager_id'] ?? null,
-                'has_agency_access' => $data['has_agency_access'] ?? false,
-                'access_status' => $accessStatus,
-                'notes' => $data['notes'] ?? null,
-                // These might be updated via API later, not usually through the form
-                'facebook_page_id' => $data['facebook_page_id'] ?? null,
+                'account_name' => $data['account_name'] ?? null,
+                'account_url' => $data['account_url'] ?? null,
+                'username' => $data['username'] ?? null,
+                
+                'account_exists' => $data['account_exists'] ?? 'unknown',
+                'access_method' => $data['access_method'] ?? 'unknown',
+                'access_status' => $data['access_status'] ?? 'not_started',
+                'is_ready_to_publish' => $data['is_ready_to_publish'] ?? false,
+                
+                'business_manager_id' => $data['business_manager_id'] ?? null,
+                'business_center_id' => $data['business_center_id'] ?? null,
+                'page_id' => $data['page_id'] ?? null,
                 'instagram_business_account_id' => $data['instagram_business_account_id'] ?? null,
-                'api_status' => $apiStatus,
+                'tiktok_account_id' => $data['tiktok_account_id'] ?? null,
+                
+                'credential_location' => $data['credential_location'] ?? null,
+                
+                'api_provider' => $data['api_provider'] ?? null,
+                'api_status' => $data['api_status'] ?? 'not_configured',
+                
+                'notes' => $data['notes'] ?? null,
+                'api_notes' => $data['api_notes'] ?? null,
+                
+                // Legacy support maps
+                'facebook_page_url' => ($platform === 'facebook') ? ($data['account_url'] ?? null) : null,
+                'instagram_profile_url' => ($platform === 'instagram') ? ($data['account_url'] ?? null) : null,
+                'meta_business_manager_id' => $data['business_manager_id'] ?? null,
+                'facebook_page_id' => $data['page_id'] ?? null,
             ]
         );
     }

@@ -1,10 +1,31 @@
 <div>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-        <h1 style="font-size:24px; font-weight:600; color:var(--text1); margin:0;">Gestione Shooting</h1>
-        <a href="<?php echo e(route('social.shooting.create')); ?>" class="btn btn-p" style="display:inline-flex; align-items:center; gap:6px;">
-            <i data-lucide="plus" style="width:16px; height:16px;"></i> Nuova Richiesta
-        </a>
-    </div>
+    <?php if (isset($component)) { $__componentOriginalf8d4ea307ab1e58d4e472a43c8548d8e = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalf8d4ea307ab1e58d4e472a43c8548d8e = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.page-header','data' => ['eyebrow' => 'Amministrazione','title' => 'Gestione Shooting']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['eyebrow' => 'Amministrazione','title' => 'Gestione Shooting']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+         <?php $__env->slot('actions', null, []); ?> 
+            <a href="<?php echo e(route('social.shooting.create')); ?>" class="btn btn-p" style="display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="plus" style="width:16px; height:16px;"></i> Nuova Richiesta
+            </a>
+         <?php $__env->endSlot(); ?>
+     <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalf8d4ea307ab1e58d4e472a43c8548d8e)): ?>
+<?php $attributes = $__attributesOriginalf8d4ea307ab1e58d4e472a43c8548d8e; ?>
+<?php unset($__attributesOriginalf8d4ea307ab1e58d4e472a43c8548d8e); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalf8d4ea307ab1e58d4e472a43c8548d8e)): ?>
+<?php $component = $__componentOriginalf8d4ea307ab1e58d4e472a43c8548d8e; ?>
+<?php unset($__componentOriginalf8d4ea307ab1e58d4e472a43c8548d8e); ?>
+<?php endif; ?>
 
     <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>

@@ -3,7 +3,7 @@
 namespace App\Domain\Social\Actions;
 
 use App\Models\SocialPost;
-use App\Models\SocialPostReviewToken;
+use App\Models\ClientReviewToken;
 use App\Models\User;
 use App\Enums\Social\SocialPostStatus;
 use App\Services\AuditLogService;
@@ -28,8 +28,9 @@ class SendSocialPostToClientAction
             // 1. Genera un token pubblico sicuro
             $tokenString = Str::random(40);
             
-            SocialPostReviewToken::create([
-                'social_post_id' => $post->id,
+            ClientReviewToken::create([
+                'reviewable_id' => $post->id,
+                'reviewable_type' => get_class($post),
                 'token' => $tokenString,
                 'expires_at' => now()->addDays(30),
             ]);
@@ -60,7 +61,7 @@ class SendSocialPostToClientAction
             // In futuro qui potremo implementare l'invio fisico del messaggio WhatsApp o Email
             // tramite n8n o altri driver. Per ora generiamo l'URL.
 
-            return route('client.social-posts.review', ['token' => $tokenString]);
+            return route('client.review', ['token' => $tokenString]);
         });
     }
 }

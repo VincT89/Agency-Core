@@ -44,4 +44,16 @@ return [
         'publish_social_post_webhook_url' => env('N8N_PUBLISH_SOCIAL_POST_WEBHOOK_URL'),
     ],
 
+    'meta' => [
+        'client_id' => env('META_CLIENT_ID'),
+        'client_secret' => env('META_CLIENT_SECRET'),
+        'redirect_uri' => env('META_REDIRECT_URI'),
+    ],
+
+    'tiktok' => [
+        'client_key' => env('TIKTOK_CLIENT_KEY'),
+        'client_secret' => env('TIKTOK_CLIENT_SECRET'),
+        'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
+    ],
+
 ];

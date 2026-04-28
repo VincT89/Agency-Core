@@ -289,3 +289,127 @@
     font-size: 11px;
     color: var(--text3);
 }
+
+/* Social Accounts Form */
+.social-accounts-header {
+    margin-bottom: 16px;
+}
+.social-accounts-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--text);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+}
+.social-accounts-grid {
+    /* Removed grid layout to make room for tabs */
+    display: block;
+}
+.social-tabs-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+}
+.social-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--line2);
+    border-radius: var(--r);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.social-tab-btn:hover {
+    background: var(--bg2);
+    color: var(--text);
+}
+.social-tab-btn.active {
+    background: var(--accent);
+    color: var(--text-inv);
+    border-color: var(--accent);
+}
+.social-tab-btn.active .social-icon-sm {
+    color: var(--text-inv);
+}
+.social-tab-contents {
+    position: relative;
+    width: 100%;
+}
+.social-account-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.social-account-req-notice {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 15px;
+}
+.w-100 {
+    width: 100%;
+    box-sizing: border-box;
+}
+.social-ready-toggle {
+    background: var(--bg);
+    border: 1px solid var(--line2);
+    padding: 12px;
+    border-radius: var(--r);
+    margin-top: 12px;
+}
+.social-ready-checkbox {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+.form-check-lbl {
+    color: var(--text);
+    font-size: 13px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.social-api-details {
+    margin-bottom: 20px;
+    border: 1px dashed var(--line2);
+    padding: 12px;
+    border-radius: var(--r);
+}
+.social-api-summary {
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+}
+.social-api-content {
+    margin-top: 12px;
+}
+.social-api-disclaimer {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+}
+.social-form-actions {
+    margin-top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.social-icon-sm {
+    width: 16px;
+    height: 16px;
+}
+.social-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

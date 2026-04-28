@@ -38,6 +38,22 @@ class MarketingWorkflowTest extends TestCase
         $this->marketing = User::factory()->create(['role' => UserRole::Marketing, 'status' => 'active']);
         
         $this->client = Client::factory()->create(['status' => 'active']);
+        
+        $this->client->socialAccounts()->create([
+            'platform' => \App\Enums\Social\SocialPlatform::Facebook->value,
+            'is_ready_to_publish' => true,
+            'access_status' => \App\Enums\Social\SocialAccessStatus::ReadyToPublish->value,
+            'access_method' => \App\Enums\Social\SocialAccessMethod::MetaBusiness->value,
+            'business_manager_id' => '12345',
+        ]);
+        $this->client->socialAccounts()->create([
+            'platform' => \App\Enums\Social\SocialPlatform::Instagram->value,
+            'is_ready_to_publish' => true,
+            'access_status' => \App\Enums\Social\SocialAccessStatus::ReadyToPublish->value,
+            'access_method' => \App\Enums\Social\SocialAccessMethod::MetaBusiness->value,
+            'business_manager_id' => '12345',
+        ]);
+
         $this->project = Project::factory()->create(['client_id' => $this->client->id]);
         
         Event::fake([

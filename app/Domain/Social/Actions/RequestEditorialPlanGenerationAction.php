@@ -31,6 +31,14 @@ class RequestEditorialPlanGenerationAction
                     'topic' => $slot->topic,
                 ];
             })->toArray(),
+            'social_access' => $project->client->socialAccounts->map(function ($account) {
+                return array_filter([
+                    'platform' => $account->platform->value,
+                    'access_status' => $account->access_status->value,
+                    'access_method' => $account->access_method->value,
+                    'business_manager_id' => $account->isMetaPlatform() ? $account->business_manager_id : null,
+                ]);
+            })->values()->toArray(),
         ];
 
         $this->n8nClient->requestEditorialPlanGeneration($payload);

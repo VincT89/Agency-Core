@@ -71,13 +71,64 @@ class Client extends Model
         return $this->morphMany(AuditLog::class, 'auditable');
     }
 
-    public function metaAccount()
+    public function socialAccounts(): HasMany
     {
-        return $this->hasOne(ClientSocialAccount::class)->where('provider', 'meta');
+        return $this->hasMany(ClientSocialAccount::class);
+    }
+
+    public function facebookAccount()
+    {
+        return $this->hasOne(ClientSocialAccount::class)->where('platform', \App\Enums\Social\SocialPlatform::Facebook->value);
+    }
+
+    public function instagramAccount()
+    {
+        return $this->hasOne(ClientSocialAccount::class)->where('platform', \App\Enums\Social\SocialPlatform::Instagram->value);
+    }
+
+    public function tiktokAccount()
+    {
+        return $this->hasOne(ClientSocialAccount::class)->where('platform', \App\Enums\Social\SocialPlatform::Tiktok->value);
+    }
+
+    public function socialAccountFor(string $platform): ?ClientSocialAccount
+    {
+        return $this->socialAccounts->firstWhere('platform', $platform);
     }
 
     public function marketingProjects(): HasMany
     {
         return $this->hasMany(MarketingProject::class);
+    }
+
+    public function isMetaReady(): bool
+    {
+        $fb = $this->socialAccountFor(\App\Enums\Social\SocialPlatform::Facebook->value);
+        $ig = $this->socialAccountFor(\App\Enums\Social\SocialPlatform::Instagram->value);
+
+        if (!$fb || !$ig) {
+            return false;
+        }
+
+        if (!$fb->isReadyToPublish() || !$ig->isReadyToPublish()) {
+            return false;
+        }
+
+        if (blank($fb->business_manager_id) || blank($ig->business_manager_id)) {
+            return false;
+        }
+
+        if ($fb->business_manager_id !== $ig->business_manager_id) {
+            return false;
+        }
+
+        if (
+            $fb->access_method !== \App\Enums\Social\SocialAccessMethod::MetaBusiness ||
+            $ig->access_method !== \App\Enums\Social\SocialAccessMethod::MetaBusiness
+        ) {
+            return false;
+        }
+
+        return true;
     }
 }

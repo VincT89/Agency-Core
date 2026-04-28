@@ -12,6 +12,12 @@ class SubmitEditorialPlanToN8nAction
 
     public function execute(EditorialPlan $plan): void
     {
+        $requiresMeta = in_array('facebook', $plan->project->platforms) || in_array('instagram', $plan->project->platforms);
+        if ($requiresMeta && !$plan->project->client->isMetaReady()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'social_access' => "Il cliente non ha gli accessi Meta Business configurati o verificati. L'invio a n8n è bloccato.",
+            ]);
+        }
         $plan->update([
             'status' => EditorialPlanStatus::SubmittedToN8n->value,
         ]);

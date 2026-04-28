@@ -8,6 +8,7 @@ class SocialPostVersion extends Model
 {
     protected $fillable = [
         'social_post_id',
+        'external_id',
         'version_number',
         'caption',
         'image_path',

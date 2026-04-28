@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('client_social_accounts', function (Blueprint $table) {
+            // Drop foreign key to allow dropping the unique index that MySQL might be using for it
+            $table->dropForeign(['client_id']);
             $table->dropUnique(['client_id', 'provider']);
+            $table->foreign('client_id')->references('id')->on('clients')->cascadeOnDelete();
             
             // Aggiungo prima i campi
             $table->string('platform')->nullable()->after('provider');

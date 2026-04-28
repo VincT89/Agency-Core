@@ -9,4 +9,10 @@ Alpine.data('clientAutocomplete', clientAutocomplete);
 Alpine.start();
 
 import { initBgCanvas } from './bg-canvas.js';
-document.addEventListener('DOMContentLoaded', () => initBgCanvas('bg-canvas'));
+document.addEventListener('livewire:navigated', () => initBgCanvas('bg-canvas'));
+// Fallback for non-livewire pages
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.Livewire === 'undefined') {
+        initBgCanvas('bg-canvas');
+    }
+});

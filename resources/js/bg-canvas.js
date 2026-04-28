@@ -5,7 +5,8 @@
  */
 export function initBgCanvas(canvasId) {
   const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
+  if (!canvas || canvas.dataset.initialized) return;
+  canvas.dataset.initialized = 'true';
 
   const ctx = canvas.getContext('2d');
   const ACCENT = [200, 16, 46]; // --accent in RGB (#c8102e)

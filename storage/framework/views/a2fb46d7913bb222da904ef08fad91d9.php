@@ -146,67 +146,32 @@
 <?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
 <?php endif; ?>
         <div>
-            <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Stato Onboarding Social','dot' => 'var(--orange)','padded' => true,'style' => 'margin-bottom:20px;']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('panel'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['title' => 'Stato Onboarding Social','dot' => 'var(--orange)','padded' => true,'style' => 'margin-bottom:20px;']); ?>
-<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+            <?php
+$__split = function ($name, $params = []) {
+    return [$name, $params];
+};
+[$__name, $__params] = $__split('client.client-social-overview', ['client' => $client]);
 
-                <?php
-                    $isMetaReady = $client->isMetaReady();
-                    $tiktokAccount = $client->socialAccountFor(\App\Enums\Social\SocialPlatform::Tiktok->value);
-                    $isTiktokReady = $tiktokAccount?->isReadyToPublish() ?? false;
-                ?>
-                
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="facebook" style="width:16px; height:16px; color:var(--text3);"></i>
-                        <span style="font-family:var(--sans); font-size:13px; color:var(--text);">Meta (Facebook / Instagram)</span>
-                    </div>
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($isMetaReady): ?>
-                        <span style="font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:4px; background:var(--green)15; color:var(--green); border:1px solid var(--green)30;">
-                            META PRONTO
-                        </span>
-                    <?php else: ?>
-                        <span style="font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:4px; background:var(--orange)15; color:var(--orange); border:1px solid var(--orange)30;">
-                            META INCOMPLETO
-                        </span>
-                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                </div>
+$__keyOuter = $__key ?? null;
 
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3);">
-                            <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
-                        </svg>
-                        <span style="font-family:var(--sans); font-size:13px; color:var(--text);">TikTok (Opzionale)</span>
-                    </div>
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($isTiktokReady): ?>
-                        <span style="font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:4px; background:var(--green)15; color:var(--green); border:1px solid var(--green)30;">
-                            TIKTOK PRONTO
-                        </span>
-                    <?php else: ?>
-                        <span style="font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:4px; background:var(--text3)15; color:var(--text3); border:1px solid var(--text3)30;">
-                            NON CONFIGURATO
-                        </span>
-                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                </div>
-             <?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
-<?php $attributes = $__attributesOriginal36665f0dc0e45320e21db1e20a989acf; ?>
-<?php unset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
-<?php $component = $__componentOriginal36665f0dc0e45320e21db1e20a989acf; ?>
-<?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
-<?php endif; ?>
+$__key = null;
+$__componentSlots = [];
+
+$__key ??= \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::generateKey('lw-4228425124-0', $__key);
+
+$__html = app('livewire')->mount($__name, $__params, $__key, $__componentSlots);
+
+echo $__html;
+
+unset($__html);
+unset($__key);
+$__key = $__keyOuter;
+unset($__keyOuter);
+unset($__name);
+unset($__params);
+unset($__componentSlots);
+unset($__split);
+?>
 
             <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
@@ -297,7 +262,7 @@ $__keyOuter = $__key ?? null;
 $__key = null;
 $__componentSlots = [];
 
-$__key ??= \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::generateKey('lw-4228425124-0', $__key);
+$__key ??= \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::generateKey('lw-4228425124-1', $__key);
 
 $__html = app('livewire')->mount($__name, $__params, $__key, $__componentSlots);
 

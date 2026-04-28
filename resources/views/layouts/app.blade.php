@@ -364,8 +364,14 @@ document.getElementById('notif-menu')?.addEventListener('click', function(e) {
     e.stopPropagation();
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('livewire:navigated', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
+});
+// Fallback
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.Livewire === 'undefined' && typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 });
 
 // Toggle open/close avatar menu

@@ -131,12 +131,10 @@
 
                     <div style="border-top:1px solid var(--line); padding-top:15px; margin-top:15px; display:flex; flex-direction:column; gap:10px;">
                         <?php
-                            $requiresMeta = in_array('facebook', $platforms ?? []) || in_array('instagram', $platforms ?? []);
                             $isMetaReady = $client ? $client->isMetaReady() : false;
-                            $canPublish = true;
-                            if ($requiresMeta && !$isMetaReady) {
-                                $canPublish = false;
-                            }
+                            $requiresMeta = collect($platforms ?? [])->intersect(['facebook', 'instagram'])->isNotEmpty();
+                            
+                            $canPublish = !$requiresMeta || $isMetaReady;
                         ?>
                         
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">

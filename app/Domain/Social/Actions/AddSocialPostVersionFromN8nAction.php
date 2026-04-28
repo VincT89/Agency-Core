@@ -44,15 +44,27 @@ class AddSocialPostVersionFromN8nAction
             $nextVersionNumber = $lockedPost->versions()->max('version_number') + 1;
 
             // 3. Crea la nuova versione
-            $version = SocialPostVersion::create([
-                'social_post_id' => $lockedPost->id,
-                'version_number' => $nextVersionNumber,
-                'caption' => $data['caption'] ?? '',
-                'image_path' => $imagePath,
-                'original_image_url' => $data['image_url'] ?? null,
-                'prompt_used' => $data['prompt_used'] ?? null,
-                'source' => SocialPostSource::Regenerated,
-            ]);
+            try {
+                $version = SocialPostVersion::create([
+                    'social_post_id' => $lockedPost->id,
+                    'external_id' => $data['n8n_execution_id'] ?? null,
+                    'version_number' => $nextVersionNumber,
+                    'caption' => $data['caption'] ?? '',
+                    'image_path' => $imagePath,
+                    'original_image_url' => $data['image_url'] ?? null,
+                    'prompt_used' => $data['prompt_used'] ?? null,
+                    'source' => SocialPostSource::Regenerated,
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($e->getCode() === '23000' && !empty($data['n8n_execution_id'])) {
+                    // Race condition hit: an identical execution was just inserted
+                    $existingVersion = SocialPostVersion::where('external_id', $data['n8n_execution_id'])->first();
+                    if ($existingVersion) {
+                        return $existingVersion;
+                    }
+                }
+                throw $e;
+            }
 
             // 4. Aggiorna il post corrente e lo stato
             $post->update([

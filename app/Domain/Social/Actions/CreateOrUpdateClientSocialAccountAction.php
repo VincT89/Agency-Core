@@ -15,33 +15,33 @@ class CreateOrUpdateClientSocialAccountAction
                 'platform' => $platform,
             ],
             [
-                'account_name' => $data['account_name'] ?? null,
-                'account_url' => $data['account_url'] ?? null,
-                'username' => $data['username'] ?? null,
+                'account_name' => blank($data['account_name'] ?? null) ? null : $data['account_name'],
+                'account_url' => blank($data['account_url'] ?? null) ? null : $data['account_url'],
+                'username' => blank($data['username'] ?? null) ? null : $data['username'],
                 
-                'account_exists' => $data['account_exists'] ?? 'unknown',
-                'access_method' => $data['access_method'] ?? 'unknown',
-                'access_status' => $data['access_status'] ?? 'not_started',
-                'is_ready_to_publish' => $data['is_ready_to_publish'] ?? false,
+                'account_exists' => (bool) ($data['account_exists'] ?? false),
+                'access_method' => blank($data['access_method'] ?? null) ? 'unknown' : $data['access_method'],
+                'access_status' => blank($data['access_status'] ?? null) ? 'not_started' : $data['access_status'],
+                'is_ready_to_publish' => (bool) ($data['is_ready_to_publish'] ?? false),
                 
-                'business_manager_id' => $data['business_manager_id'] ?? null,
-                'business_center_id' => $data['business_center_id'] ?? null,
-                'instagram_business_account_id' => $data['instagram_business_account_id'] ?? null,
-                'tiktok_account_id' => $data['tiktok_account_id'] ?? null,
+                'business_manager_id' => blank($data['business_manager_id'] ?? null) ? null : $data['business_manager_id'],
+                'business_center_id' => blank($data['business_center_id'] ?? null) ? null : $data['business_center_id'],
+                'instagram_business_account_id' => blank($data['instagram_business_account_id'] ?? null) ? null : $data['instagram_business_account_id'],
+                'tiktok_account_id' => blank($data['tiktok_account_id'] ?? null) ? null : $data['tiktok_account_id'],
                 
-                'credential_location' => $data['credential_location'] ?? null,
+                'credential_location' => blank($data['credential_location'] ?? null) ? null : $data['credential_location'],
                 
-                'api_provider' => $data['api_provider'] ?? null,
-                'api_status' => $data['api_status'] ?? 'not_configured',
+                'api_provider' => blank($data['api_provider'] ?? null) ? null : $data['api_provider'],
+                'api_status' => blank($data['api_status'] ?? null) ? 'not_configured' : $data['api_status'],
                 
-                'notes' => $data['notes'] ?? null,
-                'api_notes' => $data['api_notes'] ?? null,
+                'notes' => blank($data['notes'] ?? null) ? null : $data['notes'],
+                'api_notes' => blank($data['api_notes'] ?? null) ? null : $data['api_notes'],
                 
                 // Legacy support maps
-                'facebook_page_url' => ($platform === 'facebook') ? ($data['account_url'] ?? null) : null,
-                'instagram_profile_url' => ($platform === 'instagram') ? ($data['account_url'] ?? null) : null,
-                'meta_business_manager_id' => $data['business_manager_id'] ?? null,
-                'facebook_page_id' => $data['page_id'] ?? null,
+                'facebook_page_url' => ($platform === 'facebook') ? (blank($data['account_url'] ?? null) ? null : $data['account_url']) : null,
+                'instagram_profile_url' => ($platform === 'instagram') ? (blank($data['account_url'] ?? null) ? null : $data['account_url']) : null,
+                'meta_business_manager_id' => blank($data['business_manager_id'] ?? null) ? null : $data['business_manager_id'],
+                'facebook_page_id' => blank($data['page_id'] ?? null) ? null : $data['page_id'],
             ]
         );
     }

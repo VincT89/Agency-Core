@@ -20,10 +20,8 @@ class SocialPostController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'external_id' => ['nullable', 'string'],
-            'project_id' => ['nullable', 'exists:projects,id'],
-            'client_id' => ['nullable', 'exists:clients,id'],
-            'marketing_project_id' => ['nullable', 'exists:marketing_projects,id'],
+            'n8n_execution_id' => ['required', 'string', 'max:255'],
+            'marketing_project_id' => ['required', 'exists:marketing_projects,id'],
             'editorial_plan_id' => ['nullable', 'exists:editorial_plans,id'],
             'editorial_plan_slot_id' => ['nullable', 'exists:editorial_plan_slots,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -37,12 +35,21 @@ class SocialPostController extends Controller
         }
 
         try {
-            $post = $this->action->execute($validator->validated());
+            $result = $this->action->execute($validator->validated());
+
+            if (is_array($result) && isset($result['idempotent'])) {
+                return $this->success([
+                    'social_post_id' => $result['social_post']->id,
+                    'version_id' => $result['version']->id,
+                    'status' => $result['social_post']->status->value,
+                    'idempotent' => true,
+                ], 200);
+            }
 
             return $this->success([
-                'social_post_id' => $post->id,
-                'version_id' => $post->current_version_id,
-                'status' => $post->status->value,
+                'social_post_id' => $result->id,
+                'version_id' => $result->current_version_id,
+                'status' => $result->status->value,
             ], 201);
             
         } catch (Exception $e) {

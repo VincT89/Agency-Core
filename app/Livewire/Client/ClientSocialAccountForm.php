@@ -19,40 +19,41 @@ class ClientSocialAccountForm extends Component
     public Client $client;
     
     public array $forms = [];
+    public string $activeTab = 'facebook';
 
-    public function mount(Client $client)
+    public function mount(Client $client): void
     {
-        $this->client = $client;
-        
-        $platforms = [
-            SocialPlatform::Facebook->value,
-            SocialPlatform::Instagram->value,
-            SocialPlatform::Tiktok->value,
-        ];
-        
-        foreach ($platforms as $platform) {
-            $account = $client->socialAccountFor($platform);
-            
-            $this->forms[$platform] = [
-                'account_name' => $account?->account_name ?? '',
-                'account_url' => $account?->account_url ?? '',
-                'username' => $account?->username ?? '',
-                'account_exists' => $account?->account_exists?->value ?? 'unknown',
-                'access_method' => $account?->access_method?->value ?? 'unknown',
-                'access_status' => $account?->access_status?->value ?? 'not_started',
-                'is_ready_to_publish' => $account?->is_ready_to_publish ?? false,
-                'business_manager_id' => $account?->business_manager_id ?? '',
-                'business_center_id' => $account?->business_center_id ?? '',
-                'page_id' => $account?->facebook_page_id ?? '',
-                'instagram_business_account_id' => $account?->instagram_business_account_id ?? '',
-                'tiktok_account_id' => $account?->tiktok_account_id ?? '',
-                'credential_location' => $account?->credential_location ?? '',
-                'api_provider' => $account?->api_provider?->value ?? '',
-                'api_status' => $account?->api_status?->value ?? 'not_configured',
-                'notes' => $account?->notes ?? '',
-                'api_notes' => $account?->api_notes ?? '',
-            ];
+        $this->client = $client->load('socialAccounts');
+
+        foreach (SocialPlatform::cases() as $platform) {
+            $this->hydrateFormForPlatform($platform->value);
         }
+    }
+
+    private function hydrateFormForPlatform(string $platform): void
+    {
+        $this->client->load('socialAccounts');
+        $account = $this->client->socialAccountFor($platform);
+
+        $this->forms[$platform] = [
+            'account_name' => $account?->account_name ?? '',
+            'account_url' => $account?->account_url ?? '',
+            'username' => $account?->username ?? '',
+            'account_exists' => $account ? (string) (int) $account->account_exists : '0',
+            'access_method' => $account?->access_method?->value ?? 'unknown',
+            'access_status' => $account?->access_status?->value ?? 'not_started',
+            'is_ready_to_publish' => $account?->is_ready_to_publish ?? false,
+            'business_manager_id' => $account?->business_manager_id ?? '',
+            'business_center_id' => $account?->business_center_id ?? '',
+            'page_id' => $account?->facebook_page_id ?? '',
+            'instagram_business_account_id' => $account?->instagram_business_account_id ?? '',
+            'tiktok_account_id' => $account?->tiktok_account_id ?? '',
+            'credential_location' => $account?->credential_location ?? '',
+            'api_provider' => $account?->api_provider?->value ?? '',
+            'api_status' => $account?->api_status?->value ?? 'not_configured',
+            'notes' => $account?->notes ?? '',
+            'api_notes' => $account?->api_notes ?? '',
+        ];
     }
 
     public function save(string $platform, CreateOrUpdateClientSocialAccountAction $action)
@@ -63,11 +64,31 @@ class ClientSocialAccountForm extends Component
             return;
         }
 
+        // Validate basic fields
+        $this->validate([
+            "forms.$platform.account_url" => 'nullable|url',
+        ], [
+            "forms.$platform.account_url.url" => 'L\'URL inserito non è valido (es. https://...)',
+        ]);
+
         $data = $this->forms[$platform];
+        
+        // Normalize URL
+        if (!empty($data['account_url']) && !preg_match('~^(?:f|ht)tps?://~i', $data['account_url'])) {
+            $data['account_url'] = 'https://' . $data['account_url'];
+        }
         
         $action->execute($this->client, $platform, $data);
 
-        session()->flash('success_'.$platform, 'Dati ' . ucfirst($platform) . ' salvati correttamente.');
+        $this->client->refresh();
+        $this->hydrateFormForPlatform($platform);
+
+        session()->flash(
+            'success_'.$platform,
+            ucfirst($platform) . ' salvato correttamente.'
+        );
+
+        $this->dispatch('client-social-accounts-updated');
     }
 
     public function render()

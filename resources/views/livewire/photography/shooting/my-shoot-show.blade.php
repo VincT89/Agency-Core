@@ -1,15 +1,16 @@
 <div>
-    <div style="margin-bottom:24px;">
-        <a href="{{ route('photography.shooting.index') }}" style="color:var(--text3); font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-            <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Torna ai miei shooting
-        </a>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-            <h1 style="font-size:24px; font-weight:600; color:var(--text1); margin:0;">
-                {{ $shoot->title }}
-            </h1>
-            <x-shooting.status-badge :status="$shoot->status" context="photography" />
-        </div>
+    <div style="margin-bottom:15px">
+        <a href="{{ route('photography.shooting.index') }}" wire:navigate style="color:var(--text3);font-size:12px;text-decoration:none">← Torna ai miei shooting</a>
     </div>
+
+    <x-page-header eyebrow="Fotografia">
+        <x-slot:title>
+            <strong>{{ $shoot->title }}</strong>
+        </x-slot:title>
+        <x-slot name="actions">
+            <x-shooting.status-badge :status="$shoot->status" context="photography" />
+        </x-slot>
+    </x-page-header>
 
     <div class="g-shoot-detail">
         

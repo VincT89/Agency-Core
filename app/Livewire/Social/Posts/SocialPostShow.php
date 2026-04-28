@@ -35,7 +35,15 @@ class SocialPostShow extends Component
     public function mount(SocialPost $post)
     {
         $this->authorize('view', $post);
-        $this->post = $post->load(['currentVersion', 'versions.creator', 'comments.user', 'project', 'client']);
+        $this->post = $post->load([
+            'currentVersion', 
+            'versions.creator', 
+            'comments.user', 
+            'project', 
+            'client',
+            'marketingProject',
+            'editorialPlanSlot.editorialPlan'
+        ]);
     }
 
     public function addInternalComment()

@@ -37,6 +37,18 @@ class AppServiceProvider extends ServiceProvider
             \App\Domain\Finance\Events\PaymentRecorded::class,
             \App\Domain\Finance\Listeners\SendPaymentRecordedNotification::class
         );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\SocialPostApprovedByClient::class,
+            \App\Listeners\GenerateTaskForApprovedSocialPost::class
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\EditorialPlanApprovedByClient::class,
+            \App\Listeners\GenerateTasksForApprovedEditorialPlan::class
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\EditorialSlotPublished::class,
+            \App\Listeners\CloseTaskWhenSocialPostPublished::class
+        );
 
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
         \Illuminate\Support\Facades\Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');

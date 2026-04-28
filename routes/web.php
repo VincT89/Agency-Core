@@ -21,6 +21,9 @@ Route::get('/', function () {
 Route::get('/client/social-posts/{token}', \App\Livewire\Client\Social\SocialPostReview::class)
     ->name('client.social-posts.review');
 
+Route::get('/review/{token}', \App\Livewire\Client\ReviewTokenHandler::class)
+    ->name('client.review');
+
 Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'force.password.change'])->name('dashboard');
 
@@ -55,6 +58,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     // SOCIAL (ex Marketing)
     Route::get('social/calendar', \App\Livewire\Social\EditorialCalendar::class)->name('social.calendar');
+
+    Route::prefix('social/marketing-projects')->name('marketing-projects.')->group(function () {
+        Route::get('/publication-board', \App\Livewire\Social\PublicationBoard::class)
+            ->name('publication-board');
+            
+        Route::get('/', \App\Livewire\Social\MarketingProjects\MarketingProjectsIndex::class)->name('index');
+        Route::get('/create', \App\Livewire\Social\MarketingProjects\MarketingProjectCreate::class)->name('create');
+        Route::get('/{project}', \App\Livewire\Social\MarketingProjects\MarketingProjectShow::class)->name('show');
+    });
 
     Route::prefix('social/shooting')->name('social.shooting.')->group(function () {
         Route::get('/', \App\Livewire\Social\Shooting\RequestsIndex::class)->name('index');

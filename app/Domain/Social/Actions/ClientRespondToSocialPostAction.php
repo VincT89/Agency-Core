@@ -27,13 +27,13 @@ class ClientRespondToSocialPostAction
      * @return void
      */
     public function execute(
-        SocialPostReviewToken $token, 
+        \App\Models\ClientReviewToken $token, 
         string $actionType, 
         ?string $commentBody = null,
         ?string $clientName = null,
         ?string $clientEmail = null
     ): void {
-        $post = $token->post;
+        $post = $token->reviewable;
 
         if (in_array($post->status, [SocialPostStatus::Scheduled, SocialPostStatus::Published])) {
             throw new Exception("Non puoi interagire con un post che è già stato pianificato o pubblicato.");
@@ -56,18 +56,57 @@ class ClientRespondToSocialPostAction
 
             // 2. Gestisci lo stato in base all'azione
             if ($actionType === 'approve') {
+                $alreadyApproved = $post->status === SocialPostStatus::ClientApproved;
+
                 $post->update([
                     'status' => SocialPostStatus::ClientApproved,
                     'client_approved_at' => now(),
                 ]);
 
+                if ($post->editorial_plan_slot_id) {
+                    $post->editorialPlanSlot->update(['status' => \App\Enums\Social\EditorialPlanSlotStatus::ClientApproved->value]);
+                    
+                    if ($post->editorial_plan_id) {
+                        $plan = $post->editorialPlan;
+                        $unapprovedCount = $plan->slots()->where('status', '!=', \App\Enums\Social\EditorialPlanSlotStatus::ClientApproved->value)->count();
+                        if ($unapprovedCount === 0) {
+                            $planAlreadyApproved = $plan->status->value === \App\Enums\Social\EditorialPlanStatus::ClientApproved->value;
+                            
+                            $plan->update(['status' => \App\Enums\Social\EditorialPlanStatus::ClientApproved->value]);
+                            if ($post->marketing_project_id) {
+                                $post->marketingProject->update(['status' => \App\Enums\Social\MarketingProjectStatus::ClientApproved->value]);
+                            }
+
+                            if (!$planAlreadyApproved) {
+                                event(new \App\Events\EditorialPlanApprovedByClient($plan));
+                            }
+                        }
+                    }
+                } elseif ($post->marketing_project_id) {
+                    $post->marketingProject->update(['status' => \App\Enums\Social\MarketingProjectStatus::ClientApproved->value]);
+                }
+
                 // Segna il token come usato (opzionale, se vogliamo permettere un solo voto)
                 $token->update(['used_at' => now()]);
+
+                if (!$alreadyApproved) {
+                    event(new \App\Events\SocialPostApprovedByClient($post));
+                }
 
             } elseif ($actionType === 'request_changes') {
                 $post->update([
                     'status' => SocialPostStatus::ClientChangesRequested,
                 ]);
+
+                if ($post->marketing_project_id) {
+                    $post->marketingProject->update(['status' => \App\Enums\Social\MarketingProjectStatus::ClientChangesRequested->value]);
+                }
+                if ($post->editorial_plan_slot_id) {
+                    $post->editorialPlanSlot->update(['status' => \App\Enums\Social\EditorialPlanSlotStatus::ClientChangesRequested->value]);
+                }
+                if ($post->editorial_plan_id) {
+                    $post->editorialPlan->update(['status' => \App\Enums\Social\EditorialPlanStatus::ClientChangesRequested->value]);
+                }
             }
 
             // 3. Traccia nell'audit log (anche se fatto dal cliente)

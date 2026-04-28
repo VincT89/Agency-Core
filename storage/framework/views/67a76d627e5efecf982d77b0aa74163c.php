@@ -281,6 +281,28 @@
 <?php endif; ?>
           <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('marketing-projects.index')).'','icon' => 'megaphone','label' => 'Progetti Marketing','active' => request()->routeIs('marketing-projects.*')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('nav-item'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['href' => ''.e(route('marketing-projects.index')).'','icon' => 'megaphone','label' => 'Progetti Marketing','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('marketing-projects.*'))]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6cced52613a484e7295a90162a92d81b)): ?>
+<?php $attributes = $__attributesOriginal6cced52613a484e7295a90162a92d81b; ?>
+<?php unset($__attributesOriginal6cced52613a484e7295a90162a92d81b); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6cced52613a484e7295a90162a92d81b)): ?>
+<?php $component = $__componentOriginal6cced52613a484e7295a90162a92d81b; ?>
+<?php unset($__componentOriginal6cced52613a484e7295a90162a92d81b); ?>
+<?php endif; ?>
+          <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('social.posts.index')).'','icon' => 'instagram','label' => 'Post','active' => request()->routeIs('social.posts.*')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('nav-item'); ?>
 <?php if ($component->shouldRender()): ?>
@@ -386,6 +408,50 @@
         <div class="nav-divider"></div>
         <div class="nav-group">
           <div class="nav-group-label">Social</div>
+          <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('marketing-projects.index')).'','icon' => 'megaphone','label' => 'Progetti Marketing','active' => request()->routeIs('marketing-projects.*') && !request()->routeIs('marketing-projects.publication-board')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('nav-item'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['href' => ''.e(route('marketing-projects.index')).'','icon' => 'megaphone','label' => 'Progetti Marketing','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('marketing-projects.*') && !request()->routeIs('marketing-projects.publication-board'))]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6cced52613a484e7295a90162a92d81b)): ?>
+<?php $attributes = $__attributesOriginal6cced52613a484e7295a90162a92d81b; ?>
+<?php unset($__attributesOriginal6cced52613a484e7295a90162a92d81b); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6cced52613a484e7295a90162a92d81b)): ?>
+<?php $component = $__componentOriginal6cced52613a484e7295a90162a92d81b; ?>
+<?php unset($__componentOriginal6cced52613a484e7295a90162a92d81b); ?>
+<?php endif; ?>
+          <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('marketing-projects.publication-board')).'','icon' => 'inbox','label' => 'Da Pubblicare','active' => request()->routeIs('marketing-projects.publication-board')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('nav-item'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['href' => ''.e(route('marketing-projects.publication-board')).'','icon' => 'inbox','label' => 'Da Pubblicare','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('marketing-projects.publication-board'))]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6cced52613a484e7295a90162a92d81b)): ?>
+<?php $attributes = $__attributesOriginal6cced52613a484e7295a90162a92d81b; ?>
+<?php unset($__attributesOriginal6cced52613a484e7295a90162a92d81b); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6cced52613a484e7295a90162a92d81b)): ?>
+<?php $component = $__componentOriginal6cced52613a484e7295a90162a92d81b; ?>
+<?php unset($__componentOriginal6cced52613a484e7295a90162a92d81b); ?>
+<?php endif; ?>
           <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('social.posts.index')).'','icon' => 'instagram','label' => 'Gestione Social Post','active' => request()->routeIs('social.posts.*')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>

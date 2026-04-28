@@ -71,6 +71,15 @@ $map = [
     'bank_transfer'   => 'bb',
     'cash'            => 'bg',
     'card'            => 'bb',
+    // marketing statuses
+    'draft'           => 'bd',
+    'submitted_to_n8n'=> 'bb',
+    'posts_received'  => 'bb',
+    'internal_review' => 'ba',
+    'sent_to_client'  => 'ba',
+    'client_changes_requested' => 'br',
+    'client_approved' => 'bg',
+    'ready_to_publish'=> 'bb',
     // project status
     'completed'       => 'bg',
     'on_hold'         => 'ba',

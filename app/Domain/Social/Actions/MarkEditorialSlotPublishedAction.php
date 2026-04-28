@@ -60,6 +60,8 @@ class MarkEditorialSlotPublishedAction
                 )
             );
 
+            event(new \App\Events\EditorialSlotPublished($lockedSlot));
+
             return $lockedSlot;
         });
     }

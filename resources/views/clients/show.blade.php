@@ -71,6 +71,8 @@
                 </div>
             @endforelse
         </x-panel>
+    <div class="g-2col" style="margin-bottom:20px;">
+        <livewire:client.client-social-account-form :client="$client" />
     </div>
 
     <x-panel title="Progetti Attivi ({{ $client->projects->count() }})">

@@ -40,6 +40,13 @@ class SendSocialPostToClientAction
                 'sent_to_client_at' => now(),
             ]);
 
+            if ($post->marketing_project_id) {
+                $post->marketingProject->update(['status' => \App\Enums\Social\MarketingProjectStatus::SentToClient->value]);
+            }
+            if ($post->editorial_plan_slot_id) {
+                $post->editorialPlanSlot->update(['status' => \App\Enums\Social\EditorialPlanSlotStatus::SentToClient->value]);
+            }
+
             // 3. Traccia nell'audit log
             $this->auditLogger->log(
                 action: 'social_post.sent_to_client',

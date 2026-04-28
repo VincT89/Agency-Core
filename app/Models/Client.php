@@ -70,4 +70,14 @@ class Client extends Model
     {
         return $this->morphMany(AuditLog::class, 'auditable');
     }
+
+    public function metaAccount()
+    {
+        return $this->hasOne(ClientSocialAccount::class)->where('provider', 'meta');
+    }
+
+    public function marketingProjects(): HasMany
+    {
+        return $this->hasMany(MarketingProject::class);
+    }
 }

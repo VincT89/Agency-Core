@@ -1,15 +1,16 @@
 <div>
-    <div style="margin-bottom:24px;">
-        <a href="{{ route('social.shooting.index') }}" style="color:var(--text3); font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-            <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Torna alle richieste
-        </a>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-            <h1 style="font-size:24px; font-weight:600; color:var(--text1); margin:0;">
-                {{ $shoot->title }} <span style="font-size:16px; color:var(--text3); font-weight:400; margin-left:8px;">{{ $shoot->code }}</span>
-            </h1>
-            <x-shooting.status-badge :status="$shoot->status" context="social" />
-        </div>
+    <div style="margin-bottom:15px">
+        <a href="{{ route('social.shooting.index') }}" wire:navigate style="color:var(--text3);font-size:12px;text-decoration:none">← Torna alle richieste</a>
     </div>
+
+    <x-page-header eyebrow="Social">
+        <x-slot:title>
+            <strong>{{ $shoot->title }}</strong> <span style="font-size:16px; color:var(--text3); font-weight:400; margin-left:8px;">{{ $shoot->code }}</span>
+        </x-slot:title>
+        <x-slot name="actions">
+            <x-shooting.status-badge :status="$shoot->status" context="social" />
+        </x-slot>
+    </x-page-header>
 
     <div class="g-shoot-detail">
         

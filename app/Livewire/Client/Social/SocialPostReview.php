@@ -18,14 +18,14 @@ class SocialPostReview extends Component
 
     public function mount(string $token)
     {
-        $this->tokenObj = SocialPostReviewToken::where('token', $token)
+        $this->tokenObj = \App\Models\ClientReviewToken::where('token', $token)
                             ->where(function($q) {
                                 $q->whereNull('expires_at')
                                   ->orWhere('expires_at', '>', now());
                             })
                             ->firstOrFail();
 
-        $this->post = $this->tokenObj->post->load(['currentVersion', 'clientComments']);
+        $this->post = $this->tokenObj->reviewable->load(['currentVersion', 'clientComments']);
 
         // Autocompleta se possibile
         $this->clientName = $this->post->client->name ?? '';
@@ -33,6 +33,10 @@ class SocialPostReview extends Component
 
     public function approve(ClientRespondToSocialPostAction $action)
     {
+        if ($this->tokenObj->used_at) {
+            abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
+        }
+
         $this->validateFormIfCommented();
 
         $action->execute(
@@ -42,6 +46,8 @@ class SocialPostReview extends Component
             clientName: $this->clientName,
             clientEmail: $this->clientEmail
         );
+        
+        $this->tokenObj->update(['used_at' => now()]);
 
         $this->refreshData();
         session()->flash('success', 'Grazie! Il post è stato approvato con successo.');
@@ -49,6 +55,10 @@ class SocialPostReview extends Component
 
     public function requestChanges(ClientRespondToSocialPostAction $action)
     {
+        if ($this->tokenObj->used_at) {
+            abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
+        }
+
         $this->validate([
             'commentBody' => 'required|string|min:5|max:2000',
             'clientName' => 'required|string|max:100',
@@ -61,6 +71,8 @@ class SocialPostReview extends Component
             clientName: $this->clientName,
             clientEmail: $this->clientEmail
         );
+        
+        $this->tokenObj->update(['used_at' => now()]);
 
         $this->refreshData();
         session()->flash('success', 'Richiesta di modifica inviata con successo. Il nostro team ti aggiornerà presto.');

@@ -1,10 +1,12 @@
 <div>
-    <div style="margin-bottom:32px;">
-        <a href="{{ route('social.shooting.index') }}" style="color:var(--text3); font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; margin-bottom:12px; font-weight:500; transition:color 0.2s;" onmouseover="this.style.color='var(--text1)'" onmouseout="this.style.color='var(--text3)'">
-            <i data-lucide="arrow-left" style="width:16px; height:16px;"></i> Torna alle richieste
-        </a>
-        <h1 style="font-size:28px; font-weight:700; color:var(--text1); margin:0; letter-spacing:-0.5px;">Nuova Richiesta Shooting</h1>
-        <p style="color:var(--text3); font-size:14px; margin-top:8px;">Compila i dettagli e proponi le date per avviare il workflow con il reparto fotografia.</p>
+    <div style="margin-bottom:15px">
+        <a href="{{ route('social.shooting.index') }}" wire:navigate style="color:var(--text3);font-size:12px;text-decoration:none">← Torna alle richieste</a>
+    </div>
+
+    <div class="mb-4">
+        <x-page-header eyebrow="Social" meta="Compila i dettagli e proponi le date per avviare il workflow con il reparto fotografia.">
+            <x-slot:title><strong>Nuova Richiesta Shooting</strong></x-slot:title>
+        </x-page-header>
     </div>
 
     <div class="g-2col-main" style="align-items:start;">

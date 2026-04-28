@@ -21,8 +21,11 @@ class SocialPostController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'external_id' => ['nullable', 'string'],
-            'project_id' => ['required', 'exists:projects,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
             'client_id' => ['nullable', 'exists:clients,id'],
+            'marketing_project_id' => ['nullable', 'exists:marketing_projects,id'],
+            'editorial_plan_id' => ['nullable', 'exists:editorial_plans,id'],
+            'editorial_plan_slot_id' => ['nullable', 'exists:editorial_plan_slots,id'],
             'title' => ['required', 'string', 'max:255'],
             'caption' => ['required', 'string'],
             'image_url' => ['required', 'url'],

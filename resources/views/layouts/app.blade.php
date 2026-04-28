@@ -194,6 +194,7 @@
         <div class="nav-group">
           <div class="nav-group-label">Social</div>
           <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting" :active="request()->routeIs('social.shooting.*')" />
+          <x-nav-item href="{{ route('marketing-projects.index') }}" icon="megaphone" label="Progetti Marketing" :active="request()->routeIs('marketing-projects.*')" />
           <x-nav-item href="{{ route('social.posts.index') }}" icon="instagram" label="Post" :active="request()->routeIs('social.posts.*')" />
           <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Piano Editoriale" :active="request()->routeIs('social.calendar')" />
         </div>
@@ -217,6 +218,8 @@
         <div class="nav-divider"></div>
         <div class="nav-group">
           <div class="nav-group-label">Social</div>
+          <x-nav-item href="{{ route('marketing-projects.index') }}" icon="megaphone" label="Progetti Marketing" :active="request()->routeIs('marketing-projects.*') && !request()->routeIs('marketing-projects.publication-board')" />
+          <x-nav-item href="{{ route('marketing-projects.publication-board') }}" icon="inbox" label="Da Pubblicare" :active="request()->routeIs('marketing-projects.publication-board')" />
           <x-nav-item href="{{ route('social.posts.index') }}" icon="instagram" label="Gestione Social Post" :active="request()->routeIs('social.posts.*')" />
           <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Piano Editoriale" :active="request()->routeIs('social.calendar')" />
         </div>

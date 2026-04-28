@@ -1,7 +1,5 @@
 <div>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-        <h1 style="font-size:24px; font-weight:600; color:var(--text1); margin:0;">I Miei Shooting</h1>
-    </div>
+    <x-page-header eyebrow="Fotografia" title="I Miei Shooting"></x-page-header>
 
     <x-panel padded>
         <div style="display:flex; gap:16px; margin-bottom:24px;">

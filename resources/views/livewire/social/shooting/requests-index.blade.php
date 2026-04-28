@@ -1,10 +1,11 @@
 <div>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-        <h1 style="font-size:24px; font-weight:600; color:var(--text1); margin:0;">Richieste Shooting</h1>
-        <a href="{{ route('social.shooting.create') }}" class="btn btn-p" style="display:inline-flex; align-items:center; gap:6px;">
-            <i data-lucide="plus" style="width:16px; height:16px;"></i> Nuova Richiesta
-        </a>
-    </div>
+    <x-page-header eyebrow="Social" title="Richieste Shooting">
+        <x-slot name="actions">
+            <a href="{{ route('social.shooting.create') }}" class="btn btn-p" style="display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="plus" style="width:16px; height:16px;"></i> Nuova Richiesta
+            </a>
+        </x-slot>
+    </x-page-header>
 
     <x-panel padded>
         <div style="display:flex; gap:16px; margin-bottom:24px;">

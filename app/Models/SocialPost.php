@@ -8,6 +8,9 @@ class SocialPost extends Model
 {
     protected $fillable = [
         'project_id',
+        'marketing_project_id',
+        'editorial_plan_id',
+        'editorial_plan_slot_id',
         'client_id',
         'created_by',
         'external_id',
@@ -19,6 +22,15 @@ class SocialPost extends Model
         'sent_to_client_at',
         'client_approved_at',
         'client_rejected_at',
+        'publication_mode',
+        'scheduled_publish_at',
+        'publication_status',
+        'published_at',
+        'published_by',
+        'meta_post_id',
+        'meta_permalink',
+        'publication_error',
+        'publication_attempts',
     ];
 
     protected function casts(): array
@@ -26,9 +38,13 @@ class SocialPost extends Model
         return [
             'status' => \App\Enums\Social\SocialPostStatus::class,
             'source' => \App\Enums\Social\SocialPostSource::class,
+            'publication_mode' => \App\Enums\Social\PublicationMode::class,
+            'publication_status' => \App\Enums\Social\PublicationStatus::class,
+            'scheduled_publish_at' => 'datetime',
             'sent_to_client_at' => 'datetime',
             'client_approved_at' => 'datetime',
             'client_rejected_at' => 'datetime',
+            'published_at' => 'datetime',
         ];
     }
 
@@ -45,6 +61,26 @@ class SocialPost extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function marketingProject()
+    {
+        return $this->belongsTo(MarketingProject::class);
+    }
+
+    public function editorialPlan()
+    {
+        return $this->belongsTo(EditorialPlan::class);
+    }
+
+    public function editorialPlanSlot()
+    {
+        return $this->belongsTo(EditorialPlanSlot::class);
+    }
+
+    public function publisher()
+    {
+        return $this->belongsTo(User::class, 'published_by');
     }
 
     public function currentVersion()

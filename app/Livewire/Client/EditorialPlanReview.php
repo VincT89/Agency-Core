@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Livewire\Client;
+
+use Livewire\Component;
+use App\Models\EditorialPlan;
+use App\Models\ClientReviewToken;
+use App\Domain\Social\Actions\ClientRespondToEditorialPlanAction;
+
+class EditorialPlanReview extends Component
+{
+    public EditorialPlan $plan;
+    public string $token;
+    public $comment = '';
+    public $clientName = '';
+
+    public function mount(EditorialPlan $plan, string $token)
+    {
+        $this->plan = $plan->load(['marketingProject', 'slots.socialPost.currentVersion']);
+        $this->token = $token;
+    }
+
+    public function approve(ClientRespondToEditorialPlanAction $action)
+    {
+        $reviewToken = ClientReviewToken::where('token', $this->token)->first();
+        if ($reviewToken && $reviewToken->used_at) {
+            abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
+        }
+
+        $action->execute($this->plan, 'approve');
+        
+        $reviewToken = ClientReviewToken::where('token', $this->token)->first();
+        if ($reviewToken) {
+            $reviewToken->update(['used_at' => now()]);
+        }
+
+        $this->plan->refresh();
+        session()->flash('success', 'Piano Editoriale approvato con successo! Grazie.');
+    }
+
+    public function requestChanges(ClientRespondToEditorialPlanAction $action)
+    {
+        $this->validate([
+            'comment' => 'required|string|min:5|max:2000',
+            'clientName' => 'required|string|max:255',
+        ]);
+
+        $reviewToken = ClientReviewToken::where('token', $this->token)->first();
+        if ($reviewToken && $reviewToken->used_at) {
+            abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
+        }
+
+        $action->execute($this->plan, 'request_changes', $this->comment);
+
+        // Aggiungi il commento al progetto marketing o piano
+        // Per ora lo salviamo come nota o task
+        \App\Models\SocialPostComment::create([
+            'social_post_id' => $this->plan->slots->first()->social_post_id ?? null, // Workaround if no generic comments table
+            'client_name' => $this->clientName,
+            'body' => "REVISIONE PIANO: " . $this->comment,
+            'visibility' => \App\Enums\Social\SocialPostCommentVisibility::Client,
+            'type' => \App\Enums\Social\SocialPostCommentType::ChangeRequest,
+        ]);
+
+        $reviewToken = ClientReviewToken::where('token', $this->token)->first();
+        if ($reviewToken) {
+            $reviewToken->update(['used_at' => now()]);
+        }
+
+        $this->plan->refresh();
+        session()->flash('success', 'Richiesta di modifica inviata. Il nostro team la prenderà in carico a breve.');
+    }
+
+    public function render()
+    {
+        return view('livewire.client.editorial-plan-review');
+    }
+}

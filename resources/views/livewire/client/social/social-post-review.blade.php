@@ -1,7 +1,7 @@
 <div style="max-width: 1000px; margin: 40px auto; padding: 20px;">
     
     <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="font-family: var(--serif); font-size: 32px; margin-bottom: 10px;">Revisione Contenuto Social</h1>
+        <h1 class="page-title" style="margin-bottom: 10px; text-align:center;">Revisione Contenuto Social</h1>
         <p style="color: var(--text2);">{{ $post->title }}</p>
     </div>
 

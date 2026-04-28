@@ -40,6 +40,26 @@
         {{-- PANNELLO DESTRO: Storico, Azioni, Commenti --}}
         <div style="display: flex; flex-direction: column; gap: 20px;">
             
+            @if($post->marketingProject)
+            <x-panel title="Progetto Marketing" dot="var(--orange)">
+                <div class="social-panel-section">
+                    <div style="font-size: 13px;">
+                        <span style="color:var(--text2);">Progetto:</span> 
+                        <a href="{{ route('marketing-projects.show', $post->marketing_project_id) }}" style="color:var(--text); font-weight:600; text-decoration:none;">{{ $post->marketingProject->title }}</a>
+                    </div>
+                    @if($post->editorialPlanSlot)
+                        <div style="margin-top: 8px; font-size: 13px;">
+                            <span style="color:var(--text2);">Slot Editoriale:</span>
+                            <span style="font-weight:600;">
+                                {{ $post->editorialPlanSlot->scheduled_date?->format('d/m/Y') }} 
+                                {{ \Carbon\Carbon::parse($post->editorialPlanSlot->scheduled_time)->format('H:i') }}
+                            </span>
+                        </div>
+                    @endif
+                </div>
+            </x-panel>
+            @endif
+
             <x-panel title="Gestione e Stato" dot="var(--accent)">
                 <x-slot:headerActions>
                     <span class="badge" style="background: {{ $post->status->color() }}; color: #fff; border: none; font-size: 11px;">{{ $post->status->label() }}</span>

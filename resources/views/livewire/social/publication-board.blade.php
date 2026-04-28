@@ -36,18 +36,39 @@
                                     $platforms = $post->editorialPlanSlot ? $post->editorialPlanSlot->platforms : ($post->marketingProject->platforms ?? []);
                                     $client = $post->marketingProject->client;
                                     $allReady = true;
+                                    $tiktokWarning = false;
                                 @endphp
                                 @foreach($platforms ?? [] as $plat)
                                     @php
                                         $acc = $client?->socialAccountFor($plat);
                                         $status = $acc?->access_status ?? \App\Enums\Social\SocialAccessStatus::NotStarted;
                                         $color = $status->badgeColor();
-                                        if (!($acc?->isReadyToPublish() ?? false)) $allReady = false;
+                                        
+                                        if ($plat !== 'tiktok' && !($acc?->isReadyToPublish() ?? false)) {
+                                            $allReady = false;
+                                        }
+                                        if ($plat === 'tiktok' && !($acc?->isReadyToPublish() ?? false)) {
+                                            $tiktokWarning = true;
+                                        }
                                     @endphp
-                                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg); border:1px solid var(--line2); padding:4px 8px; border-radius:4px;">
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <i data-lucide="{{ $plat }}" style="width:12px; height:12px; color:var(--text2);"></i>
-                                            <span style="font-size:11px; font-family:var(--sans); font-weight:500;">{{ ucfirst($plat) }}</span>
+                                    <div style="display:flex; justify-content:space-between; align-items:flex-start; background:var(--bg); border:1px solid var(--line2); padding:6px 8px; border-radius:4px;">
+                                        <div style="display:flex; flex-direction:column; gap:4px;">
+                                            <div style="display:flex; align-items:center; gap:6px;">
+                                                @if($plat === 'tiktok')
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text2);"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                                                @else
+                                                    <i data-lucide="{{ $plat }}" style="width:12px; height:12px; color:var(--text2);"></i>
+                                                @endif
+                                                <span style="font-size:11px; font-family:var(--sans); font-weight:500;">{{ ucfirst($plat) }}</span>
+                                            </div>
+                                            @if($acc)
+                                            <div style="font-size:9px; color:var(--text3); font-family:var(--mono);">
+                                                BM: {{ $acc->business_manager_id ?? 'N/A' }} | Metodo: {{ $acc->access_method?->label() ?? 'N/A' }}
+                                                @if($acc->notes)
+                                                    <br><span style="color:var(--orange)">Note: {{ str($acc->notes)->limit(30) }}</span>
+                                                @endif
+                                            </div>
+                                            @endif
                                         </div>
                                         <div style="display:flex; align-items:center; gap:6px;" title="Metodo: {{ $acc?->access_method?->label() ?? 'Sconosciuto' }}">
                                             <span style="font-family:var(--mono); font-size:9px; padding:2px 4px; border-radius:3px; background:{{ $color }}15; color:{{ $color }}; border:1px solid {{ $color }}30;">
@@ -61,7 +82,12 @@
                             @if(!$allReady)
                                 <div style="margin-top:8px; padding:6px; border-radius:4px; background:var(--orange)20; border:1px solid var(--orange)40; font-size:10px; color:var(--orange); display:flex; gap:4px;">
                                     <i data-lucide="alert-triangle" style="width:12px; height:12px; flex-shrink:0;"></i>
-                                    <span>Attenzione: una o più piattaforme non sono pronte operativamente. Controlla gli accessi o le note cliente.</span>
+                                    <span>Attenzione: una o più piattaforme OBBLIGATORIE non sono pronte operativamente.</span>
+                                </div>
+                            @elseif($tiktokWarning)
+                                <div style="margin-top:8px; padding:6px; border-radius:4px; background:var(--text3)15; border:1px solid var(--line2); font-size:10px; color:var(--text2); display:flex; gap:4px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                                    <span>Avviso: TikTok non è pronto. Pubblicazione consentita perché piattaforma opzionale.</span>
                                 </div>
                             @endif
                         </div>
@@ -90,15 +116,18 @@
                             @endif
                         </div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            @if(in_array('facebook', $platforms ?? []))
-                                <a href="https://business.facebook.com/" target="_blank" class="btn btn-sm btn-secondary">Apri Facebook</a>
-                            @endif
-                            @if(in_array('instagram', $platforms ?? []))
-                                <a href="https://business.facebook.com/creatorstudio/" target="_blank" class="btn btn-sm btn-secondary">Apri Instagram</a>
-                            @endif
-                            @if(in_array('tiktok', $platforms ?? []))
-                                <a href="https://ads.tiktok.com/business/" target="_blank" class="btn btn-sm btn-secondary">Apri TikTok</a>
-                            @endif
+                            @foreach($platforms ?? [] as $plat)
+                                @php
+                                    $acc = $client?->socialAccountFor($plat);
+                                    $url = $acc?->account_url;
+                                    if (!$url) {
+                                        if ($plat === 'facebook') $url = 'https://business.facebook.com/';
+                                        elseif ($plat === 'instagram') $url = 'https://business.facebook.com/creatorstudio/';
+                                        elseif ($plat === 'tiktok') $url = 'https://ads.tiktok.com/business/';
+                                    }
+                                @endphp
+                                <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-secondary">Apri {{ ucfirst($plat) }}</a>
+                            @endforeach
                             
                             @if($client)
                                 <a href="{{ route('clients.show', $client) }}" class="btn btn-sm btn-secondary" style="margin-left:auto;">Accessi Cliente ↗</a>

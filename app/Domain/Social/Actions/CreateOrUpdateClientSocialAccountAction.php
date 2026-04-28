@@ -26,7 +26,6 @@ class CreateOrUpdateClientSocialAccountAction
                 
                 'business_manager_id' => $data['business_manager_id'] ?? null,
                 'business_center_id' => $data['business_center_id'] ?? null,
-                'page_id' => $data['page_id'] ?? null,
                 'instagram_business_account_id' => $data['instagram_business_account_id'] ?? null,
                 'tiktok_account_id' => $data['tiktok_account_id'] ?? null,
                 

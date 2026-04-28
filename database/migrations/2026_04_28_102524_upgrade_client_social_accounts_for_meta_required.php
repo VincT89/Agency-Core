@@ -49,13 +49,12 @@ return new class extends Migration
                 ->update([
                     'platform' => 'facebook',
                     'account_exists' => true,
-                    'account_url' => $account->page_url,
-                    'account_name' => $account->page_name,
-                    'facebook_page_id' => $account->page_id,
+                    'account_url' => $account->facebook_page_url,
+                    'facebook_page_id' => $account->facebook_page_id,
                     'access_method' => 'meta_business',
                     'access_status' => 'ready_to_publish',
                     'is_ready_to_publish' => true,
-                    'business_manager_id' => $account->business_manager_id,
+                    'business_manager_id' => $account->meta_business_manager_id,
                 ]);
 
             // Create a new record for "instagram" using the same Meta data
@@ -63,12 +62,12 @@ return new class extends Migration
                 'client_id' => $account->client_id,
                 'platform' => 'instagram',
                 'account_exists' => true,
-                'account_url' => $account->instagram_account_id ? 'https://instagram.com/' . $account->instagram_account_id : null,
-                'instagram_business_account_id' => $account->instagram_account_id,
+                'account_url' => $account->instagram_profile_url,
+                'instagram_business_account_id' => $account->instagram_business_account_id,
                 'access_method' => 'meta_business',
                 'access_status' => 'ready_to_publish',
                 'is_ready_to_publish' => true,
-                'business_manager_id' => $account->business_manager_id,
+                'business_manager_id' => $account->meta_business_manager_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

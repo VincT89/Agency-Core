@@ -43,7 +43,7 @@ class ClientSocialAccountForm extends Component
                 'is_ready_to_publish' => $account?->is_ready_to_publish ?? false,
                 'business_manager_id' => $account?->business_manager_id ?? '',
                 'business_center_id' => $account?->business_center_id ?? '',
-                'page_id' => $account?->page_id ?? '',
+                'page_id' => $account?->facebook_page_id ?? '',
                 'instagram_business_account_id' => $account?->instagram_business_account_id ?? '',
                 'tiktok_account_id' => $account?->tiktok_account_id ?? '',
                 'credential_location' => $account?->credential_location ?? '',

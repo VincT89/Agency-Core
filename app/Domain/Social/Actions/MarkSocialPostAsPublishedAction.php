@@ -12,6 +12,19 @@ class MarkSocialPostAsPublishedAction
 {
     public function execute(SocialPost $post): void
     {
+        $platforms = $post->editorialPlanSlot?->platforms
+            ?? $post->marketingProject?->platforms
+            ?? [];
+
+        $requiresMeta = in_array('facebook', $platforms, true)
+            || in_array('instagram', $platforms, true);
+
+        if ($requiresMeta && ! $post->marketingProject?->client?->isMetaReady()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'social_access' => 'Pubblicazione bloccata: accessi Meta Business incompleti.',
+            ]);
+        }
+        
         $post->update([
             'status' => SocialPostStatus::Published,
             'publication_status' => PublicationStatus::Published,

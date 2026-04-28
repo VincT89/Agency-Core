@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\Social\SocialPlatform;
-use App\Enums\Social\SocialAccountExists;
 use App\Enums\Social\SocialAccessMethod;
 use App\Enums\Social\SocialAccessStatus;
 use App\Enums\Social\SocialApiProvider;

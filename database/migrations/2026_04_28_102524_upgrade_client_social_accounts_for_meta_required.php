@@ -40,7 +40,11 @@ return new class extends Migration
         });
 
         // Data backfill
-        $accounts = \Illuminate\Support\Facades\DB::table('client_social_accounts')->where('provider', 'meta')->get();
+        $accounts = \Illuminate\Support\Facades\DB::table('client_social_accounts')
+            ->where('provider', 'meta')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->unique('client_id');
         
         foreach ($accounts as $account) {
             // Update the existing record to become "facebook"
@@ -73,25 +77,7 @@ return new class extends Migration
             ]);
         }
 
-        // Se esistono duplicati sulla stessa piattaforma, mantieni il più recente ed elimina i vecchi per poter creare l'indice unico
-        $duplicates = \Illuminate\Support\Facades\DB::table('client_social_accounts')
-            ->select('client_id', 'platform')
-            ->whereNotNull('platform')
-            ->groupBy('client_id', 'platform')
-            ->havingRaw('COUNT(*) > 1')
-            ->get();
 
-        foreach ($duplicates as $duplicate) {
-            $ids = \Illuminate\Support\Facades\DB::table('client_social_accounts')
-                ->where('client_id', $duplicate->client_id)
-                ->where('platform', $duplicate->platform)
-                ->orderBy('id', 'desc')
-                ->pluck('id')
-                ->toArray();
-            
-            array_shift($ids); // Keep the first one (most recent)
-            \Illuminate\Support\Facades\DB::table('client_social_accounts')->whereIn('id', $ids)->delete();
-        }
 
         Schema::table('client_social_accounts', function (Blueprint $table) {
             $table->unique(['client_id', 'platform'], 'csa_client_platform_unique');

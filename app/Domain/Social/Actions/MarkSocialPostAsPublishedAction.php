@@ -16,8 +16,7 @@ class MarkSocialPostAsPublishedAction
             ?? $post->marketingProject?->platforms
             ?? [];
 
-        $requiresMeta = in_array('facebook', $platforms, true)
-            || in_array('instagram', $platforms, true);
+        $requiresMeta = collect($platforms)->intersect(['facebook', 'instagram'])->isNotEmpty();
 
         if ($requiresMeta && ! $post->marketingProject?->client?->isMetaReady()) {
             throw \Illuminate\Validation\ValidationException::withMessages([

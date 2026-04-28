@@ -175,7 +175,9 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array('tiktok', $platforms)): ?>
                                 <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
                                     <div style="display:flex; align-items:center; gap:6px;">
-                                        <i data-lucide="tiktok" style="width:14px; height:14px; color:var(--text2);"></i>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text2);">
+                                            <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+                                        </svg>
                                         <span style="font-size:12px; font-family:var(--sans);">TikTok</span>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:8px;">

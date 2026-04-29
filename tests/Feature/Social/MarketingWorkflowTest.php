@@ -237,9 +237,19 @@ class MarketingWorkflowTest extends TestCase
 
     public function test_client_token_expiration_and_invalidity()
     {
+        $project = \App\Models\MarketingProject::create([
+            'client_id' => $this->client->id,
+            'project_id' => $this->project->id,
+            'title' => 'Test',
+            'type' => 'editorial_plan',
+            'status' => MarketingProjectStatus::Draft->value,
+            'platforms' => ['instagram'],
+        ]);
+
         $post = \App\Models\SocialPost::create([
             'project_id' => $this->project->id,
             'client_id' => $this->client->id,
+            'marketing_project_id' => $project->id,
             'title' => 'Test',
             'status' => \App\Enums\Social\SocialPostStatus::InternalReview,
             'created_by' => $this->marketing->id,

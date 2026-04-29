@@ -1,0 +1,1 @@
+<x-page-header :title="$title" />

@@ -13,15 +13,25 @@ class EditorialPlanReview extends Component
     public string $token;
     public $comment = '';
     public $clientName = '';
+    public $isExpired = false;
 
     public function mount(EditorialPlan $plan, string $token)
     {
         $this->plan = $plan->load(['marketingProject', 'slots.socialPost.currentVersion']);
         $this->token = $token;
+
+        $reviewToken = ClientReviewToken::where('token', $token)->first();
+        if ($reviewToken && $reviewToken->expires_at && $reviewToken->expires_at->isPast()) {
+            $this->isExpired = true;
+        }
     }
 
     public function approve(ClientRespondToEditorialPlanAction $action)
     {
+        if ($this->isExpired) {
+            abort(403, 'Questo link è scaduto. Contatta il team marketing.');
+        }
+
         $reviewToken = ClientReviewToken::where('token', $this->token)->first();
         if ($reviewToken && $reviewToken->used_at) {
             abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
@@ -40,6 +50,10 @@ class EditorialPlanReview extends Component
 
     public function requestChanges(ClientRespondToEditorialPlanAction $action)
     {
+        if ($this->isExpired) {
+            abort(403, 'Questo link è scaduto. Contatta il team marketing.');
+        }
+
         $this->validate([
             'comment' => 'required|string|min:5|max:2000',
             'clientName' => 'required|string|max:255',

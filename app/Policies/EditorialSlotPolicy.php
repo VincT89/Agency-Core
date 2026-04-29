@@ -25,7 +25,7 @@ class EditorialSlotPolicy
         }
 
         // Project Supremacy
-        return $editorialSlot->project->users->contains($user);
+        return $user->projects()->where('projects.id', $editorialSlot->project_id)->exists();
     }
 
     /**

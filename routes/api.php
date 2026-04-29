@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/integrations/n8n')
-    ->middleware('n8n.auth')
+    ->middleware(['n8n.auth', 'throttle:120,1'])
     ->name('api.v1.integrations.n8n.')
     ->group(function () {
         Route::get('/health', function () {

@@ -185,6 +185,12 @@
                         Risposta già inviata. Questa pagina resta visibile solo in consultazione.
                     </div>
                 </div>
+            <?php elseif($isExpired): ?>
+                <div class="review-status-card" style="padding: 20px;">
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--red); color: var(--red); padding: 12px; border-radius: 8px; text-align: center; font-weight: 600; font-size: 13px;">
+                        Questo link è scaduto. Contatta il team marketing.
+                    </div>
+                </div>
             <?php elseif($post->status->value === 'sent_to_client'): ?>
                 <div class="review-form-card">
                     <h3 style="font-size: 16px; margin-bottom: 16px; font-weight: 600;">Lascia il tuo feedback</h3>

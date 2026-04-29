@@ -16,7 +16,11 @@ class ReviewTokenHandler extends Component
         $reviewToken = ClientReviewToken::with('reviewable')->where('token', $token)->firstOrFail();
 
         if ($reviewToken->expires_at && $reviewToken->expires_at->isPast()) {
-            abort(403, 'Questo link è scaduto.');
+            \Illuminate\Support\Facades\Log::warning('Client review token expired attempt', [
+                'token_id' => $reviewToken->id,
+                'reviewable_id' => $reviewToken->reviewable_id,
+            ]);
+            abort(403, 'Il link è scaduto. Contatta il team marketing.');
         }
 
         $this->reviewable = $reviewToken->reviewable;

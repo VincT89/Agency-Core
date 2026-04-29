@@ -25,31 +25,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Domain\Core\Events\TaskAssigned::class,
-            \App\Domain\Core\Listeners\SendTaskAssignedNotification::class
-        );
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Domain\Core\Events\TicketAssigned::class,
-            \App\Domain\Core\Listeners\SendTicketAssignedNotification::class
-        );
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Domain\Finance\Events\PaymentRecorded::class,
-            \App\Domain\Finance\Listeners\SendPaymentRecordedNotification::class
-        );
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\SocialPostApprovedByClient::class,
-            \App\Listeners\GenerateTaskForApprovedSocialPost::class
-        );
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\EditorialPlanApprovedByClient::class,
-            \App\Listeners\GenerateTasksForApprovedEditorialPlan::class
-        );
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\EditorialSlotPublished::class,
-            \App\Listeners\CloseTaskWhenSocialPostPublished::class
-        );
-
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
         \Illuminate\Support\Facades\Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');
 
@@ -69,25 +44,24 @@ class AppServiceProvider extends ServiceProvider
             return $user->canManageSystem();
         });
 
-        Ticket::observe(TicketObserver::class);
-        Invoice::observe(InvoiceObserver::class);
-        Payment::observe(PaymentObserver::class);
-        CalendarEvent::observe(CalendarEventObserver::class);
-        Client::observe(ClientObserver::class);
-        Project::observe(ProjectObserver::class);
-        Task::observe(TaskObserver::class);
-        Attachment::observe(AttachmentObserver::class);
-        \App\Models\User::observe(UserObserver::class);
-        \App\Models\Shooting\Shoot::observe(\App\Observers\ShootObserver::class);
-
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             if (auth()->check()) {
                 $user = auth()->user();
+
+                $counts = \Illuminate\Support\Facades\Cache::remember('sidebar_counts_' . $user->id, 60, function () {
+                    return [
+                        'clientsCount'    => \App\Models\Client::where('status', 'active')->count(),
+                        'projectsCount'   => \App\Models\Project::where('status', 'active')->count(),
+                        'openTickets'     => \App\Models\Ticket::whereIn('status', ['open', 'in_progress'])->count(),
+                        'overdueInvoices' => \App\Models\Invoice::where('status', 'overdue')->count(),
+                    ];
+                });
+
                 $view->with([
-                    'clientsCount'    => \App\Models\Client::where('status', 'active')->count(),
-                    'projectsCount'   => \App\Models\Project::where('status', 'active')->count(),
-                    'openTickets'     => \App\Models\Ticket::whereIn('status', ['open', 'in_progress'])->count(),
-                    'overdueInvoices' => \App\Models\Invoice::where('status', 'overdue')->count(),
+                    'clientsCount'    => $counts['clientsCount'],
+                    'projectsCount'   => $counts['projectsCount'],
+                    'openTickets'     => $counts['openTickets'],
+                    'overdueInvoices' => $counts['overdueInvoices'],
                     'unreadNotificationsCount' => $user->unreadNotifications()->count(),
                     'latestNotifications'      => $user->notifications()->latest()->limit(5)->get(),
                 ]);

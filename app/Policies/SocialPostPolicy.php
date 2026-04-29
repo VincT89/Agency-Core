@@ -8,6 +8,8 @@ use Illuminate\Auth\Access\Response;
 
 class SocialPostPolicy
 {
+    use \App\Policies\Concerns\HandlesRoleAuthorization;
+
     /**
      * Determine whether the user can view any models.
      */
@@ -21,12 +23,12 @@ class SocialPostPolicy
      */
     public function view(User $user, SocialPost $socialPost): bool
     {
-        if ($user->canManageSystem() || $user->isMarketing()) {
+        if ($user->isMarketing()) {
             return true;
         }
 
         // Project Supremacy: Fotografri e altri possono vedere solo i post dei loro progetti
-        return $socialPost->project->users->contains($user);
+        return $user->projects()->where('projects.id', $socialPost->project_id)->exists();
     }
 
     /**
@@ -34,7 +36,7 @@ class SocialPostPolicy
      */
     public function create(User $user): bool
     {
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 
     /**
@@ -42,7 +44,7 @@ class SocialPostPolicy
      */
     public function update(User $user, SocialPost $socialPost): bool
     {
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 
     /**
@@ -50,7 +52,7 @@ class SocialPostPolicy
      */
     public function delete(User $user, SocialPost $socialPost): bool
     {
-        return $user->canManageSystem();
+        return false;
     }
 
     /**
@@ -75,7 +77,7 @@ class SocialPostPolicy
     public function requestRegeneration(User $user, SocialPost $socialPost): bool
     {
         // I fotografi non possono chiedere rigenerazione, solo Social e Admin.
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 
     /**
@@ -84,7 +86,7 @@ class SocialPostPolicy
     public function sendToClient(User $user, SocialPost $socialPost): bool
     {
         // I fotografi non possono inviare ai clienti
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 
     /**
@@ -92,6 +94,6 @@ class SocialPostPolicy
      */
     public function schedule(User $user, SocialPost $socialPost): bool
     {
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 }

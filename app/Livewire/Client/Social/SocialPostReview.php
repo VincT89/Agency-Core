@@ -15,15 +15,15 @@ class SocialPostReview extends Component
     public $clientName = '';
     public $clientEmail = '';
     public $commentBody = '';
+    public $isExpired = false;
 
     public function mount(string $token)
     {
-        $this->tokenObj = \App\Models\ClientReviewToken::where('token', $token)
-                            ->where(function($q) {
-                                $q->whereNull('expires_at')
-                                  ->orWhere('expires_at', '>', now());
-                            })
-                            ->firstOrFail();
+        $this->tokenObj = \App\Models\ClientReviewToken::where('token', $token)->firstOrFail();
+
+        if ($this->tokenObj->expires_at && $this->tokenObj->expires_at->isPast()) {
+            $this->isExpired = true;
+        }
 
         $this->post = $this->tokenObj->reviewable->load(['currentVersion', 'clientComments']);
 
@@ -33,6 +33,10 @@ class SocialPostReview extends Component
 
     public function approve(ClientRespondToSocialPostAction $action)
     {
+        if ($this->isExpired) {
+            abort(403, 'Questo link è scaduto. Contatta il team marketing.');
+        }
+
         if ($this->tokenObj->used_at) {
             abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
         }
@@ -55,6 +59,10 @@ class SocialPostReview extends Component
 
     public function requestChanges(ClientRespondToSocialPostAction $action)
     {
+        if ($this->isExpired) {
+            abort(403, 'Questo link è scaduto. Contatta il team marketing.');
+        }
+
         if ($this->tokenObj->used_at) {
             abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
         }
@@ -80,6 +88,10 @@ class SocialPostReview extends Component
 
     public function addComment(ClientRespondToSocialPostAction $action)
     {
+        if ($this->isExpired) {
+            abort(403, 'Questo link è scaduto. Contatta il team marketing.');
+        }
+
         $this->validate([
             'commentBody' => 'required|string|min:2|max:2000',
             'clientName' => 'required|string|max:100',

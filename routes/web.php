@@ -124,6 +124,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     // API interna: progetti per cliente (usata dai form JS)
     Route::get('/api/clients/{client}/projects', function (\App\Models\Client $client) {
+        \Illuminate\Support\Facades\Gate::authorize('view', $client);
         return response()->json(
             $client->projects()->where('status', 'active')->get(['id', 'name'])
         );

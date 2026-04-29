@@ -23,14 +23,33 @@ class SubmitMarketingProjectToN8nAction
                 'social_access' => "Il cliente non ha gli accessi Meta Business configurati o verificati. L'invio a n8n è bloccato.",
             ]);
         }
+        
         $project->update([
-            'status' => MarketingProjectStatus::SubmittedToN8n->value,
+            'status' => MarketingProjectStatus::QueuedToN8n->value,
             'n8n_request_id' => Str::uuid()->toString(),
-            'submitted_to_n8n_at' => now(),
+            'submitted_to_n8n_at' => now(), // can keep this or queued_at
         ]);
 
         if ($project->type->value === 'one_shot') {
-            $this->requestSingleAction->execute($project);
+            $payload = [
+                'type' => 'one_shot',
+                'marketing_project_id' => $project->id,
+                'client_id' => $project->client_id,
+                'brief' => $project->brief,
+                'description' => $project->description,
+                'platforms' => $project->platforms,
+                'n8n_request_id' => $project->n8n_request_id,
+                'social_access' => $project->client->socialAccounts->map(function ($account) {
+                    return array_filter([
+                        'platform' => $account->platform->value,
+                        'access_status' => $account->access_status->value,
+                        'access_method' => $account->access_method->value,
+                        'business_manager_id' => $account->isMetaPlatform() ? $account->business_manager_id : null,
+                    ]);
+                })->values()->toArray(),
+            ];
+
+            \App\Jobs\SendN8nRequestJob::dispatch($payload, $project->id, 'one_shot');
         }
     }
 }

@@ -28,7 +28,7 @@ class N8nClient
             'direction' => 'outbound',
             'endpoint' => $url,
             'event' => 'regenerate_social_post',
-            'payload' => $payload,
+            'payload' => $this->sanitizePayload($payload),
             'status' => 'processing',
         ]);
 
@@ -90,7 +90,7 @@ class N8nClient
             'direction' => 'outbound',
             'endpoint' => $url,
             'event' => $event,
-            'payload' => $payload,
+            'payload' => $this->sanitizePayload($payload),
             'status' => 'processing',
         ]);
 
@@ -119,5 +119,30 @@ class N8nClient
 
             throw $e;
         }
+    }
+
+    private function sanitizePayload(array $payload): array
+    {
+        $sensitive = [
+            'access_token',
+            'refresh_token',
+            'api_key',
+            'client_secret',
+            'authorization',
+            'password',
+        ];
+
+        foreach ($payload as $key => $value) {
+            if (in_array(strtolower($key), $sensitive, true)) {
+                $payload[$key] = '[REDACTED]';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $payload[$key] = $this->sanitizePayload($value);
+            }
+        }
+
+        return $payload;
     }
 }

@@ -109,6 +109,7 @@ class ClientController extends Controller
 
     public function quickStore(StoreClientRequest $request, \App\Actions\Clients\CreateClientAction $action): JsonResponse
     {
+        $this->authorize('create', Client::class);
         $client = $action->execute($request->validated());
 
         return response()->json([

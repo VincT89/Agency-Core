@@ -64,31 +64,37 @@
                 </div>
 
                 {{-- AZIONI CLIENTE --}}
-                <div style="background:var(--bg2); padding:30px; border-radius:12px;">
-                    <h3 style="font-size:18px; margin-bottom:15px; text-align:center;">Cosa ne pensi?</h3>
-                    
-                    <div style="display:flex; gap:15px; justify-content:center; margin-bottom:20px;">
-                        <button wire:click="approve" class="btn" style="background:var(--green); color:white; border:none; padding:12px 24px; font-size:16px;">
-                            <i data-lucide="check-circle" style="margin-right:8px; width:20px; height:20px; vertical-align:middle;"></i>
-                            Approva Piano
-                        </button>
+                @if($isExpired)
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--red); color: var(--red); padding: 20px; border-radius: 12px; text-align: center; font-weight: 600; font-size: 14px; margin-top: 30px;">
+                        Questo link è scaduto. Contatta il team marketing.
                     </div>
+                @else
+                    <div style="background:var(--bg2); padding:30px; border-radius:12px;">
+                        <h3 style="font-size:18px; margin-bottom:15px; text-align:center;">Cosa ne pensi?</h3>
+                        
+                        <div style="display:flex; gap:15px; justify-content:center; margin-bottom:20px;">
+                            <button wire:click="approve" class="btn" style="background:var(--green); color:white; border:none; padding:12px 24px; font-size:16px;">
+                                <i data-lucide="check-circle" style="margin-right:8px; width:20px; height:20px; vertical-align:middle;"></i>
+                                Approva Piano
+                            </button>
+                        </div>
 
-                    <div style="text-align:center; margin-top:30px; padding-top:20px; border-top:1px dashed var(--border);">
-                        <p style="color:var(--text3); font-size:14px; margin-bottom:15px;">Se c'è qualcosa che non va, puoi richiedere delle modifiche:</p>
-                        <form wire:submit="requestChanges" style="max-width:500px; margin:0 auto; text-align:left;">
-                            <div style="margin-bottom:15px;">
-                                <label style="display:block; font-size:13px; margin-bottom:5px; color:var(--text2);">Il tuo Nome *</label>
-                                <input type="text" wire:model="clientName" class="t-input" required placeholder="Mario Rossi">
-                            </div>
-                            <div style="margin-bottom:15px;">
-                                <label style="display:block; font-size:13px; margin-bottom:5px; color:var(--text2);">Richiesta di Modifica *</label>
-                                <textarea wire:model="comment" class="t-input" rows="4" required placeholder="Es: Il post del 15 aprile ha un'immagine troppo scura..."></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-secondary" style="width:100%;">Invia Richiesta di Modifica</button>
-                        </form>
+                        <div style="text-align:center; margin-top:30px; padding-top:20px; border-top:1px dashed var(--border);">
+                            <p style="color:var(--text3); font-size:14px; margin-bottom:15px;">Se c'è qualcosa che non va, puoi richiedere delle modifiche:</p>
+                            <form wire:submit="requestChanges" style="max-width:500px; margin:0 auto; text-align:left;">
+                                <div style="margin-bottom:15px;">
+                                    <label style="display:block; font-size:13px; margin-bottom:5px; color:var(--text2);">Il tuo Nome *</label>
+                                    <input type="text" wire:model="clientName" class="t-input" required placeholder="Mario Rossi">
+                                </div>
+                                <div style="margin-bottom:15px;">
+                                    <label style="display:block; font-size:13px; margin-bottom:5px; color:var(--text2);">Richiesta di Modifica *</label>
+                                    <textarea wire:model="comment" class="t-input" rows="4" required placeholder="Es: Il post del 15 aprile ha un'immagine troppo scura..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-secondary" style="width:100%;">Invia Richiesta di Modifica</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                @endif
             </div>
         @endif
     </div>

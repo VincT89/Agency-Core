@@ -23,11 +23,13 @@ class PublicationBoardSocialAccessTest extends TestCase
     {
         $user = User::factory()->create();
         $client = Client::factory()->create();
+        $project = \App\Models\Project::factory()->create(['client_id' => $client->id]);
         
         Livewire::actingAs($user)
             ->test(\App\Livewire\Social\MarketingProjects\MarketingProjectCreate::class)
             ->set('step', 1)
             ->set('client_id', $client->id)
+            ->set('project_id', $project->id)
             ->call('nextStep')
             ->set('type', 'one_shot')
             ->call('nextStep')
@@ -70,7 +72,7 @@ class PublicationBoardSocialAccessTest extends TestCase
 
         Livewire::actingAs($user)
             ->test(\App\Livewire\Social\PublicationBoard::class)
-            ->assertSee('Pubblicazione bloccata: è richiesto l', false);
+            ->assertSee('Pubblicazione bloccata: accessi Meta Business incompleti', false);
     }
 
     public function test_publication_board_allows_publication_if_meta_is_ready()
@@ -120,6 +122,6 @@ class PublicationBoardSocialAccessTest extends TestCase
 
         Livewire::actingAs($user)
             ->test(\App\Livewire\Social\PublicationBoard::class)
-            ->assertDontSee('Pubblicazione bloccata: è richiesto l', false);
+            ->assertDontSee('Pubblicazione bloccata: accessi Meta Business incompleti', false);
     }
 }

@@ -19,13 +19,46 @@ class SubmitEditorialPlanToN8nAction
             ]);
         }
         $plan->update([
-            'status' => EditorialPlanStatus::SubmittedToN8n->value,
+            'status' => EditorialPlanStatus::QueuedToN8n->value,
         ]);
 
         $plan->slots()->where('status', EditorialPlanSlotStatus::Empty->value)->update([
-            'status' => EditorialPlanSlotStatus::SubmittedToN8n->value,
+            'status' => EditorialPlanSlotStatus::QueuedToN8n->value,
         ]);
 
-        $this->requestAction->execute($plan);
+        $payload = [
+            'type' => 'editorial_plan',
+            'marketing_project_id' => $plan->marketing_project_id,
+            'editorial_plan_id' => $plan->id,
+            'client_id' => $plan->project->client_id,
+            'brief' => $plan->project->brief,
+            'platforms' => $plan->project->platforms,
+            'n8n_request_id' => $plan->project->n8n_request_id,
+            'plan_details' => [
+                'duration_days' => $plan->duration_days,
+                'start_date' => $plan->start_date?->format('Y-m-d'),
+                'end_date' => $plan->end_date?->format('Y-m-d'),
+                'post_count' => $plan->post_count,
+            ],
+            'slots' => $plan->slots->map(function ($slot) {
+                return [
+                    'id' => $slot->id,
+                    'scheduled_date' => $slot->scheduled_date?->format('Y-m-d'),
+                    'scheduled_time' => $slot->scheduled_time,
+                    'topic' => $slot->topic,
+                    'platforms' => $slot->platforms,
+                ];
+            })->toArray(),
+            'social_access' => $plan->project->client->socialAccounts->map(function ($account) {
+                return array_filter([
+                    'platform' => $account->platform->value,
+                    'access_status' => $account->access_status->value,
+                    'access_method' => $account->access_method->value,
+                    'business_manager_id' => $account->isMetaPlatform() ? $account->business_manager_id : null,
+                ]);
+            })->values()->toArray(),
+        ];
+
+        \App\Jobs\SendN8nRequestJob::dispatch($payload, $plan->marketing_project_id, 'editorial_plan');
     }
 }

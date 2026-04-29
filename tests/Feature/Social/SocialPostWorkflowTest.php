@@ -44,9 +44,18 @@ class SocialPostWorkflowTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
 
-        $payload = [
-            'external_id' => 'n8n-123',
+        $marketingProject = \App\Models\MarketingProject::create([
             'project_id' => $project->id,
+            'client_id' => $client->id,
+            'title' => 'Test Meta Project',
+            'type' => \App\Enums\Social\MarketingProjectType::OneShot,
+            'status' => \App\Enums\Social\MarketingProjectStatus::Draft,
+            'publication_mode' => \App\Enums\Social\PublicationMode::Manual,
+        ]);
+
+        $payload = [
+            'n8n_execution_id' => 'n8n-123',
+            'marketing_project_id' => $marketingProject->id,
             'title' => 'Test Post',
             'caption' => 'Test Caption',
             'image_url' => 'https://example.com/image.jpg'

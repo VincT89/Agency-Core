@@ -15,7 +15,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('viewAny', Invoice::class);
 
-        // Global KPI computation (unfiltered, but scoped by ProjectSupremacyScope implicitly)
+        // Calcola i KPI globali applicando automaticamente il ProjectSupremacyScope
         $globalQuery = $invoiceQuery->forIndex([]);
         
         $overdueCount = (clone $globalQuery)->where('status', 'overdue')->count();
@@ -25,7 +25,7 @@ class InvoiceController extends Controller
             ->get()
             ->sum(fn($i) => $i->residual);
 
-        // List computation (filtered)
+        // Genera la lista fatture paginata applicando i filtri di ricerca
         $invoices = $invoiceQuery->forIndex($request->all())->paginate(15)->withQueryString();
 
         return view('invoices.index', compact('invoices', 'overdueCount', 'draftCount', 'unpaidTotal'));

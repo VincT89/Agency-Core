@@ -44,7 +44,7 @@ class TaskController extends Controller
         $projects = Project::with('client')->orderBy('name')->get();
         $users    = User::where('status', 'active')->orderBy('name')->get();
 
-        // Pre-selezione progetto da query string
+        // Precompila l'ID progetto se fornito via querystring
         $preselectedProjectId = $request->project_id;
 
         return view('tasks.create', [
@@ -124,7 +124,7 @@ class TaskController extends Controller
             'notes'       => ['nullable', 'string'],
         ]);
 
-        // Gestione completed_at
+        // Imposta la data di completamento se il task viene chiuso
         if ($data['status'] === 'done' && !$task->completed_at) {
             $data['completed_at'] = now();
         } elseif ($data['status'] !== 'done') {
@@ -147,9 +147,7 @@ class TaskController extends Controller
             ->with('success', 'Task eliminato correttamente.');
     }
 
-    /**
-     * Aggiornamento rapido status via AJAX (per kanban o checkbox)
-     */
+
     public function updateStatus(Request $request, Task $task): RedirectResponse
     {
         $this->authorize('update', $task);

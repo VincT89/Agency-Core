@@ -7,14 +7,12 @@ use App\Models\Task;
 
 class CloseTaskWhenSocialPostPublished
 {
-    /**
-     * Handle the event.
-     */
+
     public function handle(EditorialSlotPublished $event): void
     {
         $slot = $event->slot;
 
-        // Cerca prima per editorial_plan_slot_id, poi per social_post_id (se the slot has one)
+        // Cerca task associati allo slot o al post correlato
         $query = Task::where('editorial_plan_slot_id', $slot->id);
         
         if ($slot->social_post_id) {

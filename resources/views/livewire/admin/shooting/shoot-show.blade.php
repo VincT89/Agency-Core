@@ -14,7 +14,7 @@
 
     <div class="g-shoot-detail">
         
-        <!-- Main Column -->
+        {{-- Main Column --}}
         <div style="display:flex; flex-direction:column; gap:24px;">
             <x-panel title="Dettagli Shooting" dot="var(--purple)">
                 <div style="padding:24px;">
@@ -60,7 +60,7 @@
                 </div>
             </x-panel>
             
-            <!-- Azione Cliente -->
+            {{-- Azione Cliente --}}
             @if($shoot->status->value === 'waiting_client')
                 <x-panel title="Conferma Cliente" dot="var(--yellow)">
                     <div style="padding:24px;">
@@ -75,7 +75,7 @@
                 </x-panel>
             @endif
             
-            <!-- Slots -->
+            {{-- Slots --}}
             <x-panel title="Slot Temporali" dot="var(--blue)">
                 <div style="padding:24px;">
                     <x-shooting.slot-list 
@@ -108,7 +108,7 @@
             @endif
         </div>
         
-        <!-- Sidebar -->
+        {{-- Sidebar --}}
         <div>
             <x-panel title="Avanzamento" dot="var(--green)">
                 <div style="padding:24px;">

@@ -13,20 +13,20 @@ class MarketingProjectCreate extends Component
 {
     public int $step = 1;
 
-    // Step 1: Client & Project
+    // Step 1: Selezione Cliente e Progetto
     public $client_id = '';
     public $project_id = '';
     
-    // Step 2: Type
+    // Step 2: Tipologia Progetto (Singolo o Piano)
     public $type = 'one_shot';
     
-    // Step 3: Brief & Platforms
+    // Step 3: Brief e Scelta Piattaforme
     public $title = '';
     public $brief = '';
     public $platforms = [];
     public $publication_mode = 'manual';
     
-    // Step 4: Editorial Plan Details
+    // Step 4: Dettagli Piano Editoriale (Solo se tipo = piano)
     public $duration_days = 30;
     public $start_date = '';
     public $end_date = '';

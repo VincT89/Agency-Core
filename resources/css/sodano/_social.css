@@ -1,7 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
-   SOCIAL MODULE STYLES
-   Specific styles for the Social Module UI components.
-═══════════════════════════════════════════════════════════ */
+/* Social Module Styles */
 
 /* Header Link */
 .social-header-link {
@@ -128,13 +125,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg);
-    padding: 20px;
+    background: transparent;
+    padding: 0;
     overflow: hidden;
 }
 .social-media-preview-img {
     max-width: 100%;
-    max-height: 100%;
+    max-height: 400px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     object-fit: contain;
@@ -414,9 +411,7 @@
     gap: 8px;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   MARKETING PROJECT SHOW
-═══════════════════════════════════════════════════════════════════ */
+/* Marketing Project Show */
 .mkt-meta-bar {
     display: flex;
     flex-wrap: wrap;

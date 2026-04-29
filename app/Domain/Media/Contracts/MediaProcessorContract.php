@@ -6,13 +6,9 @@ use App\Models\Attachment;
 
 interface MediaProcessorContract
 {
-    /**
-     * Elaborates a media file creating standard variants (e.g. thumbnails, web-optimized).
-     */
+    // Elabora un file multimediale creando le varianti standard
     public function process(Attachment $attachment): void;
     
-    /**
-     * Determines whether the given attachment requires media processing.
-     */
+    // Verifica se l'allegato richiede l'elaborazione multimediale
     public function shouldProcess(Attachment $attachment): bool;
 }

@@ -14,9 +14,9 @@
 
     <div class="g-shoot-detail">
         
-        <!-- Main Column -->
+        {{-- Main Column --}}
         <div style="display:flex; flex-direction:column; gap:24px;">
-            <!-- Info -->
+            {{-- Info --}}
             <x-panel title="Dettagli Shooting" dot="var(--purple)">
                 <div style="padding:24px;">
                     <div class="g-shoot-2col">
@@ -61,7 +61,7 @@
                 </div>
             </x-panel>
             
-            <!-- Slots -->
+            {{-- Slots --}}
             <x-panel title="Slot Temporali" dot="var(--blue)">
                 <div style="padding:24px;">
                     <x-shooting.slot-list :shoot="$shoot" :interactive="false" :showWarning="false" />
@@ -69,7 +69,7 @@
             </x-panel>
         </div>
         
-        <!-- Sidebar -->
+        {{-- Sidebar --}}
         <div>
             <x-panel title="Avanzamento" dot="var(--green)">
                 <div style="padding:24px;">
@@ -77,7 +77,7 @@
                 </div>
             </x-panel>
             
-            <!-- Audit Log -->
+            {{-- Audit Log --}}
             <div class="mt-panel">
                 <x-panel title="Storico Attività" dot="var(--gray)">
                     <div style="padding:16px;">

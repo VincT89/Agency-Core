@@ -48,7 +48,7 @@ class MarkEditorialSlotPublishedAction
                 userId: $user->id
             );
 
-            // Notifica Admin/Marketing
+            // Notifica il team dell'avvenuta pubblicazione
             $usersToNotify = \App\Models\User::whereIn('role', [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing])->get();
             
             \Illuminate\Support\Facades\Notification::send(

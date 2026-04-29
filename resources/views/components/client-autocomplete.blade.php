@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <!-- Dropdown -->
+    {{-- Dropdown --}}
     <div x-show="isOpen" 
          x-transition
          class="ca-dropdown"
@@ -63,7 +63,7 @@
              </li>
          </ul>
          
-         <!-- Pulsante per aprire il form (mostrato solo nel dropdown) -->
+         {{-- Pulsante per aprire il form (mostrato solo nel dropdown) --}}
          <div x-show="canCreate && search.length >= 2 && results.length === 0" class="ca-create-box">
              <button type="button" 
                      @click="openQuickCreate()" 
@@ -73,12 +73,12 @@
          </div>
     </div>
 
-    <!-- Form Creazione Inline (fuori dal dropdown, spinge il layout) -->
+    {{-- Form Creazione Inline (fuori dal dropdown, spinge il layout) --}}
     <div x-show="showQuickCreate" style="display: none; margin-top: 12px; padding: 16px; background: var(--bg2); border: 1px dashed var(--line); border-radius: var(--r);">
          <div class="ca-create-form">
              <div class="ca-create-title">Nuovo Cliente</div>
              
-             <!-- Row 1: Nome & Azienda -->
+             {{-- Row 1: Nome & Azienda --}}
              <div class="form-row">
                  <div>
                      <input type="text" x-model="newClient.name" class="form-in ca-create-input" :class="errors.name ? 'is-invalid' : ''" placeholder="Nome *">
@@ -90,7 +90,7 @@
                  </div>
              </div>
 
-             <!-- Row 2: Email & Telefono -->
+             {{-- Row 2: Email & Telefono --}}
              <div class="form-row">
                  <div>
                      <input type="email" x-model="newClient.email" class="form-in ca-create-input" :class="errors.email ? 'is-invalid' : ''" placeholder="Email">
@@ -102,7 +102,7 @@
                  </div>
              </div>
 
-             <!-- Row 3: P.IVA & Indirizzo -->
+             {{-- Row 3: P.IVA & Indirizzo --}}
              <div class="form-row">
                  <div>
                      <input type="text" x-model="newClient.vat_number" class="form-in ca-create-input" :class="errors.vat_number ? 'is-invalid' : ''" placeholder="Partita IVA">
@@ -114,12 +114,12 @@
                  </div>
              </div>
 
-             <!-- Notice for Default Status -->
+             {{-- Notice for Default Status --}}
              <div class="ca-info-text">
                 Il cliente verrà creato automaticamente con stato <strong>Attivo</strong>.
              </div>
 
-             <!-- Actions -->
+             {{-- Actions --}}
              <div class="ca-actions">
                  <button type="button" @click="quickStoreClient()" class="btn btn-p ca-action-btn" :disabled="loading">
                      <span x-show="!loading">Salva Cliente</span>

@@ -20,8 +20,7 @@ class SocialPostsIndex extends Component
             $query->where('status', $this->statusFilter);
         }
 
-        // Limit visibility based on project if the user is a photographer.
-        // Even if the policy handles viewAny, filtering here guarantees we only show authorized posts.
+        // Applica le restrizioni di visibilità sui progetti per l'account fotografo
         if (auth()->user()->isPhotographer()) {
             $query->whereIn('project_id', auth()->user()->projects->pluck('id'));
         }

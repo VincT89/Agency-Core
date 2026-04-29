@@ -42,8 +42,7 @@ class MyShootsIndex extends Component
 
         $filters = array_filter($filters);
 
-        // Il fotografo vede solo i propri shoot.
-        // UserScopedShootScope lo fa già, ma per chiarezza lo limitiamo anche esplicitamente qui se necessario (opzionale).
+        // Applica i filtri e recupera gli shooting dell'utente corrente
         $shoots = $query->forIndex($filters)->latest('created_at')->paginate(20);
 
         return view('livewire.photography.shooting.my-shoots-index', [

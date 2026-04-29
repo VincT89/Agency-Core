@@ -9,23 +9,13 @@ use Illuminate\Support\Facades\DB;
 
 class NotifyDueTasks extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+
     protected $signature = 'notify:due-tasks';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+
     protected $description = 'Notifica gli utenti sulle task in scadenza il giorno successivo';
 
-    /**
-     * Execute the console command.
-     */
+
     public function handle()
     {
         $tomorrow = today()->addDay();
@@ -46,7 +36,7 @@ class NotifyDueTasks extends Command
                 continue;
             }
 
-            // Regola anti-duplicato per oggi
+            // Evita l'invio multiplo della stessa notifica nello stesso giorno
             $alreadyNotifiedToday = DB::table('notifications')
                 ->where('notifiable_id', $assignee->id)
                 ->where('notifiable_type', get_class($assignee))

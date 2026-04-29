@@ -12,7 +12,7 @@ class AttachmentPolicy
     public function download(User $user, Attachment $attachment): bool
     {
         if (! $attachment->attachable) {
-            return false; // Deny if parent model corrupted
+            return false; // Nega accesso se il modello padre non esiste
         }
 
         return $user->can('view', $attachment->attachable);
@@ -21,15 +21,15 @@ class AttachmentPolicy
     public function delete(User $user, Attachment $attachment): bool
     {
         if (! $attachment->attachable) {
-            return false; // Deny if parent model corrupted
+            return false; // Nega eliminazione se il modello padre non esiste
         }
 
-        // Must still have view/update rights to the parent if not the uploader
+        // Controlla diritti di visualizzazione sul padre se l'utente è l'autore
         if ($attachment->uploaded_by === $user->id) {
             return $user->can('view', $attachment->attachable);
         }
 
-        // Eccezione Finance: Administration può gestire gli allegati delle fatture/pagamenti
+        // Bypass per dipartimento Finance su fatture e pagamenti
         if ($user->canAccessFinance() && in_array(get_class($attachment->attachable), [
             \App\Models\Invoice::class, 
             \App\Models\Payment::class
@@ -37,6 +37,6 @@ class AttachmentPolicy
             return true;
         }
 
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 }

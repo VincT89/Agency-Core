@@ -16,16 +16,12 @@ class SendSocialPostToClientAction
         protected AuditLogService $auditLogger
     ) {}
 
-    /**
-     * @param SocialPost $post
-     * @param User $user
-     * @return string L'URL pubblico per il cliente
-     */
+
     public function execute(SocialPost $post, User $user): string
     {
         return DB::transaction(function () use ($post, $user) {
             
-            // 1. Genera un token pubblico sicuro
+            // Genera un token pubblico sicuro valido per 30 giorni
             $tokenString = Str::random(40);
             
             ClientReviewToken::create([
@@ -35,7 +31,7 @@ class SendSocialPostToClientAction
                 'expires_at' => now()->addDays(30),
             ]);
 
-            // 2. Aggiorna stato e timestamp
+            // Aggiorna stato e timestamp del post e dei moduli collegati
             $post->update([
                 'status' => SocialPostStatus::SentToClient,
                 'sent_to_client_at' => now(),
@@ -48,7 +44,7 @@ class SendSocialPostToClientAction
                 $post->editorialPlanSlot->update(['status' => \App\Enums\Social\EditorialPlanSlotStatus::SentToClient->value]);
             }
 
-            // 3. Traccia nell'audit log
+            // Registra l'operazione nell'audit log
             $this->auditLogger->log(
                 action: 'social_post.sent_to_client',
                 auditable: $post,
@@ -58,8 +54,7 @@ class SendSocialPostToClientAction
                 userId: $user->id
             );
 
-            // In futuro qui potremo implementare l'invio fisico del messaggio WhatsApp o Email
-            // tramite n8n o altri driver. Per ora generiamo l'URL.
+            // TODO: Integreremo l'invio fisico WhatsApp/Email tramite n8n in futuro
 
             return route('client.review', ['token' => $tokenString]);
         });

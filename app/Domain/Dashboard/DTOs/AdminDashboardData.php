@@ -11,15 +11,15 @@ class AdminDashboardData
         public readonly int $kpi_client_rejected,
         public readonly int $kpi_scheduled,
 
-        // Social KPIs
+        // KPI area Social
         public readonly int $kpi_social_approved_not_scheduled,
         public readonly int $kpi_social_scheduled_this_week,
         public readonly int $kpi_social_publish_today,
         
-        /** @var WorkQueueItemData[] */
+        // Elementi prioritari per l'admin
         public readonly array $attention_list,
         
-        /** @var array */
+        // Allarmi di sistema
         public readonly array $health_warnings
     ) {}
 }

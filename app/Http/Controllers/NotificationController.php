@@ -19,7 +19,7 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
-        // Safe fallback in case URL is missing in old/weirder data, though our payload ensures it
+        // Fallback di sicurezza in caso di notifiche legacy senza URL nel payload
         return redirect()->to($notification->data['url'] ?? url('/dashboard'));
     }
 

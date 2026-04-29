@@ -181,7 +181,7 @@
 <?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
 <?php endif; ?>
 
-        <!-- Appuntamenti della Settimana -->
+        
         <div class="mt-panel" style="margin-bottom:20px;">
             <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
@@ -236,7 +236,7 @@
         </div>
 
         <div class="mt-panel">
-            <!-- Shooting Overview -->
+            
             <?php
 $__split = function ($name, $params = []) {
     return [$name, $params];

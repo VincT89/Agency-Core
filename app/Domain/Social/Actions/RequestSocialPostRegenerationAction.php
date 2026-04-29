@@ -20,13 +20,7 @@ class RequestSocialPostRegenerationAction
         protected AuditLogService $auditLogger
     ) {}
 
-    /**
-     * @param SocialPost $post
-     * @param User $user
-     * @param string $prompt
-     * @return void
-     * @throws Exception
-     */
+
     public function execute(SocialPost $post, User $user, string $prompt): void
     {
         if (in_array($post->status, [SocialPostStatus::Scheduled, SocialPostStatus::Published])) {
@@ -35,7 +29,7 @@ class RequestSocialPostRegenerationAction
 
         DB::transaction(function () use ($post, $user, $prompt) {
             
-            // 1. Crea il commento interno di tipo "change_request"
+            // Registra la richiesta come commento interno per tracciabilità
             SocialPostComment::create([
                 'social_post_id' => $post->id,
                 'social_post_version_id' => $post->current_version_id,
@@ -45,12 +39,12 @@ class RequestSocialPostRegenerationAction
                 'type' => SocialPostCommentType::ChangeRequest,
             ]);
 
-            // 2. Aggiorna lo stato
+            // Blocca il post nello stato di rigenerazione
             $post->update([
                 'status' => SocialPostStatus::Regenerating,
             ]);
 
-            // 3. Traccia nell'audit log
+            // Log di audit per sicurezza e compliance
             $this->auditLogger->log(
                 action: 'social_post.regeneration_requested',
                 auditable: $post,
@@ -60,7 +54,7 @@ class RequestSocialPostRegenerationAction
                 userId: $user->id
             );
 
-            // 4. Invia la richiesta a n8n
+            // Trasmette il comando al worker N8N
             $payload = [
                 'social_post_id' => $post->id,
                 'external_id' => $post->external_id,
@@ -71,7 +65,7 @@ class RequestSocialPostRegenerationAction
 
             $this->n8nClient->requestSocialPostRegeneration($payload);
 
-            // N8nClient si occupa già del logging in integration_logs
+            // Il tracciamento dell'integrazione è demandato a N8nClient
         });
     }
 }

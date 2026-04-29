@@ -13,7 +13,7 @@ class ProjectSupremacyScope implements Scope
 {
     public function apply(Builder $builder, Model $model)
     {
-        // Fail-Closed policy: se nessun utente auth e nessuno bypassa, droppa la query a 0 risultati
+        // Blocca la query se l'utente non è autenticato (Fail-Closed)
         if (!Auth::check()) {
             $builder->whereRaw('1 = 0');
             return;
@@ -21,7 +21,7 @@ class ProjectSupremacyScope implements Scope
 
         $user = Auth::user();
 
-        // Bypass per chi ha visibilità globale (Admin, Administration)
+        // Ignora il filtro per amministratori con visibilità globale
         if ($user->canBypassProjectScope()) {
             return;
         }
@@ -30,14 +30,14 @@ class ProjectSupremacyScope implements Scope
 
         $builder->where(function ($query) use ($user, $model, $projectColumn) {
             
-            // 1. Project Supremacy (Tutti i model protetti da questo scope)
+            // Applica il filtro di appartenenza al progetto
             $query->whereIn($projectColumn, function ($sub) use ($user) {
                 $sub->select('project_id')
                     ->from('project_user')
                     ->where('user_id', $user->id);
             });
 
-            // 2. Fallbacks/Eccezioni previste per entities miste
+            // Gestisce le eccezioni per entità non strettamente legate al progetto
             if ($model instanceof \App\Models\CalendarEvent) {
                 $query->orWhere(function ($q) use ($user) {
                     $q->whereNull('project_id')
@@ -45,9 +45,7 @@ class ProjectSupremacyScope implements Scope
                 });
             }
             
-            // Note: per Task o Ticket l'assegnazione è sempre dentro un project_id, 
-            // la UI vincola. Se si volesse ammettere Task standalone, si sbloccherebbe come CalendarEvent.
-            // (La rigorosità della Project Supremacy dice che non ci sono eccezioni per Task e Ticket).
+            // Task e Ticket restano volutamente bloccati al contesto del progetto
         });
     }
 }

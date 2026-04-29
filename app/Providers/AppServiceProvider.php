@@ -12,17 +12,11 @@ use App\Observers\{TicketObserver, InvoiceObserver, PaymentObserver, CalendarEve
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
+
     public function boot(): void
     {
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
@@ -54,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
                         'projectsCount'   => \App\Models\Project::where('status', 'active')->count(),
                         'openTickets'     => \App\Models\Ticket::whereIn('status', ['open', 'in_progress'])->count(),
                         'overdueInvoices' => \App\Models\Invoice::where('status', 'overdue')->count(),
+                        'openTasks'       => \App\Models\Task::open()->count(),
                     ];
                 });
 
@@ -62,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
                     'projectsCount'   => $counts['projectsCount'],
                     'openTickets'     => $counts['openTickets'],
                     'overdueInvoices' => $counts['overdueInvoices'],
+                    'openTasks'       => $counts['openTasks'],
                     'unreadNotificationsCount' => $user->unreadNotifications()->count(),
                     'latestNotifications'      => $user->notifications()->latest()->limit(5)->get(),
                 ]);

@@ -17,11 +17,7 @@ class SocialPostWorkflowNotification extends Notification
         public string $message
     ) {}
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
+
     public function via(object $notifiable): array
     {
         return ['database']; // Per ora solo DB, in futuro mail/slack
@@ -38,15 +34,4 @@ class SocialPostWorkflowNotification extends Notification
         ];
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
-    {
-        return [
-            //
-        ];
-    }
 }

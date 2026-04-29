@@ -67,7 +67,7 @@ class CreateRequest extends Component
             abort(403, 'Non hai accesso a questo progetto.');
         }
 
-        // Format slots
+        // Mappa e formatta gli slot temporali per il salvataggio
         $formattedSlots = [];
         foreach ($this->proposedSlots as $slot) {
             if ($slot['morning']) {

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -29,14 +29,9 @@ use App\Enums\UserRole;
 ])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
+    // Trait per factory e notifiche
     use HasFactory, Notifiable;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -161,7 +156,7 @@ class User extends Authenticatable
 
     public function canBypassProjectScope(): bool
     {
-        // Amministrazione e System Admin hanno visione globale per audit e finance
+        // Garantisce visibilità globale a profili amministrativi
         return $this->isAdmin() || $this->isAdministration();
     }
 

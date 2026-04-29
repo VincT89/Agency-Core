@@ -1,4 +1,4 @@
-<div>
+<div <?php if($project->status->value === 'queued_to_n8n'): ?> wire:poll.visible.10s <?php endif; ?>>
     <div style="margin-bottom: 20px;">
         <a href="<?php echo e(route('marketing-projects.index')); ?>" wire:navigate class="btn btn-g" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
             <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Torna ai progetti
@@ -69,10 +69,16 @@
         </div>
         
         <div class="mkt-meta-action">
-            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($project->status->value, ['draft'])): ?>
-                <button wire:click="submitToN8n" class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($project->status->value, ['draft', 'n8n_failed'])): ?>
+                <button wire:click="submitToN8n" 
+                        <?php if($project->status->value === 'n8n_failed'): ?> onclick="return confirm('Vuoi riprovare l\'invio a n8n?')" <?php endif; ?>
+                        class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="submitToN8n">
-                        <i data-lucide="send" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invia a n8n
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->status->value === 'n8n_failed'): ?>
+                            <i data-lucide="refresh-cw" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Riprova Invio
+                        <?php else: ?>
+                            <i data-lucide="send" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invia a n8n
+                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     </span>
                     <span wire:loading wire:target="submitToN8n">
                         <i data-lucide="loader" class="spin" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invio in corso...
@@ -229,47 +235,59 @@
 <?php endif; ?>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-            <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
+            <?php if (isset($component)) { $__componentOriginal84325527140f34a4b8029ac9f83e3b50 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal84325527140f34a4b8029ac9f83e3b50 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.social.n8n-status-panel','data' => ['project' => $project]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('social.n8n-status-panel'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['project' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($project)]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal84325527140f34a4b8029ac9f83e3b50)): ?>
+<?php $attributes = $__attributesOriginal84325527140f34a4b8029ac9f83e3b50; ?>
+<?php unset($__attributesOriginal84325527140f34a4b8029ac9f83e3b50); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal84325527140f34a4b8029ac9f83e3b50)): ?>
+<?php $component = $__componentOriginal84325527140f34a4b8029ac9f83e3b50; ?>
+<?php unset($__componentOriginal84325527140f34a4b8029ac9f83e3b50); ?>
+<?php endif; ?>
+            
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->n8n_request_id): ?>
+                <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Integrazione n8n','dot' => 'var(--purple)','padded' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Dettagli Integrazione n8n','dot' => 'var(--purple)','padded' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('panel'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => 'Integrazione n8n','dot' => 'var(--purple)','padded' => true]); ?>
+<?php $component->withAttributes(['title' => 'Dettagli Integrazione n8n','dot' => 'var(--purple)','padded' => true]); ?>
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
-                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->n8n_request_id): ?>
                     <div class="mkt-n8n-success-box">
                         <div class="mkt-n8n-header">
                             <div class="mkt-n8n-icon-box">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                <i data-lucide="cpu" style="width:18px; height:18px; color:inherit;"></i>
                             </div>
                             <div>
-                                <div class="mkt-n8n-title">Webhook Inviato</div>
+                                <div class="mkt-n8n-title">Tracking Execution</div>
                                 <div class="mkt-n8n-time"><?php echo e($project->submitted_to_n8n_at?->format('d/m/Y H:i:s')); ?></div>
                             </div>
                         </div>
-                        <div class="mkt-section-label" style="margin-bottom:4px;">Execution ID</div>
+                        <div class="mkt-section-label" style="margin-bottom:4px;">Request ID</div>
                         <div class="mkt-n8n-id-val">
                             <?php echo e($project->n8n_request_id); ?>
 
                         </div>
                     </div>
-                <?php else: ?>
-                    <div class="mkt-n8n-empty-box">
-                        <div class="mkt-n8n-empty-icon">
-                            <i data-lucide="server-off" style="width:20px; height:20px; color:var(--text3);"></i>
-                        </div>
-                        <h4 style="font-size:13px; color:var(--text); margin-bottom:6px;">In attesa di invio</h4>
-                        <p style="font-size:12px; color:var(--text3); line-height:1.5; margin-bottom:0;">
-                            Il progetto non è stato ancora inviato a n8n. Usa il pulsante in alto.
-                        </p>
-                    </div>
-                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-             <?php echo $__env->renderComponent(); ?>
+                 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
 <?php $attributes = $__attributesOriginal36665f0dc0e45320e21db1e20a989acf; ?>
@@ -279,6 +297,7 @@
 <?php $component = $__componentOriginal36665f0dc0e45320e21db1e20a989acf; ?>
 <?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
 <?php endif; ?>
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
         </div>
     </div>
 </div>

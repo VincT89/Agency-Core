@@ -20,14 +20,14 @@ class CalendarEventController extends Controller
         $query = CalendarEvent::query()
             ->with(['client', 'project', 'creator', 'assignee']);
 
-        // Filtro Reparto (Solo per Admin)
+        // Applica il filtro per reparto se l'utente è amministratore
         if ($request->filled('department') && $request->user()->role === \App\Enums\UserRole::Admin) {
             $query->whereHas('assignee', function ($q) use ($request) {
                 $q->where('role', $request->department);
             });
         }
 
-        // Risposta JSON per FullCalendar
+        // Restituisci la risposta JSON formattata per FullCalendar
         if ($request->wantsJson() || $request->query('format') === 'json') {
             $events = $query
                 ->when($request->start, fn($q) => $q->where('start_at', '>=', $request->start))
@@ -60,7 +60,7 @@ class CalendarEventController extends Controller
             ]));
         }
 
-        // Vista tabella (paginata)
+        // Restituisci la vista a tabella paginata
         $calendarEvents = $query
             ->when(request('status'), fn($q, $status) => $q->where('status', $status))
             ->orderBy('start_at')
@@ -73,7 +73,6 @@ class CalendarEventController extends Controller
     public function create(): View
     {
         $this->authorize('create', CalendarEvent::class);
-        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         $clients = Client::query()
@@ -123,7 +122,6 @@ class CalendarEventController extends Controller
     public function edit(CalendarEvent $calendarEvent): View
     {
         $this->authorize('update', $calendarEvent);
-        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         $clients = Client::query()

@@ -10,7 +10,7 @@
     </div>
 
     <div class="g-2col-main" style="align-items:start;">
-        <!-- DETTAGLI -->
+        {{-- DETTAGLI --}}
         <x-panel title="Dettagli Shooting" dot="var(--purple)" padded>
             <div style="display:flex; flex-direction:column; gap:24px;">
                 
@@ -68,7 +68,7 @@
             </div>
         </x-panel>
 
-        <!-- SLOT PROPOSTI -->
+        {{-- SLOT PROPOSTI --}}
         <div style="display:flex; flex-direction:column; gap:24px;">
             <x-panel title="Slot Proposti" dot="var(--blue)" padded>
                 <p style="font-size:13px; color:var(--text2); margin-bottom:16px;">

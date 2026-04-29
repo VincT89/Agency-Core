@@ -38,7 +38,7 @@ class PaymentController extends Controller
             ->orderByDesc('issue_date')
             ->get();
 
-        // Pre-selezione dalla query string (es. da invoices/show)
+        // Precompila l'ID fattura se passato via querystring
         $preselectedInvoice = null;
         if ($request->invoice_id) {
             $preselectedInvoice = Invoice::find($request->invoice_id);

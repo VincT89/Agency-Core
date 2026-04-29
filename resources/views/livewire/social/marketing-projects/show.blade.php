@@ -1,4 +1,4 @@
-<div>
+<div @if($project->status->value === 'queued_to_n8n') wire:poll.visible.10s @endif>
     <div style="margin-bottom: 20px;">
         <a href="{{ route('marketing-projects.index') }}" wire:navigate class="btn btn-g" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
             <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Torna ai progetti
@@ -29,18 +29,31 @@
         
         <div class="mkt-meta-action">
             @if(in_array($project->status->value, ['draft', 'n8n_failed']))
-                <button wire:click="submitToN8n" class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="submitToN8n">
-                        @if($project->status->value === 'n8n_failed')
+                @if($project->status->value === 'n8n_failed')
+                    <x-confirm-modal 
+                        title="Riprova Invio a n8n" 
+                        message="Vuoi riprovare l'invio a n8n? Verrà generato un nuovo tentativo di elaborazione." 
+                        confirmText="Sì, riprova invio" 
+                        confirmMethod="submitToN8n" 
+                        btnClass="btn btn-p" 
+                        btnStyle="background: var(--orange); border-color: var(--orange);"
+                        icon="refresh-cw" 
+                        iconColor="var(--orange)" 
+                        iconBg="rgba(255, 150, 0, 0.1)">
+                        <button class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" type="button">
                             <i data-lucide="refresh-cw" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Riprova Invio
-                        @else
+                        </button>
+                    </x-confirm-modal>
+                @else
+                    <button wire:click="submitToN8n" class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="submitToN8n">
                             <i data-lucide="send" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invia a n8n
-                        @endif
-                    </span>
-                    <span wire:loading wire:target="submitToN8n">
-                        <i data-lucide="loader" class="spin" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invio in corso...
-                    </span>
-                </button>
+                        </span>
+                        <span wire:loading wire:target="submitToN8n">
+                            <i data-lucide="loader" class="spin" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invio in corso...
+                        </span>
+                    </button>
+                @endif
             @endif
         </div>
     </div>
@@ -128,35 +141,27 @@
                 </x-panel>
             @endif
 
-            <x-panel title="Integrazione n8n" dot="var(--purple)" padded>
-                @if($project->n8n_request_id)
+            <x-social.n8n-status-panel :project="$project" />
+            
+            @if($project->n8n_request_id)
+                <x-panel title="Dettagli Integrazione n8n" dot="var(--purple)" padded>
                     <div class="mkt-n8n-success-box">
                         <div class="mkt-n8n-header">
                             <div class="mkt-n8n-icon-box">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                <i data-lucide="cpu" style="width:18px; height:18px; color:inherit;"></i>
                             </div>
                             <div>
-                                <div class="mkt-n8n-title">Webhook Inviato</div>
+                                <div class="mkt-n8n-title">Tracking Execution</div>
                                 <div class="mkt-n8n-time">{{ $project->submitted_to_n8n_at?->format('d/m/Y H:i:s') }}</div>
                             </div>
                         </div>
-                        <div class="mkt-section-label" style="margin-bottom:4px;">Execution ID</div>
+                        <div class="mkt-section-label" style="margin-bottom:4px;">Request ID</div>
                         <div class="mkt-n8n-id-val">
                             {{ $project->n8n_request_id }}
                         </div>
                     </div>
-                @else
-                    <div class="mkt-n8n-empty-box">
-                        <div class="mkt-n8n-empty-icon">
-                            <i data-lucide="server-off" style="width:20px; height:20px; color:var(--text3);"></i>
-                        </div>
-                        <h4 style="font-size:13px; color:var(--text); margin-bottom:6px;">In attesa di invio</h4>
-                        <p style="font-size:12px; color:var(--text3); line-height:1.5; margin-bottom:0;">
-                            Il progetto non è stato ancora inviato a n8n. Usa il pulsante in alto.
-                        </p>
-                    </div>
-                @endif
-            </x-panel>
+                </x-panel>
+            @endif
         </div>
     </div>
 </div>

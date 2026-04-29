@@ -31,11 +31,11 @@ class ClientPolicy
     
     public function update(User $user, Client $client): bool  
     { 
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
     
     public function delete(User $user, Client $client): bool  
     { 
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 }

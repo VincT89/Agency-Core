@@ -125,7 +125,7 @@ class Ticket extends Model
         return $this->morphMany(AuditLog::class, 'auditable');
     }
 
-    // --- Scopes ---
+
 
     public function scopeAssignedTo($query, $userOrId)
     {

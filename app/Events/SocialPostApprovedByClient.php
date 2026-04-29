@@ -16,19 +16,13 @@ class SocialPostApprovedByClient
 
     public \App\Models\SocialPost $post;
 
-    /**
-     * Create a new event instance.
-     */
+
     public function __construct(\App\Models\SocialPost $post)
     {
         $this->post = $post;
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, Channel>
-     */
+
     public function broadcastOn(): array
     {
         return [

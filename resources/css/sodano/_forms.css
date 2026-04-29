@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
-   MODAL
-═══════════════════════════════════════════════════════════════════ */
+/* Modal */
 .overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.7);
   backdrop-filter: blur(4px); z-index: 500;
@@ -29,9 +27,7 @@
 }
 .modal-close:hover { border-color: var(--red); color: var(--red); background: rgba(245,75,75,.08); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   FORMS
-═══════════════════════════════════════════════════════════════════ */
+/* Forms */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .form-row.full { grid-template-columns: 1fr; }
 .form-g { display: flex; flex-direction: column; gap: 5px; }
@@ -86,9 +82,7 @@
   margin-top: 4px;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════════════════════════════ */
+/* Toast */
 #toast {
   position: fixed; bottom: 24px; right: 24px;
   background: var(--bg2); color: var(--text); border: 1px solid var(--line2);

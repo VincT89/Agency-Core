@@ -90,9 +90,10 @@
                                 @endforeach
                             </div>
                             @if($requiresMeta && ! $isMetaReady)
-                                <div style="margin-top: 6px; font-size: 10px; color: var(--red); display: flex; align-items: center; gap: 4px;">
-                                    <i data-lucide="alert-octagon" style="width: 10px; height: 10px;"></i>
-                                    Pubblicazione bloccata: accessi Meta Business incompleti.
+                                <div style="margin-top: 8px;">
+                                    <x-alert type="error" icon="lock" title="Meta Non Pronto">
+                                        Pubblicazione bloccata. Il cliente non ha completato l'accesso a Facebook/Instagram.
+                                    </x-alert>
                                 </div>
                             @endif
                             @if(in_array('tiktok', $platforms ?? []) && ! $client?->socialAccountFor('tiktok')?->isReadyToPublish())
@@ -104,29 +105,46 @@
                         </td>
                         
                         <td style="text-align: right; vertical-align: middle;">
-                            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-                                @if($post->currentVersion && $post->currentVersion->caption)
-                                    <button type="button" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" onclick="navigator.clipboard.writeText(`{{ addslashes(str_replace('`', '\`', $post->currentVersion->caption)) }}`); alert('Caption copiata!')" title="Copia Caption">
-                                        <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
-                                    </button>
-                                @endif
-                                
-                                @if($post->currentVersion?->preview_url)
-                                    <a href="{{ $post->currentVersion->preview_url }}" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" target="_blank" title="Apri / Scarica media">
-                                        <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
-                                    </a>
-                                @endif
-                                
-                                <button wire:click="markAsPublished({{ $post->id }})" class="btn btn-sm btn-p" style="padding: 4px 10px;" wire:loading.attr="disabled" {{ !$canPublish ? 'disabled' : '' }} onclick="return confirm('Confermi di aver pubblicato manualmente il post sulle piattaforme previste?') || event.stopImmediatePropagation()">
-                                    Pubblicato
-                                </button>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                                    @if($post->currentVersion && $post->currentVersion->caption)
+                                        <button type="button" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" onclick="navigator.clipboard.writeText(`{{ addslashes(str_replace('`', '\`', $post->currentVersion->caption)) }}`); typeof toast === 'function' ? toast('Caption copiata!') : alert('Caption copiata!')" title="Copia Caption">
+                                            <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
+                                        </button>
+                                    @endif
+                                    
+                                    @if($post->currentVersion?->preview_url)
+                                        <a href="{{ $post->currentVersion->preview_url }}" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" target="_blank" title="Apri/Scarica Media">
+                                            <i data-lucide="image" style="width: 12px; height: 12px;"></i>
+                                        </a>
+                                    @endif
+                                    
+                                    <x-confirm-modal 
+                                        title="Conferma Pubblicazione" 
+                                        message="Hai effettivamente pubblicato questo contenuto sulle piattaforme target?" 
+                                        confirmText="Sì, ho pubblicato" 
+                                        confirmMethod="markAsPublished({{ $post->id }})" 
+                                        btnClass="btn btn-p" 
+                                        icon="check-circle" 
+                                        iconColor="var(--green)" 
+                                        iconBg="rgba(0, 200, 83, 0.1)"
+                                        :disabled="!$canPublish">
+                                        <button type="button" class="btn btn-sm btn-p" style="padding: 4px 10px;" wire:loading.attr="disabled" {{ !$canPublish ? 'disabled' : '' }} title="Segna come Pubblicato">
+                                            <i data-lucide="check" style="width: 12px; height: 12px; margin-right: 4px; display: inline-block; vertical-align: -2px;"></i> Pubblicato
+                                        </button>
+                                    </x-confirm-modal>
+                                </div>
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="social-empty-state" style="border: none;">
-                            Nessun post da pubblicare.
+                        <td colspan="4" style="border: none; padding: 20px;">
+                            <x-empty-state 
+                                icon="check-circle"
+                                title="Nessun contenuto da pubblicare"
+                                message="Quando un cliente approva un post, comparirà qui con caption, media e accessi social per la pubblicazione."
+                            />
                         </td>
                     </tr>
                 @endforelse

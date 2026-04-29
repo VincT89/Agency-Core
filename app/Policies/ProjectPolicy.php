@@ -41,6 +41,6 @@ class ProjectPolicy
 
     public function delete(User $user, Project $project): bool
     {
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 }

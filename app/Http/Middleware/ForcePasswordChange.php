@@ -8,25 +8,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ForcePasswordChange
 {
-    /**
-     * Handle an incoming request.
-     */
+    // Forza il cambio password al primo accesso
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
 
-        // Se l'utente non è loggato, lasciamo che sia il middleware `auth` a gestire
+        // Delega l'autenticazione al middleware auth
         if (! $user) {
             return $next($request);
         }
 
-        // Se la password è già cambiata, si procede normalmente
+        // Procede se la password è già stata aggiornata
         if ($user->password_changed_at !== null) {
             return $next($request);
         }
 
-        // Whitelist delle route ammesse durante il forced password change
-        // Permettiamo il reset form (GET/POST) e il logout
+        // Whitelist rotte per setup password e logout
         $allowedRoutes = [
             'password.setup',
             'password.setup.update',
@@ -37,7 +34,7 @@ class ForcePasswordChange
             return $next($request);
         }
 
-        // In tutti gli altri casi, redirigiamo al form di setup password
+        // Forza redirect al setup password
         return redirect()->route('password.setup');
     }
 }

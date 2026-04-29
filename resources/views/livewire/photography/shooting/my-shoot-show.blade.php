@@ -14,7 +14,7 @@
 
     <div class="g-shoot-detail">
         
-        <!-- Main Column -->
+        {{-- Main Column --}}
         <div style="display:flex; flex-direction:column; gap:24px;">
             <x-panel title="Dettagli Shooting" dot="var(--purple)">
                 <div style="padding:24px;">
@@ -34,7 +34,7 @@
                 </div>
             </x-panel>
             
-            <!-- Slots -->
+            {{-- Slots --}}
             <x-panel title="Disponibilità" dot="var(--blue)">
                 <div style="padding:24px;">
                     @php

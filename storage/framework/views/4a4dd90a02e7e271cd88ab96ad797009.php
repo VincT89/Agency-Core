@@ -43,7 +43,7 @@
 
                 <div class="social-media-preview-container">
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion?->preview_url): ?>
-                        <img src="<?php echo e($post->currentVersion->preview_url); ?>" alt="Preview" class="social-media-preview-img w-full rounded-lg">
+                        <img src="<?php echo e($post->currentVersion->preview_url); ?>" alt="Preview" class="social-media-preview-img rounded-lg">
                     <?php else: ?>
                         <div class="social-empty-preview text-gray-400 text-sm">Nessuna immagine disponibile per questa versione.</div>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
@@ -202,9 +202,33 @@
                                         <?php endif; ?>
                                         
                                         <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('cancel', $post->activeEditorialSlot)): ?>
-                                        <button wire:click="cancelSlot" class="btn btn-g" style="flex: 1; font-size: 10px; padding: 4px; color: var(--red);" onclick="return confirm('Sicuro di voler annullare questa pianificazione?') || event.stopImmediatePropagation()">
-                                            Annulla Slot
-                                        </button>
+                                        <div style="flex: 1;">
+                                            <?php if (isset($component)) { $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.confirm-modal','data' => ['title' => 'Annulla Pianificazione','message' => 'Sicuro di voler annullare questa pianificazione? Il post tornerà allo stato precedente e lo slot verrà liberato.','confirmText' => 'Sì, annulla slot','confirmMethod' => 'cancelSlot','btnClass' => 'btn','btnStyle' => 'background: var(--red); color: white; border-color: var(--red);','icon' => 'alert-triangle','iconColor' => 'var(--red)','iconBg' => 'rgba(245, 75, 75, 0.1)']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('confirm-modal'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Annulla Pianificazione','message' => 'Sicuro di voler annullare questa pianificazione? Il post tornerà allo stato precedente e lo slot verrà liberato.','confirmText' => 'Sì, annulla slot','confirmMethod' => 'cancelSlot','btnClass' => 'btn','btnStyle' => 'background: var(--red); color: white; border-color: var(--red);','icon' => 'alert-triangle','iconColor' => 'var(--red)','iconBg' => 'rgba(245, 75, 75, 0.1)']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+                                                <button type="button" class="btn btn-g" style="width: 100%; font-size: 10px; padding: 4px; color: var(--red);">
+                                                    Annulla Slot
+                                                </button>
+                                             <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10)): ?>
+<?php $attributes = $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10; ?>
+<?php unset($__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10)): ?>
+<?php $component = $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10; ?>
+<?php unset($__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10); ?>
+<?php endif; ?>
+                                        </div>
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>

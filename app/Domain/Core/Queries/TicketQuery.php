@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TicketQuery
 {
-    /**
-     * Builds the standard index query with given filters.
-     * Relies on ProjectSupremacyScope implicitly.
-     */
+    // Costruisce la query filtrata per l'indice (ProjectSupremacyScope implicito)
     public function forIndex(array $filters): Builder
     {
         $query = Ticket::query()

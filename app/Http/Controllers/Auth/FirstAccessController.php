@@ -11,12 +11,10 @@ use Illuminate\View\View;
 
 class FirstAccessController extends Controller
 {
-    /**
-     * Mostra il form del cambio password obbligatorio.
-     */
+
     public function show(Request $request): View|RedirectResponse
     {
-        // Se l'utente ha già impostato la password, lo mandiamo alla dashboard
+        // Reindirizza alla dashboard se la password è già stata impostata
         if ($request->user()->password_changed_at !== null) {
             return redirect()->route('dashboard');
         }
@@ -24,17 +22,15 @@ class FirstAccessController extends Controller
         return view('auth.first-access');
     }
 
-    /**
-     * Valida ed esegue il cambio password, poi rigenera la sessione.
-     */
+
     public function update(Request $request): RedirectResponse
     {
-        // Se l'utente ha già impostato la password, lo mandiamo alla dashboard
+        // Reindirizza alla dashboard se la password è già stata impostata
         if ($request->user()->password_changed_at !== null) {
             return redirect()->route('dashboard');
         }
 
-        // Usiamo Password::defaults() se definiti in AppServiceProvider, o regole robuste
+        // Valida la nuova password secondo le regole di sicurezza predefinite
         $request->validate([
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
@@ -46,7 +42,7 @@ class FirstAccessController extends Controller
             'password_changed_at' => now(),
         ]);
 
-        // Evitiamo session fixation
+        // Rigenera la sessione per prevenire attacchi di session fixation
         $request->session()->regenerate();
 
         return redirect()->route('dashboard')->with('success', 'Password aggiornata con successo! Benvenuto.');

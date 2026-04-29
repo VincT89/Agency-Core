@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class InvoiceQuery
 {
-    /**
-     * Builds the standard index query with given filters.
-     * Relies on ProjectSupremacyScope implicitly.
-     */
+    // Costruisce la query per l'indice con filtri (ProjectSupremacyScope implicito)
     public function forIndex(array $filters): Builder
     {
         $query = Invoice::query()
@@ -49,10 +46,7 @@ class InvoiceQuery
         return $query;
     }
 
-    /**
-     * System detection query specifically meant to find overdue invoices.
-     * Bypasses UI scopes via fail-closed bypass.
-     */
+    // Bypass di sicurezza globale per l'identificazione di sistema delle fatture scadute
     public function forSystemDetection(): Builder
     {
         return Invoice::query()->withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class);

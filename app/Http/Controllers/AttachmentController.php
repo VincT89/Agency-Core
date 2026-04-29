@@ -25,7 +25,7 @@ class AttachmentController extends Controller
             abort(404);
         }
 
-        /** @var \Illuminate\Database\Eloquent\Model|mixed $attachable */
+
 
         $file = $request->file('file');
 
@@ -55,7 +55,7 @@ class AttachmentController extends Controller
     public function download(Attachment $attachment): StreamedResponse
     {
         $this->authorize('download', $attachment);
-        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+
         $disk = Storage::disk($attachment->disk);
 
         if (! $disk->exists($attachment->path)) {

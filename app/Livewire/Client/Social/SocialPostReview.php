@@ -11,11 +11,12 @@ class SocialPostReview extends Component
     public $tokenObj;
     public $post;
     
-    // Campi Form
+    // Variabili del form di revisione
     public $clientName = '';
     public $clientEmail = '';
-    public $commentBody = '';
+    public $feedback = '';
     public $isExpired = false;
+    public $showChangesForm = false;
 
     public function mount(string $token)
     {
@@ -27,7 +28,7 @@ class SocialPostReview extends Component
 
         $this->post = $this->tokenObj->reviewable->load(['currentVersion', 'clientComments']);
 
-        // Autocompleta se possibile
+        // Precompila il nome cliente per la review
         $this->clientName = $this->post->client->name ?? '';
     }
 
@@ -41,12 +42,14 @@ class SocialPostReview extends Component
             abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
         }
 
-        $this->validateFormIfCommented();
+        $this->validate([
+            'clientName' => ['required', 'string', 'max:255'],
+        ]);
 
         $action->execute(
             token: $this->tokenObj,
             actionType: 'approve',
-            commentBody: $this->commentBody,
+            commentBody: null,
             clientName: $this->clientName,
             clientEmail: $this->clientEmail
         );
@@ -68,14 +71,14 @@ class SocialPostReview extends Component
         }
 
         $this->validate([
-            'commentBody' => 'required|string|min:5|max:2000',
-            'clientName' => 'required|string|max:100',
+            'clientName' => ['required', 'string', 'max:255'],
+            'feedback' => ['required', 'string', 'min:5'],
         ]);
 
         $action->execute(
             token: $this->tokenObj,
             actionType: 'request_changes',
-            commentBody: $this->commentBody,
+            commentBody: $this->feedback,
             clientName: $this->clientName,
             clientEmail: $this->clientEmail
         );
@@ -93,14 +96,14 @@ class SocialPostReview extends Component
         }
 
         $this->validate([
-            'commentBody' => 'required|string|min:2|max:2000',
+            'feedback' => 'required|string|min:2|max:2000',
             'clientName' => 'required|string|max:100',
         ]);
 
         $action->execute(
             token: $this->tokenObj,
             actionType: 'comment',
-            commentBody: $this->commentBody,
+            commentBody: $this->feedback,
             clientName: $this->clientName,
             clientEmail: $this->clientEmail
         );
@@ -111,9 +114,9 @@ class SocialPostReview extends Component
 
     protected function validateFormIfCommented()
     {
-        if (!empty($this->commentBody)) {
+        if (!empty($this->feedback)) {
             $this->validate([
-                'commentBody' => 'string|max:2000',
+                'feedback' => 'string|max:2000',
                 'clientName' => 'required|string|max:100',
             ]);
         }
@@ -124,12 +127,12 @@ class SocialPostReview extends Component
         $this->tokenObj->refresh();
         $this->post->refresh();
         $this->post->load(['clientComments']);
-        $this->commentBody = '';
+        $this->feedback = '';
     }
 
     public function render()
     {
-        // Usa un layout "guest" o pubblico pulito
+        // Utilizza il layout pubblico senza navigazione amministrativa
         return view('livewire.client.social.social-post-review')
             ->layout('layouts.guest', ['title' => 'Revisione Post: ' . $this->post->title]);
     }

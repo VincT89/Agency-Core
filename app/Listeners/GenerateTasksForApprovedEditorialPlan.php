@@ -8,16 +8,12 @@ use Illuminate\Queue\InteractsWithQueue;
 
 class GenerateTasksForApprovedEditorialPlan
 {
-    /**
-     * Create the event listener.
-     */
+
     public function __construct(
         protected \App\Domain\Social\Actions\CreateEditorialPlanPublicationTasksAction $action
     ) {}
 
-    /**
-     * Handle the event.
-     */
+
     public function handle(EditorialPlanApprovedByClient $event): void
     {
         $assignedTo = $event->plan->marketingProject->created_by;

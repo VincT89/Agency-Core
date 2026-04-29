@@ -41,12 +41,12 @@ class TaskPolicy
 
     public function delete(User $user, Task $task): bool
     {
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 
     private function canAccessTask(User $user, Task $task): bool
     {
-        // Regola Suprema: Appartenenza al progetto collegato
+        // Limita la visibilità al perimetro del progetto
         if ($task->project_id && $user->projects()->where('projects.id', $task->project_id)->exists()) {
             return true;
         }

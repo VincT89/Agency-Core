@@ -7,10 +7,7 @@ use Illuminate\Validation\Validator;
 
 trait ValidatesProjectOwnership
 {
-    /**
-     * Aggiunge un after-hook che verifica che project_id
-     * appartenga al client_id nella stessa request.
-     */
+    // Verifica che il progetto appartenga al cliente specificato nella request
     protected function withProjectOwnershipCheck(Validator $validator): void
     {
         $projectId = $this->input('project_id');

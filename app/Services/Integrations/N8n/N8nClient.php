@@ -8,13 +8,7 @@ use Exception;
 
 class N8nClient
 {
-    /**
-     * Invia un payload a n8n per la rigenerazione di un post social.
-     *
-     * @param array $payload
-     * @return array
-     * @throws Exception
-     */
+    // Invia un payload a n8n per la rigenerazione di un post social
     public function requestSocialPostRegeneration(array $payload): array
     {
         $url = config('services.n8n.regenerate_social_post_webhook_url');

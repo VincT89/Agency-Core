@@ -27,8 +27,7 @@ class ShootPolicy
 
     public function update(User $user, Shoot $shoot): bool
     {
-        // Marketing/Developer can update any shoot they have access to.
-        // Photographers can update if it's assigned to them (for accepting slots).
+        // Consenti aggiornamento al team interno o al fotografo assegnato
         if ($user->isMarketing() || $user->isDeveloper()) {
             return $this->canAccessShoot($user, $shoot);
         }
@@ -42,7 +41,7 @@ class ShootPolicy
 
     public function delete(User $user, Shoot $shoot): bool
     {
-        return false; // Admin is already handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 
     private function canAccessShoot(User $user, Shoot $shoot): bool
@@ -65,8 +64,7 @@ class ShootPolicy
 
     public function confirmClient(User $user, Shoot $shoot): bool
     {
-        // Solo Admin possono confermare/rifiutare per il cliente
-        // Gestito dal before() in HandlesRoleAuthorization per chi canManageSystem()
+        // Autorizzazione ristretta agli Admin (gestita dal metodo before)
         return false;
     }
 }

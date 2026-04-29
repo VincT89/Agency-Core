@@ -11,9 +11,7 @@ class AppLayout extends Component
         public string $title = 'Sodano Consulting'
     ) {}
 
-    /**
-     * Get the view / contents that represents the component.
-     */
+
     public function render(): View
     {
         return view('layouts.app');

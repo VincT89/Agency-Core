@@ -9,14 +9,7 @@ use Exception;
 
 class SocialImageStorageService
 {
-    /**
-     * Scarica un'immagine da un URL e la salva nello storage locale.
-     *
-     * @param string $url
-     * @param string $disk
-     * @return string $path Relativo al disk scelto (es. 'social-posts/12345.jpg')
-     * @throws Exception
-     */
+    // Scarica un'immagine da un URL e la salva nello storage locale
     public function downloadAndStore(string $url, string $disk = 'public'): string
     {
         $response = Http::timeout(15)->get($url);
@@ -41,12 +34,7 @@ class SocialImageStorageService
         return $filename;
     }
 
-    /**
-     * Deduce l'estensione dal Content-Type.
-     *
-     * @param string|null $contentType
-     * @return string
-     */
+    // Deduce l'estensione dal Content-Type
     protected function getExtensionFromContentType(?string $contentType): string
     {
         return match ($contentType) {

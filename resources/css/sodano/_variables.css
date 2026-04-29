@@ -1,24 +1,24 @@
 :root {
-  /* ── Backgrounds ─────────────────────────────────────── */
+  /* Backgrounds */
   --bg:         #111115;
   --bg1:        #18181d;
   --bg2:        #1e1e24;
   --bg3:        #26262e;
   --bg-main:    transparent;
 
-  /* ── Lines / Borders ─────────────────────────────────── */
+  /* Lines / Borders */
   --line:       rgba(255,255,255,0.07);
   --line2:      rgba(255,255,255,0.11);
   --line3:      rgba(255,255,255,0.18);
   --border:     rgba(255,255,255,0.07);
 
-  /* ── Text ────────────────────────────────────────────── */
+  /* Text */
   --text:       #f0ede8;
   --text1:      #f0ede8;
   --text2:      #b0afb4;
   --text3:      #6e6d74;
 
-  /* ── Brand / Accents ─────────────────────────────────── */
+  /* Brand / Accents */
   --accent:     #c8102e;
   --accent2:    #e8304e;
   --teal:       #2dd4aa;
@@ -29,19 +29,19 @@
   --green:      #3ecf8e;
   --purple:     #a78bfa;
 
-  /* ── Typography ──────────────────────────────────────── */
+  /* Typography */
   --serif:  'Instrument Serif', serif;
   --sans:   'Syne', sans-serif;
   --mono:   'JetBrains Mono', monospace;
 
-  /* ── Spacing / Radius ────────────────────────────────── */
+  /* Spacing / Radius */
   --sidebar:       64px;
   --sidebar-open:  240px;
   --top:           52px;
   --r:             6px;
   --r2:            12px;
 
-  /* ── Shadows 3D (NUOVI) ──────────────────────────────── */
+  /* Shadows 3D */
   --shadow-sm:    0 2px 0 rgba(0,0,0,.45), 0 4px 10px rgba(0,0,0,.2);
   --shadow-md:    0 4px 0 rgba(0,0,0,.5),  0 8px 24px rgba(0,0,0,.3);
   --shadow-md-hv: 0 6px 0 rgba(0,0,0,.5),  0 12px 32px rgba(0,0,0,.35);

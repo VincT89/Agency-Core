@@ -27,21 +27,27 @@
 <?php endif; ?>
 
     <div class="g-1col">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
-            <select wire:model.live="projectFilter" class="form-in" style="padding:5px 10px;font-size:11px;width:200px">
+        <div class="calendar-filters">
+            <select wire:model.live="clientFilter" class="form-in calendar-select calendar-select-md">
+                <option value="">Tutti i Clienti</option>
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $clients; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $client): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                    <option value="<?php echo e($client->id); ?>"><?php echo e($client->name); ?></option>
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+            </select>
+            <select wire:model.live="projectFilter" class="form-in calendar-select calendar-select-lg">
                 <option value="">Tutti i Progetti</option>
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $projects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $project): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                     <option value="<?php echo e($project->id); ?>"><?php echo e($project->name); ?></option>
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
             </select>
-            <select wire:model.live="platformFilter" class="form-in" style="padding:5px 10px;font-size:11px;width:160px">
+            <select wire:model.live="platformFilter" class="form-in calendar-select calendar-select-md">
                 <option value="">Tutte le Piattaforme</option>
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $platforms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $platform): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                     <option value="<?php echo e($platform->value); ?>"><?php echo e($platform->label()); ?></option>
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
             </select>
-            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($projectFilter || $platformFilter): ?>
-                <button wire:click="$set('projectFilter', ''); $set('platformFilter', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($clientFilter || $projectFilter || $platformFilter): ?>
+                <button wire:click="$set('clientFilter', ''); $set('projectFilter', ''); $set('platformFilter', '')" class="btn btn-g calendar-btn">Reset</button>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
         </div>
 
@@ -180,10 +186,14 @@
     .fc-list-event-title a { color: var(--text) !important; text-decoration: none; }
 
     /* Custom UI overrides per i filtri */
+    .calendar-filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; justify-content: flex-end; }
+    .calendar-select { padding: 6px 12px; font-size: 12px; width: auto !important; height: auto !important; display: inline-block; }
+    .calendar-select-md { min-width: 180px; max-width: 250px; }
+    .calendar-select-lg { min-width: 220px; max-width: 300px; }
+    .calendar-btn { padding: 5px 10px; font-size: 11px; }
+
     .filter-lbl { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; display: block;}
     .project-sel, .platform-sel { background: var(--bg2); color: var(--text); border: 1px solid var(--line2); border-radius: var(--r); padding: 4px 8px; font-size: 12px; }
-    .project-sel { min-width: 200px; }
-    .platform-sel { min-width: 150px; }
     .js-error-box:empty { display: none; }
     .js-error-box { color:var(--red); margin-bottom:10px; font-family:monospace; white-space:pre-wrap; }
 </style>

@@ -15,7 +15,7 @@
             <x-panel title="Media Versione Attuale (v{{ $post->currentVersion->version_number ?? 1 }})" dot="var(--purple)" class="social-left-panel">
                 <div class="social-media-preview-container">
                     @if($post->currentVersion?->preview_url)
-                        <img src="{{ $post->currentVersion->preview_url }}" alt="Preview" class="social-media-preview-img w-full rounded-lg">
+                        <img src="{{ $post->currentVersion->preview_url }}" alt="Preview" class="social-media-preview-img rounded-lg">
                     @else
                         <div class="social-empty-preview text-gray-400 text-sm">Nessuna immagine disponibile per questa versione.</div>
                     @endif
@@ -131,9 +131,22 @@
                                         @endcan
                                         
                                         @can('cancel', $post->activeEditorialSlot)
-                                        <button wire:click="cancelSlot" class="btn btn-g" style="flex: 1; font-size: 10px; padding: 4px; color: var(--red);" onclick="return confirm('Sicuro di voler annullare questa pianificazione?') || event.stopImmediatePropagation()">
-                                            Annulla Slot
-                                        </button>
+                                        <div style="flex: 1;">
+                                            <x-confirm-modal 
+                                                title="Annulla Pianificazione" 
+                                                message="Sicuro di voler annullare questa pianificazione? Il post tornerà allo stato precedente e lo slot verrà liberato." 
+                                                confirmText="Sì, annulla slot" 
+                                                confirmMethod="cancelSlot" 
+                                                btnClass="btn" 
+                                                btnStyle="background: var(--red); color: white; border-color: var(--red);"
+                                                icon="alert-triangle" 
+                                                iconColor="var(--red)" 
+                                                iconBg="rgba(245, 75, 75, 0.1)">
+                                                <button type="button" class="btn btn-g" style="width: 100%; font-size: 10px; padding: 4px; color: var(--red);">
+                                                    Annulla Slot
+                                                </button>
+                                            </x-confirm-modal>
+                                        </div>
                                         @endcan
                                     </div>
                                 @endif

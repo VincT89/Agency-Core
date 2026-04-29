@@ -10,7 +10,7 @@ class SendTaskAssignedNotification
     {
         $task = $event->task;
 
-        // Invia notifica o effettua altre procedure previste prima in Observer
+        // Invia la notifica se l'assegnatario è diverso dal creatore
         if ($task->assigned_to && $task->assigned_to !== $task->created_by && $task->assignee) {
              $task->assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
         }

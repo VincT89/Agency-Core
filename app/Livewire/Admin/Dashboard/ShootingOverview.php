@@ -10,7 +10,7 @@ class ShootingOverview extends Component
 {
     public function render()
     {
-        // Ottieni tutti gli shooting non completati/archiviati che richiedono azione
+        // Filtra gli shooting operativi che richiedono un'azione immediata
         $actionShoots = Shoot::whereIn('status', [
                 ShootStatus::WaitingClient->value, 
                 ShootStatus::ClientRejected->value, 
@@ -19,7 +19,7 @@ class ShootingOverview extends Component
             ])
             ->get()
             ->sortBy(function($shoot) {
-                // Ordine: 1. waiting_client, 2. client_rejected, 3. waiting_photographer, 4. scheduled
+                // Ordina per priorità di sblocco operativo
                 return match($shoot->status->value) {
                     ShootStatus::WaitingClient->value => 1,
                     ShootStatus::ClientRejected->value => 2,
@@ -28,7 +28,7 @@ class ShootingOverview extends Component
                     default => 5,
                 };
             })
-            ->take(6); // Prendi i primi 6
+            ->take(6); // Limita gli elementi per non saturare la dashboard
 
         return view('livewire.admin.dashboard.shooting-overview', [
             'waitingPhotographer' => Shoot::whereStatus(ShootStatus::WaitingPhotographer)->count(),

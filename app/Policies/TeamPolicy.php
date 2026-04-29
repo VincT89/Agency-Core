@@ -12,13 +12,13 @@ class TeamPolicy
 
     public function viewAny(User $user): bool
     {
-        // Tutti possono vedere i team (per logiche di directory aziendale)
+        // Visibilità globale per la directory aziendale
         return true;
     }
 
     public function view(User $user, Team $team): bool
     {
-        // Tutti possono vedere le info di base di un team
+        // Visibilità globale per la scheda team
         return true;
     }
 

@@ -38,6 +38,7 @@ class ClientConfirmAction
                 $startAt = Carbon::parse($slot->date->format('Y-m-d') . ' ' . $slot->starts_at, $tz);
                 $endAt = Carbon::parse($slot->date->format('Y-m-d') . ' ' . $slot->ends_at, $tz);
 
+                // Fissa a calendario l'appuntamento per lo shooting
                 $event = CalendarEvent::create([
                     'client_id' => $shoot->project->client_id,
                     'project_id' => $shoot->project_id,
@@ -53,7 +54,7 @@ class ClientConfirmAction
                     'location' => $shoot->location,
                 ]);
 
-                // 2. Create Task
+                // Crea la task operativa per il fotografo
                 $task = Task::create([
                     'project_id' => $shoot->project_id,
                     'created_by' => $adminId,
@@ -65,7 +66,7 @@ class ClientConfirmAction
                     'due_date' => $slot->date,
                 ]);
 
-                // 3. Update Shoot
+                // Aggiorna lo stato dello shooting agganciando evento e task
                 $shoot->update([
                     'status' => ShootStatus::Scheduled,
                     'client_confirmation_status' => 'accepted',
@@ -77,15 +78,14 @@ class ClientConfirmAction
                 $this->notifyAll($shoot, ShootingWorkflowEvent::ClientConfirmed, 'Shooting Confermato', "Il cliente ha confermato lo shooting {$shoot->code}. Evento a calendario e Task creati.");
 
             } else {
-                // Client Rejected
-                // Reset all slots to proposed so the photographer can choose another one
+                // Il cliente ha rifiutato: ripristina gli slot per una nuova proposta
                 $shoot->slots()->update(['status' => ShootSlotStatus::Proposed]);
                 
                 $shoot->update([
                     'status' => ShootStatus::ClientRejected,
                     'client_confirmation_status' => 'rejected',
                     'client_confirmed_at' => now(),
-                    'selected_slot_id' => null, // Reset selected slot
+                    'selected_slot_id' => null, // Rimuove il vincolo dello slot
                 ]);
                 
                 $this->notifyAll($shoot, ShootingWorkflowEvent::ClientRejected, 'Shooting Rifiutato', "Il cliente ha rifiutato lo shooting {$shoot->code}.");

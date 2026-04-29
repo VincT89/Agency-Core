@@ -1,13 +1,13 @@
 <div style="border-left:2px solid var(--line); margin-left:12px; padding-left:24px; position:relative;">
     
-    <!-- Step 1: Richiesta Creata -->
+    {{-- Step 1: Richiesta Creata --}}
     <div style="position:relative; margin-bottom:24px;">
         <div style="position:absolute; left:-33px; top:0; width:16px; height:16px; border-radius:50%; background:var(--green); border:2px solid var(--bg1);"></div>
         <div style="font-weight:600; font-size:14px; color:var(--text1);">Richiesta Creata</div>
         <div style="font-size:13px; color:var(--text3);">Da: {{ $shoot->creator->name ?? 'N/D' }} il {{ $shoot->created_at->format('d/m/Y H:i') }}</div>
     </div>
     
-    <!-- Step 2: Risposta Fotografo -->
+    {{-- Step 2: Risposta Fotografo --}}
     <div style="position:relative; margin-bottom:24px;">
         @php
             $hasResponded = in_array($shoot->status->value, ['waiting_client', 'client_rejected', 'photographer_rejected', 'scheduled', 'client_confirmed']);
@@ -36,7 +36,7 @@
         @endif
     </div>
     
-    <!-- Step 3: Conferma Cliente -->
+    {{-- Step 3: Conferma Cliente --}}
     <div style="position:relative;">
         @php
             // Se il fotografo ha rifiutato, questo step è annullato o non applicabile

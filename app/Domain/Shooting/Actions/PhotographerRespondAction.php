@@ -13,10 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class PhotographerRespondAction
 {
-    /**
-     * @param Shoot $shoot
-     * @param int|null $acceptedSlotId If null, it means the photographer rejected all slots.
-     */
+
     public function execute(Shoot $shoot, ?int $acceptedSlotId, ?string $note = null): void
     {
         if ($shoot->status !== ShootStatus::WaitingPhotographer) {
@@ -29,7 +26,7 @@ class PhotographerRespondAction
 
         DB::transaction(function () use ($shoot, $acceptedSlotId, $note) {
             
-            // Mark slots
+            // Aggiorna lo stato di ogni singolo slot proposto in base alla scelta del fotografo
             foreach ($shoot->slots as $slot) {
                 if ($acceptedSlotId && $slot->id === $acceptedSlotId) {
                     $slot->update([

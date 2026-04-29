@@ -19,11 +19,11 @@ class RegisterPaymentAction
             
             $payment = Payment::create($data);
 
-            // Sync Totals Atomically
+            // Blocca la fattura per sincronizzare il totale pagato senza conflitti
             $invoice = Invoice::lockForUpdate()->find($invoice->id);
             $invoice->paid_total += $payment->amount;
 
-            // State Transition
+            // Aggiorna lo stato della fattura in base al saldo residuo
             if ($invoice->paid_total >= $invoice->total) {
                 $invoice->status = 'paid';
             } elseif ($invoice->status === 'issued' && $invoice->paid_total > 0) {

@@ -14,7 +14,8 @@ class CancelMarketingProjectAction
         ]);
         
         if ($project->editorialPlan) {
-            $project->editorialPlan->update(['status' => \App\Enums\Social\EditorialPlanStatus::Completed->value]); // or cancelled if enum supports it
+            // Segna come completato il piano editoriale correlato se presente
+            $project->editorialPlan->update(['status' => \App\Enums\Social\EditorialPlanStatus::Completed->value]);
         }
     }
 }

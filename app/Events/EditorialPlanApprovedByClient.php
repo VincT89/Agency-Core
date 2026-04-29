@@ -16,19 +16,13 @@ class EditorialPlanApprovedByClient
 
     public \App\Models\EditorialPlan $plan;
 
-    /**
-     * Create a new event instance.
-     */
+
     public function __construct(\App\Models\EditorialPlan $plan)
     {
         $this->plan = $plan;
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, Channel>
-     */
+
     public function broadcastOn(): array
     {
         return [

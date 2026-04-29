@@ -14,7 +14,7 @@ class PhotographerDashboardQuery
     {
         $today = Carbon::today();
 
-        // Query base: Shoot non archiviati/annullati assegnati al fotografo
+        // Filtra solo shooting attivi assegnati al fotografo corrente
         $baseQuery = Shoot::with(['project', 'calendarEvent', 'slots'])
             ->where('photographer_id', $user->id)
             ->whereNotIn('status', ['archived', 'cancelled', 'completed', 'draft']);
@@ -32,14 +32,14 @@ class PhotographerDashboardQuery
         foreach ($shoots as $shoot) {
             $status = $shoot->status->value;
 
-            // --- Calcolo KPI ---
+            // Calcola le metriche della dashboard
             if ($status === 'waiting_photographer') $daRispondere++;
             if ($status === 'waiting_client') $inAttesaCliente++;
             if ($status === 'scheduled') $pianificati++;
 
-            // --- Costruzione Work Queue ---
+            // Classifica gli elementi per coda di lavoro
             
-            // Bucket: Da Rispondere
+            // Richiede feedback immediato dal fotografo
             if ($status === 'waiting_photographer') {
                 $queueDaRispondere[] = new WorkQueueItemData(
                     bucket: 'pending',
@@ -54,7 +54,7 @@ class PhotographerDashboardQuery
                     reason_code: 'waiting_photographer'
                 );
             }
-            // Bucket: In Attesa Cliente
+            // In attesa di validazione da parte del cliente
             elseif ($status === 'waiting_client') {
                 $queueInAttesaCliente[] = new WorkQueueItemData(
                     bucket: 'pending',
@@ -69,9 +69,9 @@ class PhotographerDashboardQuery
                     reason_code: 'waiting_client'
                 );
             }
-            // Bucket: Pianificati (Oggi)
+            // Shooting programmati per la data odierna
             elseif ($status === 'scheduled') {
-                // Check se uno slot confermato o il calendarEvent è oggi
+                // Verifica la data rispetto agli slot o all'evento a calendario
                 $isToday = false;
                 if ($shoot->calendarEvent && Carbon::parse($shoot->calendarEvent->start_date)->isToday()) {
                     $isToday = true;
@@ -99,12 +99,12 @@ class PhotographerDashboardQuery
             }
         }
 
-        // Ordinamento
+        // Ordina la coda in base all'urgenza operativa
         usort($queueDaRispondere, fn($a, $b) => $a->priority <=> $b->priority);
         usort($queueInAttesaCliente, fn($a, $b) => $a->priority <=> $b->priority);
         usort($queueOggi, fn($a, $b) => $a->priority <=> $b->priority);
 
-        // Task in scadenza assegnati al fotografo
+        // Estrae le task imminenti assegnate all'utente
         $upcomingTasks = \App\Models\Task::with('project')
             ->assignedTo($user)
             ->open()

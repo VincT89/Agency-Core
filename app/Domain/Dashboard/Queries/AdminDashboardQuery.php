@@ -48,7 +48,7 @@ class AdminDashboardQuery
             } elseif ($status === 'waiting_client') {
                 $waitingClient++;
                 $attentionList[] = new WorkQueueItemData(
-                    bucket: 'issue', // Alta priorità per admin
+                    bucket: 'issue', // Alta priorità per sblocco flusso
                     shoot_id: $shoot->id,
                     shoot_code: $shoot->code,
                     shoot_name: $shoot->title,
@@ -78,7 +78,7 @@ class AdminDashboardQuery
             }
         }
 
-        // Social Data
+        // Statistiche modulo social
         $socialApprovedNotScheduled = SocialPost::where('status', SocialPostStatus::ClientApproved)
             ->whereDoesntHave('activeEditorialSlot')
             ->count();
@@ -91,7 +91,7 @@ class AdminDashboardQuery
             ->whereDate('scheduled_at', Carbon::today())
             ->count();
 
-        // Social Attention List: Scaduti non pubblicati
+        // Segnala post non pubblicati nei tempi previsti
         $pastDueSlots = EditorialSlot::with('post.project')
             ->where('status', EditorialSlotStatus::Scheduled)
             ->where('scheduled_at', '<', Carbon::now())
@@ -112,10 +112,10 @@ class AdminDashboardQuery
             );
         }
 
-        // Ordinamento per priorità: waiting_client/social_past_due (1), client_rejected (2), waiting_photographer (3)
+        // Ordina le urgenze in base alla priorità operativa
         usort($attentionList, fn($a, $b) => $a->priority <=> $b->priority);
 
-        // Prendi solo i primi 10 da far vedere
+        // Limita l'output per non sovraccaricare la UI
         $attentionList = array_slice($attentionList, 0, 10);
 
         return new AdminDashboardData(
@@ -128,7 +128,7 @@ class AdminDashboardQuery
             kpi_social_scheduled_this_week: $socialScheduledThisWeek,
             kpi_social_publish_today: $socialPublishToday,
             attention_list: $attentionList,
-            health_warnings: [] // Da usare in futuro se serve
+            health_warnings: [] // Placeholder espandibile in futuro
         );
     }
 }

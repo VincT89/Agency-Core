@@ -8,7 +8,7 @@
         </x-page-header>
     </div>
 
-    <!-- Progress Indicator -->
+    {{-- Progress Indicator --}}
     <div class="mkt-wizard-progress">
         @for($i = 1; $i <= 5; $i++)
             @if($i == 4 && $type == 'one_shot') @continue @endif

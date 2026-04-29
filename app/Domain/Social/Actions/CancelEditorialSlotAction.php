@@ -48,7 +48,7 @@ class CancelEditorialSlotAction
                 userId: $user->id
             );
 
-            // Notifica Admin/Marketing
+            // Avvisa il team che lo slot è stato annullato
             $usersToNotify = \App\Models\User::whereIn('role', [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing])->get();
             
             \Illuminate\Support\Facades\Notification::send(

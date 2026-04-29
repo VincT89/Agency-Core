@@ -15,18 +15,18 @@ class SocialPostShow extends Component
 {
     public SocialPost $post;
     
-    // Form commento
+    // Dati per il form del nuovo commento
     public $newCommentBody = '';
     
-    // Modal Rigenera
+    // Stato per la modale di rigenerazione contenuti
     public $showRegenerateModal = false;
     public $regenerationPrompt = '';
 
-    // Modal Invia Cliente
+    // Stato per la modale di condivisione con il cliente
     public $showSendClientModal = false;
     public $clientLink = '';
 
-    // Modal Pianificazione
+    // Stato per la modale di schedulazione post
     public $showScheduleModal = false;
     public $scheduleDate = '';
     public $schedulePlatform = 'instagram';

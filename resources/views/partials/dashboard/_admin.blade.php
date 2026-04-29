@@ -119,7 +119,7 @@
             </div>
         </x-panel>
 
-        <!-- Appuntamenti della Settimana -->
+        {{-- Appuntamenti della Settimana --}}
         <div class="mt-panel" style="margin-bottom:20px;">
             <x-panel title="Appuntamenti della Settimana" dot="var(--blue)">
                 @if($weeklyEvents->isEmpty())
@@ -153,7 +153,7 @@
         </div>
 
         <div class="mt-panel">
-            <!-- Shooting Overview -->
+            {{-- Shooting Overview --}}
             @livewire('admin.dashboard.shooting-overview')
         </div>
 

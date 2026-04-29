@@ -57,7 +57,7 @@
         </x-panel>
     </div>
 
-    <!-- Client Table -->
+    {{-- Client Table --}}
     <div style="margin-bottom: 32px">
         <x-panel title="Riepilogo per Cliente" dot="var(--blue)">
             <table class="t-table">
@@ -91,7 +91,7 @@
         </x-panel>
     </div>
 
-    <!-- Project Table -->
+    {{-- Project Table --}}
     <x-panel title="Riepilogo per Progetto" dot="var(--teal)">
         <table class="t-table">
             <thead>

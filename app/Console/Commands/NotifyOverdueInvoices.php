@@ -11,26 +11,16 @@ use Illuminate\Support\Facades\DB;
 
 class NotifyOverdueInvoices extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+
     protected $signature = 'notify:overdue-invoices';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+
     protected $description = 'Cambia lo stato delle fatture scadute in overdue e invia una notifica ricorrente (1 al giorno) ad admin e administration.';
 
-    /**
-     * Execute the console command.
-     */
+
     public function handle()
     {
-        // 1. Mark 'issued' invoices that passed the due_date as 'overdue'
+        // 1. Marca come "scadute" (overdue) le fatture emesse che hanno superato la data di scadenza
         Invoice::query()
             ->where('status', 'issued')
             ->whereDate('due_date', '<', today())
@@ -39,7 +29,7 @@ class NotifyOverdueInvoices extends Command
                 $invoice->save();
             });
 
-        // 2. Fetch all invoices currently 'overdue'
+        // 2. Recupera tutte le fatture attualmente "overdue"
         $overdueInvoices = Invoice::where('status', 'overdue')->get();
 
         if ($overdueInvoices->isEmpty()) {

@@ -16,19 +16,19 @@ class ReceiveSocialPostFromN8nAction
         protected AuditLogService $auditLogger
     ) {}
 
-    /**
-     * @param array $data
-     * @return SocialPost|array
-     * @throws Exception
-     */
+
     public function execute(array $data): SocialPost|array
     {
         return DB::transaction(function () use ($data) {
+            // Blocca esecuzioni duplicate provenienti dallo stesso webhook n8n
             if ($existing = $this->checkIdempotency($data['n8n_execution_id'] ?? null)) {
                 return $existing;
             }
 
+            // Risolve il progetto di marketing di riferimento
             $mp = $this->resolveMarketingContext($data['marketing_project_id']);
+            
+            // Crea il post o lo aggancia a uno slot esistente
             $post = $this->createOrReusePost($data, $mp);
 
             try {
@@ -42,6 +42,7 @@ class ReceiveSocialPostFromN8nAction
                 throw $e;
             }
 
+            // Aggiorna lo stato del post e invia le notifiche
             $this->finalizePostAndNotify($post, $version);
 
             return $post;

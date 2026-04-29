@@ -93,7 +93,7 @@
                                   @php
                                       $iconName = 'bell';
                                       $nType = $notification->data['type'] ?? '';
-                                      if (in_array($nType, ['task_assigned', 'task_due_soon'])) $iconName = 'check-square';
+                                      if (in_array($nType, ['task_assigned', 'task_due_soon', 'task_created'])) $iconName = 'check-square';
                                       elseif ($nType === 'ticket_assigned') $iconName = 'ticket';
                                       elseif (in_array($nType, ['invoice_overdue', 'payment_recorded'])) $iconName = 'credit-card';
                                   @endphp
@@ -105,7 +105,7 @@
                                   <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)">{{ $notification->created_at->diffForHumans() }}</div>
                               </button>
                           </form>
-                          <!-- Clear Button -->
+                          {{-- Clear Button --}}
                           <form method="POST" action="{{ route('notifications.destroy', $notification->id) }}" style="position:absolute;top:10px;right:10px;margin:0" onsubmit="event.stopPropagation();">
                               @csrf
                               @method('DELETE')
@@ -238,7 +238,7 @@
         @endif
       @endcan
       
-      <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task" :active="request()->routeIs('tasks.*')" />
+      <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task" :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
       
       <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario" :active="request()->routeIs('calendar-events.*')" />
       

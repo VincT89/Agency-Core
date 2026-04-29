@@ -23,12 +23,14 @@ class ScheduleSocialPostAction
         Gate::forUser($user)->authorize('schedule', $post);
 
         return DB::transaction(function () use ($post, $scheduledAt, $platform, $notes, $user) {
+            // Blocca il record in scrittura per evitare doppie pianificazioni simultanee
             $lockedPost = SocialPost::whereKey($post->id)->lockForUpdate()->first();
 
             if (!$lockedPost->isPlannable()) {
                 throw new Exception("Il post non può essere pianificato. Assicurati che sia approvato e non abbia già slot attivi.");
             }
 
+            // Crea lo slot di pubblicazione effettivo per la piattaforma
             $slot = EditorialSlot::create([
                 'project_id' => $lockedPost->project_id,
                 'social_post_id' => $lockedPost->id,
@@ -39,6 +41,7 @@ class ScheduleSocialPostAction
                 'created_by' => $user->id,
             ]);
 
+            // Aggiorna lo stato del post a pianificato
             $lockedPost->update([
                 'status' => SocialPostStatus::Scheduled,
             ]);
@@ -52,7 +55,7 @@ class ScheduleSocialPostAction
                 userId: $user->id
             );
 
-            // Notifica Admin/Marketing
+            // Notifica il team dell'avvenuta pianificazione
             $usersToNotify = \App\Models\User::whereIn('role', [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing])->get();
             
             \Illuminate\Support\Facades\Notification::send(

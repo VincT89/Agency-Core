@@ -18,14 +18,7 @@ class ClientRespondToSocialPostAction
         protected AuditLogService $auditLogger
     ) {}
 
-    /**
-     * @param SocialPostReviewToken $token
-     * @param string $actionType 'approve' | 'request_changes' | 'comment'
-     * @param string|null $commentBody
-     * @param string|null $clientName
-     * @param string|null $clientEmail
-     * @return void
-     */
+
     public function execute(
         \App\Models\ClientReviewToken $token, 
         string $actionType, 
@@ -47,7 +40,7 @@ class ClientRespondToSocialPostAction
 
         DB::transaction(function () use ($token, $actionType, $commentBody, $clientName, $clientEmail, $post) {
 
-            // 1. Aggiungi il commento (se presente)
+            // Salva l'eventuale feedback testuale del cliente
             if ($commentBody) {
                 SocialPostComment::create([
                     'social_post_id' => $post->id,
@@ -60,7 +53,7 @@ class ClientRespondToSocialPostAction
                 ]);
             }
 
-            // 2. Gestisci lo stato in base all'azione
+            // Applica la transizione di stato in base all'esito della revisione
             if ($actionType === 'approve') {
                 $alreadyApproved = $post->status === SocialPostStatus::ClientApproved;
 
@@ -93,7 +86,7 @@ class ClientRespondToSocialPostAction
                     $post->marketingProject->update(['status' => \App\Enums\Social\MarketingProjectStatus::ClientApproved->value]);
                 }
 
-                // Segna il token come usato
+                // Invalida il token dopo l'uso
                 $token->update(['used_at' => now()]);
 
                 if (!$alreadyApproved) {
@@ -115,11 +108,11 @@ class ClientRespondToSocialPostAction
                     $post->editorialPlan->update(['status' => \App\Enums\Social\EditorialPlanStatus::ClientChangesRequested->value]);
                 }
                 
-                // Segna il token come usato
+                // Invalida il token dopo l'uso
                 $token->update(['used_at' => now()]);
             }
 
-            // 3. Traccia nell'audit log (anche se fatto dal cliente)
+            // Registra l'azione per audit e compliance
             $actionLabel = match($actionType) {
                 'approve' => 'social_post.client_approved',
                 'request_changes' => 'social_post.client_requested_changes',
@@ -135,7 +128,7 @@ class ClientRespondToSocialPostAction
                 userId: null
             );
 
-            // Notifica Admin e Social
+            // Notifica il team interno dell'interazione del cliente
             $usersToNotify = \App\Models\User::whereIn('role', [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing])->get();
             
             \Illuminate\Support\Facades\Notification::send(

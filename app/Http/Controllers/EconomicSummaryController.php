@@ -12,7 +12,7 @@ class EconomicSummaryController extends Controller
     {
         $user = auth()->user();
 
-        // Operativi and staff not allowed in finance dashboard
+        // Blocca l'accesso ai profili operativi non autorizzati all'area finance
         abort_if(! $user->canAccessFinance(), 403);
 
         $from = $request->string('from')->toString() ?: null;

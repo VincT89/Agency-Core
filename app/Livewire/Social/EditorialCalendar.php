@@ -4,11 +4,13 @@ namespace App\Livewire\Social;
 
 use App\Models\EditorialSlot;
 use App\Models\Project;
+use App\Models\Client;
 use App\Enums\Social\SocialPlatform;
 use Livewire\Component;
 
 class EditorialCalendar extends Component
 {
+    public $clientFilter = '';
     public $projectFilter = '';
     public $platformFilter = '';
 
@@ -17,7 +19,13 @@ class EditorialCalendar extends Component
         $query = EditorialSlot::with(['post.project', 'post.currentVersion'])
             ->where('status', '!=', \App\Enums\Social\EditorialSlotStatus::Cancelled);
 
-        // Filtri
+        // Applica i filtri impostati dall'utente
+        if ($this->clientFilter) {
+            $query->whereHas('post.project', function($q) {
+                $q->where('client_id', $this->clientFilter);
+            });
+        }
+
         if ($this->projectFilter) {
             $query->where('project_id', $this->projectFilter);
         }
@@ -26,7 +34,7 @@ class EditorialCalendar extends Component
             $query->where('platform', $this->platformFilter);
         }
 
-        // Project Supremacy
+        // Applica le policy di sicurezza basate sull'assegnazione dei progetti
         if (!auth()->user()->canManageSystem() && !auth()->user()->isMarketing()) {
             $query->whereHas('project', function($q) {
                 $q->whereHas('users', function($q2) {
@@ -56,7 +64,7 @@ class EditorialCalendar extends Component
 
     public function render()
     {
-        // Solo per riempire la select
+        // Carica i dati per le select di filtraggio in base ai permessi
         $projects = Project::when(!auth()->user()->canManageSystem() && !auth()->user()->isMarketing(), function ($q) {
             $q->whereHas('users', function ($q2) {
                 $q2->where('user_id', auth()->id());
@@ -65,7 +73,10 @@ class EditorialCalendar extends Component
 
         $platforms = SocialPlatform::cases();
 
+        $clients = Client::orderBy('name')->get();
+
         return view('livewire.social.editorial-calendar', [
+            'clients' => $clients,
             'projects' => $projects,
             'platforms' => $platforms,
         ])->layout('layouts.app', ['title' => 'Calendario Editoriale Social']);

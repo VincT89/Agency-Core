@@ -9,16 +9,16 @@ class PhotographerDashboardData
         public readonly int $kpi_in_attesa_cliente,
         public readonly int $kpi_pianificati,
         
-        /** @var WorkQueueItemData[] */
+        // Richieste in attesa di conferma del fotografo
         public readonly array $queue_da_rispondere,
         
-        /** @var WorkQueueItemData[] */
+        // Attività programmate per oggi
         public readonly array $queue_oggi,
         
-        /** @var WorkQueueItemData[] */
+        // Attività in attesa del cliente
         public readonly array $queue_in_attesa_cliente,
         
-        /** @var \App\Models\Task[] */
+        // Task generali in arrivo
         public readonly array $upcoming_tasks = []
     ) {}
 }

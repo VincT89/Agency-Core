@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
-   LOGIN / AUTHENTICATION
-═══════════════════════════════════════════════════════════════════ */
+/* Login / Authentication */
 
 .login-shell {
   display: grid;
@@ -9,7 +7,7 @@
   background: transparent;
 }
 
-/* ── DESTRA: Form ── */
+/* Destra: Form */
 .login-right {
   background: var(--bg1);
   border-left: 1px solid var(--line);
@@ -22,7 +20,7 @@
   z-index: 10;
 }
 
-/* ── SINISTRA: Brand ── */
+/* Sinistra: Brand */
 .login-left {
   padding: 60px 100px;
   display: flex;
@@ -101,7 +99,7 @@
   color: var(--text3);
 }
 
-/* ── Form interna ── */
+/* Form interna */
 .login-form-top {
   margin-bottom: 48px;
 }
@@ -136,7 +134,7 @@
   line-height: 1.5;
 }
 
-/* ── Inline Replacement Classes ── */
+/* Inline Replacement Classes */
 .login-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
 .login-left-top { position: relative; z-index: 1; }
 .login-form-g { margin-bottom: 14px; }

@@ -7,12 +7,7 @@ use App\Models\Shooting\Shoot;
 
 class ShootingRouteResolver
 {
-    /**
-     * Risolve la route della pagina di dettaglio di uno shooting 
-     * in base al ruolo dell'utente che la richiede.
-     * 
-     * Priorità: Admin > Social > Photographer
-     */
+    // Risolve la route di dettaglio in base al ruolo dell'utente (Admin > Social > Fotografo)
     public static function showRouteFor(User $user, Shoot $shoot): string
     {
         if ($user->canManageSystem()) {
@@ -26,11 +21,7 @@ class ShootingRouteResolver
         return route('social.shooting.show', $shoot);
     }
 
-    /**
-     * Risolve la route della pagina index in base al ruolo dell'utente.
-     * 
-     * Priorità: Admin > Social > Photographer
-     */
+    // Risolve la route della pagina index in base al ruolo (Admin > Social > Fotografo)
     public static function indexRouteFor(User $user): string
     {
         if ($user->canManageSystem()) {

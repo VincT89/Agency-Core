@@ -7,23 +7,13 @@ use Illuminate\Console\Command;
 
 class BackfillTicketCodes extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+
     protected $signature = 'app:backfill-ticket-codes';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+
     protected $description = 'Retroattivamente genera i codici Ticket per tutti i ticket esistenti sprovvisti di codice.';
 
-    /**
-     * Execute the console command.
-     */
+
     public function handle()
     {
         $tickets = Ticket::withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)

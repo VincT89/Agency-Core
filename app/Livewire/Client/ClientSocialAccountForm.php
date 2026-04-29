@@ -66,13 +66,13 @@ class ClientSocialAccountForm extends Component
 
         $data = $this->forms[$platform];
         
-        // Normalize URL prima della validazione
+        // Normalizza e formatta l'URL prima della validazione
         if (!empty($data['account_url']) && !preg_match('~^(?:f|ht)tps?://~i', $data['account_url'])) {
             $data['account_url'] = 'https://' . $data['account_url'];
             $this->forms[$platform]['account_url'] = $data['account_url'];
         }
 
-        // Validate basic fields
+        // Valida i campi base
         $this->validate([
             "forms.$platform.account_url" => 'nullable|url',
         ], [

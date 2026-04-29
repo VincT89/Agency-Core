@@ -16,26 +16,21 @@ class AddSocialPostVersionFromN8nAction
         protected AuditLogService $auditLogger
     ) {}
 
-    /**
-     * @param SocialPost $post
-     * @param array $data
-     * @return SocialPostVersion
-     * @throws Exception
-     */
+
     public function execute(SocialPost $post, array $data): SocialPostVersion
     {
         return DB::transaction(function () use ($post, $data) {
-            // Lock per evitare race condition sul numero di versione
+            // Blocca il record in scrittura per evitare doppioni di versione
             $lockedPost = SocialPost::where('id', $post->id)->lockForUpdate()->first();
 
             if (in_array($lockedPost->status, [SocialPostStatus::Scheduled, SocialPostStatus::Published])) {
                 throw new Exception("Non puoi aggiungere nuove versioni a un post pianificato o pubblicato. Annulla prima la pianificazione.");
             }
 
-            // 1. Determina il prossimo numero di versione
+            // Calcola dinamicamente il numero della prossima versione
             $nextVersionNumber = $lockedPost->versions()->max('version_number') + 1;
 
-            // 2. Crea la nuova versione
+            // Registra la nuova versione nel database
             try {
                 $version = SocialPostVersion::create([
                     'social_post_id' => $lockedPost->id,
@@ -49,7 +44,7 @@ class AddSocialPostVersionFromN8nAction
                 ]);
             } catch (\Illuminate\Database\QueryException $e) {
                 if ($e->getCode() === '23000' && !empty($data['n8n_execution_id'])) {
-                    // Race condition hit: an identical execution was just inserted
+                    // Intercetta esecuzioni duplicate silenziose da n8n
                     $existingVersion = SocialPostVersion::where('external_id', $data['n8n_execution_id'])->first();
                     if ($existingVersion) {
                         return $existingVersion;
@@ -58,13 +53,13 @@ class AddSocialPostVersionFromN8nAction
                 throw $e;
             }
 
-            // 4. Aggiorna il post corrente e lo stato
+            // Imposta la nuova versione come attiva e rimanda il post in revisione interna
             $post->update([
                 'current_version_id' => $version->id,
                 'status' => SocialPostStatus::InternalReview,
             ]);
 
-            // 5. Traccia nell'audit log
+            // Logga l'aggiornamento di versione
             $this->auditLogger->log(
                 action: 'social_post.version_added',
                 auditable: $post,
@@ -74,7 +69,7 @@ class AddSocialPostVersionFromN8nAction
                 userId: null
             );
 
-            // Notificare Admin/Marketing
+            // Avvisa il team che una nuova versione è disponibile
             $usersToNotify = \App\Models\User::whereIn('role', [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing])->get();
             
             \Illuminate\Support\Facades\Notification::send(

@@ -21,7 +21,7 @@ class DashboardController extends Controller
         } elseif ($user->isAdministration()) {
             $data = $this->getAdministrationData($user);
         } else {
-            // Include ruoli operativi: Developer, Marketing, Photographer, GraphicDesigner
+            // Carica la dashboard operativa per sviluppatori, marketing, creativi, ecc.
             $data = $this->getWorkspaceData($user);
         }
 
@@ -81,7 +81,7 @@ class DashboardController extends Controller
 
             'dueSoonTasks' => Task::assignedTo($user)
                                 ->open()
-                                ->dueSoon(7) // Tra oggi e 7 giorni
+                                ->dueSoon(7)
                                 ->with(['project'])
                                 ->orderBy('due_date', 'asc')
                                 ->get(),

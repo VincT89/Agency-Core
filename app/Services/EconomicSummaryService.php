@@ -19,9 +19,7 @@ class EconomicSummaryService
         'overdue',
     ];
 
-    /**
-     * Applica il perimetro di autorizzazione Finance
-     */
+    // Applica il perimetro di autorizzazione per gli utenti Finance
     protected function applyRolePerimeter(Builder $query, User $user): Builder
     {
         if ($user->canAccessFinance()) {
@@ -40,9 +38,7 @@ class EconomicSummaryService
         return $query->whereRaw('1 = 0');
     }
 
-    /**
-     * Filtro temporale generico
-     */
+    // Applica il filtro temporale sulle date specificate
     protected function applyPeriod(Builder $query, string $dateColumn, ?string $from, ?string $to): Builder
     {
         if ($from) {

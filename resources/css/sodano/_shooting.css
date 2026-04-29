@@ -1,4 +1,4 @@
-/* ── Mini stat card shooting (usata in shooting-overview Livewire) ── */
+/* Mini stat card shooting (usata in shooting-overview Livewire) */
 .shoot-stat-card {
   border-radius: var(--r2); padding: 16px; text-align: center;
   border: 1px solid var(--line);

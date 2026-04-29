@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TaskQuery
 {
-    /**
-     * Builds the standard index query with given filters.
-     * This relies upon the underlying ProjectSupremacyScope implicitly.
-     */
+    // Costruisce la query per la lista applicando i filtri (ProjectSupremacyScope implicito)
     public function forIndex(array $filters): Builder
     {
         $query = Task::query()
@@ -33,19 +30,13 @@ class TaskQuery
         return $query;
     }
 
-    /**
-     * Builds the query for the Kanban board view.
-     * Often identical to forIndex but may include different eager loads or ordering.
-     */
+    // Costruisce la query ottimizzata per la vista Kanban
     public function forKanban(array $filters): Builder
     {
         return $this->forIndex($filters)->reorder()->orderByRaw('due_date IS NULL, due_date ASC');
     }
 
-    /**
-     * Returns an un-scoped task builder for trusted system/batch detection processes only.
-     * Use with EXTREME caution.
-     */
+    // Bypass di sicurezza globale per processi di sistema in background
     public function forSystemBatch(): Builder
     {
         return Task::query()->withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class);

@@ -8,11 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class N8nAuth
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Closure(Request): (Response)  $next
-     */
+    // Valida il token bearer per le richieste in ingresso da n8n
     public function handle(Request $request, Closure $next): Response
     {
         $token = $request->bearerToken();

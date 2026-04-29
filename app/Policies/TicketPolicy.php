@@ -37,12 +37,12 @@ class TicketPolicy
 
     public function delete(User $user, Ticket $ticket): bool
     {
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 
     private function canAccessTicket(User $user, Ticket $ticket): bool
     {
-        // Regola Suprema: Appartenenza al progetto collegato
+        // Limita la visibilità al perimetro del progetto
         if ($ticket->project_id && $user->projects()->where('projects.id', $ticket->project_id)->exists()) {
             return true;
         }

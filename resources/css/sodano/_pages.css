@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
-   FLOW STRIP
-═══════════════════════════════════════════════════════════════════ */
+/* Flow Strip */
 .flow {
   display: flex; margin-bottom: 20px;
   border: 1px solid var(--line); border-radius: var(--r); overflow: hidden;
@@ -24,9 +22,7 @@
 .flow-l { font-size: 11px; font-weight: 600; color: var(--text); }
 .flow-s { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; }
 
-/* ═══════════════════════════════════════════════════════════════════
-   KANBAN
-═══════════════════════════════════════════════════════════════════ */
+/* Kanban */
 .kanban {
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 10px; min-height: 320px;
@@ -51,9 +47,7 @@
 .k-card-title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
 .k-card-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   CALENDAR
-═══════════════════════════════════════════════════════════════════ */
+/* Calendar */
 .cal-week {
   display: grid; grid-template-columns: repeat(5, 1fr);
   gap: 0; border: 1px solid var(--line); border-radius: var(--r2);
@@ -78,9 +72,7 @@
 .cal-ev.busy { background: rgba(232,91,42,.1); border-left-color: var(--accent); color: var(--text); }
 .cal-ev.med { background: rgba(245,200,66,.08); border-left-color: var(--yellow); color: var(--text2); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   WORKLOAD BAR / PROGRESS
-═══════════════════════════════════════════════════════════════════ */
+/* Workload Bar / Progress */
 .wl-track { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 4px; }
 .wl-fill { height: 100%; border-radius: 2px; transition: width .4s ease; background: var(--teal); }
 .wl-fill.warn { background: var(--accent); }
@@ -88,9 +80,7 @@
 .prog-track { height: 2px; background: var(--bg3); border-radius: 1px; overflow: hidden; margin-top: 4px; }
 .prog-fill { height: 100%; border-radius: 1px; background: var(--accent); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   INTEGRATIONS
-═══════════════════════════════════════════════════════════════════ */
+/* Integrations */
 .int-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .int-card {
   background: var(--bg1); border: 1px solid var(--line);
@@ -114,9 +104,7 @@
 .int-pulse.off { background: var(--text3); }
 .int-ping { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 6px; }
 
-/* ═══════════════════════════════════════════════════════════════════
-   SETTINGS
-═══════════════════════════════════════════════════════════════════ */
+/* Settings */
 .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .settings-panel { background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r2); padding: 18px; }
 .settings-panel-title { font-weight: 700; font-size: 12px; color: var(--text); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
@@ -136,9 +124,7 @@
 }
 .toggle.on::after { transform: translateX(14px); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   DASHBOARD WELCOME AREA
-═══════════════════════════════════════════════════════════════════ */
+/* Dashboard Welcome Area */
 .welcome {
   display: flex; align-items: flex-end; justify-content: space-between;
   margin-bottom: 20px;

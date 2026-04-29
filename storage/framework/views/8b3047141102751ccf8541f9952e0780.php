@@ -123,9 +123,30 @@
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                             </div>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($requiresMeta && ! $isMetaReady): ?>
-                                <div style="margin-top: 6px; font-size: 10px; color: var(--red); display: flex; align-items: center; gap: 4px;">
-                                    <i data-lucide="alert-octagon" style="width: 10px; height: 10px;"></i>
-                                    Pubblicazione bloccata: accessi Meta Business incompleti.
+                                <div style="margin-top: 8px;">
+                                    <?php if (isset($component)) { $__componentOriginal5194778a3a7b899dcee5619d0610f5cf = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5194778a3a7b899dcee5619d0610f5cf = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.alert','data' => ['type' => 'error','icon' => 'lock','title' => 'Meta Non Pronto']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('alert'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['type' => 'error','icon' => 'lock','title' => 'Meta Non Pronto']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+                                        Pubblicazione bloccata. Il cliente non ha completato l'accesso a Facebook/Instagram.
+                                     <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5194778a3a7b899dcee5619d0610f5cf)): ?>
+<?php $attributes = $__attributesOriginal5194778a3a7b899dcee5619d0610f5cf; ?>
+<?php unset($__attributesOriginal5194778a3a7b899dcee5619d0610f5cf); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5194778a3a7b899dcee5619d0610f5cf)): ?>
+<?php $component = $__componentOriginal5194778a3a7b899dcee5619d0610f5cf; ?>
+<?php unset($__componentOriginal5194778a3a7b899dcee5619d0610f5cf); ?>
+<?php endif; ?>
                                 </div>
                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array('tiktok', $platforms ?? []) && ! $client?->socialAccountFor('tiktok')?->isReadyToPublish()): ?>
@@ -137,29 +158,74 @@
                         </td>
                         
                         <td style="text-align: right; vertical-align: middle;">
-                            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion && $post->currentVersion->caption): ?>
-                                    <button type="button" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" onclick="navigator.clipboard.writeText(`<?php echo e(addslashes(str_replace('`', '\`', $post->currentVersion->caption))); ?>`); alert('Caption copiata!')" title="Copia Caption">
-                                        <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
-                                    </button>
-                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion?->preview_url): ?>
-                                    <a href="<?php echo e($post->currentVersion->preview_url); ?>" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" target="_blank" title="Apri / Scarica media">
-                                        <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
-                                    </a>
-                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                
-                                <button wire:click="markAsPublished(<?php echo e($post->id); ?>)" class="btn btn-sm btn-p" style="padding: 4px 10px;" wire:loading.attr="disabled" <?php echo e(!$canPublish ? 'disabled' : ''); ?> onclick="return confirm('Confermi di aver pubblicato manualmente il post sulle piattaforme previste?') || event.stopImmediatePropagation()">
-                                    Pubblicato
-                                </button>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion && $post->currentVersion->caption): ?>
+                                        <button type="button" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" onclick="navigator.clipboard.writeText(`<?php echo e(addslashes(str_replace('`', '\`', $post->currentVersion->caption))); ?>`); typeof toast === 'function' ? toast('Caption copiata!') : alert('Caption copiata!')" title="Copia Caption">
+                                            <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
+                                        </button>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion?->preview_url): ?>
+                                        <a href="<?php echo e($post->currentVersion->preview_url); ?>" class="btn btn-sm btn-secondary" style="padding: 4px 6px;" target="_blank" title="Apri/Scarica Media">
+                                            <i data-lucide="image" style="width: 12px; height: 12px;"></i>
+                                        </a>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    
+                                    <?php if (isset($component)) { $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.confirm-modal','data' => ['title' => 'Conferma Pubblicazione','message' => 'Hai effettivamente pubblicato questo contenuto sulle piattaforme target?','confirmText' => 'Sì, ho pubblicato','confirmMethod' => 'markAsPublished('.e($post->id).')','btnClass' => 'btn btn-p','icon' => 'check-circle','iconColor' => 'var(--green)','iconBg' => 'rgba(0, 200, 83, 0.1)','disabled' => !$canPublish]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('confirm-modal'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Conferma Pubblicazione','message' => 'Hai effettivamente pubblicato questo contenuto sulle piattaforme target?','confirmText' => 'Sì, ho pubblicato','confirmMethod' => 'markAsPublished('.e($post->id).')','btnClass' => 'btn btn-p','icon' => 'check-circle','iconColor' => 'var(--green)','iconBg' => 'rgba(0, 200, 83, 0.1)','disabled' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(!$canPublish)]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+                                        <button type="button" class="btn btn-sm btn-p" style="padding: 4px 10px;" wire:loading.attr="disabled" <?php echo e(!$canPublish ? 'disabled' : ''); ?> title="Segna come Pubblicato">
+                                            <i data-lucide="check" style="width: 12px; height: 12px; margin-right: 4px; display: inline-block; vertical-align: -2px;"></i> Pubblicato
+                                        </button>
+                                     <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10)): ?>
+<?php $attributes = $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10; ?>
+<?php unset($__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10)): ?>
+<?php $component = $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10; ?>
+<?php unset($__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10); ?>
+<?php endif; ?>
+                                </div>
                             </div>
                         </td>
                     </tr>
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                     <tr>
-                        <td colspan="4" class="social-empty-state" style="border: none;">
-                            Nessun post da pubblicare.
+                        <td colspan="4" style="border: none; padding: 20px;">
+                            <?php if (isset($component)) { $__componentOriginal074a021b9d42f490272b5eefda63257c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal074a021b9d42f490272b5eefda63257c = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.empty-state','data' => ['icon' => 'check-circle','title' => 'Nessun contenuto da pubblicare','message' => 'Quando un cliente approva un post, comparirà qui con caption, media e accessi social per la pubblicazione.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('empty-state'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['icon' => 'check-circle','title' => 'Nessun contenuto da pubblicare','message' => 'Quando un cliente approva un post, comparirà qui con caption, media e accessi social per la pubblicazione.']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal074a021b9d42f490272b5eefda63257c)): ?>
+<?php $attributes = $__attributesOriginal074a021b9d42f490272b5eefda63257c; ?>
+<?php unset($__attributesOriginal074a021b9d42f490272b5eefda63257c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal074a021b9d42f490272b5eefda63257c)): ?>
+<?php $component = $__componentOriginal074a021b9d42f490272b5eefda63257c; ?>
+<?php unset($__componentOriginal074a021b9d42f490272b5eefda63257c); ?>
+<?php endif; ?>
                         </td>
                     </tr>
                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>

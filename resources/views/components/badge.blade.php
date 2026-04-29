@@ -45,13 +45,18 @@ $map = [
     'card'            => 'bb',
     // marketing statuses
     'draft'           => 'bd',
-    'submitted_to_n8n'=> 'bb',
+    'queued_to_n8n'   => 'ba', // giallo
+    'n8n_failed'      => 'br', // rosso
+    'submitted_to_n8n'=> 'bb', // blu
     'posts_received'  => 'bb',
     'internal_review' => 'ba',
     'sent_to_client'  => 'ba',
     'client_changes_requested' => 'br',
     'client_approved' => 'bg',
-    'ready_to_publish'=> 'bb',
+    'ready_to_publish'=> 'bg', // verde
+    'not_ready'       => 'bd', // grigio
+    'publishing'      => 'ba', // giallo/arancione
+    'failed'          => 'br', // rosso
     // project status
     'completed'       => 'bg',
     'on_hold'         => 'ba',

@@ -8,21 +8,17 @@ use Illuminate\Queue\InteractsWithQueue;
 
 class GenerateTaskForApprovedSocialPost
 {
-    /**
-     * Create the event listener.
-     */
+
     public function __construct(
         protected \App\Domain\Social\Actions\CreateMarketingPublicationTaskAction $action
     ) {}
 
-    /**
-     * Handle the event.
-     */
+
     public function handle(SocialPostApprovedByClient $event): void
     {
         $post = $event->post;
         
-        // Se è parte di un piano editoriale, i task vengono generati dall'approvazione del piano
+        // Generazione posticipata al piano editoriale se il post ne fa parte
         if ($post->editorial_plan_id || $post->editorial_plan_slot_id) {
             return;
         }

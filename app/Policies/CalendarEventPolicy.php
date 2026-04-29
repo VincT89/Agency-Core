@@ -41,17 +41,17 @@ class CalendarEventPolicy
 
     public function delete(User $user, CalendarEvent $event): bool
     {
-        return false; // Handled by before()
+        return false; // Autorizzazione gestita dal metodo before()
     }
 
     private function canAccessEvent(User $user, CalendarEvent $event): bool
     {
         if ($event->project_id) {
-            // Regola Suprema: Il perimetro del progetto vince sempre.
+            // Limita la visibilità al perimetro del progetto
             return $user->projects()->where('projects.id', $event->project_id)->exists();
         }
 
-        // Se l'evento NON ha progetto (Personal Event), fallback su Ownership
+        // Fallback sul creatore/assegnatario per eventi non legati a progetti
         if ($event->assigned_to === $user->id || $event->created_by === $user->id) {
             return true;
         }

@@ -14,6 +14,8 @@ class EditorialPlanReview extends Component
     public $comment = '';
     public $clientName = '';
     public $isExpired = false;
+    public $showChangesForm = false;
+    public $tokenObj = null;
 
     public function mount(EditorialPlan $plan, string $token)
     {
@@ -21,6 +23,7 @@ class EditorialPlanReview extends Component
         $this->token = $token;
 
         $reviewToken = ClientReviewToken::where('token', $token)->first();
+        $this->tokenObj = $reviewToken;
         if ($reviewToken && $reviewToken->expires_at && $reviewToken->expires_at->isPast()) {
             $this->isExpired = true;
         }
@@ -66,10 +69,9 @@ class EditorialPlanReview extends Component
 
         $action->execute($this->plan, 'request_changes', $this->comment);
 
-        // Aggiungi il commento al progetto marketing o piano
-        // Per ora lo salviamo come nota o task
+        // WORKAROUND: Salva temporaneamente il feedback sul primo post disponibile in assenza di tabella commenti globale
         \App\Models\SocialPostComment::create([
-            'social_post_id' => $this->plan->slots->first()->social_post_id ?? null, // Workaround if no generic comments table
+            'social_post_id' => $this->plan->slots->first()->social_post_id ?? null,
             'client_name' => $this->clientName,
             'body' => "REVISIONE PIANO: " . $this->comment,
             'visibility' => \App\Enums\Social\SocialPostCommentVisibility::Client,

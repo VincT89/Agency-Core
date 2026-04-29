@@ -12,7 +12,6 @@ class PaymentObserver
     public function created(Payment $payment): void
     {
         if ($payment->invoice) {
-            /** @var \App\Models\User|null $user */
             $user = auth()->user();
             $userName = $user?->name ?? 'Sistema';
             $amt = number_format((float) $payment->amount, 2, ',', '.');
@@ -32,7 +31,6 @@ class PaymentObserver
     public function deleted(Payment $payment): void
     {
         if ($payment->invoice) {
-            /** @var \App\Models\User|null $user */
             $user = auth()->user();
             $userName = $user?->name ?? 'Sistema';
             $amt = number_format((float) $payment->amount, 2, ',', '.');

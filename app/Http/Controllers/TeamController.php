@@ -47,7 +47,7 @@ class TeamController extends Controller
             'is_active'   => $request->boolean('is_active', true),
         ]);
 
-        // Associa i membri
+        // Associa i membri al team con il relativo ruolo
         if (!empty($data['members'])) {
             $sync = [];
             foreach ($data['members'] as $userId) {

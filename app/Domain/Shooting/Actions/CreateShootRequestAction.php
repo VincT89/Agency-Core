@@ -42,7 +42,7 @@ class CreateShootRequestAction
                 }
             }
             
-            // Notify photographer
+            // Avvisa il fotografo della nuova assegnazione
             if ($shoot->photographer) {
                 $url = \App\Helpers\ShootingRouteResolver::showRouteFor($shoot->photographer, $shoot);
                 $shoot->photographer->notify(new ShootingWorkflowNotification(

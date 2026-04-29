@@ -8,17 +8,11 @@ use App\Observers\{TicketObserver, InvoiceObserver, PaymentObserver, CalendarEve
 
 class ObserverServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     */
     public function register(): void
     {
-        //
     }
 
-    /**
-     * Bootstrap services.
-     */
+
     public function boot(): void
     {
         Ticket::observe(TicketObserver::class);

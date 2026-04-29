@@ -1,8 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
-   SODANO CONSULTING — Design System v2
-   Ogni modulo è indipendente e manutenibile separatamente.
-   Vite compila tutto in un unico bundle ottimizzato.
-═══════════════════════════════════════════════════════════ */
+/* Entrypoint Design System Sodano Consulting */
 
 @import './sodano/_variables.css';
 @import './sodano/_reset.css';
@@ -20,3 +16,4 @@
 @import './sodano/_auth.css';
 @import './sodano/_social.css';
 @import './sodano/_marketing.css';
+@import './sodano/_client-review.css';

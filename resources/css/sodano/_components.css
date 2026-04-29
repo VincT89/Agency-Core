@@ -1,4 +1,4 @@
-/* ── KPI STRIP ─────────────────────────────────────────── */
+/* KPI Strip */
 .kpi-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);  /* default; override inline dove serve */
@@ -50,7 +50,7 @@
 .kpi-delta-t.up   { color: var(--teal); }
 .kpi-delta-t.down { color: var(--red); }
 
-/* ── PANEL ──────────────────────────────────────────────── */
+/* Panel */
 .panel {
   background: rgba(24, 24, 29, 0.88);
   border: 1px solid var(--line);
@@ -80,7 +80,7 @@
 .panel-body.pad     { padding: 16px 18px; }
 .panel-body.scroll  { max-height: 440px; overflow-y: auto; }
 
-/* ── STAT CARD ──────────────────────────────────────────── */
+/* Stat Card */
 .stat-card { padding: 0; }
 .stat-card.hi .stat-val { color: var(--accent); }
 .stat-lbl {
@@ -94,9 +94,7 @@
 .stat-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 4px; }
 .stat-sub.al { color: var(--accent); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   BADGES
-═══════════════════════════════════════════════════════════════════ */
+/* Badges */
 .badge {
   font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
   text-transform: uppercase; padding: 3px 8px; border-radius: 2px;
@@ -110,18 +108,14 @@
 .bk { background: rgba(232,91,42,.12); color: var(--accent); border: 1px solid rgba(232,91,42,.2); }
 .bp { background: rgba(167,139,250,.12); color: var(--purple); border: 1px solid rgba(167,139,250,.2); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   VERSION BADGE
-═══════════════════════════════════════════════════════════════════ */
+/* Version Badge */
 .ver {
   font-family: var(--mono); font-size: 9px; padding: 2px 6px;
   background: var(--bg3); color: var(--text3); border-radius: 2px;
   border: 1px solid var(--line2); margin-left: 6px;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   PILLS / FILTERS
-═══════════════════════════════════════════════════════════════════ */
+/* Pills / Filters */
 .pills {
   display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap;
 }
@@ -134,9 +128,7 @@
 .pill:hover { border-color: var(--line3); color: var(--text2); }
 .pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-/* ═══════════════════════════════════════════════════════════════════
-   TAB SWITCHER
-═══════════════════════════════════════════════════════════════════ */
+/* Tab Switcher */
 .tab-switcher {
   display: flex; gap: 4px;
   background: var(--bg2);
@@ -157,9 +149,7 @@
   border: 1px solid var(--line2);
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   FILTERS ROW
-═══════════════════════════════════════════════════════════════════ */
+/* Filters Row */
 .filters-row {
   display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
   align-items: center; justify-content: flex-end;

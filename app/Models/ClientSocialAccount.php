@@ -13,7 +13,7 @@ class ClientSocialAccount extends Model
 {
     protected $fillable = [
         'client_id',
-        'provider', // legacy
+        'provider', // obsoleto
         'platform',
         'account_name',
         'account_url',
@@ -25,7 +25,7 @@ class ClientSocialAccount extends Model
         'access_verified_at',
         'access_verified_by',
         
-        // Legacy fields (kept for now)
+        // Campi legacy per compatibilità pre-refactoring
         'facebook_page_url',
         'instagram_profile_url',
         'meta_business_manager_id',
@@ -33,13 +33,13 @@ class ClientSocialAccount extends Model
         'facebook_page_id',
         'instagram_business_account_id',
         
-        // New ID fields
+        // Identificativi account specifici per piattaforma
         'business_manager_id',
         'business_center_id',
         'tiktok_account_id',
         'credential_location',
         
-        // API Configuration
+        // Configurazione API e Token
         'api_provider',
         'api_status',
         'access_token',
@@ -52,7 +52,7 @@ class ClientSocialAccount extends Model
     protected function casts(): array
     {
         return [
-            'has_agency_access' => 'boolean', // legacy
+            'has_agency_access' => 'boolean', // obsoleto
             'is_ready_to_publish' => 'boolean',
             'account_exists' => 'boolean',
             

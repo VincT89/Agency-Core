@@ -37,7 +37,7 @@ class CreateOrUpdateClientSocialAccountAction
                 'notes' => blank($data['notes'] ?? null) ? null : $data['notes'],
                 'api_notes' => blank($data['api_notes'] ?? null) ? null : $data['api_notes'],
                 
-                // Legacy support maps
+                // Mappatura campi legacy per compatibilità pre-refactoring
                 'facebook_page_url' => ($platform === 'facebook') ? (blank($data['account_url'] ?? null) ? null : $data['account_url']) : null,
                 'instagram_profile_url' => ($platform === 'instagram') ? (blank($data['account_url'] ?? null) ? null : $data['account_url']) : null,
                 'meta_business_manager_id' => blank($data['business_manager_id'] ?? null) ? null : $data['business_manager_id'],

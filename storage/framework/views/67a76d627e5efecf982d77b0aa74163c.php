@@ -93,7 +93,7 @@
                                   <?php
                                       $iconName = 'bell';
                                       $nType = $notification->data['type'] ?? '';
-                                      if (in_array($nType, ['task_assigned', 'task_due_soon'])) $iconName = 'check-square';
+                                      if (in_array($nType, ['task_assigned', 'task_due_soon', 'task_created'])) $iconName = 'check-square';
                                       elseif ($nType === 'ticket_assigned') $iconName = 'ticket';
                                       elseif (in_array($nType, ['invoice_overdue', 'payment_recorded'])) $iconName = 'credit-card';
                                   ?>
@@ -105,7 +105,7 @@
                                   <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)"><?php echo e($notification->created_at->diffForHumans()); ?></div>
                               </button>
                           </form>
-                          <!-- Clear Button -->
+                          
                           <form method="POST" action="<?php echo e(route('notifications.destroy', $notification->id)); ?>" style="position:absolute;top:10px;right:10px;margin:0" onsubmit="event.stopPropagation();">
                               <?php echo csrf_field(); ?>
                               <?php echo method_field('DELETE'); ?>
@@ -535,14 +535,14 @@
       
       <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('tasks.index')).'','icon' => 'check-square','label' => 'Task','active' => request()->routeIs('tasks.*')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('tasks.index')).'','icon' => 'check-square','label' => 'Task','active' => request()->routeIs('tasks.*'),'badge' => $openTasks ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('nav-item'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['href' => ''.e(route('tasks.index')).'','icon' => 'check-square','label' => 'Task','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('tasks.*'))]); ?>
+<?php $component->withAttributes(['href' => ''.e(route('tasks.index')).'','icon' => 'check-square','label' => 'Task','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('tasks.*')),'badge' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($openTasks ?? null)]); ?>
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
 <?php echo $__env->renderComponent(); ?>

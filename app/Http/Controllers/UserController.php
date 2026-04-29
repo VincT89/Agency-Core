@@ -90,9 +90,7 @@ class UserController extends Controller implements HasMiddleware
             ->with('success', 'Utente aggiornato correttamente.');
     }
 
-    /**
-     * Reset password manuale — genera una password temporanea e la mostra una volta sola.
-     */
+    // Genera una password temporanea visualizzata una sola volta
     public function resetPassword(User $user): RedirectResponse
     {
         $temporary = Str::password(12);
@@ -102,7 +100,7 @@ class UserController extends Controller implements HasMiddleware
             'password_changed_at' => null,
         ]);
 
-        // La password temporanea viene mostrata in sessione una volta sola
+        // Passa la password temporanea alla vista tramite sessione flash
         return redirect()->route('users.index')
             ->with('temp_password', [
                 'user'     => $user->name,
@@ -110,12 +108,10 @@ class UserController extends Controller implements HasMiddleware
             ]);
     }
 
-    /**
-     * Disattiva/riattiva account senza eliminarlo.
-     */
+    // Cambia lo stato attivo/inattivo dell'account
     public function toggleStatus(User $user): RedirectResponse
     {
-        // Non puoi disattivare te stesso
+        // Impedisce l'autodisattivazione del proprio account
         abort_if($user->id === auth()->id(), 403, 'Non puoi disattivare il tuo account.');
 
         $user->update([

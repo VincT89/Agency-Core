@@ -10,12 +10,12 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
-        // Solo Admin
+        // Accesso limitato agli amministratori di sistema
         Gate::authorize('system.admin');
 
         $query = AuditLog::with('user', 'auditable')->latest();
 
-        // Filtri opzionali (basic)
+        // Applica eventuali filtri di ricerca
         if ($request->filled('action')) {
             $query->where('action', $request->action);
         }

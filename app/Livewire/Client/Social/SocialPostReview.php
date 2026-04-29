@@ -45,13 +45,11 @@ class SocialPostReview extends Component
             abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
         }
 
-        if (!$this->hasReadContent) {
-            $this->addError('hasReadContent', 'È obbligatorio dichiarare di aver visionato il contenuto.');
-            return;
-        }
-
         $this->validate([
             'clientName' => ['required', 'string', 'max:255'],
+            'hasReadContent' => ['accepted'],
+        ], [
+            'hasReadContent.accepted' => 'È obbligatorio dichiarare di aver visionato il contenuto.',
         ]);
 
         $action->execute(

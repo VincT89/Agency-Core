@@ -13,7 +13,6 @@ class ClientSocialAccount extends Model
 {
     protected $fillable = [
         'client_id',
-        'provider', // obsoleto
         'platform',
         'account_name',
         'account_url',

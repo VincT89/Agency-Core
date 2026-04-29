@@ -1,6 +1,4 @@
-// resources/js/project-select.js
 // Popola dinamicamente il select progetto in base al cliente selezionato.
-// Uso: data-client-select="<id-select-cliente>" data-project-select="<id-select-progetto>"
 
 function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = null) {
     const clientEl  = document.getElementById(clientSelectId);
@@ -40,5 +38,5 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
     }
 }
 
-// Make it global
+// globale
 window.initProjectSelect = initProjectSelect;

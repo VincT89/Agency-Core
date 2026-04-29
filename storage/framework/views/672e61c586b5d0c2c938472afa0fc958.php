@@ -70,20 +70,42 @@
         
         <div class="mkt-meta-action">
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($project->status->value, ['draft', 'n8n_failed'])): ?>
-                <button wire:click="submitToN8n" 
-                        <?php if($project->status->value === 'n8n_failed'): ?> onclick="return confirm('Vuoi riprovare l\'invio a n8n?')" <?php endif; ?>
-                        class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="submitToN8n">
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->status->value === 'n8n_failed'): ?>
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->status->value === 'n8n_failed'): ?>
+                    <?php if (isset($component)) { $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.confirm-modal','data' => ['title' => 'Riprova Invio a n8n','message' => 'Vuoi riprovare l\'invio a n8n? Verrà generato un nuovo tentativo di elaborazione.','confirmText' => 'Sì, riprova invio','confirmMethod' => 'submitToN8n','btnClass' => 'btn btn-p','btnStyle' => 'background: var(--orange); border-color: var(--orange);','icon' => 'refresh-cw','iconColor' => 'var(--orange)','iconBg' => 'rgba(255, 150, 0, 0.1)']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('confirm-modal'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Riprova Invio a n8n','message' => 'Vuoi riprovare l\'invio a n8n? Verrà generato un nuovo tentativo di elaborazione.','confirmText' => 'Sì, riprova invio','confirmMethod' => 'submitToN8n','btnClass' => 'btn btn-p','btnStyle' => 'background: var(--orange); border-color: var(--orange);','icon' => 'refresh-cw','iconColor' => 'var(--orange)','iconBg' => 'rgba(255, 150, 0, 0.1)']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+                        <button class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" type="button">
                             <i data-lucide="refresh-cw" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Riprova Invio
-                        <?php else: ?>
+                        </button>
+                     <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10)): ?>
+<?php $attributes = $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10; ?>
+<?php unset($__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10)): ?>
+<?php $component = $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10; ?>
+<?php unset($__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10); ?>
+<?php endif; ?>
+                <?php else: ?>
+                    <button wire:click="submitToN8n" class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="submitToN8n">
                             <i data-lucide="send" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invia a n8n
-                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                    </span>
-                    <span wire:loading wire:target="submitToN8n">
-                        <i data-lucide="loader" class="spin" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invio in corso...
-                    </span>
-                </button>
+                        </span>
+                        <span wire:loading wire:target="submitToN8n">
+                            <i data-lucide="loader" class="spin" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invio in corso...
+                        </span>
+                    </button>
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
         </div>
     </div>

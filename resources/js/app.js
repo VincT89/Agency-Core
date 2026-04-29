@@ -7,7 +7,7 @@ document.addEventListener('alpine:init', () => {
 
 import { initBgCanvas } from './bg-canvas.js';
 document.addEventListener('livewire:navigated', () => initBgCanvas('bg-canvas'));
-// Fallback for non-livewire pages
+// Fallback per non livewire pages
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.Livewire === 'undefined') {
         initBgCanvas('bg-canvas');

@@ -22,8 +22,8 @@ class MarketingProjectShow extends Component
         SubmitEditorialPlanToN8nAction $submitPlan
     ) {
         try {
-            if ($this->project->status->value !== 'draft') {
-                session()->flash('error', 'Azione non permessa: il progetto non è in stato Bozza.');
+            if (!in_array($this->project->status->value, ['draft', 'n8n_failed'])) {
+                session()->flash('error', 'Azione non permessa: il progetto non è in stato Bozza o Errore.');
                 return;
             }
 

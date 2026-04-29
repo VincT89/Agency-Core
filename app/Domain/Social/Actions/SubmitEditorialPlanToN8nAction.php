@@ -12,12 +12,22 @@ class SubmitEditorialPlanToN8nAction
 
     public function execute(EditorialPlan $plan): void
     {
+        if (!in_array($plan->status->value, [EditorialPlanStatus::Draft->value, EditorialPlanStatus::N8nFailed->value])) {
+            throw new \Exception('Il piano è già stato inviato a n8n o non è in stato valido per l\'invio.');
+        }
+
         $requiresMeta = in_array('facebook', $plan->project->platforms) || in_array('instagram', $plan->project->platforms);
         if ($requiresMeta && !$plan->project->client->isMetaReady()) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'social_access' => "Il cliente non ha gli accessi Meta Business configurati o verificati. L'invio a n8n è bloccato.",
             ]);
         }
+        
+        $newRequestId = \Illuminate\Support\Str::uuid()->toString();
+        $plan->project->update([
+            'n8n_request_id' => $newRequestId,
+        ]);
+
         $plan->update([
             'status' => EditorialPlanStatus::QueuedToN8n->value,
         ]);
@@ -33,7 +43,7 @@ class SubmitEditorialPlanToN8nAction
             'client_id' => $plan->project->client_id,
             'brief' => $plan->project->brief,
             'platforms' => $plan->project->platforms,
-            'n8n_request_id' => $plan->project->n8n_request_id,
+            'n8n_request_id' => $newRequestId,
             'plan_details' => [
                 'duration_days' => $plan->duration_days,
                 'start_date' => $plan->start_date?->format('Y-m-d'),

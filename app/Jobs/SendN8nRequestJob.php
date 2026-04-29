@@ -55,7 +55,20 @@ class SendN8nRequestJob implements ShouldQueue
                 'project_id' => $this->projectId,
                 'error' => $e->getMessage(),
             ]);
-            // NON cambiare stato per ora
+            
+            MarketingProject::where('id', $this->projectId)->update([
+                'status' => MarketingProjectStatus::N8nFailed->value
+            ]);
+
+            if ($this->type === 'editorial_plan') {
+                $plan = EditorialPlan::where('marketing_project_id', $this->projectId)->first();
+                if ($plan) {
+                    $plan->update(['status' => EditorialPlanStatus::N8nFailed->value]);
+                    $plan->slots()->where('status', EditorialPlanSlotStatus::QueuedToN8n->value)->update([
+                        'status' => EditorialPlanSlotStatus::N8nFailed->value,
+                    ]);
+                }
+            }
         }
     }
 }

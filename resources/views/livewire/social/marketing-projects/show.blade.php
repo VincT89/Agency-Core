@@ -28,10 +28,14 @@
         </div>
         
         <div class="mkt-meta-action">
-            @if(in_array($project->status->value, ['draft']))
+            @if(in_array($project->status->value, ['draft', 'n8n_failed']))
                 <button wire:click="submitToN8n" class="btn btn-p" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; justify-content:center;" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="submitToN8n">
-                        <i data-lucide="send" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invia a n8n
+                        @if($project->status->value === 'n8n_failed')
+                            <i data-lucide="refresh-cw" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Riprova Invio
+                        @else
+                            <i data-lucide="send" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invia a n8n
+                        @endif
                     </span>
                     <span wire:loading wire:target="submitToN8n">
                         <i data-lucide="loader" class="spin" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"></i>Invio in corso...

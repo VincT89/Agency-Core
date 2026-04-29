@@ -12,8 +12,8 @@ class SubmitMarketingProjectToN8nAction
 
     public function execute(MarketingProject $project): void
     {
-        if ($project->status->value !== MarketingProjectStatus::Draft->value) {
-            throw new \Exception('Il progetto è già stato inviato a n8n o non è in stato Bozza.');
+        if (!in_array($project->status->value, [MarketingProjectStatus::Draft->value, MarketingProjectStatus::N8nFailed->value])) {
+            throw new \Exception('Il progetto è già stato inviato a n8n o non è in stato valido per l\'invio.');
         }
 
         $platforms = $project->platforms ?? [];

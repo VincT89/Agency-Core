@@ -26,7 +26,6 @@ class CreateOrUpdateClientSocialAccountAction
                 
                 'business_manager_id' => blank($data['business_manager_id'] ?? null) ? null : $data['business_manager_id'],
                 'business_center_id' => blank($data['business_center_id'] ?? null) ? null : $data['business_center_id'],
-                'instagram_business_account_id' => blank($data['instagram_business_account_id'] ?? null) ? null : $data['instagram_business_account_id'],
                 'tiktok_account_id' => blank($data['tiktok_account_id'] ?? null) ? null : $data['tiktok_account_id'],
                 
                 'credential_location' => blank($data['credential_location'] ?? null) ? null : $data['credential_location'],
@@ -36,12 +35,6 @@ class CreateOrUpdateClientSocialAccountAction
                 
                 'notes' => blank($data['notes'] ?? null) ? null : $data['notes'],
                 'api_notes' => blank($data['api_notes'] ?? null) ? null : $data['api_notes'],
-                
-                // Mappatura campi legacy per compatibilità pre-refactoring
-                'facebook_page_url' => ($platform === 'facebook') ? (blank($data['account_url'] ?? null) ? null : $data['account_url']) : null,
-                'instagram_profile_url' => ($platform === 'instagram') ? (blank($data['account_url'] ?? null) ? null : $data['account_url']) : null,
-                'meta_business_manager_id' => blank($data['business_manager_id'] ?? null) ? null : $data['business_manager_id'],
-                'facebook_page_id' => blank($data['page_id'] ?? null) ? null : $data['page_id'],
             ]
         );
     }

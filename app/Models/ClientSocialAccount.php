@@ -25,14 +25,6 @@ class ClientSocialAccount extends Model
         'access_verified_at',
         'access_verified_by',
         
-        // Campi legacy per compatibilità pre-refactoring
-        'facebook_page_url',
-        'instagram_profile_url',
-        'meta_business_manager_id',
-        'has_agency_access',
-        'facebook_page_id',
-        'instagram_business_account_id',
-        
         // Identificativi account specifici per piattaforma
         'business_manager_id',
         'business_center_id',
@@ -52,7 +44,6 @@ class ClientSocialAccount extends Model
     protected function casts(): array
     {
         return [
-            'has_agency_access' => 'boolean', // obsoleto
             'is_ready_to_publish' => 'boolean',
             'account_exists' => 'boolean',
             

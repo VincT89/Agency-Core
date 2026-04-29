@@ -111,17 +111,6 @@
                                     <label class="form-lbl">Business Manager ID</label>
                                     <input type="text" wire:model="forms.{{ $platform->value }}.business_manager_id" class="form-in w-100">
                                 </div>
-                                @if($platform->value === 'facebook')
-                                    <div class="form-g">
-                                        <label class="form-lbl">Page ID (Facebook)</label>
-                                        <input type="text" wire:model="forms.{{ $platform->value }}.page_id" class="form-in w-100">
-                                    </div>
-                                @else
-                                    <div class="form-g">
-                                        <label class="form-lbl">IG Business Account ID</label>
-                                        <input type="text" wire:model="forms.{{ $platform->value }}.instagram_business_account_id" class="form-in w-100">
-                                    </div>
-                                @endif
                             </div>
                         @endif
 

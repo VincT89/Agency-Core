@@ -5,37 +5,39 @@
     </header>
 
     <main class="client-review-layout">
-        
-        <section class="cr-card cr-content">
-            <div class="cr-section-title">
-                <i data-lucide="eye" width="16" height="16"></i>
-                <span>Anteprima del post</span>
-            </div>
-
-            <div class="cr-media-wrap">
-                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion?->preview_url): ?>
-                    <img
-                        src="<?php echo e($post->currentVersion->preview_url); ?>"
-                        alt="Anteprima contenuto"
-                        class="cr-media"
-                    >
-                <?php else: ?>
-                    <div class="cr-media-placeholder" style="padding: 100px 20px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 13px;">
-                        Nessuna anteprima multimediale disponibile
-                    </div>
-                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-
-                <div class="cr-format-badge">
-                    1080 × 1350<br>
-                    <small>Formato verticale 4:5</small>
+        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$isExpired && !$tokenObj->used_at): ?>
+            
+            <section class="cr-card cr-content">
+                <div class="cr-section-title">
+                    <i data-lucide="eye" width="16" height="16"></i>
+                    <span>Anteprima del post</span>
                 </div>
-            </div>
 
-            <div class="cr-caption-block">
-                <div class="cr-label">Testo del post (Caption)</div>
-                <div class="cr-caption"><?php echo e($post->currentVersion?->caption ?? 'Nessun testo inserito.'); ?></div>
-            </div>
-        </section>
+                <div class="cr-media-wrap">
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($post->currentVersion?->preview_url): ?>
+                        <img
+                            src="<?php echo e($post->currentVersion->preview_url); ?>"
+                            alt="Anteprima contenuto"
+                            class="cr-media"
+                        >
+                    <?php else: ?>
+                        <div class="cr-media-placeholder" style="padding: 100px 20px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 13px;">
+                            Nessuna anteprima multimediale disponibile
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                    <div class="cr-format-badge">
+                        1080 × 1350<br>
+                        <small>Formato verticale 4:5</small>
+                    </div>
+                </div>
+
+                <div class="cr-caption-block">
+                    <div class="cr-label">Testo del post (Caption)</div>
+                    <div class="cr-caption"><?php echo e($post->currentVersion?->caption ?? 'Nessun testo inserito.'); ?></div>
+                </div>
+            </section>
+        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
         
         <aside class="cr-card cr-actions">
@@ -78,19 +80,34 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                     <h3>Approva per la pubblicazione</h3>
                     <p>Il contenuto verrà siglato e passerà direttamente al team per la pianificazione.</p>
 
+                    <label style="display: flex; align-items: flex-start; gap: 8px; margin: 16px 0; cursor: pointer;">
+                        <input type="checkbox" wire:model.live="hasReadContent" class="form-check" style="margin-top: 3px;">
+                        <span style="font-size: 13px; color: var(--text2); line-height: 1.4;">
+                            Dichiaro di aver visionato con attenzione l'immagine e letto l'intero testo del post.
+                        </span>
+                    </label>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['hasReadContent'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> <span style="color:var(--red); font-size:12px; margin-bottom:12px; display:block;"><?php echo e($message); ?></span> <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
                     <?php if (isset($component)) { $__componentOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal2cfaf2d8c559a20e3495c081df2d0b10 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.confirm-modal','data' => ['title' => 'Approva Contenuto','message' => 'Confermi di voler approvare definitivamente questo contenuto? Passerà al team per la pubblicazione.','confirmText' => 'Sì, Approva','confirmMethod' => 'approve','btnClass' => 'btn btn-p cr-btn','icon' => 'check-circle']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.confirm-modal','data' => ['title' => 'Approva Contenuto','message' => 'Confermi di voler approvare definitivamente questo contenuto? Passerà al team per la pubblicazione.','confirmText' => 'Sì, Approva','confirmMethod' => 'approve','btnClass' => 'btn btn-p cr-btn '.e(!$hasReadContent ? 'disabled' : '').'','icon' => 'check-circle']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('confirm-modal'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => 'Approva Contenuto','message' => 'Confermi di voler approvare definitivamente questo contenuto? Passerà al team per la pubblicazione.','confirmText' => 'Sì, Approva','confirmMethod' => 'approve','btnClass' => 'btn btn-p cr-btn','icon' => 'check-circle']); ?>
+<?php $component->withAttributes(['title' => 'Approva Contenuto','message' => 'Confermi di voler approvare definitivamente questo contenuto? Passerà al team per la pubblicazione.','confirmText' => 'Sì, Approva','confirmMethod' => 'approve','btnClass' => 'btn btn-p cr-btn '.e(!$hasReadContent ? 'disabled' : '').'','icon' => 'check-circle']); ?>
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
-                        <button type="button" class="btn btn-p cr-btn">
+                        <button type="button" class="btn btn-p cr-btn" <?php if(!$hasReadContent): ?> disabled style="opacity:0.5;cursor:not-allowed;" <?php endif; ?>>
                             Approva e continua
                         </button>
                      <?php echo $__env->renderComponent(); ?>

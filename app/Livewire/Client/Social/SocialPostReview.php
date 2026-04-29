@@ -17,6 +17,7 @@ class SocialPostReview extends Component
     public $feedback = '';
     public $isExpired = false;
     public $showChangesForm = false;
+    public bool $hasReadContent = false;
 
     public function mount(string $token)
     {
@@ -26,10 +27,12 @@ class SocialPostReview extends Component
             $this->isExpired = true;
         }
 
-        $this->post = $this->tokenObj->reviewable->load(['currentVersion', 'clientComments']);
+        $this->post = $this->tokenObj->reviewable;
 
-        // Precompila il nome cliente per la review
-        $this->clientName = $this->post->client->name ?? '';
+        if (!$this->isExpired && !$this->tokenObj->used_at) {
+            $this->post->load(['currentVersion', 'clientComments']);
+            $this->clientName = $this->post->client->name ?? '';
+        }
     }
 
     public function approve(ClientRespondToSocialPostAction $action)
@@ -40,6 +43,11 @@ class SocialPostReview extends Component
 
         if ($this->tokenObj->used_at) {
             abort(403, 'Questo link è già stato utilizzato per inviare una risposta.');
+        }
+
+        if (!$this->hasReadContent) {
+            $this->addError('hasReadContent', 'È obbligatorio dichiarare di aver visionato il contenuto.');
+            return;
         }
 
         $this->validate([

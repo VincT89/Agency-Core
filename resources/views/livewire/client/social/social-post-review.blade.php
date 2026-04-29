@@ -5,37 +5,39 @@
     </header>
 
     <main class="client-review-layout">
-        {{-- Colonna Sinistra: Contenuto --}}
-        <section class="cr-card cr-content">
-            <div class="cr-section-title">
-                <i data-lucide="eye" width="16" height="16"></i>
-                <span>Anteprima del post</span>
-            </div>
-
-            <div class="cr-media-wrap">
-                @if($post->currentVersion?->preview_url)
-                    <img
-                        src="{{ $post->currentVersion->preview_url }}"
-                        alt="Anteprima contenuto"
-                        class="cr-media"
-                    >
-                @else
-                    <div class="cr-media-placeholder" style="padding: 100px 20px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 13px;">
-                        Nessuna anteprima multimediale disponibile
-                    </div>
-                @endif
-
-                <div class="cr-format-badge">
-                    1080 × 1350<br>
-                    <small>Formato verticale 4:5</small>
+        @if(!$isExpired && !$tokenObj->used_at)
+            {{-- Colonna Sinistra: Contenuto --}}
+            <section class="cr-card cr-content">
+                <div class="cr-section-title">
+                    <i data-lucide="eye" width="16" height="16"></i>
+                    <span>Anteprima del post</span>
                 </div>
-            </div>
 
-            <div class="cr-caption-block">
-                <div class="cr-label">Testo del post (Caption)</div>
-                <div class="cr-caption">{{ $post->currentVersion?->caption ?? 'Nessun testo inserito.' }}</div>
-            </div>
-        </section>
+                <div class="cr-media-wrap">
+                    @if($post->currentVersion?->preview_url)
+                        <img
+                            src="{{ $post->currentVersion->preview_url }}"
+                            alt="Anteprima contenuto"
+                            class="cr-media"
+                        >
+                    @else
+                        <div class="cr-media-placeholder" style="padding: 100px 20px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 13px;">
+                            Nessuna anteprima multimediale disponibile
+                        </div>
+                    @endif
+
+                    <div class="cr-format-badge">
+                        1080 × 1350<br>
+                        <small>Formato verticale 4:5</small>
+                    </div>
+                </div>
+
+                <div class="cr-caption-block">
+                    <div class="cr-label">Testo del post (Caption)</div>
+                    <div class="cr-caption">{{ $post->currentVersion?->caption ?? 'Nessun testo inserito.' }}</div>
+                </div>
+            </section>
+        @endif
 
         {{-- Colonna Destra: Azioni --}}
         <aside class="cr-card cr-actions">
@@ -71,15 +73,23 @@
                     <h3>Approva per la pubblicazione</h3>
                     <p>Il contenuto verrà siglato e passerà direttamente al team per la pianificazione.</p>
 
+                    <label style="display: flex; align-items: flex-start; gap: 8px; margin: 16px 0; cursor: pointer;">
+                        <input type="checkbox" wire:model.live="hasReadContent" class="form-check" style="margin-top: 3px;">
+                        <span style="font-size: 13px; color: var(--text2); line-height: 1.4;">
+                            Dichiaro di aver visionato con attenzione l'immagine e letto l'intero testo del post.
+                        </span>
+                    </label>
+                    @error('hasReadContent') <span style="color:var(--red); font-size:12px; margin-bottom:12px; display:block;">{{ $message }}</span> @enderror
+
                     <x-confirm-modal 
                         title="Approva Contenuto" 
                         message="Confermi di voler approvare definitivamente questo contenuto? Passerà al team per la pubblicazione." 
                         confirmText="Sì, Approva" 
                         confirmMethod="approve"
-                        btnClass="btn btn-p cr-btn"
+                        btnClass="btn btn-p cr-btn {{ !$hasReadContent ? 'disabled' : '' }}"
                         icon="check-circle"
                     >
-                        <button type="button" class="btn btn-p cr-btn">
+                        <button type="button" class="btn btn-p cr-btn" @if(!$hasReadContent) disabled style="opacity:0.5;cursor:not-allowed;" @endif>
                             Approva e continua
                         </button>
                     </x-confirm-modal>

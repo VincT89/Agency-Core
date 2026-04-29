@@ -35,6 +35,12 @@ class ClientRespondToSocialPostAction
     ): void {
         $post = $token->reviewable;
 
+        if ($token->used_at) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'token' => 'Questo link è già stato utilizzato.',
+            ]);
+        }
+
         if (in_array($post->status, [SocialPostStatus::Scheduled, SocialPostStatus::Published])) {
             throw new Exception("Non puoi interagire con un post che è già stato pianificato o pubblicato.");
         }
@@ -87,7 +93,7 @@ class ClientRespondToSocialPostAction
                     $post->marketingProject->update(['status' => \App\Enums\Social\MarketingProjectStatus::ClientApproved->value]);
                 }
 
-                // Segna il token come usato (opzionale, se vogliamo permettere un solo voto)
+                // Segna il token come usato
                 $token->update(['used_at' => now()]);
 
                 if (!$alreadyApproved) {
@@ -108,6 +114,9 @@ class ClientRespondToSocialPostAction
                 if ($post->editorial_plan_id) {
                     $post->editorialPlan->update(['status' => \App\Enums\Social\EditorialPlanStatus::ClientChangesRequested->value]);
                 }
+                
+                // Segna il token come usato
+                $token->update(['used_at' => now()]);
             }
 
             // 3. Traccia nell'audit log (anche se fatto dal cliente)

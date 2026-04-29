@@ -88,7 +88,7 @@
                         
                         <td onclick="window.location='<?php echo e(route('social.posts.show', $post->id)); ?>'" style="cursor: pointer;">
                             <div><?php echo e($post->marketingProject->client->name ?? 'Nessun Cliente'); ?></div>
-                            <div class="social-index-meta"><?php echo e($post->marketingProject->name ?? 'Nessun Progetto'); ?></div>
+                            <div class="social-index-meta"><?php echo e($post->marketingProject->title ?? 'Nessun Progetto'); ?></div>
                         </td>
                         
                         <td>

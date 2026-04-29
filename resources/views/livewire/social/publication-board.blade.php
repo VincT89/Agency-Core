@@ -56,7 +56,7 @@
                         
                         <td onclick="window.location='{{ route('social.posts.show', $post->id) }}'" style="cursor: pointer;">
                             <div>{{ $post->marketingProject->client->name ?? 'Nessun Cliente' }}</div>
-                            <div class="social-index-meta">{{ $post->marketingProject->name ?? 'Nessun Progetto' }}</div>
+                            <div class="social-index-meta">{{ $post->marketingProject->title ?? 'Nessun Progetto' }}</div>
                         </td>
                         
                         <td>

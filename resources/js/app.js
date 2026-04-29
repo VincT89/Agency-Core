@@ -1,12 +1,9 @@
-import Alpine from 'alpinejs';
 import './project-select.js';
 import clientAutocomplete from './client-autocomplete.js';
 
-window.Alpine = Alpine;
-
-Alpine.data('clientAutocomplete', clientAutocomplete);
-
-Alpine.start();
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('clientAutocomplete', clientAutocomplete);
+});
 
 import { initBgCanvas } from './bg-canvas.js';
 document.addEventListener('livewire:navigated', () => initBgCanvas('bg-canvas'));

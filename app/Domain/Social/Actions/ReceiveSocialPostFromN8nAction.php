@@ -55,7 +55,7 @@ class ReceiveSocialPostFromN8nAction
                 if ($post) {
                     $versionAction = app(AddSocialPostVersionFromN8nAction::class);
                     $version = $versionAction->execute($post, $data);
-                    return $post;
+                    return $post->refresh();
                 }
 
                 // If not found, create it with firstOrCreate to avoid race conditions
@@ -79,7 +79,7 @@ class ReceiveSocialPostFromN8nAction
                 if (!$post->wasRecentlyCreated && $post->versions()->exists()) {
                     $versionAction = app(AddSocialPostVersionFromN8nAction::class);
                     $version = $versionAction->execute($post, $data);
-                    return $post;
+                    return $post->refresh();
                 }
             } else {
                 $post = SocialPost::create([

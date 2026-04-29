@@ -766,79 +766,89 @@
 </div>
 
 <script>
-let sidebarOpen = true;
-function toggleSidebar() {
-  sidebarOpen = !sidebarOpen;
-  document.getElementById('shell').classList.toggle('expanded', sidebarOpen);
+window.sidebarOpen = window.sidebarOpen ?? true;
+window.toggleSidebar = function() {
+  window.sidebarOpen = !window.sidebarOpen;
+  document.getElementById('shell').classList.toggle('expanded', window.sidebarOpen);
   const icon = document.getElementById('sidebar-toggle-icon');
   if (icon) {
-      icon.innerHTML = sidebarOpen 
+      icon.innerHTML = window.sidebarOpen 
           ? '<path d="m15 18-6-6 6-6"/>' 
           : '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
   }
-}
+};
 
 // Flash → toast automatico
 <?php if(session('success')): ?>
   document.addEventListener('DOMContentLoaded', () => toast('<?php echo e(session('success')); ?> ✓'));
 <?php endif; ?>
 
-function toast(msg) {
+window.toast = function(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2600);
-}
+  if(t) {
+      t.textContent = msg; 
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2600);
+  }
+};
 
-// Chiudi modal con Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
-});
-document.querySelectorAll('.overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
+// Setup event listeners solo una volta usando un flag sul document
+if (!window.appListenersAdded) {
+    window.appListenersAdded = true;
 
-// Chiudi user menu e notif menu cliccando fuori
-document.addEventListener('click', function(e) {
-    const wrap = document.getElementById('avatar-wrap');
-    const menu = document.getElementById('user-menu');
-    if (wrap && !wrap.contains(e.target)) {
-        if(menu) {
-            menu.style.display = 'none';
-            menu.classList.remove('open');
-        }
-    }
+    // Chiudi modal con Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
+    });
     
-    const notifWrap = document.getElementById('notif-wrap');
-    const notifMenu = document.getElementById('notif-menu');
-    if (notifWrap && !notifWrap.contains(e.target)) {
-        if(notifMenu) {
-            notifMenu.style.display = 'none';
+    document.addEventListener('click', e => {
+      // Chiudi modali cliccando fuori
+      document.querySelectorAll('.overlay.open').forEach(o => {
+        if (e.target === o) o.classList.remove('open');
+      });
+      
+      // Chiudi user menu e notif menu cliccando fuori
+      const wrap = document.getElementById('avatar-wrap');
+      const menu = document.getElementById('user-menu');
+      if (wrap && !wrap.contains(e.target)) {
+          if(menu) {
+              menu.style.display = 'none';
+              menu.classList.remove('open');
+          }
+      }
+      
+      const notifWrap = document.getElementById('notif-wrap');
+      const notifMenu = document.getElementById('notif-menu');
+      if (notifWrap && !notifWrap.contains(e.target)) {
+          if(notifMenu) {
+              notifMenu.style.display = 'none';
+          }
+      }
+    });
+
+    // Toggle open/close avatar menu delegato
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.avatar-btn')) {
+            const menu = document.getElementById('user-menu');
+            if (menu) {
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            }
         }
-    }
-});
-document.getElementById('user-menu')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-});
-document.getElementById('notif-menu')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-});
+        
+        if (e.target.closest('#user-menu') || e.target.closest('#notif-menu')) {
+            e.stopPropagation();
+        }
+    });
+}
 
 document.addEventListener('livewire:navigated', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 });
+
 // Fallback
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.Livewire === 'undefined' && typeof lucide !== 'undefined') {
         lucide.createIcons();
-    }
-});
-
-// Toggle open/close avatar menu
-const origToggle = HTMLElement.prototype.classList.toggle;
-document.querySelector('.avatar-btn')?.addEventListener('click', function() {
-    const menu = document.getElementById('user-menu');
-    if (menu) {
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
     }
 });
 

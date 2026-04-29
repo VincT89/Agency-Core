@@ -41,7 +41,7 @@ class EditorialCalendar extends Component
             return [
                 'id' => $slot->id,
                 'title' => $slot->post->title ?? 'Post senza titolo',
-                'start' => $slot->scheduled_at->toIso8601String(),
+                'start' => $slot->scheduled_at->format('Y-m-d\TH:i:s'),
                 'url' => route('social.posts.show', $slot->post_id ?? $slot->social_post_id),
                 'backgroundColor' => $slot->status->color(),
                 'borderColor' => $slot->status->color(),

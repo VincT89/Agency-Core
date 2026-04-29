@@ -183,7 +183,7 @@
         <div class="modal" @click.stop>
             <div class="modal-hd">
                 <div class="modal-title">Richiedi Rigenerazione</div>
-                <button class="modal-close" wire:click="$set('showRegenerateModal', false)"><i data-lucide="x" width="14"></i></button>
+                <button class="modal-close" wire:click="$set('showRegenerateModal', false)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
             <div style="font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 20px;">
                 Indica nel prompt le modifiche che desideri apportare. N8n elaborerà la richiesta e creerà una nuova versione di questo post (v{{ ($post->currentVersion->version_number ?? 1) + 1 }}).
@@ -211,7 +211,7 @@
         <div class="modal" @click.stop>
             <div class="modal-hd">
                 <div class="modal-title">Link Pubblico Cliente</div>
-                <button class="modal-close" wire:click="$set('showSendClientModal', false)"><i data-lucide="x" width="14"></i></button>
+                <button class="modal-close" wire:click="$set('showSendClientModal', false)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
             <div style="font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 20px;">
                 Copia questo link e invialo al cliente per la revisione e approvazione.
@@ -231,7 +231,7 @@
         <div class="modal" @click.stop>
             <div class="modal-hd">
                 <div class="modal-title">Pianifica nel Calendario Editoriale</div>
-                <button class="modal-close" wire:click="$set('showScheduleModal', false)"><i data-lucide="x" width="14"></i></button>
+                <button class="modal-close" wire:click="$set('showScheduleModal', false)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
             <div style="font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 20px;">
                 Scegli la data di pubblicazione. Il post diventerà "Pianificato" e non potrà più essere modificato dal cliente senza prima annullare lo slot.

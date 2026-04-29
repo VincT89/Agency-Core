@@ -20,7 +20,7 @@ enum EditorialSlotStatus: string
     public function color(): string
     {
         return match($this) {
-            self::Scheduled => 'var(--accent)',
+            self::Scheduled => 'var(--yellow)',
             self::Published => 'var(--green)',
             self::Cancelled => 'var(--red)',
         };

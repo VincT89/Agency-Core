@@ -413,3 +413,217 @@
     align-items: center;
     gap: 8px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MARKETING PROJECT SHOW
+═══════════════════════════════════════════════════════════════════ */
+.mkt-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.mkt-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mkt-meta-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--text3);
+}
+
+.mkt-meta-label {
+    font-size: 13px;
+    color: var(--text2);
+}
+
+.mkt-meta-value {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mkt-meta-sep {
+    background-color: var(--line);
+    width: 1px;
+    height: 14px;
+}
+
+.mkt-meta-action {
+    margin-left: auto;
+}
+
+.mkt-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.mkt-platform-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mkt-platform-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mkt-platform-icon {
+    width: 12px;
+    height: 12px;
+    color: #fff;
+}
+
+.mkt-mode-badge {
+    background: var(--bg3);
+    color: var(--text2);
+    border: 1px solid var(--line2);
+}
+
+.mkt-brief-box {
+    background: var(--bg3);
+    padding: 16px;
+    border-radius: var(--r);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    border: 1px solid var(--line2);
+}
+
+.mkt-brief-empty {
+    background: var(--bg3);
+    padding: 16px;
+    border-radius: var(--r);
+    font-size: 13px;
+    color: var(--text3);
+    text-align: center;
+    font-style: italic;
+    border: 1px solid var(--line2);
+}
+
+.mkt-plan-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.mkt-stat-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    font-family: var(--mono);
+}
+
+.mkt-stat-val {
+    font-size: 14px;
+    color: var(--text);
+    margin-top: 2px;
+    font-weight: 600;
+}
+
+.mkt-slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mkt-slot-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--line2);
+    border-radius: var(--r);
+}
+
+.mkt-slot-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 4px;
+}
+
+.mkt-slot-topic {
+    font-size: 13px;
+    color: var(--text);
+}
+
+.mkt-n8n-success-box {
+    background: var(--bg3);
+    border: 1px solid var(--line2);
+    border-radius: var(--r);
+    padding: 16px;
+}
+
+.mkt-n8n-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.mkt-n8n-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r);
+    background: color-mix(in srgb, var(--purple) 15%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--purple);
+}
+
+.mkt-n8n-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.mkt-n8n-time {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+}
+
+.mkt-n8n-id-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    word-break: break-all;
+}
+
+.mkt-n8n-empty-box {
+    text-align: center;
+    padding: 30px 16px;
+}
+
+.mkt-n8n-empty-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1px solid var(--line2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+}

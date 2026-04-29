@@ -78,16 +78,26 @@
                     }
                 },
                 eventContent: function(arg) {
-                    let italicEl = document.createElement('div');
-                    italicEl.innerHTML = `
-                        <div style="font-size: 10px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            ${arg.timeText} ${arg.event.title}
-                        </div>
-                        <div style="font-size: 9px; opacity: 0.8;">
-                            ${arg.event.extendedProps.platform} - ${arg.event.extendedProps.project}
+                    let dotColor = arg.event.backgroundColor || 'var(--accent)';
+                    
+                    let wrapper = document.createElement('div');
+                    wrapper.style.display = 'flex';
+                    wrapper.style.alignItems = 'flex-start';
+                    wrapper.style.gap = '6px';
+                    wrapper.style.padding = '2px 0';
+                    
+                    wrapper.innerHTML = `
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${dotColor}; margin-top: 3px; flex-shrink: 0; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>
+                        <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+                            <div style="font-size: 11px; font-weight: bold; line-height: 1.2; white-space: normal; word-break: break-word; color: ${dotColor};">
+                                ${arg.timeText ? arg.timeText + ' ' : ''}${arg.event.title}
+                            </div>
+                            <div style="font-size: 10px; opacity: 0.8; white-space: normal; line-height: 1.1; color: var(--text3);">
+                                ${arg.event.extendedProps.platform} - ${arg.event.extendedProps.project}
+                            </div>
                         </div>
                     `;
-                    return { domNodes: [ italicEl ] }
+                    return { domNodes: [ wrapper ] }
                 }
             });
 
@@ -126,7 +136,7 @@
     .fc-button-primary:not(:disabled):active { background-color: var(--accent) !important;
         border-color: var(--accent) !important; color: #fff !important; }
     .fc-event { font-family: var(--sans); font-size: 11px; border-radius: 3px !important;
-        padding: 1px 4px !important; cursor: pointer; }
+        padding: 1px 4px !important; cursor: pointer; background: transparent !important; border: none !important; box-shadow: none !important; }
     .fc-toolbar-title { font-family: var(--serif); font-style: italic;
         font-size: 20px !important; color: var(--text); }
     .fc-list-event:hover td { background: var(--bg2) !important; }

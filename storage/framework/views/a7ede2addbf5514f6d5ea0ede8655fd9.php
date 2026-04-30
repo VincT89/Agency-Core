@@ -336,11 +336,17 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $uploaded_media; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $file): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                                         <div style="position:relative; width:80px; height:80px; border-radius:var(--r); overflow:hidden; border:1px solid var(--line);">
-                                            @try
-                                                <img src="<?php echo e($file->temporaryUrl()); ?>" style="width:100%; height:100%; object-fit:cover;">
-                                            @catch(\Exception $e)
-                                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:10px;"><?php echo e($file->getClientOriginalExtension()); ?></div>
-                                            @endtry
+                                            <?php
+                                                $tempUrl = null;
+                                                try {
+                                                    $tempUrl = $file->temporaryUrl();
+                                                } catch(\Exception $e) {}
+                                            ?>
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($tempUrl): ?>
+                                                <img src="<?php echo e($tempUrl); ?>" style="width:100%; height:100%; object-fit:cover;">
+                                            <?php else: ?>
+                                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:10px; color:var(--text3);"><?php echo e(strtoupper($file->getClientOriginalExtension())); ?></div>
+                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                             <button type="button" wire:click="removeUploadedMedia(<?php echo e($idx); ?>)" style="position:absolute; top:2px; right:2px; background:var(--red); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
                                         </div>
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
@@ -367,14 +373,14 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                                 <div style="max-height:200px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--bg); padding:10px;">
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($nextcloud_path !== '/'): ?>
                                         <div wire:click="browseNextcloud('<?php echo e(dirname($nextcloud_path)); ?>')" style="cursor:pointer; padding:5px; border-bottom:1px solid var(--line); color:var(--text2); font-size:13px;">
-                                            📁 .. (Su)
+                                            .. (Su)
                                         </div>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $nextcloud_files; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ncFile): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                                         <div style="display:flex; align-items:center; gap:10px; padding:5px; border-bottom:1px solid var(--line); font-size:13px;">
                                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($ncFile['is_dir']): ?>
                                                 <div wire:click="browseNextcloud('<?php echo e($ncFile['path']); ?>')" style="cursor:pointer; color:var(--blue); flex:1;">
-                                                    📁 <?php echo e($ncFile['name']); ?>
+                                                    [Dir] <?php echo e($ncFile['name']); ?>
 
                                                 </div>
                                             <?php else: ?>
@@ -383,7 +389,7 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                                                         <input type="checkbox" 
                                                             wire:click="toggleNextcloudFile('<?php echo e($ncFile['path']); ?>', '<?php echo e($ncFile['name']); ?>', <?php echo e($ncFile['size']); ?>, '<?php echo e($ncFile['content_type']); ?>')"
                                                             <?php echo e(collect($selected_nextcloud_files)->contains('path', $ncFile['path']) ? 'checked' : ''); ?>>
-                                                        🖼️ <?php echo e($ncFile['name']); ?> <span style="color:var(--text3); font-size:11px;">(<?php echo e(round($ncFile['size'] / 1024)); ?> KB)</span>
+                                                        <?php echo e($ncFile['name']); ?> <span style="color:var(--text3); font-size:11px;">(<?php echo e(round($ncFile['size'] / 1024)); ?> KB)</span>
                                                     </label>
                                                 </div>
                                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>

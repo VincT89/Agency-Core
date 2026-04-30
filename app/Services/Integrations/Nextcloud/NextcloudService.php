@@ -87,9 +87,9 @@ class NextcloudService
                 if (!$isDir) {
                     $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                     $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
-                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
                     
-                    if (!in_array($ext, $allowedExts) || !in_array(strtolower($contentType), $allowedMimes)) {
+                    // Fallback affidabile sull'estensione per prevenire bug di Nextcloud sui MIME types
+                    if (!in_array($ext, $allowedExts)) {
                         continue;
                     }
                 }

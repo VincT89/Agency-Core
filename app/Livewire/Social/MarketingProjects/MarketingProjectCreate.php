@@ -272,21 +272,30 @@ class MarketingProjectCreate extends Component
         foreach ($this->uploaded_media as $file) {
             $checksum = hash_file('sha256', $file->getRealPath());
             
-            // Check if checksum already exists for this project
+            // Check if checksum already exists for this project (fast path)
             if ($project->media()->where('checksum', $checksum)->exists()) {
                 continue;
             }
 
             $path = $file->store('marketing-projects/' . $project->id . '/reference-material', 'public');
-            $project->media()->create([
-                'source' => 'local',
-                'disk' => 'public',
-                'path' => $path,
-                'original_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
-                'checksum' => $checksum,
-            ]);
+            
+            try {
+                $project->media()->create([
+                    'source' => 'local',
+                    'disk' => 'public',
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'checksum' => $checksum,
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Ignore race condition duplicates
+                if ($e->getCode() == 23000) {
+                    continue;
+                }
+                throw $e;
+            }
         }
 
         // Import Nextcloud files
@@ -306,15 +315,22 @@ class MarketingProjectCreate extends Component
                     $path = 'marketing-projects/' . $project->id . '/reference-material/' . $filename;
                     \Illuminate\Support\Facades\Storage::disk('public')->put($path, $content);
                     
-                    $project->media()->create([
-                        'source' => 'nextcloud',
-                        'disk' => 'public',
-                        'path' => $path,
-                        'original_name' => $ncFile['name'],
-                        'mime_type' => $ncFile['mime'] ?? 'application/octet-stream',
-                        'size' => strlen($content),
-                        'checksum' => $checksum,
-                    ]);
+                    try {
+                        $project->media()->create([
+                            'source' => 'nextcloud',
+                            'disk' => 'public',
+                            'path' => $path,
+                            'original_name' => $ncFile['name'],
+                            'mime_type' => $ncFile['mime'] ?? 'application/octet-stream',
+                            'size' => strlen($content),
+                            'checksum' => $checksum,
+                        ]);
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        if ($e->getCode() == 23000) {
+                            continue;
+                        }
+                        throw $e;
+                    }
                 }
             }
         }

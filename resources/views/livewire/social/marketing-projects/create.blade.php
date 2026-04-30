@@ -210,11 +210,17 @@
                                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
                                     @foreach($uploaded_media as $idx => $file)
                                         <div style="position:relative; width:80px; height:80px; border-radius:var(--r); overflow:hidden; border:1px solid var(--line);">
-                                            @try
-                                                <img src="{{ $file->temporaryUrl() }}" style="width:100%; height:100%; object-fit:cover;">
-                                            @catch(\Exception $e)
-                                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:10px;">{{ $file->getClientOriginalExtension() }}</div>
-                                            @endtry
+                                            @php
+                                                $tempUrl = null;
+                                                try {
+                                                    $tempUrl = $file->temporaryUrl();
+                                                } catch(\Exception $e) {}
+                                            @endphp
+                                            @if($tempUrl)
+                                                <img src="{{ $tempUrl }}" style="width:100%; height:100%; object-fit:cover;">
+                                            @else
+                                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:10px; color:var(--text3);">{{ strtoupper($file->getClientOriginalExtension()) }}</div>
+                                            @endif
                                             <button type="button" wire:click="removeUploadedMedia({{ $idx }})" style="position:absolute; top:2px; right:2px; background:var(--red); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
                                         </div>
                                     @endforeach

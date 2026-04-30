@@ -36,7 +36,7 @@ class MarketingProjectShowTest extends TestCase
             'type' => \App\Enums\Social\MarketingProjectType::OneShot,
             'status' => \App\Enums\Social\MarketingProjectStatus::Draft,
             'publication_mode' => \App\Enums\Social\PublicationMode::Manual,
-            'platforms' => ['facebook', 'instagram'],
+            'service_options' => ['platforms' => ['facebook', 'instagram']],
         ]);
     }
 

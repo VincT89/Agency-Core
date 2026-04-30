@@ -39,8 +39,14 @@
         <div class="mkt-meta-sep"></div>
         <div class="mkt-meta-item">
             <i data-lucide="tag" class="mkt-meta-icon"></i>
-            <span class="mkt-meta-label">Tipo:</span>
-            <strong class="mkt-meta-value"><?php echo e($project->type->label()); ?></strong>
+            <span class="mkt-meta-label">Servizio:</span>
+            <strong class="mkt-meta-value"><?php echo e(ucfirst(str_replace('_', ' ', $project->service_type ?? 'other'))); ?></strong>
+        </div>
+        <div class="mkt-meta-sep"></div>
+        <div class="mkt-meta-item">
+            <i data-lucide="calendar" class="mkt-meta-icon"></i>
+            <span class="mkt-meta-label">Struttura:</span>
+            <strong class="mkt-meta-value"><?php echo e(ucfirst(str_replace('_', ' ', $project->campaign_structure ?? 'one_shot'))); ?></strong>
         </div>
         <div class="mkt-meta-sep"></div>
         <div>
@@ -127,7 +133,7 @@
                 <div style="margin-bottom:20px;">
                     <div class="mkt-section-label">Piattaforme Destinazione</div>
                     <div class="mkt-platform-pills">
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $project->platforms ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $project->getServiceOption('platforms', []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                             <span class="badge bd mkt-platform-pill">
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($plat === 'facebook'): ?> <i data-lucide="facebook" class="mkt-platform-icon"></i>
                                 <?php elseif($plat === 'instagram'): ?> <i data-lucide="instagram" class="mkt-platform-icon"></i>
@@ -168,6 +174,83 @@
 <?php $component = $__componentOriginal36665f0dc0e45320e21db1e20a989acf; ?>
 <?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
 <?php endif; ?>
+            
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->shoots->isNotEmpty()): ?>
+                <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Shooting Collegati ('.e($project->shoots->count()).')','dot' => 'var(--accent)','padded' => true,'style' => 'margin-top:20px;']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('panel'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Shooting Collegati ('.e($project->shoots->count()).')','dot' => 'var(--accent)','padded' => true,'style' => 'margin-top:20px;']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+                    <div style="display:flex; flex-direction:column; gap:15px;">
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $project->shoots; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $shoot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                            <div style="border:1px solid var(--line2); border-radius:var(--r); padding:15px; background:var(--bg2);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <strong style="color:var(--text);"><?php echo e($shoot->title); ?></strong>
+                                    <?php if (isset($component)) { $__componentOriginal2ddbc40e602c342e508ac696e52f8719 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal2ddbc40e602c342e508ac696e52f8719 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.badge','data' => ['status' => $shoot->status->value,'label' => $shoot->status->label()]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['status' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($shoot->status->value),'label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($shoot->status->label())]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal2ddbc40e602c342e508ac696e52f8719)): ?>
+<?php $attributes = $__attributesOriginal2ddbc40e602c342e508ac696e52f8719; ?>
+<?php unset($__attributesOriginal2ddbc40e602c342e508ac696e52f8719); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal2ddbc40e602c342e508ac696e52f8719)): ?>
+<?php $component = $__componentOriginal2ddbc40e602c342e508ac696e52f8719; ?>
+<?php unset($__componentOriginal2ddbc40e602c342e508ac696e52f8719); ?>
+<?php endif; ?>
+                                </div>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px; margin-bottom:10px;">
+                                    <div>
+                                        <div style="color:var(--text3); font-size:11px; text-transform:uppercase;">Fotografo</div>
+                                        <div style="color:var(--text2);"><?php echo e($shoot->photographer->name ?? 'Da assegnare'); ?></div>
+                                    </div>
+                                    <div>
+                                        <div style="color:var(--text3); font-size:11px; text-transform:uppercase;">Data Proposta/Confermata</div>
+                                        <div style="color:var(--text2);">
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($shoot->selectedSlot): ?>
+                                                <?php echo e($shoot->selectedSlot->date->format('d/m/Y')); ?> (<?php echo e($shoot->selectedSlot->period->label()); ?>)
+                                            <?php elseif($shoot->slots->isNotEmpty()): ?>
+                                                Da confermare (<?php echo e($shoot->slots->count()); ?> opzioni)
+                                            <?php else: ?>
+                                                Nessuna data
+                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <a href="<?php echo e(\App\Helpers\ShootingRouteResolver::showRouteFor(auth()->user(), $shoot)); ?>" class="btn btn-sm btn-g" style="font-size:11px; padding:4px 8px;">Vedi Dettaglio</a>
+                                </div>
+                            </div>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                    </div>
+                 <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
+<?php $attributes = $__attributesOriginal36665f0dc0e45320e21db1e20a989acf; ?>
+<?php unset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
+<?php $component = $__componentOriginal36665f0dc0e45320e21db1e20a989acf; ?>
+<?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
+<?php endif; ?>
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
         </div>
 
         <div style="display:flex; flex-direction:column; gap:20px;">

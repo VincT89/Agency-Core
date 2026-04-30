@@ -14,7 +14,7 @@
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
             <table class="t-table">
-                <thead><tr><th>Task</th><th>Progetto</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $overdueTasks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                     <tr onclick="window.location='<?php echo e(route('tasks.show', $task)); ?>'" style="cursor:pointer">
@@ -74,7 +74,7 @@
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
             <table class="t-table">
-                <thead><tr><th>Task</th><th>Progetto</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $dueSoonTasks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                     <tr onclick="window.location='<?php echo e(route('tasks.show', $task)); ?>'" style="cursor:pointer">
@@ -133,7 +133,7 @@
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
             <table class="t-table">
-                <thead><tr><th>Task</th><th>Progetto</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $otherTasks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                     <tr onclick="window.location='<?php echo e(route('tasks.show', $task)); ?>'" style="cursor:pointer">
@@ -194,7 +194,7 @@
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
                 <table class="t-table">
-                    <thead><tr><th>Ticket</th><th>Progetto</th><th>Stato</th></tr></thead>
+                    <thead><tr><th>Ticket</th><th>Commessa</th><th>Stato</th></tr></thead>
                     <tbody>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $openTickets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ticket): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                         <tr onclick="window.location='<?php echo e(route('tickets.show', $ticket)); ?>'" style="cursor:pointer">
@@ -322,7 +322,7 @@
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
                 <table class="t-table">
-                    <thead><tr><th>Titolo</th><th>Progetto</th><th>Stato</th></tr></thead>
+                    <thead><tr><th>Titolo</th><th>Commessa</th><th>Stato</th></tr></thead>
                     <tbody>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $recentShoots; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $shoot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
                         <tr onclick="window.location='<?php echo e(route('social.shooting.index')); ?>'" style="cursor:pointer">

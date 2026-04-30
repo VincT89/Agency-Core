@@ -102,7 +102,7 @@
                     <thead>
                         <tr>
                             <th>Ticket</th>
-                            <th>Progetto</th>
+                            <th>Commessa</th>
                             <th>Stato</th>
                         </tr>
                     </thead>

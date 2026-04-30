@@ -29,17 +29,23 @@ class MarketingWizardSocialAccessTest extends TestCase
             'access_method' => SocialAccessMethod::MetaBusiness->value,
         ]);
 
+        $projectModel = \App\Models\Project::factory()->create(['client_id' => $client->id]);
+
         Livewire::actingAs($user)
             ->test(\App\Livewire\Social\MarketingProjects\MarketingProjectCreate::class)
             ->set('step', 1)
             ->set('client_id', $client->id)
+            ->set('project_mode', 'existing')
+            ->set('project_id', $projectModel->id)
             ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Test Project')
             ->set('brief', 'Test brief')
-            ->set('platforms', ['facebook', 'instagram'])
-            ->set('publication_mode', 'manual')
+            ->set('service_options.platforms', ['facebook', 'instagram'])
+            ->set('service_options.frequency', '3 post')
+            ->set('shooting_mode', 'none')
             ->call('nextStep')
             ->call('save')
             ->assertHasNoErrors()

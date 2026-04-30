@@ -35,12 +35,14 @@ class MarketingCampaignWizardTest extends TestCase
             ->set('project_mode', 'existing')
             ->set('project_id', $project->id)
             ->call('nextStep') // Step 2
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep') // Step 3
             ->set('title', 'Campaign Title')
             ->set('brief', 'Some brief')
-            ->set('platforms', ['facebook'])
-            ->set('publication_mode', 'manual')
+            ->set('service_options.platforms', ['facebook'])
+            ->set('service_options.frequency', '3 post')
+            ->set('shooting_mode', 'none')
             ->call('nextStep') // Step 5 (since one_shot)
             ->call('save')
             ->assertRedirect();
@@ -60,12 +62,14 @@ class MarketingCampaignWizardTest extends TestCase
             ->set('project_mode', 'new')
             ->set('new_project_name', 'Nuova Commessa Test')
             ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Campaign with New Project')
             ->set('brief', 'Test brief')
-            ->set('platforms', ['instagram'])
-            ->set('publication_mode', 'manual')
+            ->set('service_options.platforms', ['instagram'])
+            ->set('service_options.frequency', '3 post')
+            ->set('shooting_mode', 'none')
             ->call('nextStep')
             ->call('save');
 

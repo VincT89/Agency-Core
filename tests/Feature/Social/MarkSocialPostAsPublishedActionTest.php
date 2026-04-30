@@ -25,7 +25,7 @@ class MarkSocialPostAsPublishedActionTest extends TestCase
             'title' => 'Test',
             'type' => 'one_shot',
             'status' => \App\Enums\Social\MarketingProjectStatus::Draft->value,
-            'platforms' => ['facebook', 'instagram', 'tiktok'],
+            'service_options' => ['platforms' => ['facebook', 'instagram', 'tiktok']],
         ]);
 
         $post = SocialPost::create([

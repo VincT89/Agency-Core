@@ -19,9 +19,12 @@ class MarketingProject extends Model
         'brief',
         'description',
         'type',
+        'service_type',
+        'campaign_structure',
         'status',
         'platforms',
         'publication_mode',
+        'service_options',
         'n8n_request_id',
         'submitted_to_n8n_at',
     ];
@@ -33,6 +36,7 @@ class MarketingProject extends Model
             'status' => MarketingProjectStatus::class,
             'publication_mode' => PublicationMode::class,
             'platforms' => 'array',
+            'service_options' => 'array',
             'submitted_to_n8n_at' => 'datetime',
         ];
     }
@@ -65,5 +69,10 @@ class MarketingProject extends Model
     public function shoots(): HasMany
     {
         return $this->hasMany(Shoot::class, 'marketing_project_id');
+    }
+
+    public function getServiceOption(string $key, $default = null)
+    {
+        return data_get($this->service_options, $key, $default);
     }
 }

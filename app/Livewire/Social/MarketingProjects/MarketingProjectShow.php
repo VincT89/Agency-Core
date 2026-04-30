@@ -14,7 +14,15 @@ class MarketingProjectShow extends Component
 
     public function mount(MarketingProject $project)
     {
-        $this->project = $project->load(['client', 'project', 'creator', 'editorialPlan.slots']);
+        $this->project = $project->load([
+            'client', 
+            'project', 
+            'creator', 
+            'editorialPlan.slots',
+            'shoots.photographer',
+            'shoots.slots',
+            'shoots.selectedSlot'
+        ]);
     }
 
     public function submitToN8n(

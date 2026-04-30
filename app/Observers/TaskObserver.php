@@ -17,11 +17,6 @@ class TaskObserver
     {
         $this->auditLog->log('created', $task, null, $task->getAttributes());
 
-        // 1. Notifica all'assegnatario (se presente e non è colui che ha creato la task)
-        if ($task->assigned_to && $task->assigned_to !== $task->created_by) {
-            $task->assignee?->notify(new TaskAssignedNotification($task));
-        }
-
         // 2. Notifica agli Admin (escluso chi l'ha creata e l'eventuale assegnatario se admin)
         $admins = User::where('role', UserRole::Admin)->get();
         foreach ($admins as $admin) {

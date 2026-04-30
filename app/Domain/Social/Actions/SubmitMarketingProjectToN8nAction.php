@@ -16,7 +16,7 @@ class SubmitMarketingProjectToN8nAction
             throw new \Exception('Il progetto è già stato inviato a n8n o non è in stato valido per l\'invio.');
         }
 
-        $platforms = $project->platforms ?? [];
+        $platforms = $project->getServiceOption('platforms', []);
         $requiresMeta = collect($platforms)->intersect(['facebook', 'instagram'])->isNotEmpty();
         if ($requiresMeta && !$project->client->isMetaReady()) {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -29,6 +29,8 @@ class SubmitMarketingProjectToN8nAction
             'n8n_request_id' => Str::uuid()->toString(),
             'submitted_to_n8n_at' => now(), // can keep this or queued_at
         ]);
+
+        $shoot = $project->shoots()->first();
 
         if ($project->type->value === 'one_shot') {
             $payload = [
@@ -43,10 +45,18 @@ class SubmitMarketingProjectToN8nAction
                 'marketing_campaign' => [
                     'id' => $project->id,
                     'name' => $project->title,
+                    'legacy_type' => $project->type->value,
+                    'service_type' => $project->service_type,
+                    'campaign_structure' => $project->campaign_structure,
+                    'service_options' => $project->service_options ?? (object)[],
+                ],
+                'shooting' => [
+                    'required' => $shoot !== null,
+                    'linked' => $shoot !== null,
+                    'status' => $shoot?->status->value ?? 'pending',
                 ],
                 'brief' => $project->brief,
                 'description' => $project->description,
-                'platforms' => $project->platforms,
                 'n8n_request_id' => $project->n8n_request_id,
                 'social_access' => $project->client->socialAccounts->map(function ($account) {
                     return array_filter([

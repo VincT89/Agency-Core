@@ -13,7 +13,7 @@ class MarkSocialPostAsPublishedAction
     public function execute(SocialPost $post): void
     {
         $platforms = $post->editorialPlanSlot?->platforms
-            ?? $post->marketingProject?->platforms
+            ?? $post->marketingProject?->getServiceOption('platforms', [])
             ?? [];
 
         $requiresMeta = collect($platforms)->intersect(['facebook', 'instagram'])->isNotEmpty();

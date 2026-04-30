@@ -19,8 +19,14 @@
         <div class="mkt-meta-sep"></div>
         <div class="mkt-meta-item">
             <i data-lucide="tag" class="mkt-meta-icon"></i>
-            <span class="mkt-meta-label">Tipo:</span>
-            <strong class="mkt-meta-value">{{ $project->type->label() }}</strong>
+            <span class="mkt-meta-label">Servizio:</span>
+            <strong class="mkt-meta-value">{{ ucfirst(str_replace('_', ' ', $project->service_type ?? 'other')) }}</strong>
+        </div>
+        <div class="mkt-meta-sep"></div>
+        <div class="mkt-meta-item">
+            <i data-lucide="calendar" class="mkt-meta-icon"></i>
+            <span class="mkt-meta-label">Struttura:</span>
+            <strong class="mkt-meta-value">{{ ucfirst(str_replace('_', ' ', $project->campaign_structure ?? 'one_shot')) }}</strong>
         </div>
         <div class="mkt-meta-sep"></div>
         <div>
@@ -64,7 +70,7 @@
                 <div style="margin-bottom:20px;">
                     <div class="mkt-section-label">Piattaforme Destinazione</div>
                     <div class="mkt-platform-pills">
-                        @forelse($project->platforms ?? [] as $plat)
+                        @forelse($project->getServiceOption('platforms', []) as $plat)
                             <span class="badge bd mkt-platform-pill">
                                 @if($plat === 'facebook') <i data-lucide="facebook" class="mkt-platform-icon"></i>
                                 @elseif($plat === 'instagram') <i data-lucide="instagram" class="mkt-platform-icon"></i>

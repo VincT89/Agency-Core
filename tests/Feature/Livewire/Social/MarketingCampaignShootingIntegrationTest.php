@@ -38,12 +38,13 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
             ->set('project_mode', 'existing')
             ->set('project_id', $project->id)
             ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Campaign No Shoot')
             ->set('brief', 'Some brief')
-            ->set('platforms', ['facebook'])
-            ->set('publication_mode', 'manual')
+            ->set('service_options.platforms', ['facebook'])
+            ->set('service_options.frequency', '3 post')
             ->set('shooting_mode', 'none')
             ->call('nextStep')
             ->call('save')
@@ -61,6 +62,7 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
     public function test_can_create_campaign_linking_existing_shooting()
     {
         $project = Project::factory()->create(['client_id' => $this->client->id]);
+        $project->users()->attach($this->user->id, ['role' => 'manager']);
         
         $shoot = Shoot::create([
             'project_id' => $project->id,
@@ -77,12 +79,13 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
             ->set('project_mode', 'existing')
             ->set('project_id', $project->id)
             ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Campaign With Existing Shoot')
             ->set('brief', 'Some brief')
-            ->set('platforms', ['facebook'])
-            ->set('publication_mode', 'manual')
+            ->set('service_options.platforms', ['facebook'])
+            ->set('service_options.frequency', '3 post')
             ->set('shooting_mode', 'existing')
             ->set('existing_shoot_id', $shoot->id)
             ->call('nextStep')
@@ -100,7 +103,9 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
     public function test_cannot_link_shooting_from_another_project()
     {
         $project1 = Project::factory()->create(['client_id' => $this->client->id]);
+        $project1->users()->attach($this->user->id, ['role' => 'manager']);
         $project2 = Project::factory()->create(['client_id' => $this->client->id]);
+        $project2->users()->attach($this->user->id, ['role' => 'manager']);
         
         $shootFromOtherProject = Shoot::create([
             'project_id' => $project2->id,
@@ -116,16 +121,18 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
             ->set('client_id', $this->client->id)
             ->set('project_mode', 'existing')
             ->set('project_id', $project1->id) // Seleziono project1
-            ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Campaign Wrong Shoot')
             ->set('brief', 'brief')
-            ->set('platforms', ['facebook'])
+            ->set('service_options.platforms', ['facebook'])
+            ->set('service_options.frequency', '3 post')
             ->set('shooting_mode', 'existing')
             ->set('existing_shoot_id', $shootFromOtherProject->id) // Tento di collegare shoot del project2
             ->call('nextStep')
-            ->call('save'); // non dovrebbe collegarlo a causa del controllo nell'action
+            ->call('save')
+            ->assertHasErrors(['existing_shoot_id']);
             
         $this->assertDatabaseHas('shoots', [
             'id' => $shootFromOtherProject->id,
@@ -136,6 +143,7 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
     public function test_can_create_campaign_with_new_shooting_request()
     {
         $project = Project::factory()->create(['client_id' => $this->client->id]);
+        $project->users()->attach($this->user->id, ['role' => 'manager']);
 
         Livewire::actingAs($this->user)
             ->test(MarketingProjectCreate::class)
@@ -143,12 +151,13 @@ class MarketingCampaignShootingIntegrationTest extends TestCase
             ->set('project_mode', 'existing')
             ->set('project_id', $project->id)
             ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Campaign New Shoot')
             ->set('brief', 'Some brief')
-            ->set('platforms', ['facebook'])
-            ->set('publication_mode', 'manual')
+            ->set('service_options.platforms', ['facebook'])
+            ->set('service_options.frequency', '3 post')
             ->set('shooting_mode', 'new')
             ->set('photographer_id', $this->photographer->id)
             ->set('shooting_location', 'Milano Centro')

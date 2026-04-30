@@ -26,7 +26,7 @@
             <tbody>
                 @forelse($posts as $post)
                     @php
-                        $platforms = $post->editorialPlanSlot ? $post->editorialPlanSlot->platforms : ($post->marketingProject->platforms ?? []);
+                        $platforms = $post->editorialPlanSlot ? $post->editorialPlanSlot->platforms : ($post->marketingProject->getServiceOption('platforms', []));
                         $client = $post->marketingProject->client;
                         $allReady = true;
                         

@@ -31,14 +31,16 @@ class PublicationBoardSocialAccessTest extends TestCase
             ->set('client_id', $client->id)
             ->set('project_id', $project->id)
             ->call('nextStep')
-            ->set('type', 'one_shot')
+            ->set('service_type', 'social_management')
+            ->set('campaign_structure', 'one_shot')
             ->call('nextStep')
             ->set('title', 'Test Project')
             ->set('brief', 'Test brief')
-            ->set('platforms', ['facebook', 'instagram'])
+            ->set('service_options.platforms', ['facebook', 'instagram'])
+            ->set('service_options.frequency', '3 post')
+            ->set('shooting_mode', 'none')
             ->assertSee('Stato Accessi Social')
             ->assertSee('Meta Business è richiesto per l', false)
-            ->set('publication_mode', 'manual')
             ->call('nextStep');
     }
 
@@ -54,9 +56,10 @@ class PublicationBoardSocialAccessTest extends TestCase
             'title' => 'Test Project',
             'brief' => 'Brief test',
             'type' => 'editorial_plan',
+            'service_type' => 'social_management',
+            'campaign_structure' => 'plan',
             'status' => \App\Enums\Social\MarketingProjectStatus::Draft,
-            'publication_mode' => PublicationMode::Manual,
-            'platforms' => ['facebook', 'instagram'],
+            'service_options' => ['platforms' => ['facebook', 'instagram']],
         ]);
 
         $post = SocialPost::create([
@@ -72,7 +75,7 @@ class PublicationBoardSocialAccessTest extends TestCase
 
         Livewire::actingAs($user)
             ->test(\App\Livewire\Social\PublicationBoard::class)
-            ->assertSee('Pubblicazione bloccata: accessi Meta Business incompleti', false);
+            ->assertSee('Pubblicazione bloccata. Il cliente non ha completato l\'accesso', false);
     }
 
     public function test_publication_board_allows_publication_if_meta_is_ready()
@@ -104,9 +107,10 @@ class PublicationBoardSocialAccessTest extends TestCase
             'title' => 'Test Project',
             'brief' => 'Brief test',
             'type' => 'editorial_plan',
+            'service_type' => 'social_management',
+            'campaign_structure' => 'plan',
             'status' => \App\Enums\Social\MarketingProjectStatus::Draft,
-            'publication_mode' => PublicationMode::Manual,
-            'platforms' => ['facebook', 'instagram'],
+            'service_options' => ['platforms' => ['facebook', 'instagram']],
         ]);
 
         $post = SocialPost::create([
@@ -122,6 +126,6 @@ class PublicationBoardSocialAccessTest extends TestCase
 
         Livewire::actingAs($user)
             ->test(\App\Livewire\Social\PublicationBoard::class)
-            ->assertDontSee('Pubblicazione bloccata: accessi Meta Business incompleti', false);
+            ->assertDontSee('Pubblicazione bloccata. Il cliente non ha completato l\'accesso', false);
     }
 }

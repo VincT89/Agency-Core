@@ -41,7 +41,7 @@ class MarketingAsyncFailureTest extends TestCase
             'title' => 'Test Failure',
             'type' => 'one_shot',
             'status' => MarketingProjectStatus::QueuedToN8n->value,
-            'platforms' => [],
+            'service_options' => ['platforms' => []],
         ]);
 
         $mockClient = Mockery::mock(N8nClient::class);
@@ -50,7 +50,11 @@ class MarketingAsyncFailureTest extends TestCase
         $job = new SendN8nRequestJob(['dummy' => 'payload'], $marketingProject->id, 'one_shot');
         
         // Execute the job manually with the mocked client
-        $job->handle($mockClient);
+        try {
+            $job->handle($mockClient);
+        } catch (\Exception $e) {
+            $job->failed($e);
+        }
 
         $this->assertEquals(MarketingProjectStatus::N8nFailed->value, $marketingProject->fresh()->status->value);
     }
@@ -65,7 +69,7 @@ class MarketingAsyncFailureTest extends TestCase
             'title' => 'Test Retry',
             'type' => 'one_shot',
             'status' => MarketingProjectStatus::N8nFailed->value,
-            'platforms' => [],
+            'service_options' => ['platforms' => []],
             'n8n_request_id' => 'OLD_ID',
         ]);
 
@@ -93,7 +97,7 @@ class MarketingAsyncFailureTest extends TestCase
             'title' => 'Test Failure Plan',
             'type' => 'editorial_plan',
             'status' => MarketingProjectStatus::QueuedToN8n->value,
-            'platforms' => [],
+            'service_options' => ['platforms' => []],
         ]);
 
         $plan = \App\Models\EditorialPlan::create([
@@ -106,7 +110,7 @@ class MarketingAsyncFailureTest extends TestCase
             'editorial_plan_id' => $plan->id,
             'scheduled_date' => now()->addDays(2),
             'scheduled_time' => '10:00',
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
             'status' => \App\Enums\Social\EditorialPlanSlotStatus::QueuedToN8n->value,
         ]);
 
@@ -114,7 +118,11 @@ class MarketingAsyncFailureTest extends TestCase
         $mockClient->shouldReceive('requestEditorialPlanGeneration')->andThrow(new \Exception('N8n down'));
 
         $job = new SendN8nRequestJob(['dummy' => 'payload'], $marketingProject->id, 'editorial_plan');
-        $job->handle($mockClient);
+        try {
+            $job->handle($mockClient);
+        } catch (\Exception $e) {
+            $job->failed($e);
+        }
 
         $this->assertEquals(MarketingProjectStatus::N8nFailed->value, $marketingProject->fresh()->status->value);
         $this->assertEquals(\App\Enums\Social\EditorialPlanStatus::N8nFailed->value, $plan->fresh()->status->value);

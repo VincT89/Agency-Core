@@ -16,7 +16,8 @@ class SubmitEditorialPlanToN8nAction
             throw new \Exception('Il piano è già stato inviato a n8n o non è in stato valido per l\'invio.');
         }
 
-        $requiresMeta = in_array('facebook', $plan->project->platforms) || in_array('instagram', $plan->project->platforms);
+        $platforms = $plan->project->getServiceOption('platforms', []);
+        $requiresMeta = in_array('facebook', $platforms) || in_array('instagram', $platforms);
         if ($requiresMeta && !$plan->project->client->isMetaReady()) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'social_access' => "Il cliente non ha gli accessi Meta Business configurati o verificati. L'invio a n8n è bloccato.",
@@ -36,6 +37,8 @@ class SubmitEditorialPlanToN8nAction
             'status' => EditorialPlanSlotStatus::QueuedToN8n->value,
         ]);
 
+        $shoot = $plan->project->shoots()->first();
+
         $payload = [
             'type' => 'editorial_plan',
             'marketing_project_id' => $plan->marketing_project_id, // deprecated
@@ -49,9 +52,17 @@ class SubmitEditorialPlanToN8nAction
             'marketing_campaign' => [
                 'id' => $plan->project->id,
                 'name' => $plan->project->title,
+                'legacy_type' => $plan->project->type->value,
+                'service_type' => $plan->project->service_type,
+                'campaign_structure' => $plan->project->campaign_structure,
+                'service_options' => $plan->project->service_options ?? (object)[],
+            ],
+            'shooting' => [
+                'required' => $shoot !== null,
+                'linked' => $shoot !== null,
+                'status' => $shoot?->status->value ?? 'pending',
             ],
             'brief' => $plan->project->brief,
-            'platforms' => $plan->project->platforms,
             'n8n_request_id' => $newRequestId,
             'plan_details' => [
                 'duration_days' => $plan->duration_days,

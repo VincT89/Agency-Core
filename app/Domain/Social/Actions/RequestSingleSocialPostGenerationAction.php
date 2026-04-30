@@ -11,13 +11,27 @@ class RequestSingleSocialPostGenerationAction
 
     public function execute(MarketingProject $project): void
     {
+        $shoot = $project->shoots()->first();
+
         $payload = [
             'type' => 'one_shot',
             'marketing_project_id' => $project->id,
             'client_id' => $project->client_id,
             'brief' => $project->brief,
             'description' => $project->description,
-            'platforms' => $project->platforms,
+            'marketing_campaign' => [
+                'id' => $project->id,
+                'name' => $project->title,
+                'legacy_type' => $project->type->value,
+                'service_type' => $project->service_type,
+                'campaign_structure' => $project->campaign_structure,
+                'service_options' => $project->service_options ?? (object)[],
+            ],
+            'shooting' => [
+                'required' => $shoot !== null,
+                'linked' => $shoot !== null,
+                'status' => $shoot?->status->value ?? 'pending',
+            ],
             'n8n_request_id' => $project->n8n_request_id,
             'social_access' => $project->client->socialAccounts->map(function ($account) {
                 return array_filter([

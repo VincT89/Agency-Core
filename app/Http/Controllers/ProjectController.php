@@ -60,7 +60,8 @@ class ProjectController extends Controller
         $this->authorize('view', $project);
 
         $project->load(['client', 'users', 'tasks' => fn($q) => $q->latest()->limit(10),
-                        'tickets' => fn($q) => $q->latest()->limit(10), 'attachments.uploader']);
+                        'tickets' => fn($q) => $q->latest()->limit(10), 'attachments.uploader',
+                        'marketingProjects.shoots']);
 
         $project->loadCount([
             'tasks as total_tasks_count',

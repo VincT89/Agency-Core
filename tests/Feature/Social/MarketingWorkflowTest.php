@@ -81,7 +81,7 @@ class MarketingWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'title' => 'Test One Shot',
             'type' => 'one_shot',
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
             'brief' => 'test brief',
         ]);
 
@@ -132,7 +132,7 @@ class MarketingWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'title' => 'Test Plan',
             'type' => 'editorial_plan',
-            'platforms' => ['facebook', 'instagram'],
+            'service_options' => ['platforms' => ['facebook', 'instagram']],
         ]);
 
         $createPlanAction = app(CreateEditorialPlanAction::class);
@@ -187,7 +187,7 @@ class MarketingWorkflowTest extends TestCase
             'title' => 'Test',
             'type' => 'editorial_plan',
             'status' => MarketingProjectStatus::Draft->value,
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
         ]);
 
         $plan = \App\Models\EditorialPlan::create([
@@ -202,7 +202,7 @@ class MarketingWorkflowTest extends TestCase
             'editorial_plan_id' => $plan->id,
             'scheduled_date' => now()->addDays(2),
             'scheduled_time' => '10:00',
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
             'status' => \App\Enums\Social\EditorialPlanSlotStatus::Empty->value,
         ]);
 
@@ -243,7 +243,7 @@ class MarketingWorkflowTest extends TestCase
             'title' => 'Test',
             'type' => 'editorial_plan',
             'status' => MarketingProjectStatus::Draft->value,
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
         ]);
 
         $post = \App\Models\SocialPost::create([
@@ -281,7 +281,7 @@ class MarketingWorkflowTest extends TestCase
             'title' => 'Test',
             'type' => 'editorial_plan',
             'status' => MarketingProjectStatus::Draft->value,
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
         ]);
         $plan = \App\Models\EditorialPlan::create([
             'marketing_project_id' => $project->id,
@@ -295,14 +295,14 @@ class MarketingWorkflowTest extends TestCase
             'editorial_plan_id' => $plan->id,
             'scheduled_date' => now()->addDays(2),
             'scheduled_time' => '10:00',
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
             'status' => \App\Enums\Social\EditorialPlanSlotStatus::Empty->value,
         ]);
         $slot2 = \App\Models\EditorialPlanSlot::create([
             'editorial_plan_id' => $plan->id,
             'scheduled_date' => now()->addDays(3),
             'scheduled_time' => '10:00',
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
             'status' => \App\Enums\Social\EditorialPlanSlotStatus::Empty->value,
         ]);
 
@@ -357,7 +357,7 @@ class MarketingWorkflowTest extends TestCase
             'title' => 'Test',
             'type' => 'editorial_plan',
             'status' => MarketingProjectStatus::Draft->value,
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
         ]);
         $plan = \App\Models\EditorialPlan::create([
             'marketing_project_id' => $project->id,
@@ -370,7 +370,7 @@ class MarketingWorkflowTest extends TestCase
             'editorial_plan_id' => $plan->id,
             'scheduled_date' => now()->addDays(2),
             'scheduled_time' => '10:00',
-            'platforms' => ['instagram'],
+            'service_options' => ['platforms' => ['instagram']],
             'status' => \App\Enums\Social\EditorialPlanSlotStatus::Empty->value,
         ]);
 

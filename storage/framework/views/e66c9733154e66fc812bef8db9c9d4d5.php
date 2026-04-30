@@ -211,7 +211,7 @@
 <?php endif; ?>
     </div>
 
-    <!-- Client Table -->
+    
     <div style="margin-bottom: 32px">
         <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
@@ -266,7 +266,7 @@
 <?php endif; ?>
     </div>
 
-    <!-- Project Table -->
+    
     <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Riepilogo per Progetto','dot' => 'var(--teal)']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>

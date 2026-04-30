@@ -55,7 +55,7 @@
 
     <div class="g-shoot-detail">
         
-        <!-- Main Column -->
+        
         <div style="display:flex; flex-direction:column; gap:24px;">
             <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
@@ -95,7 +95,7 @@
 <?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
 <?php endif; ?>
             
-            <!-- Slots -->
+            
             <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Disponibilità','dot' => 'var(--blue)']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>

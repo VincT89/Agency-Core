@@ -22,14 +22,14 @@ class MarketingProjectCreate extends Component
     public $new_project_budget = '';
     public $new_project_deadline = '';
     
-    // Step 2: Tipologia Progetto (Singolo o Piano)
-    public $type = 'one_shot';
+    // Step 2: Tipologia Servizio
+    public $service_type = 'other';
+    public $campaign_structure = 'one_shot';
     
-    // Step 3: Brief, Piattaforme e Produzione Contenuti
+    // Step 3: Brief, Dettagli Servizio e Produzione Contenuti
     public $title = '';
     public $brief = '';
-    public $platforms = [];
-    public $publication_mode = 'manual';
+    public array $service_options = [];
     public $shooting_mode = 'none';
     public $existing_shoot_id = null;
     public $photographer_id = null;
@@ -47,6 +47,11 @@ class MarketingProjectCreate extends Component
     {
         $this->start_date = now()->addDays(2)->format('Y-m-d');
         $this->end_date = now()->addDays(32)->format('Y-m-d');
+    }
+
+    public function updatedServiceType()
+    {
+        $this->service_options = [];
     }
 
     public function nextStep()
@@ -67,18 +72,25 @@ class MarketingProjectCreate extends Component
             $this->validate($rules);
         } elseif ($this->step == 2) {
             $this->validate([
-                'type' => 'required|in:one_shot,editorial_plan',
+                'service_type' => 'required|in:one_shot,editorial_plan,social_management,ads,seo,branding,other',
+                'campaign_structure' => 'required|in:one_shot,plan,recurring',
             ]);
         } elseif ($this->step == 3) {
             $rules = [
                 'title' => 'required|string|max:255',
                 'brief' => 'required|string',
-                'platforms' => 'required|array|min:1',
-                'platforms.*' => 'in:facebook,instagram,tiktok',
-                'publication_mode' => 'required|in:manual,automatic',
                 'shooting_mode' => 'required|in:none,existing,new',
             ];
             
+            if ($this->service_type === 'social_management') {
+                $rules['service_options.platforms'] = 'required|array|min:1';
+                $rules['service_options.platforms.*'] = 'in:facebook,instagram,tiktok';
+                $rules['service_options.frequency'] = 'required|string';
+            } elseif ($this->service_type === 'ads') {
+                $rules['service_options.platforms'] = 'required|array|min:1';
+                $rules['service_options.budget'] = 'required|numeric|min:0';
+            }
+
             if ($this->shooting_mode === 'existing') {
                 $rules['existing_shoot_id'] = 'required|exists:shoots,id';
             } elseif ($this->shooting_mode === 'new') {
@@ -92,7 +104,7 @@ class MarketingProjectCreate extends Component
 
             $this->validate($rules);
             
-            if ($this->type == 'one_shot') {
+            if ($this->campaign_structure !== 'plan') {
                 $this->step = 5;
                 return;
             }
@@ -119,7 +131,7 @@ class MarketingProjectCreate extends Component
 
     public function prevStep()
     {
-        if ($this->step == 5 && $this->type == 'one_shot') {
+        if ($this->step == 5 && $this->campaign_structure !== 'plan') {
             $this->step = 3;
             return;
         }
@@ -132,7 +144,7 @@ class MarketingProjectCreate extends Component
             'date' => '',
             'time' => '12:00',
             'topic' => '',
-            'platforms' => $this->platforms,
+            'platforms' => $this->service_options['platforms'] ?? [],
         ];
     }
 
@@ -172,9 +184,10 @@ class MarketingProjectCreate extends Component
             'title' => $this->title,
             'brief' => $this->brief,
             'description' => $this->brief,
-            'type' => $this->type,
-            'platforms' => $this->platforms,
-            'publication_mode' => $this->publication_mode,
+            'type' => $this->service_type === 'editorial_plan' ? 'editorial_plan' : 'one_shot', // legacy
+            'service_type' => $this->service_type,
+            'campaign_structure' => $this->campaign_structure,
+            'service_options' => $this->service_options,
             'shooting_mode' => $this->shooting_mode,
             'existing_shoot_id' => $this->existing_shoot_id,
             'photographer_id' => $this->photographer_id,
@@ -183,7 +196,7 @@ class MarketingProjectCreate extends Component
             'shooting_proposed_slots' => $this->shooting_proposed_slots,
         ]);
 
-        if ($this->type === 'editorial_plan') {
+        if ($this->campaign_structure === 'plan') {
             $plan = $createPlanAction->execute($project, [
                 'duration_days' => $this->duration_days,
                 'start_date' => $this->start_date,
@@ -224,8 +237,10 @@ class MarketingProjectCreate extends Component
             $projects = Project::where('client_id', $this->client_id)->orderBy('name')->get();
         }
         if ($this->project_mode === 'existing' && $this->project_id) {
-            $availableShoots = \App\Models\Shooting\Shoot::where('project_id', $this->project_id)
+            $availableShoots = \App\Models\Shooting\Shoot::with('photographer')
+                ->where('project_id', $this->project_id)
                 ->whereNull('marketing_project_id')
+                ->orderBy('status', 'asc')
                 ->orderBy('created_at', 'desc')
                 ->get();
         }

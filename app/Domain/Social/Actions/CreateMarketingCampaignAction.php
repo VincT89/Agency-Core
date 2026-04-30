@@ -21,13 +21,26 @@ class CreateMarketingCampaignAction
             $project = Project::create([
                 'client_id' => $data['client_id'],
                 'name' => $data['new_project_name'],
+                'slug' => \Illuminate\Support\Str::slug($data['new_project_name'] . '-' . uniqid()),
                 'description' => $data['new_project_description'] ?? null,
                 'budget' => $data['new_project_budget'] ?? null,
                 'deadline' => $data['new_project_deadline'] ?? null,
                 'status' => 'active', // assuming 'active' is default or you have an enum
             ]);
+            
+            if (Auth::check()) {
+                $project->users()->attach(Auth::id(), [
+                    'role' => 'manager',
+                    'assignment_status' => 'active',
+                    'assigned_at' => now(),
+                ]);
+            }
+            
             $projectId = $project->id;
         }
+
+        // Legacy mapping come da indicazioni
+        $legacyType = ($data['service_type'] ?? '') === 'editorial_plan' ? 'editorial_plan' : 'one_shot';
 
         // Product/UI name: Marketing Campaign
         // Technical model: MarketingProject
@@ -38,10 +51,12 @@ class CreateMarketingCampaignAction
             'title' => $data['title'],
             'brief' => $data['brief'] ?? null,
             'description' => $data['description'] ?? null,
-            'type' => $data['type'],
+            'type' => $legacyType,
+            'service_type' => $data['service_type'] ?? 'other',
+            'campaign_structure' => $data['campaign_structure'] ?? 'one_shot',
+            'service_options' => $data['service_options'] ?? [],
             'status' => MarketingProjectStatus::Draft->value,
-            'platforms' => $data['platforms'] ?? [],
-            'publication_mode' => $data['publication_mode'] ?? 'manual',
+            'platforms' => $data['service_options']['platforms'] ?? [], // fallback temporaneo
         ]);
 
         if (($data['shooting_mode'] ?? 'none') === 'existing' && !empty($data['existing_shoot_id'])) {
@@ -50,9 +65,14 @@ class CreateMarketingCampaignAction
                 ->whereNull('marketing_project_id')
                 ->first();
                 
-            if ($shoot) {
-                $shoot->update(['marketing_project_id' => $marketingProject->id]);
+            if (!$shoot) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'existing_shoot_id' => "Lo shooting selezionato non è valido, appartiene ad un'altra commessa o è già stato assegnato a un'altra campagna."
+                ]);
             }
+            
+            $shoot->update(['marketing_project_id' => $marketingProject->id]);
+            
         } elseif (($data['shooting_mode'] ?? 'none') === 'new') {
             $shootData = [
                 'project_id' => $projectId,

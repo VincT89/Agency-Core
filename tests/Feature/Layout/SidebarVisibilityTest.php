@@ -21,7 +21,7 @@ class SidebarVisibilityTest extends TestCase
 
         // Deve vedere le voci principali
         $response->assertSeeText('Dashboard');
-        $response->assertSeeText('Commesse');
+        $response->assertSeeText('Progetti');
         $response->assertSeeText('Shooting');
         $response->assertSeeText('Calendario');
         
@@ -49,7 +49,7 @@ class SidebarVisibilityTest extends TestCase
         // L'admin vede tutto il sistema
         $response->assertSeeText('Dashboard');
         $response->assertSeeText('Clienti');
-        $response->assertSeeText('Commesse');
+        $response->assertSeeText('Progetti');
         $response->assertSeeText('Team');
         $response->assertSeeText('Task');
         $response->assertSeeText('Ticket');
@@ -67,7 +67,7 @@ class SidebarVisibilityTest extends TestCase
         $response->assertStatus(200);
 
         // Developer (come staff operativo) vede progetti, ticket, ecc.
-        $response->assertSeeText('Commesse');
+        $response->assertSeeText('Progetti');
         $response->assertSeeText('Ticket');
         $response->assertSeeText('Team');
         $response->assertSeeText('Task');

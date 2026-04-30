@@ -196,8 +196,67 @@
 
                     {{-- FINE DINAMICO --}}
 
+                    {{-- MATERIALE DI RIFERIMENTO --}}
+                    <h4 style="margin-bottom:15px; font-size:16px; font-family:var(--sans); color:var(--text);">Materiale di riferimento</h4>
+                    <div style="padding:15px; background:var(--bg2); border:1px solid var(--line2); border-radius:var(--r); margin-bottom:15px;">
+                        
+                        <div class="form-g mb-4">
+                            <label class="form-lbl">Carica dal computer</label>
+                            <input type="file" wire:model="uploaded_media" multiple class="form-in" accept="image/*">
+                            <div style="font-size:11px; color:var(--text3); margin-top:4px;">Max 10MB per file. Solo immagini (jpg, png, webp).</div>
+                            @error('uploaded_media.*') <span style="color:var(--red); font-size:12px; display:block;">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-g mb-3">
+                            <label class="form-lbl">Importa da Nextcloud</label>
+                            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                <input type="text" wire:model="nextcloud_path" class="form-in" placeholder="/Cartella" disabled>
+                                <button type="button" wire:click="browseNextcloud(nextcloud_path)" class="btn-sec" style="padding:8px 15px;">Esplora</button>
+                            </div>
+                            @error('nextcloud_files') <span style="color:var(--red); font-size:12px; display:block; margin-bottom:10px;">{{ $message }}</span> @enderror
+
+                            @if(!empty($nextcloud_files))
+                                <div style="max-height:200px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--bg); padding:10px;">
+                                    @if($nextcloud_path !== '/')
+                                        <div wire:click="browseNextcloud('{{ dirname($nextcloud_path) }}')" style="cursor:pointer; padding:5px; border-bottom:1px solid var(--line); color:var(--text2); font-size:13px;">
+                                            📁 .. (Su)
+                                        </div>
+                                    @endif
+                                    @foreach($nextcloud_files as $ncFile)
+                                        <div style="display:flex; align-items:center; gap:10px; padding:5px; border-bottom:1px solid var(--line); font-size:13px;">
+                                            @if($ncFile['is_dir'])
+                                                <div wire:click="browseNextcloud('{{ $ncFile['path'] }}')" style="cursor:pointer; color:var(--blue); flex:1;">
+                                                    📁 {{ $ncFile['name'] }}
+                                                </div>
+                                            @else
+                                                <div style="flex:1;">
+                                                    <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                                                        <input type="checkbox" 
+                                                            wire:click="toggleNextcloudFile('{{ $ncFile['path'] }}', '{{ $ncFile['name'] }}', {{ $ncFile['size'] }}, '{{ $ncFile['content_type'] }}')"
+                                                            {{ collect($selected_nextcloud_files)->contains('path', $ncFile['path']) ? 'checked' : '' }}>
+                                                        🖼️ {{ $ncFile['name'] }} <span style="color:var(--text3); font-size:11px;">({{ round($ncFile['size'] / 1024) }} KB)</span>
+                                                    </label>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            @if(!empty($selected_nextcloud_files))
+                                <div style="margin-top:10px;">
+                                    <strong style="font-size:12px; color:var(--text2);">Selezionati da Nextcloud:</strong>
+                                    <ul style="font-size:12px; color:var(--text); margin-top:5px; padding-left:20px;">
+                                        @foreach($selected_nextcloud_files as $sFile)
+                                            <li>{{ $sFile['name'] }} ({{ round($sFile['size'] / 1024) }} KB)</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                     <hr style="border:none; border-top:1px solid var(--line); margin:20px 0;">
-                    
                     <h4 style="margin-bottom:15px; font-size:16px; font-family:var(--sans); color:var(--text);">Produzione foto/video</h4>
                     <div class="form-g mb-3">
                         <label class="form-lbl">Questa campagna richiede foto o video?</label>

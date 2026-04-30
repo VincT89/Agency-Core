@@ -71,6 +71,11 @@ class MarketingProject extends Model
         return $this->hasMany(Shoot::class, 'marketing_project_id');
     }
 
+    public function media(): HasMany
+    {
+        return $this->hasMany(MarketingProjectMedia::class);
+    }
+
     public function getServiceOption(string $key, $default = null)
     {
         return data_get($this->service_options, $key, $default);

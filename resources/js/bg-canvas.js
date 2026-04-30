@@ -11,49 +11,45 @@ export function initBgCanvas(canvasId) {
     const W = canvas.width  = parent === document.body ? window.innerWidth  : parent.clientWidth;
     const H = canvas.height = parent === document.body ? window.innerHeight : parent.clientHeight;
 
-    const cx = W * 0.5;
-    const cy = H * 0.42;
+    const BLUE = [37, 99, 235];
+    const RED  = [200, 16, 46];
 
-    // Base calda marrone scuro
-    ctx.fillStyle = 'rgb(40,18,10)';
+    // Base bianco ghiaccio
+    ctx.fillStyle = '#f6f8ff';
     ctx.fillRect(0, 0, W, H);
 
-    // Linee radiali sottili dal centro
-    for (let a = 0; a < 32; a++) {
-      const angle = (a / 32) * Math.PI * 2;
-      const dist  = Math.max(W, H) * 0.9;
-      const alpha = Math.max(0.012, 0.07 - Math.abs(Math.cos(angle * 2)) * 0.035);
-      ctx.strokeStyle = `rgba(${ACCENT}, ${alpha})`;
-      ctx.lineWidth   = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(angle) * 4, cy + Math.sin(angle) * 4);
-      ctx.lineTo(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist * 0.64);
-      ctx.stroke();
+    // Alone blu in alto a sinistra
+    const gb = ctx.createRadialGradient(W * 0.15, H * 0.05, 0, W * 0.15, H * 0.05, Math.max(W, H) * 0.75);
+    gb.addColorStop(0,   `rgba(${BLUE}, .13)`);
+    gb.addColorStop(0.4, `rgba(${BLUE}, .05)`);
+    gb.addColorStop(1,   `rgba(${BLUE}, 0)`);
+    ctx.fillStyle = gb;
+    ctx.fillRect(0, 0, W, H);
+
+    // Alone rosso in basso a destra
+    const gr = ctx.createRadialGradient(W * 0.9, H, 0, W * 0.9, H, Math.max(W, H) * 0.7);
+    gr.addColorStop(0,   `rgba(${RED}, .14)`);
+    gr.addColorStop(0.4, `rgba(${RED}, .05)`);
+    gr.addColorStop(1,   `rgba(${RED}, 0)`);
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+
+    // Griglia sottile blu
+    ctx.strokeStyle = 'rgba(37,99,235,.05)';
+    ctx.lineWidth = 0.4;
+    const s = 40;
+    for (let x = 0; x <= W; x += s) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += s) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
-    // Core luminoso caldo — alone ambra + rosso
-    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 1.4);
-    core.addColorStop(0,    'rgba(255,200,120,.32)');
-    core.addColorStop(0.05, `rgba(${ACCENT},.55)`);
-    core.addColorStop(0.18, `rgba(${ACCENT},.20)`);
-    core.addColorStop(0.45, `rgba(${ACCENT},.07)`);
-    core.addColorStop(1,    `rgba(${ACCENT},0)`);
-    ctx.fillStyle = core;
-    ctx.fillRect(0, 0, W, H);
-
-    // Luce ambra diffusa
-    const amb = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.9);
-    amb.addColorStop(0,   'rgba(180,80,20,.12)');
-    amb.addColorStop(0.4, 'rgba(120,40,10,.05)');
-    amb.addColorStop(1,   'rgba(120,40,10,0)');
-    ctx.fillStyle = amb;
-    ctx.fillRect(0, 0, W, H);
-
-    // Vignette morbida sui bordi
-    const vig = ctx.createRadialGradient(cx, cy, Math.max(W, H) * 0.18, cx, cy, Math.max(W, H) * 0.92);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,0,0,.55)');
-    ctx.fillStyle = vig;
+    // Vignette bianca sui bordi — ammorbidisce
+    const v = ctx.createRadialGradient(W * 0.5, H * 0.4, H * 0.1, W * 0.5, H * 0.4, Math.max(W, H));
+    v.addColorStop(0, 'rgba(255,255,255,0)');
+    v.addColorStop(1, 'rgba(255,255,255,.3)');
+    ctx.fillStyle = v;
     ctx.fillRect(0, 0, W, H);
   }
 

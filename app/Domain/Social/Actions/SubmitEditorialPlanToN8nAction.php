@@ -64,6 +64,16 @@ class SubmitEditorialPlanToN8nAction
             ],
             'brief' => $plan->project->brief,
             'n8n_request_id' => $newRequestId,
+            'media' => $plan->project->media->map(function ($media) {
+                return [
+                    'id' => $media->id,
+                    'source' => $media->source,
+                    'url' => url(\Illuminate\Support\Facades\Storage::disk($media->disk)->url($media->path)),
+                    'filename' => $media->original_name,
+                    'mime_type' => $media->mime_type,
+                    'size' => $media->size,
+                ];
+            })->toArray(),
             'plan_details' => [
                 'duration_days' => $plan->duration_days,
                 'start_date' => $plan->start_date?->format('Y-m-d'),

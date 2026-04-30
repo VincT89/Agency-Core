@@ -8,9 +8,12 @@ use App\Models\Project;
 use App\Domain\Social\Actions\CreateMarketingCampaignAction;
 use App\Domain\Social\Actions\CreateEditorialPlanAction;
 use App\Domain\Social\Actions\CreateEditorialPlanSlotsAction;
+use Livewire\WithFileUploads;
 
 class MarketingProjectCreate extends Component
 {
+    use WithFileUploads;
+
     public int $step = 1;
 
     // Step 1: Selezione Cliente e Progetto
@@ -36,6 +39,12 @@ class MarketingProjectCreate extends Component
     public $shooting_location = '';
     public $shooting_brief = '';
     public array $shooting_proposed_slots = [];
+    
+    // Reference Material
+    public $uploaded_media = [];
+    public $nextcloud_path = '/';
+    public $nextcloud_files = [];
+    public array $selected_nextcloud_files = [];
     
     // Step 4: Dettagli Piano Editoriale (Solo se tipo = piano)
     public $duration_days = 30;
@@ -80,6 +89,7 @@ class MarketingProjectCreate extends Component
                 'title' => 'required|string|max:255',
                 'brief' => 'required|string',
                 'shooting_mode' => 'required|in:none,existing,new',
+                'uploaded_media.*' => 'image|max:10240',
             ];
             
             if ($this->service_type === 'social_management') {
@@ -168,6 +178,34 @@ class MarketingProjectCreate extends Component
         $this->shooting_proposed_slots = array_values($this->shooting_proposed_slots);
     }
 
+    public function browseNextcloud(string $path = '/')
+    {
+        $service = new \App\Services\Integrations\Nextcloud\NextcloudService();
+        $this->nextcloud_path = $path;
+        $this->nextcloud_files = $service->listFiles($path);
+    }
+
+    public function toggleNextcloudFile($path, $name, $size, $mime = null)
+    {
+        $idx = collect($this->selected_nextcloud_files)->search(fn($f) => $f['path'] === $path);
+        if ($idx !== false) {
+            unset($this->selected_nextcloud_files[$idx]);
+            $this->selected_nextcloud_files = array_values($this->selected_nextcloud_files);
+        } else {
+            if ($size > 20 * 1024 * 1024) {
+                $this->addError('nextcloud_files', "Il file $name supera il limite di 20MB.");
+                return;
+            }
+            $this->selected_nextcloud_files[] = [
+                'path' => $path,
+                'name' => $name,
+                'size' => $size,
+                'mime' => $mime,
+            ];
+            $this->resetErrorBag('nextcloud_files');
+        }
+    }
+
     public function save(
         CreateMarketingCampaignAction $createProjectAction,
         CreateEditorialPlanAction $createPlanAction,
@@ -209,6 +247,42 @@ class MarketingProjectCreate extends Component
             }
         }
 
+        // Upload local files
+        foreach ($this->uploaded_media as $file) {
+            $path = $file->store('marketing-projects/' . $project->id . '/reference-material', 'public');
+            $project->media()->create([
+                'source' => 'local',
+                'disk' => 'public',
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ]);
+        }
+
+        // Import Nextcloud files
+        if (!empty($this->selected_nextcloud_files)) {
+            $ncService = new \App\Services\Integrations\Nextcloud\NextcloudService();
+            foreach ($this->selected_nextcloud_files as $ncFile) {
+                $content = $ncService->downloadFile($ncFile['path']);
+                if ($content) {
+                    $ext = pathinfo($ncFile['name'], PATHINFO_EXTENSION);
+                    $filename = uniqid() . '-' . \Illuminate\Support\Str::slug(pathinfo($ncFile['name'], PATHINFO_FILENAME)) . '.' . $ext;
+                    $path = 'marketing-projects/' . $project->id . '/reference-material/' . $filename;
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($path, $content);
+                    
+                    $project->media()->create([
+                        'source' => 'nextcloud',
+                        'disk' => 'public',
+                        'path' => $path,
+                        'original_name' => $ncFile['name'],
+                        'mime_type' => $ncFile['mime'] ?? 'application/octet-stream',
+                        'size' => strlen($content),
+                    ]);
+                }
+            }
+        }
+
         session()->flash('success', 'Progetto creato con successo e pronto per l\'invio a n8n.');
         return $this->redirectRoute('marketing-projects.show', ['project' => $project->id]);
     }
@@ -246,7 +320,7 @@ class MarketingProjectCreate extends Component
         }
 
         $photographers = \App\Models\User::where('role', \App\Enums\UserRole::Photographer->value)
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->orderBy('name')
             ->get();
 

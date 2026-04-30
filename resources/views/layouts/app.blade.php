@@ -184,7 +184,7 @@
           <x-nav-item href="{{ route('clients.index') }}" icon="building-2" label="Clienti" :active="request()->routeIs('clients.*')" :badge="$clientsCount ?? null" />
         @endif
       @endcan
-      <x-nav-item href="{{ route('projects.index') }}" icon="folder-kanban" label="Commesse" :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
+      <x-nav-item href="{{ route('projects.index') }}" icon="folder-kanban" label="Progetti" :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
     </div>
 
     @can('viewAny', \App\Models\Shooting\Shoot::class)

@@ -229,14 +229,14 @@
       <?php endif; ?>
       <?php if (isset($component)) { $__componentOriginal6cced52613a484e7295a90162a92d81b = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal6cced52613a484e7295a90162a92d81b = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('projects.index')).'','icon' => 'folder-kanban','label' => 'Commesse','active' => request()->routeIs('projects.*'),'badge' => $projectsCount ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-item','data' => ['href' => ''.e(route('projects.index')).'','icon' => 'folder-kanban','label' => 'Progetti','active' => request()->routeIs('projects.*'),'badge' => $projectsCount ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('nav-item'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['href' => ''.e(route('projects.index')).'','icon' => 'folder-kanban','label' => 'Commesse','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('projects.*')),'badge' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($projectsCount ?? null)]); ?>
+<?php $component->withAttributes(['href' => ''.e(route('projects.index')).'','icon' => 'folder-kanban','label' => 'Progetti','active' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(request()->routeIs('projects.*')),'badge' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($projectsCount ?? null)]); ?>
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
 <?php echo $__env->renderComponent(); ?>

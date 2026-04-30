@@ -58,6 +58,16 @@ class SubmitMarketingProjectToN8nAction
                 'brief' => $project->brief,
                 'description' => $project->description,
                 'n8n_request_id' => $project->n8n_request_id,
+                'media' => $project->media->map(function ($media) {
+                    return [
+                        'id' => $media->id,
+                        'source' => $media->source,
+                        'url' => url(\Illuminate\Support\Facades\Storage::disk($media->disk)->url($media->path)),
+                        'filename' => $media->original_name,
+                        'mime_type' => $media->mime_type,
+                        'size' => $media->size,
+                    ];
+                })->toArray(),
                 'social_access' => $project->client->socialAccounts->map(function ($account) {
                     return array_filter([
                         'platform' => $account->platform->value,

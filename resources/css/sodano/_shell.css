@@ -211,7 +211,7 @@
 }
 .page-title {
   font-family: var(--sans); font-style: normal; font-weight: 800; font-size: 32px;
-  letter-spacing: -.02em; line-height: 1; color: var(--text);
+  letter-spacing: -.02em; line-height: 1; color: var(--blue-title);
 }
 .page-title strong { font-style: normal; font-family: var(--sans); font-weight: 800; }
 .page-meta {

@@ -87,7 +87,9 @@ class NextcloudService
                 if (!$isDir) {
                     $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                     $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
-                    if (!in_array($ext, $allowedExts)) {
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                    
+                    if (!in_array($ext, $allowedExts) || !in_array(strtolower($contentType), $allowedMimes)) {
                         continue;
                     }
                 }

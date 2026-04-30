@@ -1,5 +1,23 @@
 /* Login / Authentication */
 
+.guest-body {
+  /* Sfondo chiaro per schermate pubbliche/login in base al nuovo canvas Ice */
+  --bg:         #ffffff;
+  --bg1:        #f9fafb;
+  --bg2:        #f3f4f6;
+  --bg3:        #e5e7eb;
+
+  --line:       rgba(0,0,0,0.08);
+  --line2:      rgba(0,0,0,0.12);
+  --line3:      rgba(0,0,0,0.18);
+  --border:     rgba(0,0,0,0.08);
+
+  --text:       #111827;
+  --text1:      #1f2937;
+  --text2:      #4b5563;
+  --text3:      #6b7280;
+}
+
 .login-shell {
   display: grid;
   grid-template-columns: 2fr 1fr;

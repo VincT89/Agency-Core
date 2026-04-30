@@ -89,7 +89,7 @@ class MarketingProjectCreate extends Component
                 'title' => 'required|string|max:255',
                 'brief' => 'required|string',
                 'shooting_mode' => 'required|in:none,existing,new',
-                'uploaded_media.*' => 'image|max:10240',
+                'uploaded_media.*' => 'image|mimes:jpg,jpeg,png,webp|max:10240',
             ];
             
             if ($this->service_type === 'social_management') {
@@ -192,8 +192,13 @@ class MarketingProjectCreate extends Component
             unset($this->selected_nextcloud_files[$idx]);
             $this->selected_nextcloud_files = array_values($this->selected_nextcloud_files);
         } else {
-            if ($size > 20 * 1024 * 1024) {
-                $this->addError('nextcloud_files', "Il file $name supera il limite di 20MB.");
+            if (count($this->selected_nextcloud_files) >= 5) {
+                $this->addError('nextcloud_files', "Puoi selezionare massimo 5 file da Nextcloud per volta.");
+                return;
+            }
+            $currentSize = collect($this->selected_nextcloud_files)->sum('size');
+            if (($currentSize + $size) > 20 * 1024 * 1024) {
+                $this->addError('nextcloud_files', "Il peso totale dei file Nextcloud selezionati non può superare 20MB.");
                 return;
             }
             $this->selected_nextcloud_files[] = [
@@ -203,6 +208,22 @@ class MarketingProjectCreate extends Component
                 'mime' => $mime,
             ];
             $this->resetErrorBag('nextcloud_files');
+        }
+    }
+
+    public function removeUploadedMedia($index)
+    {
+        if (isset($this->uploaded_media[$index])) {
+            unset($this->uploaded_media[$index]);
+            $this->uploaded_media = array_values($this->uploaded_media);
+        }
+    }
+
+    public function removeNextcloudFile($index)
+    {
+        if (isset($this->selected_nextcloud_files[$index])) {
+            unset($this->selected_nextcloud_files[$index]);
+            $this->selected_nextcloud_files = array_values($this->selected_nextcloud_files);
         }
     }
 
@@ -249,6 +270,13 @@ class MarketingProjectCreate extends Component
 
         // Upload local files
         foreach ($this->uploaded_media as $file) {
+            $checksum = hash_file('sha256', $file->getRealPath());
+            
+            // Check if checksum already exists for this project
+            if ($project->media()->where('checksum', $checksum)->exists()) {
+                continue;
+            }
+
             $path = $file->store('marketing-projects/' . $project->id . '/reference-material', 'public');
             $project->media()->create([
                 'source' => 'local',
@@ -257,6 +285,7 @@ class MarketingProjectCreate extends Component
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
+                'checksum' => $checksum,
             ]);
         }
 
@@ -266,6 +295,12 @@ class MarketingProjectCreate extends Component
             foreach ($this->selected_nextcloud_files as $ncFile) {
                 $content = $ncService->downloadFile($ncFile['path']);
                 if ($content) {
+                    $checksum = hash('sha256', $content);
+                    
+                    if ($project->media()->where('checksum', $checksum)->exists()) {
+                        continue;
+                    }
+
                     $ext = pathinfo($ncFile['name'], PATHINFO_EXTENSION);
                     $filename = uniqid() . '-' . \Illuminate\Support\Str::slug(pathinfo($ncFile['name'], PATHINFO_FILENAME)) . '.' . $ext;
                     $path = 'marketing-projects/' . $project->id . '/reference-material/' . $filename;
@@ -278,6 +313,7 @@ class MarketingProjectCreate extends Component
                         'original_name' => $ncFile['name'],
                         'mime_type' => $ncFile['mime'] ?? 'application/octet-stream',
                         'size' => strlen($content),
+                        'checksum' => $checksum,
                     ]);
                 }
             }

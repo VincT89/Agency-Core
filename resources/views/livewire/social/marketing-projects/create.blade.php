@@ -205,6 +205,21 @@
                             <input type="file" wire:model="uploaded_media" multiple class="form-in" accept="image/*">
                             <div style="font-size:11px; color:var(--text3); margin-top:4px;">Max 10MB per file. Solo immagini (jpg, png, webp).</div>
                             @error('uploaded_media.*') <span style="color:var(--red); font-size:12px; display:block;">{{ $message }}</span> @enderror
+                            
+                            @if($uploaded_media)
+                                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                                    @foreach($uploaded_media as $idx => $file)
+                                        <div style="position:relative; width:80px; height:80px; border-radius:var(--r); overflow:hidden; border:1px solid var(--line);">
+                                            @try
+                                                <img src="{{ $file->temporaryUrl() }}" style="width:100%; height:100%; object-fit:cover;">
+                                            @catch(\Exception $e)
+                                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:10px;">{{ $file->getClientOriginalExtension() }}</div>
+                                            @endtry
+                                            <button type="button" wire:click="removeUploadedMedia({{ $idx }})" style="position:absolute; top:2px; right:2px; background:var(--red); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
 
                         <div class="form-g mb-3">
@@ -219,14 +234,14 @@
                                 <div style="max-height:200px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--bg); padding:10px;">
                                     @if($nextcloud_path !== '/')
                                         <div wire:click="browseNextcloud('{{ dirname($nextcloud_path) }}')" style="cursor:pointer; padding:5px; border-bottom:1px solid var(--line); color:var(--text2); font-size:13px;">
-                                            📁 .. (Su)
+                                            .. (Su)
                                         </div>
                                     @endif
                                     @foreach($nextcloud_files as $ncFile)
                                         <div style="display:flex; align-items:center; gap:10px; padding:5px; border-bottom:1px solid var(--line); font-size:13px;">
                                             @if($ncFile['is_dir'])
                                                 <div wire:click="browseNextcloud('{{ $ncFile['path'] }}')" style="cursor:pointer; color:var(--blue); flex:1;">
-                                                    📁 {{ $ncFile['name'] }}
+                                                    [Dir] {{ $ncFile['name'] }}
                                                 </div>
                                             @else
                                                 <div style="flex:1;">
@@ -234,7 +249,7 @@
                                                         <input type="checkbox" 
                                                             wire:click="toggleNextcloudFile('{{ $ncFile['path'] }}', '{{ $ncFile['name'] }}', {{ $ncFile['size'] }}, '{{ $ncFile['content_type'] }}')"
                                                             {{ collect($selected_nextcloud_files)->contains('path', $ncFile['path']) ? 'checked' : '' }}>
-                                                        🖼️ {{ $ncFile['name'] }} <span style="color:var(--text3); font-size:11px;">({{ round($ncFile['size'] / 1024) }} KB)</span>
+                                                        {{ $ncFile['name'] }} <span style="color:var(--text3); font-size:11px;">({{ round($ncFile['size'] / 1024) }} KB)</span>
                                                     </label>
                                                 </div>
                                             @endif
@@ -247,8 +262,11 @@
                                 <div style="margin-top:10px;">
                                     <strong style="font-size:12px; color:var(--text2);">Selezionati da Nextcloud:</strong>
                                     <ul style="font-size:12px; color:var(--text); margin-top:5px; padding-left:20px;">
-                                        @foreach($selected_nextcloud_files as $sFile)
-                                            <li>{{ $sFile['name'] }} ({{ round($sFile['size'] / 1024) }} KB)</li>
+                                        @foreach($selected_nextcloud_files as $idx => $sFile)
+                                            <li style="margin-bottom:4px; display:flex; align-items:center; justify-content:space-between; max-width:300px;">
+                                                <span>{{ $sFile['name'] }} ({{ round($sFile['size'] / 1024) }} KB)</span>
+                                                <button type="button" wire:click="removeNextcloudFile({{ $idx }})" style="background:transparent; color:var(--red); border:none; cursor:pointer; font-size:14px; padding:0 5px;">&times;</button>
+                                            </li>
                                         @endforeach
                                     </ul>
                                 </div>

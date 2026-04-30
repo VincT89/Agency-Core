@@ -14,6 +14,7 @@ class MarketingProjectMedia extends Model
         'original_name',
         'mime_type',
         'size',
+        'checksum',
         'metadata',
     ];
 

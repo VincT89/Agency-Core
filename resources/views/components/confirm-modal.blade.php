@@ -16,7 +16,8 @@
         {{ $slot }}
     </div>
 
-    <div x-show="open" x-cloak style="display: none; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;" @click.self="open = false" @keydown.escape.window="open = false">
+    <template x-teleport="body" wire:ignore>
+        <div x-show="open" x-cloak style="display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999;" @click.self="open = false" @keydown.escape.window="open = false">
         <div style="background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--r); width: 100%; max-width: 400px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" @click.stop>
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
                 <div style="background: {{ $iconBg }}; color: {{ $iconColor }}; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -41,5 +42,6 @@
                 </button>
             </div>
         </div>
-    </div>
+        </div>
+    </template>
 </div>

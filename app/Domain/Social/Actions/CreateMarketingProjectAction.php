@@ -3,26 +3,19 @@
 namespace App\Domain\Social\Actions;
 
 use App\Models\MarketingProject;
-use Illuminate\Support\Facades\Auth;
-use App\Enums\Social\MarketingProjectStatus;
 
+/**
+ * @deprecated Usa CreateMarketingCampaignAction invece
+ */
 class CreateMarketingProjectAction
 {
+    public function __construct(private CreateMarketingCampaignAction $newAction)
+    {}
+
     public function execute(array $data): MarketingProject
     {
-        $project = MarketingProject::create([
-            'client_id' => $data['client_id'],
-            'project_id' => $data['project_id'] ?? null,
-            'created_by' => Auth::id(),
-            'title' => $data['title'],
-            'brief' => $data['brief'] ?? null,
-            'description' => $data['description'] ?? null,
-            'type' => $data['type'],
-            'status' => MarketingProjectStatus::Draft->value,
-            'platforms' => $data['platforms'] ?? [],
-            'publication_mode' => $data['publication_mode'] ?? 'manual',
-        ]);
-
-        return $project;
+        // Wrapper per retrocompatibilità
+        $data['project_mode'] = 'existing';
+        return $this->newAction->execute($data);
     }
 }

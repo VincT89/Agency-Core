@@ -38,9 +38,18 @@ class SubmitEditorialPlanToN8nAction
 
         $payload = [
             'type' => 'editorial_plan',
-            'marketing_project_id' => $plan->marketing_project_id,
+            'marketing_project_id' => $plan->marketing_project_id, // deprecated
             'editorial_plan_id' => $plan->id,
             'client_id' => $plan->project->client_id,
+            'project_id' => $plan->project->project_id,
+            'project' => $plan->project->project ? [
+                'id' => $plan->project->project->id,
+                'name' => $plan->project->project->name,
+            ] : null,
+            'marketing_campaign' => [
+                'id' => $plan->project->id,
+                'name' => $plan->project->title,
+            ],
             'brief' => $plan->project->brief,
             'platforms' => $plan->project->platforms,
             'n8n_request_id' => $newRequestId,

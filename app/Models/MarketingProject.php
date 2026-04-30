@@ -6,6 +6,8 @@ use App\Enums\Social\MarketingProjectType;
 use App\Enums\Social\MarketingProjectStatus;
 use App\Enums\Social\PublicationMode;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Shooting\Shoot;
 
 class MarketingProject extends Model
 {
@@ -58,5 +60,10 @@ class MarketingProject extends Model
     public function socialPosts()
     {
         return $this->hasMany(SocialPost::class);
+    }
+
+    public function shoots(): HasMany
+    {
+        return $this->hasMany(Shoot::class, 'marketing_project_id');
     }
 }

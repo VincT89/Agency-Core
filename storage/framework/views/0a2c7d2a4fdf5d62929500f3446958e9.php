@@ -130,17 +130,6 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                                     <label class="form-lbl">Business Manager ID</label>
                                     <input type="text" wire:model="forms.<?php echo e($platform->value); ?>.business_manager_id" class="form-in w-100">
                                 </div>
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($platform->value === 'facebook'): ?>
-                                    <div class="form-g">
-                                        <label class="form-lbl">Page ID (Facebook)</label>
-                                        <input type="text" wire:model="forms.<?php echo e($platform->value); ?>.page_id" class="form-in w-100">
-                                    </div>
-                                <?php else: ?>
-                                    <div class="form-g">
-                                        <label class="form-lbl">IG Business Account ID</label>
-                                        <input type="text" wire:model="forms.<?php echo e($platform->value); ?>.instagram_business_account_id" class="form-in w-100">
-                                    </div>
-                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             </div>
                         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 

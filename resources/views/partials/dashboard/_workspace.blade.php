@@ -3,7 +3,7 @@
         @if($overdueTasks->isNotEmpty())
         <x-panel title="Task Scaduti" dot="var(--red)">
             <table class="t-table">
-                <thead><tr><th>Task</th><th>Progetto</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     @foreach($overdueTasks as $task)
                     <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
@@ -22,7 +22,7 @@
         @if($dueSoonTasks->isNotEmpty())
         <x-panel title="Task in Scadenza a Breve" dot="var(--orange)">
             <table class="t-table">
-                <thead><tr><th>Task</th><th>Progetto</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     @foreach($dueSoonTasks as $task)
                     <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
@@ -40,7 +40,7 @@
 
         <x-panel title="Altri Task in Lavorazione" dot="var(--line2)">
             <table class="t-table">
-                <thead><tr><th>Task</th><th>Progetto</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     @forelse($otherTasks as $task)
                     <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
@@ -60,7 +60,7 @@
         <div class="mt-panel">
             <x-panel title="Ticket nel Mio Perimetro" dot="var(--blue)">
                 <table class="t-table">
-                    <thead><tr><th>Ticket</th><th>Progetto</th><th>Stato</th></tr></thead>
+                    <thead><tr><th>Ticket</th><th>Commessa</th><th>Stato</th></tr></thead>
                     <tbody>
                         @forelse($openTickets as $ticket)
                         <tr onclick="window.location='{{ route('tickets.show', $ticket) }}'" style="cursor:pointer">
@@ -107,7 +107,7 @@
         <div class="mt-panel">
             <x-panel title="Le Mie Richieste Shooting" dot="var(--purple)">
                 <table class="t-table">
-                    <thead><tr><th>Titolo</th><th>Progetto</th><th>Stato</th></tr></thead>
+                    <thead><tr><th>Titolo</th><th>Commessa</th><th>Stato</th></tr></thead>
                     <tbody>
                         @forelse($recentShoots as $shoot)
                         <tr onclick="window.location='{{ route('social.shooting.index') }}'" style="cursor:pointer">

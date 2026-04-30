@@ -1,6 +1,6 @@
 <x-app-layout title="{{ $project->name }}">
     <x-page-header
-        eyebrow="Dettaglio · Progetto"
+        eyebrow="Dettaglio · Commessa"
         
     >
     <x-slot:title><strong>{{ $project->name }}</strong></x-slot:title>
@@ -13,8 +13,8 @@
             @can('delete', $project)
                 <x-delete-modal 
                     action="{{ route('projects.destroy', $project) }}" 
-                    title="Elimina Progetto" 
-                    message="Sei sicuro di voler eliminare il progetto '{{ $project->name }}'? Questa azione non può essere annullata."
+                    title="Elimina Commessa" 
+                    message="Sei sicuro di voler eliminare la commessa '{{ $project->name }}'? Questa azione non può essere annullata."
                     confirmText="{{ $project->name }}">
                     <button type="button" class="btn btn-g" style="color:var(--red);border-color:rgba(245,75,75,.3)">
                         Elimina
@@ -69,7 +69,7 @@
             </div>
             @if($project->code)
             <div class="form-g mb-2">
-                <div class="form-lbl">Codice Progetto</div>
+                <div class="form-lbl">Codice Commessa</div>
                 <div style="color:var(--text);font-family:var(--mono)">{{ $project->code }}</div>
             </div>
             @endif
@@ -92,7 +92,7 @@
             @endif
         </x-panel>
 
-        <x-panel title="Team di Progetto" dot="var(--purple)" padded>
+        <x-panel title="Team di Commessa" dot="var(--purple)" padded>
             @forelse($project->users as $u)
                 <div style="padding:8px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
                     <span style="color:var(--text)">{{ $u->name }}</span>
@@ -100,7 +100,7 @@
                 </div>
             @empty
                 <div style="padding:16px;">
-                    <x-empty-state message="Nessun membro del team assegnato a questo progetto." icon="users" />
+                    <x-empty-state message="Nessun membro del team assegnato a questa commessa." icon="users" />
                 </div>
             @endforelse
         </x-panel>
@@ -110,7 +110,7 @@
         <x-panel title="Ticket Recenti">
         @if($project->tickets->isEmpty())
             <div style="padding:16px;">
-                <x-empty-state message="Nessun ticket registrato per questo progetto." icon="ticket" />
+                <x-empty-state message="Nessun ticket registrato per questa commessa." icon="ticket" />
             </div>
         @else
             <table class="t-table">
@@ -141,7 +141,7 @@
             </x-slot:headerActions>
         @if($project->tasks->isEmpty())
             <div style="padding:16px;">
-                <x-empty-state message="Nessun task per questo progetto." icon="check-square" />
+                <x-empty-state message="Nessun task per questa commessa." icon="check-square" />
             </div>
         @else
             <table class="t-table">
@@ -165,6 +165,45 @@
         @endif
         </x-panel>
     </div>
+
+    <div style="margin-bottom:20px;">
+        <x-panel title="Campagne Marketing ({{ $project->marketingProjects->count() }})">
+            @if($project->marketingProjects->isEmpty())
+                <div style="padding:16px;">
+                    <x-empty-state message="Nessuna campagna marketing per questa commessa." icon="megaphone" />
+                </div>
+            @else
+                <table class="t-table">
+                    <thead>
+                        <tr>
+                            <th>Titolo Campagna</th>
+                            <th>Stato</th>
+                            <th>Shooting</th>
+                            <th>Data Inserimento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($project->marketingProjects as $mp)
+                        <tr onclick="window.location='{{ route('marketing-projects.show', $mp) }}'" style="cursor:pointer">
+                            <td class="name-col">{{ $mp->title }}</td>
+                            <td><x-badge :status="$mp->status->value ?? $mp->status" :label="$mp->status->label ?? $mp->status" /></td>
+                            <td>
+                                @if($mp->shoots->isNotEmpty())
+                                    @php $shoot = $mp->shoots->first(); @endphp
+                                    <span style="font-size:11px; color:var(--text2);">{{ $shoot->status->label() }}</span>
+                                @else
+                                    <span style="font-size:11px; color:var(--text3); font-style:italic;">Nessuno</span>
+                                @endif
+                            </td>
+                            <td class="mono-col">{{ $mp->created_at->format('d/m/Y') }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </x-panel>
+    </div>
+
     
     <x-audit-timeline :logs="$project->auditLogs" />
     

@@ -80,16 +80,16 @@
         <livewire:client.client-social-account-form :client="$client" />
     </div>
 
-    <x-panel title="Progetti Attivi ({{ $client->projects->count() }})">
+    <x-panel title="Commesse Attive ({{ $client->projects->count() }})">
         @if($client->projects->isEmpty())
             <div style="padding:16px;">
-                <x-empty-state message="Nessun progetto registrato per questo cliente." icon="folder-open" />
+                <x-empty-state message="Nessuna commessa registrata per questo cliente." icon="folder-open" />
             </div>
         @else
             <table class="t-table">
                 <thead>
                     <tr>
-                        <th>Nome Progetto</th>
+                        <th>Nome Commessa</th>
                         <th>Stato</th>
                         <th>Data avvio</th>
                     </tr>

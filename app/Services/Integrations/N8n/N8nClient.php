@@ -27,7 +27,11 @@ class N8nClient
         ]);
 
         try {
-            $response = Http::timeout(10)->post($url, $payload);
+            $request = Http::timeout(10);
+            if ($token = config('services.n8n.token')) {
+                $request = $request->withToken($token);
+            }
+            $response = $request->post($url, $payload);
             
             $log->update([
                 'response' => $response->json() ?? $response->body(),
@@ -89,7 +93,11 @@ class N8nClient
         ]);
 
         try {
-            $response = Http::timeout(10)->post($url, $payload);
+            $request = Http::timeout(10);
+            if ($token = config('services.n8n.token')) {
+                $request = $request->withToken($token);
+            }
+            $response = $request->post($url, $payload);
             
             $log->update([
                 'response' => $response->json() ?? $response->body(),

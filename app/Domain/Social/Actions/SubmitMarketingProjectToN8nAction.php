@@ -33,8 +33,17 @@ class SubmitMarketingProjectToN8nAction
         if ($project->type->value === 'one_shot') {
             $payload = [
                 'type' => 'one_shot',
-                'marketing_project_id' => $project->id,
+                'marketing_project_id' => $project->id, // deprecated
                 'client_id' => $project->client_id,
+                'project_id' => $project->project_id,
+                'project' => $project->project ? [
+                    'id' => $project->project->id,
+                    'name' => $project->project->name,
+                ] : null,
+                'marketing_campaign' => [
+                    'id' => $project->id,
+                    'name' => $project->title,
+                ],
                 'brief' => $project->brief,
                 'description' => $project->description,
                 'platforms' => $project->platforms,

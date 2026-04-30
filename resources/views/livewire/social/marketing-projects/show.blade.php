@@ -94,6 +94,42 @@
                     @endif
                 </div>
             </x-panel>
+            
+            @if($project->shoots->isNotEmpty())
+                <x-panel title="Shooting Collegati ({{ $project->shoots->count() }})" dot="var(--accent)" padded style="margin-top:20px;">
+                    <div style="display:flex; flex-direction:column; gap:15px;">
+                        @foreach($project->shoots as $shoot)
+                            <div style="border:1px solid var(--line2); border-radius:var(--r); padding:15px; background:var(--bg2);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <strong style="color:var(--text);">{{ $shoot->title }}</strong>
+                                    <x-badge :status="$shoot->status->value" :label="$shoot->status->label()" />
+                                </div>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px; margin-bottom:10px;">
+                                    <div>
+                                        <div style="color:var(--text3); font-size:11px; text-transform:uppercase;">Fotografo</div>
+                                        <div style="color:var(--text2);">{{ $shoot->photographer->name ?? 'Da assegnare' }}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color:var(--text3); font-size:11px; text-transform:uppercase;">Data Proposta/Confermata</div>
+                                        <div style="color:var(--text2);">
+                                            @if($shoot->selectedSlot)
+                                                {{ $shoot->selectedSlot->date->format('d/m/Y') }} ({{ $shoot->selectedSlot->period->label() }})
+                                            @elseif($shoot->slots->isNotEmpty())
+                                                Da confermare ({{ $shoot->slots->count() }} opzioni)
+                                            @else
+                                                Nessuna data
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <a href="{{ \App\Helpers\ShootingRouteResolver::showRouteFor(auth()->user(), $shoot) }}" class="btn btn-sm btn-g" style="font-size:11px; padding:4px 8px;">Vedi Dettaglio</a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </x-panel>
+            @endif
         </div>
 
         <div style="display:flex; flex-direction:column; gap:20px;">

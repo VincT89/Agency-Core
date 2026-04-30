@@ -1,7 +1,7 @@
 <div>
     <div class="mb-4">
-        <x-page-header eyebrow="Social" meta="Wizard creazione progetto e piano editoriale">
-            <x-slot:title><strong>Nuovo Progetto Marketing</strong></x-slot:title>
+        <x-page-header eyebrow="Social" meta="Wizard creazione campagna e piano editoriale">
+            <x-slot:title><strong>Nuova Campagna Marketing</strong></x-slot:title>
             <x-slot:actions>
                 <a href="{{ route('marketing-projects.index') }}" wire:navigate class="btn btn-g">← Indietro</a>
             </x-slot:actions>
@@ -11,14 +11,14 @@
     {{-- Progress Indicator --}}
     <div class="mkt-wizard-progress">
         @for($i = 1; $i <= 5; $i++)
-            @if($i == 4 && $type == 'one_shot') @continue @endif
-            <div class="mkt-wizard-step {{ $step >= $i ? 'active' : 'inactive' }}"></div>
+            <div class="mkt-wizard-step {{ $step >= $i ? 'active' : 'inactive' }}"
+                 style="{{ ($i == 4 && $type == 'one_shot') ? 'display: none;' : '' }}"></div>
         @endfor
     </div>
 
     <x-panel padded="true" title="Step {{ $step }}: {{ 
         $step == 1 ? 'Seleziona Cliente' : (
-        $step == 2 ? 'Tipo di Progetto' : (
+        $step == 2 ? 'Tipo di Campagna' : (
         $step == 3 ? 'Brief e Dettagli' : (
         $step == 4 ? 'Piano Editoriale' : 'Riepilogo'
         ))) 
@@ -42,18 +42,54 @@
 
                     @if($client_id)
                     <div class="form-g mb-3">
-                        <label class="form-lbl">Progetto Gestionale Associato *</label>
-                        @if(count($projects) > 0)
-                            <select wire:model="project_id" class="form-in" required>
-                                <option value="">Seleziona...</option>
-                                @foreach($projects as $proj)
-                                    <option value="{{ $proj->id }}">{{ $proj->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('project_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                        <label class="form-lbl">Commessa Associata *</label>
+                        <div style="display:flex; gap:20px; margin-bottom:15px;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="radio" wire:model.live="project_mode" value="existing">
+                                <span>Usa commessa esistente</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="radio" wire:model.live="project_mode" value="new">
+                                <span>Crea nuova commessa</span>
+                            </label>
+                        </div>
+                        @error('project_mode') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+
+                        @if($project_mode === 'existing')
+                            @if(count($projects) > 0)
+                                <select wire:model="project_id" class="form-in" required>
+                                    <option value="">Seleziona...</option>
+                                    @foreach($projects as $proj)
+                                        <option value="{{ $proj->id }}">{{ $proj->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('project_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                            @else
+                                <div style="padding:15px; background:var(--bg); border:1px solid var(--line2); border-radius:var(--r); color:var(--text2); font-size:14px;">
+                                    Questo cliente non ha commesse attive. Seleziona "Crea nuova commessa".
+                                </div>
+                            @endif
                         @else
-                            <div style="padding:15px; background:var(--bg); border:1px solid var(--line2); border-radius:var(--r); color:var(--text2); font-size:14px;">
-                                Questo cliente non ha progetti attivi. <a href="{{ route('projects.create') }}" style="color:var(--brand); text-decoration:underline;">Crea prima un progetto gestionale</a>.
+                            <div style="padding:15px; background:var(--bg2); border:1px solid var(--line2); border-radius:var(--r);">
+                                <div class="form-g mb-3">
+                                    <label class="form-lbl">Nome Commessa *</label>
+                                    <input type="text" wire:model="new_project_name" class="form-in" placeholder="Es. Commessa Primavera 2026">
+                                    @error('new_project_name') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="form-g mb-3">
+                                    <label class="form-lbl">Descrizione (Opzionale)</label>
+                                    <textarea wire:model="new_project_description" class="form-in" rows="2"></textarea>
+                                </div>
+                                <div class="g-2col">
+                                    <div class="form-g">
+                                        <label class="form-lbl">Budget (Opzionale)</label>
+                                        <input type="number" step="0.01" wire:model="new_project_budget" class="form-in" placeholder="0.00">
+                                    </div>
+                                    <div class="form-g">
+                                        <label class="form-lbl">Scadenza (Opzionale)</label>
+                                        <input type="date" wire:model="new_project_deadline" class="form-in">
+                                    </div>
+                                </div>
                             </div>
                         @endif
                     </div>
@@ -167,6 +203,91 @@
                             <option value="automatic">Automatica (Tramite n8n/API se supportato)</option>
                         </select>
                     </div>
+
+                    <hr style="border:none; border-top:1px solid var(--line); margin:20px 0;">
+                    
+                    <h4 style="margin-bottom:15px; font-size:16px; font-family:var(--sans); color:var(--text);">Produzione foto/video</h4>
+                    <div class="form-g mb-3">
+                        <label class="form-lbl">Questa campagna richiede foto o video?</label>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="radio" wire:model.live="shooting_mode" value="none">
+                                <span>No</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="radio" wire:model.live="shooting_mode" value="existing">
+                                <span>Sì, collega shooting esistente</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="radio" wire:model.live="shooting_mode" value="new">
+                                <span>Sì, crea nuova richiesta shooting</span>
+                            </label>
+                        </div>
+                        @error('shooting_mode') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                    </div>
+
+                    @if($shooting_mode === 'existing')
+                        <div style="padding:15px; background:var(--bg); border:1px solid var(--line2); border-radius:var(--r); margin-bottom:15px;">
+                            <label class="form-lbl">Shooting Esistente *</label>
+                            @if(count($availableShoots) > 0)
+                                <select wire:model="existing_shoot_id" class="form-in" required>
+                                    <option value="">Seleziona...</option>
+                                    @foreach($availableShoots as $shoot)
+                                        <option value="{{ $shoot->id }}">{{ $shoot->title }} ({{ $shoot->created_at->format('d/m/Y') }})</option>
+                                    @endforeach
+                                </select>
+                                @error('existing_shoot_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                            @else
+                                <div style="color:var(--text2); font-size:13px;">Nessuno shooting disponibile per questa commessa.</div>
+                            @endif
+                        </div>
+                    @elseif($shooting_mode === 'new')
+                        <div style="padding:15px; background:var(--bg2); border:1px solid var(--line2); border-radius:var(--r); margin-bottom:15px;">
+                            <div class="g-2col mb-3">
+                                <div class="form-g">
+                                    <label class="form-lbl">Fotografo Assegnato *</label>
+                                    <select wire:model="photographer_id" class="form-in" required>
+                                        <option value="">Seleziona fotografo...</option>
+                                        @foreach($photographers as $photographer)
+                                            <option value="{{ $photographer->id }}">{{ $photographer->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('photographer_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="form-g">
+                                    <label class="form-lbl">Location *</label>
+                                    <input type="text" wire:model="shooting_location" class="form-in" placeholder="Es. Sede cliente o Indirizzo" required>
+                                    @error('shooting_location') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="form-g mb-3">
+                                <label class="form-lbl">Brief Shooting *</label>
+                                <textarea wire:model="shooting_brief" class="form-in" rows="3" placeholder="Descrivi cosa deve fotografare/riprendere..." required></textarea>
+                                @error('shooting_brief') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div class="mb-2">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <label class="form-lbl" style="margin:0;">Date/Slot Proposti *</label>
+                                    <button type="button" wire:click="addShootingSlot" class="btn btn-sm btn-secondary">+ Slot</button>
+                                </div>
+                                @error('shooting_proposed_slots') <span style="color:var(--red); font-size:12px; display:block; margin-bottom:10px;">{{ $message }}</span> @enderror
+                                
+                                @foreach($shooting_proposed_slots as $index => $slot)
+                                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                                        <input type="date" wire:model="shooting_proposed_slots.{{ $index }}.date" class="form-in" required>
+                                        <select wire:model="shooting_proposed_slots.{{ $index }}.period" class="form-in" required>
+                                            <option value="morning">Mattina (09:00 - 13:00)</option>
+                                            <option value="afternoon">Pomeriggio (14:00 - 18:00)</option>
+                                            <option value="full_day">Giornata Intera</option>
+                                        </select>
+                                        <button type="button" wire:click="removeShootingSlot({{ $index }})" class="btn btn-sm" style="color:var(--red); border:1px solid var(--red)40;">&times;</button>
+                                    </div>
+                                    @error('shooting_proposed_slots.'.$index.'.date') <span style="color:var(--red); font-size:12px; display:block;">{{ $message }}</span> @enderror
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
 
@@ -231,7 +352,7 @@
             @if($step == 5)
                 <div wire:key="step-5">
                     <div class="mkt-summary-card">
-                        <h3 class="mkt-summary-title">Riepilogo Progetto</h3>
+                        <h3 class="mkt-summary-title">Riepilogo Campagna</h3>
                         
                         <table class="mkt-summary-table">
                             <tr><td class="label">Titolo</td><td><strong>{{ $title }}</strong></td></tr>
@@ -249,7 +370,7 @@
                     </div>
 
                     <div class="mkt-alert-info">
-                        <i class="fa fa-info-circle"></i> Il progetto verrà salvato in stato <strong>Bozza</strong>. Potrai inviarlo a n8n in un secondo momento dalla pagina di dettaglio.
+                        <i class="fa fa-info-circle"></i> La campagna verrà salvata in stato <strong>Bozza</strong>. Potrai inviarla a n8n in un secondo momento dalla pagina di dettaglio.
                     </div>
                 </div>
             @endif
@@ -265,7 +386,7 @@
                 @if($step < 5)
                     <button type="button" wire:click="nextStep" wire:target="nextStep" class="btn btn-g" wire:loading.attr="disabled">Avanti</button>
                 @else
-                    <button type="submit" wire:target="save" class="btn btn-success" wire:loading.attr="disabled">Salva Progetto</button>
+                    <button type="submit" wire:target="save" class="btn btn-success" wire:loading.attr="disabled">Salva Campagna</button>
                 @endif
             </div>
 

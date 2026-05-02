@@ -56,11 +56,14 @@ class MarketingProjectCreate extends Component
     {
         $this->start_date = now()->addDays(2)->format('Y-m-d');
         $this->end_date = now()->addDays(32)->format('Y-m-d');
+        $this->service_options = ['platforms' => []];
     }
 
     public function updatedServiceType()
     {
-        $this->service_options = [];
+        $this->service_options = [
+            'platforms' => []
+        ];
     }
 
     public function nextStep()

@@ -56,13 +56,13 @@
         <i data-lucide="{{ $config['icon'] }}" @if($config['spin'] ?? false) class="spin" @endif style="width: 24px; height: 24px;"></i>
     </div>
     <div style="flex: 1;">
-        <div style="font-weight: 600; font-size: 14px; color: var(--text1); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-weight: 600; font-size: 14px; color: {{ $config['color'] }}; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
             <span>{{ $config['title'] }}</span>
             @if(in_array($status, ['submitted_to_n8n', 'n8n_failed', 'posts_received', 'queued_to_n8n']) && $updatedAt)
-                <span style="font-size: 11px; font-weight: 400; color: var(--text3); opacity: 0.8;">Ultimo agg: {{ $updatedAt }}</span>
+                <span style="font-size: 11px; font-weight: 400; color: {{ $config['color'] }}; opacity: 0.7;">Ultimo agg: {{ $updatedAt }}</span>
             @endif
         </div>
-        <div style="font-size: 13px; color: var(--text2); line-height: 1.4;">
+        <div style="font-size: 13px; color: {{ $config['color'] }}; opacity: 0.9; line-height: 1.4;">
             {{ $config['desc'] }}
         </div>
     </div>

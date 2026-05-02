@@ -56,7 +56,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::get('/shoots', [\App\Http\Controllers\ShootRedirectController::class, 'index'])->name('shoots.index');
     Route::get('/shoots/{shoot}', [\App\Http\Controllers\ShootRedirectController::class, 'show'])->name('shoots.show');
 
-    // SOCIAL (ex Marketing)
+    // SOCIAL (Marketing)
     Route::get('social/calendar', \App\Livewire\Social\EditorialCalendar::class)->name('social.calendar');
 
     Route::prefix('social/marketing-projects')->name('marketing-projects.')->group(function () {

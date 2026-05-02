@@ -175,6 +175,65 @@
 <?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
 <?php endif; ?>
             
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->media->isNotEmpty()): ?>
+                <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.panel','data' => ['title' => 'Materiale di Riferimento ('.e($project->media->count()).')','dot' => 'var(--green)','padded' => true,'style' => 'margin-top:20px;']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('panel'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Materiale di Riferimento ('.e($project->media->count()).')','dot' => 'var(--green)','padded' => true,'style' => 'margin-top:20px;']); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $project->media; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $media): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                            <div style="position:relative; width:80px; height:80px; border-radius:var(--r); overflow:hidden; border:1px solid var(--line); background:var(--bg2);">
+                                <?php
+                                    $tempUrl = null;
+                                    try {
+                                        $disk = \Illuminate\Support\Facades\Storage::disk($media->disk);
+                                        $tempUrl = $disk->temporaryUrl($media->path, now()->addMinutes(60));
+                                    } catch(\Exception $e) {
+                                        try {
+                                            $tempUrl = url($disk->url($media->path));
+                                        } catch(\Exception $e2) {
+                                            $tempUrl = null;
+                                        }
+                                    }
+                                ?>
+                                
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($tempUrl): ?>
+                                    <a href="<?php echo e($tempUrl); ?>" target="_blank" title="<?php echo e($media->original_name); ?>">
+                                        <img src="<?php echo e($tempUrl); ?>" style="width:100%; height:100%; object-fit:cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    </a>
+                                <?php else: ?>
+                                    <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg3); font-size:10px; color:var(--text3); text-align:center; padding:4px; line-height:1.2;">
+                                        <i data-lucide="file" style="width:16px; height:16px; margin-bottom:4px;"></i>
+                                        <span style="word-break:break-all;"><?php echo e(strtoupper(pathinfo($media->original_name, PATHINFO_EXTENSION))); ?></span>
+                                    </div>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($media->source === 'nextcloud'): ?>
+                                    <div style="position:absolute; bottom:2px; right:2px; background:var(--blue); color:white; border-radius:3px; padding:2px 4px; font-size:8px; font-weight:bold; opacity:0.8;">NC</div>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            </div>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                    </div>
+                 <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
+<?php $attributes = $__attributesOriginal36665f0dc0e45320e21db1e20a989acf; ?>
+<?php unset($__attributesOriginal36665f0dc0e45320e21db1e20a989acf); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal36665f0dc0e45320e21db1e20a989acf)): ?>
+<?php $component = $__componentOriginal36665f0dc0e45320e21db1e20a989acf; ?>
+<?php unset($__componentOriginal36665f0dc0e45320e21db1e20a989acf); ?>
+<?php endif; ?>
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+            
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($project->shoots->isNotEmpty()): ?>
                 <?php if (isset($component)) { $__componentOriginal36665f0dc0e45320e21db1e20a989acf = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal36665f0dc0e45320e21db1e20a989acf = $attributes; } ?>

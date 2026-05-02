@@ -65,14 +65,11 @@ class SubmitMarketingProjectToN8nAction
                         'source' => $media->source,
                         'url' => (function() use ($media) {
                             $disk = \Illuminate\Support\Facades\Storage::disk($media->disk);
-                            if (method_exists($disk->getAdapter(), 'getTemporaryUrl') || method_exists($disk, 'temporaryUrl')) {
-                                try {
-                                    return $disk->temporaryUrl($media->path, now()->addHours(24));
-                                } catch (\Exception $e) {
-                                    return url($disk->url($media->path));
-                                }
+                            try {
+                                return $disk->temporaryUrl($media->path, now()->addHours(24));
+                            } catch (\Exception $e) {
+                                return url($disk->url($media->path));
                             }
-                            return url($disk->url($media->path));
                         })(),
                         'filename' => $media->original_name,
                         'mime_type' => $media->mime_type,

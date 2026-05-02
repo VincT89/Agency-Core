@@ -27,8 +27,9 @@ class SocialPost extends Model
         'publication_status',
         'published_at',
         'published_by',
-        'meta_post_id',
-        'meta_permalink',
+        'published_platform',
+        'external_post_id',
+        'external_post_url',
         'publication_error',
         'publication_attempts',
     ];

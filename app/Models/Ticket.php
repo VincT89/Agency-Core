@@ -52,12 +52,18 @@ class Ticket extends Model
         'closed_at',
         'resolution_notes',
         'notes',
+        'n8n_execution_id',
+        'marketing_project_id',
+        'social_post_id',
+        'source',
+        'context',
     ];
 
     protected $casts = [
         'opened_at' => 'datetime',
         'due_date' => 'date',
         'closed_at' => 'datetime',
+        'context' => 'array',
     ];
 
         public function getPriorityLabelAttribute(): string
@@ -103,6 +109,16 @@ class Ticket extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function marketingProject(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MarketingProject::class);
+    }
+
+    public function socialPost(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\SocialPost::class);
     }
 
     public function creator(): BelongsTo

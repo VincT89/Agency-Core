@@ -84,13 +84,13 @@ unset($__defined_vars, $__key, $__value); ?>
         <i data-lucide="<?php echo e($config['icon']); ?>" <?php if($config['spin'] ?? false): ?> class="spin" <?php endif; ?> style="width: 24px; height: 24px;"></i>
     </div>
     <div style="flex: 1;">
-        <div style="font-weight: 600; font-size: 14px; color: var(--text1); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-weight: 600; font-size: 14px; color: <?php echo e($config['color']); ?>; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
             <span><?php echo e($config['title']); ?></span>
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($status, ['submitted_to_n8n', 'n8n_failed', 'posts_received', 'queued_to_n8n']) && $updatedAt): ?>
-                <span style="font-size: 11px; font-weight: 400; color: var(--text3); opacity: 0.8;">Ultimo agg: <?php echo e($updatedAt); ?></span>
+                <span style="font-size: 11px; font-weight: 400; color: <?php echo e($config['color']); ?>; opacity: 0.7;">Ultimo agg: <?php echo e($updatedAt); ?></span>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
         </div>
-        <div style="font-size: 13px; color: var(--text2); line-height: 1.4;">
+        <div style="font-size: 13px; color: <?php echo e($config['color']); ?>; opacity: 0.9; line-height: 1.4;">
             <?php echo e($config['desc']); ?>
 
         </div>

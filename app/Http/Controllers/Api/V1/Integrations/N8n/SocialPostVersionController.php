@@ -21,9 +21,10 @@ class SocialPostVersionController extends Controller
     public function store(Request $request, SocialPost $post)
     {
         $validator = Validator::make($request->all(), [
+            'regeneration_type' => ['required', 'in:caption,image,full'],
+            'caption' => ['required_if:regeneration_type,caption,full', 'nullable', 'string'],
+            'image_url' => ['required_if:regeneration_type,image,full', 'nullable', 'url'],
             'external_generation_id' => ['nullable', 'string'],
-            'caption' => ['required', 'string'],
-            'image_url' => ['required', 'url'],
             'prompt_used' => ['nullable', 'string'],
         ]);
 
@@ -31,8 +32,15 @@ class SocialPostVersionController extends Controller
             return $this->error('Validazione fallita', $validator->errors()->toArray(), 422);
         }
 
+        $validated = $validator->validated();
+
+        // Strong Guard: n8n non deve mandare un payload vuoto o fatto solo di spazi
+        if (empty(trim($validated['caption'] ?? '')) && empty($validated['image_url'])) {
+            return $this->error('Payload vuoto', ['error' => 'Devi fornire almeno un testo o un\'immagine valida.'], 422);
+        }
+
         try {
-            $version = $this->action->execute($post, $validator->validated());
+            $version = $this->action->execute($post, $validated);
 
             return $this->success([
                 'social_post_id' => $post->id,

@@ -27,25 +27,49 @@ class AddSocialPostVersionFromN8nAction
                 throw new Exception("Non puoi aggiungere nuove versioni a un post pianificato o pubblicato. Annulla prima la pianificazione.");
             }
 
+            // Controllo idempotenza su external_generation_id
+            if (!empty($data['external_generation_id'])) {
+                $existingVersion = SocialPostVersion::where('external_id', $data['external_generation_id'])->first();
+                if ($existingVersion) {
+                    return $existingVersion;
+                }
+            }
+
             // Calcola dinamicamente il numero della prossima versione
             $nextVersionNumber = $lockedPost->versions()->max('version_number') + 1;
+
+            // Logica di fallback per rigenerazioni parziali
+            $currentVersion = $lockedPost->currentVersion;
+            $regenType = $data['regeneration_type'] ?? 'full';
+            
+            $caption = $data['caption'] ?? null;
+            $imageUrl = $data['image_url'] ?? null;
+
+            if ($regenType === 'caption' && empty($imageUrl) && $currentVersion) {
+                $imageUrl = $currentVersion->original_image_url;
+                // Nota: potremmo voler ereditare anche image_path se il file è in locale, 
+                // ma per ora manteniamo la logica di fallback del payload.
+            }
+            if ($regenType === 'image' && empty($caption) && $currentVersion) {
+                $caption = $currentVersion->caption;
+            }
 
             // Registra la nuova versione nel database
             try {
                 $version = SocialPostVersion::create([
                     'social_post_id' => $lockedPost->id,
-                    'external_id' => $data['n8n_execution_id'] ?? null,
+                    'external_id' => $data['external_generation_id'] ?? null,
                     'version_number' => $nextVersionNumber,
-                    'caption' => $data['caption'] ?? '',
+                    'caption' => $caption ?? '',
                     'image_path' => null,
-                    'original_image_url' => $data['image_url'] ?? null,
+                    'original_image_url' => $imageUrl,
                     'prompt_used' => $data['prompt_used'] ?? null,
                     'source' => SocialPostSource::Regenerated,
                 ]);
             } catch (\Illuminate\Database\QueryException $e) {
-                if ($e->getCode() === '23000' && !empty($data['n8n_execution_id'])) {
+                if ($e->getCode() === '23000' && !empty($data['external_generation_id'])) {
                     // Intercetta esecuzioni duplicate silenziose da n8n
-                    $existingVersion = SocialPostVersion::where('external_id', $data['n8n_execution_id'])->first();
+                    $existingVersion = SocialPostVersion::where('external_id', $data['external_generation_id'])->first();
                     if ($existingVersion) {
                         return $existingVersion;
                     }

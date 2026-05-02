@@ -67,7 +67,7 @@ class MarketingProjectServiceTypeTest extends TestCase
             ->set('service_options.frequency', '3 post')
             // Cambiamo servizio
             ->set('service_type', 'ads')
-            ->assertSet('service_options', []);
+            ->assertSet('service_options', ['platforms' => []]);
     }
 
     public function test_syncs_legacy_type_correctly()

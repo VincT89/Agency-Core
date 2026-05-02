@@ -82,6 +82,26 @@
   margin-top: 4px;
 }
 
+/* Flash messages */
+.flash {
+  padding: 12px 16px;
+  border-radius: var(--r);
+  font-family: var(--sans);
+  font-size: 13px;
+  border: 1px solid transparent;
+  line-height: 1.4;
+}
+.flash-error {
+  background: rgba(245, 75, 75, 0.1);
+  border-color: rgba(245, 75, 75, 0.2);
+  color: var(--red);
+}
+.flash-success {
+  background: rgba(62, 207, 142, 0.1);
+  border-color: rgba(62, 207, 142, 0.2);
+  color: var(--green);
+}
+
 /* Toast */
 #toast {
   position: fixed; bottom: 24px; right: 24px;

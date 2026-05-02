@@ -101,6 +101,45 @@
                 </div>
             </x-panel>
             
+            @if($project->media->isNotEmpty())
+                <x-panel title="Materiale di Riferimento ({{ $project->media->count() }})" dot="var(--green)" padded style="margin-top:20px;">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        @foreach($project->media as $media)
+                            <div style="position:relative; width:80px; height:80px; border-radius:var(--r); overflow:hidden; border:1px solid var(--line); background:var(--bg2);">
+                                @php
+                                    $tempUrl = null;
+                                    try {
+                                        $disk = \Illuminate\Support\Facades\Storage::disk($media->disk);
+                                        $tempUrl = $disk->temporaryUrl($media->path, now()->addMinutes(60));
+                                    } catch(\Exception $e) {
+                                        try {
+                                            $tempUrl = url($disk->url($media->path));
+                                        } catch(\Exception $e2) {
+                                            $tempUrl = null;
+                                        }
+                                    }
+                                @endphp
+                                
+                                @if($tempUrl)
+                                    <a href="{{ $tempUrl }}" target="_blank" title="{{ $media->original_name }}">
+                                        <img src="{{ $tempUrl }}" style="width:100%; height:100%; object-fit:cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    </a>
+                                @else
+                                    <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg3); font-size:10px; color:var(--text3); text-align:center; padding:4px; line-height:1.2;">
+                                        <i data-lucide="file" style="width:16px; height:16px; margin-bottom:4px;"></i>
+                                        <span style="word-break:break-all;">{{ strtoupper(pathinfo($media->original_name, PATHINFO_EXTENSION)) }}</span>
+                                    </div>
+                                @endif
+                                
+                                @if($media->source === 'nextcloud')
+                                    <div style="position:absolute; bottom:2px; right:2px; background:var(--blue); color:white; border-radius:3px; padding:2px 4px; font-size:8px; font-weight:bold; opacity:0.8;">NC</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </x-panel>
+            @endif
+            
             @if($project->shoots->isNotEmpty())
                 <x-panel title="Shooting Collegati ({{ $project->shoots->count() }})" dot="var(--accent)" padded style="margin-top:20px;">
                     <div style="display:flex; flex-direction:column; gap:15px;">

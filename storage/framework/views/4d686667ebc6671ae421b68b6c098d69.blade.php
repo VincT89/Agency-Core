@@ -1,1 +1,0 @@
-<x-page-header><x-slot:title>{!! $title !!}</x-slot:title></x-page-header>

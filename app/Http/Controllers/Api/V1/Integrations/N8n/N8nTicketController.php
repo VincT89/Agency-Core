@@ -6,10 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Domain\Tickets\Actions\CreateTicketFromN8nAction;
 use App\Support\ApiResponse;
-use Illuminate\Support\Facades\Validator;
-use App\Models\Ticket;
-use Exception;
-
 class N8nTicketController extends Controller
 {
     use ApiResponse;
@@ -31,7 +27,23 @@ class N8nTicketController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'priority' => ['nullable', 'in:low,medium,high,urgent'],
+            'n8n_execution_id' => ['nullable', 'string', 'max:255'],
+            'marketing_project_id' => ['nullable', 'exists:marketing_projects,id'],
+            'social_post_id' => ['nullable', 'exists:social_posts,id'],
+            'source' => ['nullable', 'string'],
+            'context' => ['nullable', 'array'],
+        ]);
+
+        $ticket = $this->action->execute($data);
+
+        return $this->success([
+            'ticket_id' => $ticket->id,
+            'code' => $ticket->code,
+        ], 201);
     }
 
     /**

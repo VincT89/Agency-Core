@@ -20,7 +20,9 @@ class N8nAuth
             ], 401);
         }
 
-        if ($token !== config('services.n8n.token')) {
+        $expected = config('services.n8n.token');
+
+        if (! $expected || ! hash_equals($expected, $token)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Forbidden: Invalid token',

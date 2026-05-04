@@ -11,7 +11,9 @@ class MarketingProjectPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isMarketing() || $user->canManageSystem();
+        return $user->canManageSystem() 
+            || $user->isMarketing() 
+            || $user->projects()->exists();
     }
 
     public function view(User $user, MarketingProject $project): bool

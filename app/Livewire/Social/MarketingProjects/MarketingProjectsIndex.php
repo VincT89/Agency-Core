@@ -13,6 +13,11 @@ class MarketingProjectsIndex extends Component
     public $search = '';
     public $filterStatus = '';
 
+    public function mount()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('viewAny', MarketingProject::class);
+    }
+
     public function updatingSearch()
     {
         $this->resetPage();
@@ -26,14 +31,17 @@ class MarketingProjectsIndex extends Component
     public function render()
     {
         $query = MarketingProject::query()
+            ->visibleTo(auth()->user())
             ->with(['client', 'creator'])
             ->latest();
 
         if ($this->search) {
-            $query->where('title', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('client', function($q) {
-                      $q->where('name', 'like', '%' . $this->search . '%');
+            $query->where(function ($q) {
+                $q->where('title', 'like', '%' . $this->search . '%')
+                  ->orWhereHas('client', function($q2) {
+                      $q2->where('name', 'like', '%' . $this->search . '%');
                   });
+            });
         }
 
         if ($this->filterStatus) {

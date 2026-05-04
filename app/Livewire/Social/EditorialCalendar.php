@@ -73,7 +73,7 @@ class EditorialCalendar extends Component
 
         $platforms = SocialPlatform::cases();
 
-        $clients = Client::orderBy('name')->get();
+        $clients = Client::query()->visibleTo(auth()->user())->orderBy('name')->get();
 
         return view('livewire.social.editorial-calendar', [
             'clients' => $clients,

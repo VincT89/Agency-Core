@@ -7,10 +7,13 @@ use App\Enums\Social\MarketingProjectStatus;
 use App\Enums\Social\PublicationMode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Shooting\Shoot;
 
 class MarketingProject extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'client_id',
         'project_id',
@@ -44,12 +47,8 @@ class MarketingProject extends Model
     protected static function booted()
     {
         static::deleting(function ($marketingProject) {
-            if ($marketingProject->editorialPlan) {
-                $marketingProject->editorialPlan->delete();
-            }
             $marketingProject->socialPosts->each(fn($post) => $post->delete());
             $marketingProject->shoots->each(fn($shoot) => $shoot->delete());
-            $marketingProject->media->each(fn($media) => $media->delete());
         });
     }
 
@@ -91,5 +90,16 @@ class MarketingProject extends Model
     public function getServiceOption(string $key, $default = null)
     {
         return data_get($this->service_options, $key, $default);
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->canManageSystem() || $user->isMarketing()) {
+            return $query;
+        }
+
+        return $query->whereHas('project.users', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        });
     }
 }

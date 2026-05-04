@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\User;
 
 #[Fillable([
     'name',
@@ -130,5 +132,16 @@ class Client extends Model
         }
 
         return true;
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->canManageSystem() || $user->isMarketing()) {
+            return $query;
+        }
+
+        return $query->whereHas('projects.users', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        });
     }
 }

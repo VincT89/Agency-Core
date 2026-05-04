@@ -30,9 +30,7 @@ class Project extends Model
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);
 
         static::deleting(function ($project) {
-            $project->tasks->each(fn($task) => $task->delete());
             $project->tickets->each(fn($ticket) => $ticket->delete());
-            $project->marketingProjects->each(fn($mp) => $mp->delete());
             $project->calendarEvents->each(fn($event) => $event->delete());
             $project->attachments->each(fn($attachment) => $attachment->delete());
         });

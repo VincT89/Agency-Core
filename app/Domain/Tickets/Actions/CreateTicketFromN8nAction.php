@@ -40,8 +40,8 @@ class CreateTicketFromN8nAction
         $projectId = null;
 
         if (!empty($data['marketing_project_id'])) {
-            $marketingProject = MarketingProject::find($data['marketing_project_id']);
-            if ($marketingProject) {
+            $marketingProject = MarketingProject::with(['project' => fn($q) => $q->withoutGlobalScopes()])->find($data['marketing_project_id']);
+            if ($marketingProject && $marketingProject->project) {
                 $projectId = $marketingProject->project_id;
                 $clientId = $marketingProject->project->client_id ?? null;
             }

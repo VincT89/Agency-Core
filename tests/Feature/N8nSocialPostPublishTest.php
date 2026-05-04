@@ -28,7 +28,7 @@ class N8nSocialPostPublishTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . env('N8N_API_TOKEN', 'test-token'),
-        ])->postJson(route('social.posts.publish.store', $post), $payload);
+        ])->postJson(route('api.v1.integrations.n8n.social.posts.publish.store', $post), $payload);
 
         $response->assertStatus(200)
                  ->assertJsonPath('data.status', 'published')
@@ -64,7 +64,7 @@ class N8nSocialPostPublishTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . env('N8N_API_TOKEN', 'test-token'),
-        ])->postJson(route('social.posts.publish.store', $post), $payload);
+        ])->postJson(route('api.v1.integrations.n8n.social.posts.publish.store', $post), $payload);
 
         $response->assertStatus(200);
         

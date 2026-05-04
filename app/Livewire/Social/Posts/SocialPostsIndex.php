@@ -12,17 +12,19 @@ class SocialPostsIndex extends Component
 
     public $statusFilter = '';
 
+    public function mount()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('viewAny', SocialPost::class);
+    }
+
     public function render()
     {
-        $query = SocialPost::with(['client', 'project', 'currentVersion']);
+        $query = SocialPost::query()
+            ->visibleTo(auth()->user())
+            ->with(['client', 'project', 'currentVersion']);
 
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
-        }
-
-        // Applica le restrizioni di visibilità sui progetti per l'account fotografo
-        if (auth()->user()->isPhotographer()) {
-            $query->whereIn('project_id', auth()->user()->projects->pluck('id'));
         }
 
         $posts = $query->orderBy('updated_at', 'desc')->paginate(15);

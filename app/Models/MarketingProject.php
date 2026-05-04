@@ -41,6 +41,18 @@ class MarketingProject extends Model
         ];
     }
 
+    protected static function booted()
+    {
+        static::deleting(function ($marketingProject) {
+            if ($marketingProject->editorialPlan) {
+                $marketingProject->editorialPlan->delete();
+            }
+            $marketingProject->socialPosts->each(fn($post) => $post->delete());
+            $marketingProject->shoots->each(fn($shoot) => $shoot->delete());
+            $marketingProject->media->each(fn($media) => $media->delete());
+        });
+    }
+
     public function client()
     {
         return $this->belongsTo(Client::class);

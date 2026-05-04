@@ -74,7 +74,7 @@
                                             elseif ($plat === 'tiktok') $url = 'https://ads.tiktok.com/business/';
                                         }
                                     @endphp
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.02); border: 1px solid var(--line2); font-size: 11px;">
+                                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: var(--bg3); border: 1px solid var(--line2); font-size: 11px;">
                                         <a href="{{ $url }}" target="_blank" style="display: flex; align-items: center; gap: 4px; color: var(--text); text-decoration: none;" title="Apri {{ ucfirst($plat) }}">
                                             @if($plat === 'tiktok')
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text2);"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>

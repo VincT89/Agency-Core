@@ -152,6 +152,15 @@ class SocialPostShow extends Component
         }
     }
 
+    public function deletePost()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('delete', $this->post);
+        $this->post->delete();
+        
+        session()->flash('success', 'Post Social eliminato correttamente.');
+        return redirect()->route('social.posts.index');
+    }
+
     public function render()
     {
         return view('livewire.social.posts.social-post-show')

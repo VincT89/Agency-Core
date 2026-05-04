@@ -53,6 +53,15 @@ class MarketingProjectShow extends Component
         }
     }
 
+    public function deleteProject()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('delete', $this->project);
+        $this->project->delete();
+        
+        session()->flash('success', 'Progetto Marketing eliminato correttamente.');
+        return redirect()->route('marketing-projects.index'); // FIXME check route name
+    }
+
     public function render()
     {
         return view('livewire.social.marketing-projects.show');

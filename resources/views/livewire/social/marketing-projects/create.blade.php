@@ -29,14 +29,15 @@
             {{-- STEP 1 --}}
             @if($step == 1)
                 <div wire:key="step-1">
-                    <div class="form-g mb-3">
+                    <div class="form-g mb-3" @client-updated="$wire.set('client_id', $event.detail)">
                         <label class="form-lbl">Cliente *</label>
-                        <select wire:model.live="client_id" class="form-in" required>
-                            <option value="">Seleziona...</option>
-                            @foreach($clients as $client)
-                                <option value="{{ $client->id }}">{{ $client->name }}</option>
-                            @endforeach
-                        </select>
+                        <div wire:ignore>
+                            <x-client-autocomplete 
+                                name="client_id" 
+                                :value="$client_id" 
+                                :required="true" 
+                            />
+                        </div>
                         @error('client_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
                     </div>
 

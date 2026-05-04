@@ -7,6 +7,15 @@
 
     <x-page-header eyebrow="Progetto Marketing">
         <x-slot:title>{{ $project->title }}</x-slot:title>
+        <x-slot:actions>
+            @if(auth()->user()->isAdmin())
+                <button wire:click="deleteProject" 
+                        wire:confirm="Sei sicuro di voler eliminare questo progetto marketing? L'azione è irreversibile." 
+                        class="btn btn-g" style="color:var(--red);border-color:rgba(245,75,75,.3)">
+                    Elimina
+                </button>
+            @endif
+        </x-slot:actions>
     </x-page-header>
 
     {{-- METADATA ROW --}}

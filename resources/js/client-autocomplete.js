@@ -27,14 +27,21 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
                     this.originalText = '';
                 }
                 
-                if (value.length >= 2) {
+                if (value.length >= 1) {
                     this.newClient.name = value;
                 }
+            });
+
+            this.$watch('value', (val) => {
+                this.$el.dispatchEvent(new CustomEvent('client-updated', {
+                    detail: val,
+                    bubbles: true
+                }));
             });
         },
 
         open() {
-            if (this.search.length >= 2 || this.results.length > 0) {
+            if (this.search.length >= 1 || this.results.length > 0) {
                 this.isOpen = true;
             }
         },
@@ -49,7 +56,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
         },
 
         async fetchResults() {
-            if (this.search.length < 2) {
+            if (this.search.length < 1) {
                 this.results = [];
                 this.isOpen = false;
                 return;
@@ -125,6 +132,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
                         vat_number: '',
                         address: ''
                     };
+                    this.showQuickCreate = false;
                 } else if (response.status === 422) {
                     // Laravel validation errors
                     for (const field in data.errors) {

@@ -5,6 +5,13 @@
     >
         <x-slot:title><strong>{{ $post->title }}</strong></x-slot:title>
         <x-slot:actions>
+            @if(auth()->user()->isAdmin())
+                <button wire:click="deletePost" 
+                        wire:confirm="Sei sicuro di voler eliminare questo post? L'azione è irreversibile." 
+                        class="btn btn-g" style="color:var(--red);border-color:rgba(245,75,75,.3)">
+                    Elimina
+                </button>
+            @endif
             <a href="{{ route('social.posts.index') }}" class="btn btn-g">Torna all'Archivio</a>
         </x-slot:actions>
     </x-page-header>

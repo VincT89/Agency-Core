@@ -1,33 +1,74 @@
-@props([
+<?php $attributes ??= new \Illuminate\View\ComponentAttributeBag;
+
+$__newAttributes = [];
+$__propNames = \Illuminate\View\ComponentAttributeBag::extractPropNames(([
     'name' => 'client_id',
     'required' => false,
     'value' => null,
     'text' => null,
     'canCreate' => auth()->user()->can('create', \App\Models\Client::class),
-])
+]));
+
+foreach ($attributes->all() as $__key => $__value) {
+    if (in_array($__key, $__propNames)) {
+        $$__key = $$__key ?? $__value;
+    } else {
+        $__newAttributes[$__key] = $__value;
+    }
+}
+
+$attributes = new \Illuminate\View\ComponentAttributeBag($__newAttributes);
+
+unset($__propNames);
+unset($__newAttributes);
+
+foreach (array_filter(([
+    'name' => 'client_id',
+    'required' => false,
+    'value' => null,
+    'text' => null,
+    'canCreate' => auth()->user()->can('create', \App\Models\Client::class),
+]), 'is_string', ARRAY_FILTER_USE_KEY) as $__key => $__value) {
+    $$__key = $$__key ?? $__value;
+}
+
+$__defined_vars = get_defined_vars();
+
+foreach ($attributes->all() as $__key => $__value) {
+    if (array_key_exists($__key, $__defined_vars)) unset($$__key);
+}
+
+unset($__defined_vars, $__key, $__value); ?>
 
 <div x-data="clientAutocomplete({
-        initialValue: @js($value),
-        initialText: @js($text),
-        canCreate: @js($canCreate),
-        searchEndpoint: @js(route('api.clients.search')),
-        storeEndpoint: @js(route('api.clients.quick-store'))
+        initialValue: <?php echo \Illuminate\Support\Js::from($value)->toHtml() ?>,
+        initialText: <?php echo \Illuminate\Support\Js::from($text)->toHtml() ?>,
+        canCreate: <?php echo \Illuminate\Support\Js::from($canCreate)->toHtml() ?>,
+        searchEndpoint: <?php echo \Illuminate\Support\Js::from(route('api.clients.search'))->toHtml() ?>,
+        storeEndpoint: <?php echo \Illuminate\Support\Js::from(route('api.clients.quick-store'))->toHtml() ?>
     })"
     class="ca-wrapper"
     @click.outside="close()"
 >
     <div class="ca-input-container">
         <input type="text"
-               id="{{ $name }}_search"
+               id="<?php echo e($name); ?>_search"
                x-model="search"
                @input.debounce.300ms="fetchResults()"
                @focus="open()"
-               class="form-in ca-create-input @error($name) is-invalid @enderror"
+               class="form-in ca-create-input <?php $__errorArgs = [$name];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
                placeholder="Cerca cliente (min. 1 carattere)..."
                autocomplete="off"
         >
         
-        <input type="hidden" name="{{ $name }}" x-model="value">
+        <input type="hidden" name="<?php echo e($name); ?>" x-model="value">
         
         <div x-show="loading" class="ca-spinner-container">
             <svg style="animation: spin 1s linear infinite; height: 16px; width: 16px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -37,7 +78,7 @@
         </div>
     </div>
 
-    {{-- Dropdown --}}
+    
     <div x-show="isOpen" 
          x-transition
          class="ca-dropdown"
@@ -63,7 +104,7 @@
              </li>
          </ul>
          
-         {{-- Pulsante per aprire il form (mostrato solo nel dropdown) --}}
+         
          <div x-show="canCreate && search.length >= 1" class="ca-create-box">
              <button type="button" 
                      @click="openQuickCreate()" 
@@ -73,12 +114,12 @@
          </div>
     </div>
 
-    {{-- Form Creazione Inline (fuori dal dropdown, spinge il layout) --}}
+    
     <div x-show="showQuickCreate" style="display: none; margin-top: 12px; padding: 16px; background: var(--bg2); border: 1px dashed var(--line); border-radius: var(--r);">
          <div class="ca-create-form">
              <div class="ca-create-title">Nuovo Cliente</div>
              
-             {{-- Row 1: Nome & Azienda --}}
+             
              <div class="form-row">
                  <div>
                      <input type="text" x-model="newClient.name" class="form-in ca-create-input" :class="errors.name ? 'is-invalid' : ''" placeholder="Nome *">
@@ -90,7 +131,7 @@
                  </div>
              </div>
 
-             {{-- Row 2: Email & Telefono --}}
+             
              <div class="form-row">
                  <div>
                      <input type="email" x-model="newClient.email" class="form-in ca-create-input" :class="errors.email ? 'is-invalid' : ''" placeholder="Email">
@@ -102,7 +143,7 @@
                  </div>
              </div>
 
-             {{-- Row 3: P.IVA & Indirizzo --}}
+             
              <div class="form-row">
                  <div>
                      <input type="text" x-model="newClient.vat_number" class="form-in ca-create-input" :class="errors.vat_number ? 'is-invalid' : ''" placeholder="Partita IVA">
@@ -114,12 +155,12 @@
                  </div>
              </div>
 
-             {{-- Notice for Default Status --}}
+             
              <div class="ca-info-text">
                 Il cliente verrà creato automaticamente con stato <strong>Attivo</strong>.
              </div>
 
-             {{-- Actions --}}
+             
              <div class="ca-actions">
                  <button type="button" @click="quickStoreClient()" class="btn btn-p ca-action-btn" :disabled="loading">
                      <span x-show="!loading">Salva Cliente</span>
@@ -132,3 +173,4 @@
          </div>
     </div>
 </div>
+<?php /**PATH C:\Users\vince\OneDrive\Desktop\SODANO\GESTIONALE\Agency-core\resources\views/components/client-autocomplete.blade.php ENDPATH**/ ?>

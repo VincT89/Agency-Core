@@ -49,6 +49,16 @@ class SocialPost extends Model
         ];
     }
 
+    protected static function booted()
+    {
+        static::deleting(function ($socialPost) {
+            $socialPost->versions->each(fn($version) => $version->delete());
+            $socialPost->comments->each(fn($comment) => $comment->delete());
+            $socialPost->tokens->each(fn($token) => $token->delete());
+            $socialPost->editorialSlots->each(fn($slot) => $slot->delete());
+        });
+    }
+
     public function project()
     {
         return $this->belongsTo(Project::class);

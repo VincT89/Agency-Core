@@ -28,6 +28,10 @@ class Task extends Model
     protected static function booted()
     {
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);
+
+        static::deleting(function ($task) {
+            $task->attachments->each(fn($attachment) => $attachment->delete());
+        });
     }
 
     protected function casts(): array

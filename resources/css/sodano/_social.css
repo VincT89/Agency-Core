@@ -474,7 +474,7 @@
 .mkt-platform-icon {
     width: 12px;
     height: 12px;
-    color: #fff;
+    color: currentColor;
 }
 
 .mkt-mode-badge {

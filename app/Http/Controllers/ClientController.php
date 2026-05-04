@@ -87,7 +87,7 @@ class ClientController extends Controller
 
         $search = $request->get('q', '');
 
-        if (strlen($search) < 2) {
+        if (strlen($search) < 1) {
             return response()->json([]);
         }
 

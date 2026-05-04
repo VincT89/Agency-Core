@@ -11,6 +11,10 @@ class Ticket extends Model
     protected static function booted()
     {
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);
+
+        static::deleting(function ($ticket) {
+            $ticket->attachments->each(fn($attachment) => $attachment->delete());
+        });
     }
 
     public const TYPES = [

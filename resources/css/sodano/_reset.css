@@ -1,12 +1,35 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-[x-cloak] { display: none !important; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html, body {
-  height: 100%; background: var(--bg); color: var(--text);
-  font-family: var(--sans); font-size: 13px; overflow: hidden;
+[x-cloak] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: transparent;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--line3); border-radius: 2px; }
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line3);
+  border-radius: 2px;
+}

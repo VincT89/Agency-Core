@@ -27,6 +27,20 @@
 
 /* Destra: Form */
 .login-right {
+  /* Ripristina tema scuro (come la sidebar) per la colonna destra */
+  --bg:         #111115;
+  --bg1:        #18181d;
+  --bg2:        #1e1e24;
+  --bg3:        #26262e;
+  --line:       rgba(255,255,255,0.07);
+  --line2:      rgba(255,255,255,0.11);
+  --line3:      rgba(255,255,255,0.18);
+  --border:     rgba(255,255,255,0.07);
+  --text:       #f0ede8;
+  --text1:      #f0ede8;
+  --text2:      #b0afb4;
+  --text3:      #6e6d74;
+
   background: var(--bg1);
   border-left: 1px solid var(--line);
   padding: 80px 100px;

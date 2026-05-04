@@ -23,7 +23,7 @@
 .kpi-cell:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md-hv);
-  background: var(--bg3);
+  background: #e8edf8;
 }
 
 .kpi-cell:last-child {
@@ -85,10 +85,10 @@
 
 /* PANEL */
 .panel {
-  background: rgba(24, 24, 29, 0.88);
+  background: rgba(244, 246, 249, 0.95);
   border: 1px solid var(--line);
   border-radius: var(--r2);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -179,56 +179,57 @@
 
 /* BADGES */
 .badge {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .06em;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
   text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 2px;
+  padding: 4px 10px;
+  border-radius: 20px;
   display: inline-block;
   white-space: nowrap;
 }
 
 .bg {
-  background: rgba(62, 207, 142, .12);
-  color: var(--green);
-  border: 1px solid rgba(62, 207, 142, .2);
+  background: #e6f7ec;
+  color: #1e8753;
+  border: none;
 }
 
 .ba {
-  background: rgba(245, 200, 66, .12);
-  color: var(--yellow);
-  border: 1px solid rgba(245, 200, 66, .2);
+  background: #fdf5e0;
+  color: #b77b0d;
+  border: none;
 }
 
 .br {
-  background: rgba(245, 75, 75, .12);
-  color: var(--red);
-  border: 1px solid rgba(245, 75, 75, .2);
+  background: #fdeaea;
+  color: #c42929;
+  border: none;
 }
 
 .bb {
-  background: rgba(91, 142, 245, .12);
-  color: var(--blue);
-  border: 1px solid rgba(91, 142, 245, .2);
+  background: #ebf2fe;
+  color: #235de6;
+  border: none;
 }
 
 .bd {
   background: var(--bg3);
   color: var(--text2);
-  border: 1px solid var(--line2);
+  border: none;
 }
 
 .bk {
-  background: rgba(232, 91, 42, .12);
-  color: var(--accent);
-  border: 1px solid rgba(232, 91, 42, .2);
+  background: #fdede6;
+  color: #b33912;
+  border: none;
 }
 
 .bp {
-  background: rgba(167, 139, 250, .12);
-  color: var(--purple);
-  border: 1px solid rgba(167, 139, 250, .2);
+  background: #f2edfe;
+  color: #6d42d3;
+  border: none;
 }
 
 /* VERSION BADGE */

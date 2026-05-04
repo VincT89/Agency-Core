@@ -27,3 +27,4 @@ Thumbs.db
 /database/database.sqlite
 /database/*.sqlite
 /storage/framework/
+/storage/logs/

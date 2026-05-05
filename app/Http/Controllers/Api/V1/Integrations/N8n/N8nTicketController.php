@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Api\V1\Integrations\N8n;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Domain\Tickets\Actions\CreateTicketFromN8nAction;
+use App\Domain\Tickets\Actions\CreateTicketFromN8n;
+use App\Http\Requests\Integrations\N8n\CreateTicketFromN8nRequest;
 use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
+
 class N8nTicketController extends Controller
 {
     use ApiResponse;
 
     public function __construct(
-        protected CreateTicketFromN8nAction $action
+        protected CreateTicketFromN8n $action
     ) {}
 
     /**
@@ -25,25 +28,22 @@ class N8nTicketController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(CreateTicketFromN8nRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
-            'priority' => ['nullable', 'in:low,medium,high,urgent'],
-            'n8n_execution_id' => ['nullable', 'string', 'max:255'],
-            'marketing_project_id' => ['nullable', 'exists:marketing_projects,id'],
-            'social_post_id' => ['nullable', 'exists:social_posts,id'],
-            'source' => ['nullable', 'string'],
-            'context' => ['nullable', 'array'],
-        ]);
+        $result = $this->action->execute($request->validated());
 
-        $ticket = $this->action->execute($data);
+        $statusCode = $result['created'] ? 201 : 200;
 
-        return $this->success([
-            'ticket_id' => $ticket->id,
-            'code' => $ticket->code,
-        ], 201);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'ticket_id' => $result['ticket']->id,
+                'created' => $result['created'],
+                'status' => $result['ticket']->status,
+                'client_id' => $result['ticket']->client_id,
+                'project_id' => $result['ticket']->project_id,
+            ],
+        ], $statusCode);
     }
 
     /**

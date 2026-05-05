@@ -15,8 +15,8 @@
   /* Text */
   --text: #1a1a2e;
   --text1: #1a1a2e;
-  --text2: #6878b0;
-  --text3: #8898c8;
+  --text2: #6b7280;
+  --text3: #9ca3af;
 
   /* Brand / Accents */
   --accent: #c8102e;
@@ -32,7 +32,7 @@
 
   /* Typography */
   --serif: 'Instrument Serif', serif;
-  --sans: 'Syne', sans-serif;
+  --sans: 'Ubuntu', sans-serif;
   --mono: 'JetBrains Mono', monospace;
 
   /* Spacing / Radius */

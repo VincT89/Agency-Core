@@ -56,11 +56,12 @@ class Ticket extends Model
         'closed_at',
         'resolution_notes',
         'notes',
-        'n8n_execution_id',
+        'external_id',
         'marketing_project_id',
         'social_post_id',
         'source',
         'context',
+        'received_at',
     ];
 
     protected $casts = [
@@ -68,6 +69,7 @@ class Ticket extends Model
         'due_date' => 'date',
         'closed_at' => 'datetime',
         'context' => 'array',
+        'received_at' => 'datetime',
     ];
 
         public function getPriorityLabelAttribute(): string

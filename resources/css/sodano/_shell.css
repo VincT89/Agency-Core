@@ -455,7 +455,7 @@
   font-size: 32px;
   letter-spacing: -.02em;
   line-height: 1;
-  color: var(--blue-title);
+  color: #000000;
 }
 
 .page-title strong {

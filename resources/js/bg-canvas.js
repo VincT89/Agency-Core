@@ -12,7 +12,7 @@ export function initBgCanvas(canvasId) {
     const H = canvas.height = parent === document.body ? window.innerHeight : parent.clientHeight;
 
     // Tinta unica (Grigio-Blu Medio per un contrasto bilanciato con i pannelli bianchi)
-    ctx.fillStyle = '#cbd5e1';
+    ctx.fillStyle = '#f5f5f5';
     ctx.fillRect(0, 0, W, H);
 
     // Spotlight bianco puro e morbido dall'alto (illumina i pannelli sottostanti)

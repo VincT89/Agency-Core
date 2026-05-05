@@ -36,4 +36,21 @@ class CreateTicketFromN8nRequest extends FormRequest
             'context' => ['nullable', 'array'],
         ];
     }
+
+    public function after(): array
+    {
+        return [
+            function (\Illuminate\Validation\Validator $validator) {
+                $clientId = $this->input('client_id');
+                $projectId = $this->input('project_id');
+
+                if ($clientId && $projectId) {
+                    $project = \App\Models\Project::withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)->find($projectId);
+                    if ($project && $project->client_id != $clientId) {
+                        $validator->errors()->add('client_id', 'Il client_id fornito non corrisponde al project_id.');
+                    }
+                }
+            }
+        ];
+    }
 }

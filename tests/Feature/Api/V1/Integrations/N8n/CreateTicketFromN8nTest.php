@@ -109,4 +109,49 @@ class CreateTicketFromN8nTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_fails_if_client_id_and_project_id_do_not_match()
+    {
+        $client1 = Client::factory()->create();
+        $client2 = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client1->id]);
+
+        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+            'client_id' => $client2->id, // Mismatch!
+            'project_id' => $project->id,
+            'source' => 'whatsapp',
+            'n8n_execution_id' => 'exec-mismatch',
+        ], [
+            'Authorization' => 'Bearer test-token'
+        ]);
+
+        $response->assertStatus(422)
+                 ->assertJsonValidationErrors(['client_id']);
+    }
+
+    public function test_creates_ticket_with_client_id_only()
+    {
+        $client = Client::factory()->create();
+
+        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+            'client_id' => $client->id,
+            'title' => 'Client Only Ticket',
+            'source' => 'whatsapp',
+            'n8n_execution_id' => 'exec-client-only',
+        ], [
+            'Authorization' => 'Bearer test-token'
+        ]);
+
+        $response->assertStatus(201)
+                 ->assertJsonPath('data.client_id', $client->id)
+                 ->assertJsonPath('data.project_id', null);
+
+        $this->assertDatabaseHas('tickets', [
+            'client_id' => $client->id,
+            'project_id' => null,
+            'external_id' => 'exec-client-only',
+        ]);
+        
+        $this->assertNotNull(Ticket::withoutGlobalScopes()->where('external_id', 'exec-client-only')->first()->opened_at);
+    }
 }

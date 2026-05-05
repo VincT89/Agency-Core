@@ -38,25 +38,44 @@ class CreateTicketFromN8n
             ?? data_get($data, 'context.original_message')
             ?? 'Ticket creato automaticamente da n8n.';
 
-        $ticket = Ticket::create([
-            'client_id' => $clientId,
-            'project_id' => $project?->id,
-            'created_by' => null,
+        try {
+            $ticket = Ticket::create([
+                'client_id' => $clientId,
+                'project_id' => $project?->id,
+                'created_by' => null,
 
-            'title' => $data['title'] ?? 'Ticket WhatsApp',
-            'description' => $description,
-            'priority' => $data['priority'] ?? 'medium',
-            'status' => 'open',
+                'title' => $data['title'] ?? 'Ticket WhatsApp',
+                'description' => $description,
+                'priority' => $data['priority'] ?? 'medium',
+                'status' => 'open',
 
-            'source' => $source,
-            'external_id' => $externalId,
-            'context' => $data['context'] ?? [],
-            'received_at' => now(),
-        ]);
+                'source' => $source,
+                'external_id' => $externalId,
+                'context' => $data['context'] ?? [],
+                'received_at' => now(),
+                'opened_at' => now(),
+            ]);
 
-        return [
-            'ticket' => $ticket,
-            'created' => true,
-        ];
+            return [
+                'ticket' => $ticket,
+                'created' => true,
+            ];
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Check for unique constraint violation (source + external_id)
+            if ($e->getCode() == 23000) {
+                $existing = Ticket::withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)
+                    ->where('source', $source)
+                    ->where('external_id', $externalId)
+                    ->first();
+
+                if ($existing) {
+                    return [
+                        'ticket' => $existing,
+                        'created' => false,
+                    ];
+                }
+            }
+            throw $e;
+        }
     }
 }

@@ -12,7 +12,7 @@
   padding: 18px 20px;
   background: var(--bg2);
   border: 1px solid var(--line);
-  border-top: 2px solid var(--line2);
+  border-top: 2px solid var(--green);
   border-radius: var(--r2);
   position: relative;
   overflow: hidden;
@@ -23,7 +23,7 @@
 .kpi-cell:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md-hv);
-  background: #e8edf8;
+  background: #f3f4f6;
 }
 
 .kpi-cell:last-child {

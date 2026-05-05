@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
@@ -59,6 +60,7 @@ class Task extends Model
         return match ($this->status) {
             'todo' => 'Da fare',
             'in_progress' => 'In lavorazione',
+            'waiting' => 'In attesa',
             'review' => 'In revisione',
             'done' => 'Completata',
             'cancelled' => 'Annullata',
@@ -106,7 +108,15 @@ class Task extends Model
         return $this->morphMany(AuditLog::class, 'auditable');
     }
 
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TaskComment::class)->latest();
+    }
 
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(TaskChecklistItem::class)->orderBy('sort_order');
+    }
 
     public function scopeAssignedTo($query, $userOrId)
     {

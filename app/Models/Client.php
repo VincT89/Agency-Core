@@ -29,10 +29,30 @@ use App\Models\User;
     'sdi_code',
     'status',
     'notes',
+    'logo_path',
+    'activity_description',
 ])]
 class Client extends Model
 {
     use HasFactory;
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo_path 
+            ? url(route('media.public', ['path' => $this->logo_path], false)) 
+            : null;
+    }
+
+    public function toN8nPayload(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'company_name' => $this->company_name,
+            'logo_url' => $this->logo_url,
+            'activity_description' => $this->activity_description,
+        ];
+    }
 
     public function getStatusLabelAttribute(): string
     {
@@ -101,6 +121,11 @@ class Client extends Model
     public function marketingProjects(): HasMany
     {
         return $this->hasMany(MarketingProject::class);
+    }
+
+    public function marketingCampaigns(): HasMany
+    {
+        return $this->hasMany(MarketingCampaign::class);
     }
 
     public function isMetaReady(): bool

@@ -49,7 +49,7 @@
                     </thead>
                     <tbody>
                         @foreach($attentionPosts as $post)
-                            <tr onclick="window.location='{{ route('social.posts.show', $post) }}'" style="cursor:pointer">
+                            <tr>
                                 <td class="name-col">
                                     <div class="social-post-title">
                                         [{{ $post->client->name ?? 'N/D' }}] {{ $post->title }}
@@ -77,21 +77,21 @@
             <div class="social-alerts-container">
                 
                 @foreach($staleSentToClient as $post)
-                    <div class="social-alert-card yellow" onclick="window.location='{{ route('social.posts.show', $post) }}'">
+                    <div class="social-alert-card yellow">
                         <div class="social-alert-title yellow">Inviato al cliente da > 48h senza risposta</div>
                         <div class="social-alert-link">{{ $post->title }}</div>
                     </div>
                 @endforeach
 
                 @foreach($staleRegenerating as $post)
-                    <div class="social-alert-card red" onclick="window.location='{{ route('social.posts.show', $post) }}'">
+                    <div class="social-alert-card red">
                         <div class="social-alert-title red">In rigenerazione da > 1h (Possibile blocco n8n)</div>
                         <div class="social-alert-link">{{ $post->title }}</div>
                     </div>
                 @endforeach
 
                 @foreach($staleInternalReview as $post)
-                    <div class="social-alert-card purple" onclick="window.location='{{ route('social.posts.show', $post) }}'">
+                    <div class="social-alert-card purple">
                         <div class="social-alert-title purple">Fermo in revisione interna da > 24h</div>
                         <div class="social-alert-link">{{ $post->title }}</div>
                     </div>

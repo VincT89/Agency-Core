@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Shooting\Shoot;
 
+/**
+ * @deprecated Replaced by MarketingCampaign module.
+ */
 class MarketingProject extends Model
 {
     use HasFactory;

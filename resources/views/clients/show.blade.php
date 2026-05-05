@@ -26,6 +26,25 @@
 
     <div class="g-2col" style="margin-bottom:20px;">
         <x-panel title="Info Base" dot="var(--teal)" padded>
+            @if($client->logo_url)
+                <div style="margin-bottom:16px">
+                    <img src="{{ $client->logo_url }}"
+                         alt="Logo {{ $client->name }}"
+                         style="max-height:90px;max-width:220px;object-fit:contain;"
+                         onerror="this.style.display='none'">
+                </div>
+            @else
+                <div style="margin-bottom:16px;font-size:13px;color:var(--text3);font-style:italic;">
+                    Nessun logo caricato
+                </div>
+            @endif
+
+            <div class="form-g mb-2">
+                <div class="form-lbl">Descrizione attività cliente</div>
+                <div style="color:var(--text);font-family:var(--sans)">
+                    {{ $client->activity_description ?: '—' }}
+                </div>
+            </div>
             <div class="form-g mb-2">
                 <div class="form-lbl">Partita IVA / C.F.</div>
                 <div style="color:var(--text);font-family:var(--mono)">{{ $client->vat_number ?? '—' }}</div>

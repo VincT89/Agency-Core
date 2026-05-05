@@ -26,6 +26,13 @@ class CreateClientAction
             $data['status'] = 'active';
         }
 
+        $logo = data_get($data, 'logo');
+        unset($data['logo']);
+
+        if ($logo) {
+            $data['logo_path'] = $logo->store('clients/logos', 'public');
+        }
+
         return Client::create($data);
     }
 }

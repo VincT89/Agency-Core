@@ -7,7 +7,7 @@
     </x-page-header>
 
     <x-panel padded>
-        <form action="{{ route('clients.store') }}" method="POST">
+        <form action="{{ route('clients.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             {{-- Sezione: Anagrafica principale --}}
@@ -113,6 +113,25 @@
                 <x-form-group label="Note interne" name="notes">
                     <textarea name="notes" class="form-ta @error('notes') is-invalid @enderror"
                               rows="3" placeholder="Note riservate...">{{ old('notes') }}</textarea>
+                </x-form-group>
+            </div>
+
+            {{-- Sezione: Identità marketing --}}
+            <div class="sec-lbl" style="margin-top:16px">Identità marketing</div>
+            <div class="form-row">
+                <x-form-group label="Logo cliente" name="logo">
+                    <input type="file"
+                           name="logo"
+                           accept="image/jpeg,image/png,image/webp"
+                           class="form-in @error('logo') is-invalid @enderror">
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px;">Formati ammessi: JPG, PNG, WEBP. Max 4MB.</div>
+                </x-form-group>
+
+                <x-form-group label="Descrizione attività cliente" name="activity_description">
+                    <textarea name="activity_description"
+                              class="form-ta @error('activity_description') is-invalid @enderror"
+                              rows="4"
+                              placeholder="Es. Ristorante di cucina mediterranea a Roma, specializzato in pesce fresco.">{{ old('activity_description') }}</textarea>
                 </x-form-group>
             </div>
 

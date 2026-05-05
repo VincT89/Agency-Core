@@ -198,6 +198,32 @@
         </svg>
       </button>
 
+      <style>
+        .shell:not(.expanded) .sidebar-btn-text { display: none; }
+        .shell:not(.expanded) .sidebar-btn { 
+            padding: 8px !important; 
+            margin: 4px auto 8px auto !important; 
+            width: 40px !important; 
+            border-radius: 8px !important; 
+            justify-content: center; 
+        }
+      </style>
+
+      {{-- Azioni Rapide --}}
+      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
+      <div style="padding: 16px 16px 8px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-p sidebar-btn" style="font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px 0; border-radius: 6px;">
+              <i data-lucide="plus" style="width: 14px; height: 14px; flex-shrink: 0;"></i> <span class="sidebar-btn-text">Nuovo task</span>
+          </a>
+          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+          <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-p sidebar-btn" style="font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px 0; border-radius: 6px;">
+              <i data-lucide="plus" style="width: 14px; height: 14px; flex-shrink: 0;"></i> <span class="sidebar-btn-text">Nuovo ticket</span>
+          </a>
+          @endif
+      </div>
+      @endif
+
+      {{-- 1. Principale --}}
       <div class="nav-group">
         <div class="nav-group-label">Principale</div>
         <x-nav-item href="{{ route('dashboard') }}" icon="layout-dashboard" label="Dashboard"
@@ -212,23 +238,81 @@
           :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
       </div>
 
-      @can('viewAny', \App\Models\Shooting\Shoot::class)
+      {{-- 2. Operatività --}}
+      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
+        <div class="nav-divider"></div>
+        <div class="nav-group">
+          <div class="nav-group-label">Operatività</div>
 
+          @can('viewAny', \App\Models\Team::class)
+            @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+              <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
+                :active="request()->routeIs('teams.*')" />
+            @endif
+          @endcan
+
+          <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
+            :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
+
+          <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
+            :active="request()->routeIs('calendar-events.*')" />
+
+          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+            <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
+              :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
+          @endif
+        </div>
+      @endif
+
+      {{-- 3. Social Media Management --}}
+      @can('viewAny', \App\Models\Shooting\Shoot::class)
+        <div style="padding: 16px 16px 0 16px; display: flex; flex-direction: column; gap: 8px;">
+            <a href="{{ route('marketing-campaigns.create') }}" wire:navigate class="btn btn-p sidebar-btn" style="font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px 0; border-radius: 6px;">
+                <i data-lucide="plus" style="width: 14px; height: 14px; flex-shrink: 0;"></i> <span class="sidebar-btn-text">Nuovo Progetto Marketing</span>
+            </a>
+        </div>
         @if(!auth()->user()->isPhotographer() && !auth()->user()->canManageSystem())
           <div class="nav-divider"></div>
           <div class="nav-group">
-            <div class="nav-group-label">Social</div>
+            <div class="nav-group-label">Social Media Management</div>
             <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting"
               :active="request()->routeIs('social.shooting.*')" />
-            <x-nav-item href="{{ route('marketing-projects.index') }}" icon="megaphone" label="Campagne Marketing"
-              :active="request()->routeIs('marketing-projects.*')" />
-            <x-nav-item href="{{ route('social.posts.index') }}" icon="instagram" label="Post"
-              :active="request()->routeIs('social.posts.*')" />
-            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Piano Editoriale"
+            <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
+              :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
+
+            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Editoriale"
               :active="request()->routeIs('social.calendar')" />
           </div>
         @endif
 
+        @if(auth()->user()->canManageSystem())
+          <div class="nav-divider"></div>
+          <div class="nav-group">
+            <div class="nav-group-label">Social Media Management</div>
+            <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
+              :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
+            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Editoriale"
+              :active="request()->routeIs('social.calendar')" />
+          </div>
+        @endif
+      @endcan
+
+      {{-- 4. Amministrazione --}}
+      @if(auth()->user()->canAccessFinance())
+        <div class="nav-divider"></div>
+        <div class="nav-group">
+          <div class="nav-group-label">Amministrazione</div>
+          <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
+            :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" />
+          <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
+            :active="request()->routeIs('payments.*')" />
+          <x-nav-item href="{{ route('economic-summary.index') }}" icon="bar-chart-2" label="Riepilogo"
+            :active="request()->routeIs('economic-summary.*')" />
+        </div>
+      @endif
+
+      {{-- 5. Shooting --}}
+      @can('viewAny', \App\Models\Shooting\Shoot::class)
         @if(auth()->user()->isPhotographer())
           <div class="nav-divider"></div>
           <div class="nav-group">
@@ -245,67 +329,21 @@
             <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
               :active="request()->routeIs('admin.shooting.*')" />
           </div>
-
-          <div class="nav-divider"></div>
-          <div class="nav-group">
-            <div class="nav-group-label">Social</div>
-            <x-nav-item href="{{ route('marketing-projects.index') }}" icon="megaphone" label="Campagne Marketing"
-              :active="request()->routeIs('marketing-projects.*') && !request()->routeIs('marketing-projects.publication-board')" />
-            <x-nav-item href="{{ route('marketing-projects.publication-board') }}" icon="inbox" label="Da Pubblicare"
-              :active="request()->routeIs('marketing-projects.publication-board')" />
-            <x-nav-item href="{{ route('social.posts.index') }}" icon="instagram" label="Gestione Social Post"
-              :active="request()->routeIs('social.posts.*')" />
-            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Piano Editoriale"
-              :active="request()->routeIs('social.calendar')" />
-          </div>
         @endif
-
       @endcan
 
-      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
+      {{-- 6. Hosting e Domini --}}
+      @if(auth()->user()->canManageSystem())
         <div class="nav-divider"></div>
-
         <div class="nav-group">
-          <div class="nav-group-label">Operatività</div>
-          @can('viewAny', \App\Models\Team::class)
-            @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-              <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
-                :active="request()->routeIs('teams.*')" />
-            @endif
-          @endcan
-
-          <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
-            :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
-
-          <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
-            :active="request()->routeIs('calendar-events.*')" />
-
-          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-            <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
-              :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" badge-class="b-warn" />
-          @endif
+          <div class="nav-group-label">Hosting e Domini</div>
+          <x-nav-item href="#" icon="server" label="Gestione Hosting" />
         </div>
       @endif
 
-
-
-      @if(auth()->user()->canAccessFinance())
-        <div class="nav-divider"></div>
-
-        <div class="nav-group">
-          <div class="nav-group-label">Amministrazione</div>
-          <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
-            :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" badge-class="b-warn" />
-          <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
-            :active="request()->routeIs('payments.*')" />
-          <x-nav-item href="{{ route('economic-summary.index') }}" icon="bar-chart-2" label="Riepilogo"
-            :active="request()->routeIs('economic-summary.*')" />
-        </div>
-      @endif
-
+      {{-- 7. Admin --}}
       @can('system.admin')
         <div class="nav-divider"></div>
-
         <div class="nav-group">
           <div class="nav-group-label">Admin</div>
           <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"

@@ -5,6 +5,9 @@ namespace App\Models;
 use App\Enums\Social\EditorialPlanStatus;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @deprecated Replaced by MarketingCampaign module.
+ */
 class EditorialPlan extends Model
 {
     protected $fillable = [

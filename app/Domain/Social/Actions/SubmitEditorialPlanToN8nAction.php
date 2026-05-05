@@ -10,22 +10,22 @@ class SubmitEditorialPlanToN8nAction
 {
     public function __construct(private RequestEditorialPlanGenerationAction $requestAction) {}
 
-    public function execute(EditorialPlan $plan): void
+    public function execute(EditorialPlan $plan, array $clientContext = []): void
     {
         if (!in_array($plan->status->value, [EditorialPlanStatus::Draft->value, EditorialPlanStatus::N8nFailed->value])) {
             throw new \Exception('Il piano è già stato inviato a n8n o non è in stato valido per l\'invio.');
         }
 
-        $platforms = $plan->project->getServiceOption('platforms', []);
+        $platforms = $plan->marketingProject->getServiceOption('platforms', []);
         $requiresMeta = in_array('facebook', $platforms) || in_array('instagram', $platforms);
-        if ($requiresMeta && !$plan->project->client->isMetaReady()) {
+        if ($requiresMeta && !$plan->marketingProject->client->isMetaReady()) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'social_access' => "Il cliente non ha gli accessi Meta Business configurati o verificati. L'invio a n8n è bloccato.",
             ]);
         }
         
         $newRequestId = \Illuminate\Support\Str::uuid()->toString();
-        $plan->project->update([
+        $plan->marketingProject->update([
             'n8n_request_id' => $newRequestId,
         ]);
 
@@ -37,35 +37,51 @@ class SubmitEditorialPlanToN8nAction
             'status' => EditorialPlanSlotStatus::QueuedToN8n->value,
         ]);
 
-        $plan->project->loadMissing(['shoots', 'media']);
-        $shoot = $plan->project->shoots()->first();
+        $plan->loadMissing(['marketingProject.client.socialAccounts', 'marketingProject.project', 'marketingProject.shoots', 'marketingProject.media', 'slots']);
+        $shoot = $plan->marketingProject->shoots()->first();
+
+        // Costruzione dinamica client base context
+        $clientPayload = [
+            'id' => $plan->marketingProject->client->id,
+            'name' => $plan->marketingProject->client->name,
+            'company_name' => $plan->marketingProject->client->company_name,
+        ];
+
+        if (!empty($clientContext['include_logo']) && !empty($clientContext['logo_url'])) {
+            $clientPayload['logo_url'] = $clientContext['logo_url'];
+        }
+
+        if (!empty($clientContext['include_header']) && !empty($clientContext['activity_description'])) {
+            $clientPayload['activity_description'] = $clientContext['activity_description'];
+        }
 
         $payload = [
             'type' => 'editorial_plan',
             'marketing_project_id' => $plan->marketing_project_id, // deprecated
             'editorial_plan_id' => $plan->id,
-            'client_id' => $plan->project->client_id,
-            'project_id' => $plan->project->project_id,
-            'project' => $plan->project->project ? [
-                'id' => $plan->project->project->id,
-                'name' => $plan->project->project->name,
+            'client_id' => $plan->marketingProject->client_id,
+            'client' => $clientPayload,
+            'project_id' => $plan->marketingProject->project_id,
+            'project' => $plan->marketingProject->project ? [
+                'id' => $plan->marketingProject->project->id,
+                'name' => $plan->marketingProject->project->name,
             ] : null,
             'marketing_campaign' => [
-                'id' => $plan->project->id,
-                'name' => $plan->project->title,
-                'legacy_type' => $plan->project->type->value,
-                'service_type' => $plan->project->service_type,
-                'campaign_structure' => $plan->project->campaign_structure,
-                'service_options' => $plan->project->service_options ?? (object)[],
+                'id' => $plan->marketingProject->id,
+                'name' => $plan->marketingProject->title,
+                'legacy_type' => $plan->marketingProject->type->value,
+                'service_type' => $plan->marketingProject->service_type,
+                'campaign_structure' => $plan->marketingProject->campaign_structure,
+                'service_options' => $plan->marketingProject->service_options ?? (object)[],
             ],
             'shooting' => [
                 'required' => $shoot !== null,
                 'linked' => $shoot !== null,
                 'status' => $shoot?->status->value ?? 'pending',
             ],
-            'brief' => $plan->project->brief,
+            'brief' => $plan->marketingProject->brief,
             'n8n_request_id' => $newRequestId,
-            'media' => $plan->project->media->map(function ($media) {
+            'media' => $plan->marketingProject->media->map(function ($media) {
                 return [
                     'id' => $media->id,
                     'source' => $media->source,
@@ -97,7 +113,7 @@ class SubmitEditorialPlanToN8nAction
                     'platforms' => $slot->platforms,
                 ];
             })->toArray(),
-            'social_access' => $plan->project->client->socialAccounts->map(function ($account) {
+            'social_access' => $plan->marketingProject->client->socialAccounts->map(function ($account) {
                 return array_filter([
                     'platform' => $account->platform->value,
                     'access_status' => $account->access_status->value,
@@ -107,6 +123,6 @@ class SubmitEditorialPlanToN8nAction
             })->values()->toArray(),
         ];
 
-        \App\Jobs\SendN8nRequestJob::dispatch($payload, $plan->marketing_project_id, 'editorial_plan');
+        \App\Jobs\SendN8nRequestJob::dispatch($payload, $plan->marketing_project_id, 'editorial_plan', $clientContext['tempPathToDeleteAfterSend'] ?? null);
     }
 }

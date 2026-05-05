@@ -19,4 +19,7 @@ Route::prefix('v1/integrations/n8n')
         Route::post('/social/posts/{post}/versions', [\App\Http\Controllers\Api\V1\Integrations\N8n\SocialPostVersionController::class, 'store'])->name('social.posts.versions.store');
         Route::post('/social/posts/{post}/publish', [\App\Http\Controllers\Api\V1\Integrations\N8n\N8nSocialPostPublishController::class, 'store'])->name('social.posts.publish.store');
         Route::post('/tickets', [\App\Http\Controllers\Api\V1\Integrations\N8n\N8nTicketController::class, 'store'])->name('tickets.store');
+
+        Route::post('/marketing-campaign-posts/result', [\App\Http\Controllers\Api\V1\Integrations\N8n\MarketingCampaignPostResultController::class, 'store'])->name('marketing-campaign-posts.result');
+        Route::post('/marketing-campaign-posts/{post}/versions', [\App\Http\Controllers\Api\V1\Integrations\N8n\MarketingCampaignPostVersionController::class, 'store'])->name('marketing-campaign-posts.versions.store');
     });

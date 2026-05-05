@@ -30,7 +30,7 @@ class SocialPostWorkflowNotification extends Notification
             'title' => 'Aggiornamento Social Post',
             'message' => $this->message . " ({$this->post->title})",
             'post_id' => $this->post->id,
-            'url' => route('social.posts.show', $this->post)
+            'url' => '#'
         ];
     }
 

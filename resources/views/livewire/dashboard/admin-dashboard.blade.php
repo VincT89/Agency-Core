@@ -45,11 +45,7 @@
             <div class="kpi-delta-t">In uscita nei prossimi giorni</div>
         </div>
         
-        <div class="kpi-cell">
-            <div class="kpi-label-t">Da Pubblicare Oggi</div>
-            <div class="kpi-val-t {{ $data->kpi_social_publish_today > 0 ? 'blue' : '' }}">{{ $data->kpi_social_publish_today }}</div>
-            <div class="kpi-delta-t">Azione manuale richiesta</div>
-        </div>
+
     </div>
 
     <div class="mt-panel">

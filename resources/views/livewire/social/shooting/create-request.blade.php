@@ -93,17 +93,12 @@
                             
                             <div>
                                 <label class="form-lbl" style="font-size:11px; margin-bottom:4px;">Fascia Oraria</label>
-                                <div style="display:flex; gap:12px; align-items:center; background:var(--bg); padding:8px 12px; border-radius:6px; border:1px solid var(--line);">
-                                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text1); cursor:pointer; flex:1;">
-                                        <input type="checkbox" wire:model="proposedSlots.{{ $index }}.morning"> 
-                                        Mattina (9:00-13:00)
-                                    </label>
-                                    <div style="width:1px; height:16px; background:var(--line);"></div>
-                                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text1); cursor:pointer; flex:1;">
-                                        <input type="checkbox" wire:model="proposedSlots.{{ $index }}.afternoon"> 
-                                        Pomeriggio (14:00-18:00)
-                                    </label>
-                                </div>
+                                <select wire:model="proposedSlots.{{ $index }}.period" class="form-in" style="width:100%; box-sizing:border-box; background:var(--bg);" required>
+                                    <option value="morning">Mattina (09:00 - 13:00)</option>
+                                    <option value="intermediate">Intermedio (11:00 - 16:00)</option>
+                                    <option value="afternoon">Pomeriggio (15:00 - 20:00)</option>
+                                    <option value="full_day">Tutta la giornata</option>
+                                </select>
                             </div>
                         </div>
                     @endforeach

@@ -76,6 +76,63 @@
                     </div>
                 </x-panel>
             </div>
+
+            {{-- Checklist --}}
+            <div style="margin-top:16px">
+                <x-panel title="Checklist" dot="var(--green)" padded>
+                    @php
+                        $totalChecklist = $task->checklistItems->count();
+                        $doneChecklist = $task->checklistItems->where('is_completed', true)->count();
+                    @endphp
+
+                    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+                        {{ $doneChecklist }}/{{ $totalChecklist }} completati
+                    </div>
+
+                    @forelse($task->checklistItems as $item)
+                        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">
+                            <form action="{{ route('task-checklist-items.toggle', $item) }}" method="POST">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="btn btn-g" style="padding:4px 8px">
+                                    {{ $item->is_completed ? '✓' : '○' }}
+                                </button>
+                            </form>
+
+                            <div style="flex:1;{{ $item->is_completed ? 'text-decoration:line-through;color:var(--text3)' : 'color:var(--text)' }}">
+                                {{ $item->title }}
+                            </div>
+
+                            @if($item->is_completed)
+                                <div style="font-size:10px;color:var(--text3)">
+                                    {{ $item->completedBy?->name }}
+                                </div>
+                            @endif
+
+                            <form action="{{ route('task-checklist-items.destroy', $item) }}" method="POST"
+                                  onsubmit="return confirm('Eliminare questa voce checklist?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-icon" style="color:var(--red)">✕</button>
+                            </form>
+                        </div>
+                    @empty
+                        <div style="color:var(--text3);font-size:12px">Nessuna voce checklist.</div>
+                    @endforelse
+
+                    @can('update', $task)
+                        <form action="{{ route('tasks.checklist-items.store', $task) }}" method="POST"
+                              style="display:flex;gap:8px;margin-top:12px">
+                            @csrf
+                            <input name="title" class="form-in" placeholder="Nuova voce checklist..." required>
+                            <button type="submit" class="btn btn-g">Aggiungi</button>
+                        </form>
+                        @error('title')
+                            <div style="color:var(--red);font-size:12px;margin-top:6px">{{ $message }}</div>
+                        @enderror
+                    @endcan
+                </x-panel>
+            </div>
         </div>
 
         <div>
@@ -141,6 +198,47 @@
             </div>
             @endcan
         </div>
+    </div>
+
+    {{-- Commenti --}}
+    <div style="margin-top:20px">
+        <x-panel title="Commenti / Storico operativo" dot="var(--blue)" padded>
+            @can('update', $task)
+                <form action="{{ route('tasks.comments.store', $task) }}" method="POST"
+                      style="margin-bottom:16px">
+                    @csrf
+                    <textarea name="body"
+                              class="form-ta @error('body') is-invalid @enderror"
+                              rows="3"
+                              placeholder="Scrivi un aggiornamento, una nota o un avanzamento..."
+                              required>{{ old('body') }}</textarea>
+
+                    @error('body')
+                        <div style="color:var(--red);font-size:12px;margin-top:6px">{{ $message }}</div>
+                    @enderror
+
+                    <div style="margin-top:8px;text-align:right">
+                        <button type="submit" class="btn btn-p">Aggiungi commento</button>
+                    </div>
+                </form>
+            @endcan
+
+            @forelse($task->comments as $comment)
+                <div style="padding:12px 0;border-top:1px solid var(--line)">
+                    <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px">
+                        <strong style="font-size:13px;color:var(--text)">
+                            {{ $comment->user?->name ?? 'Sistema' }}
+                        </strong>
+                        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">
+                            {{ $comment->created_at->format('d/m/Y H:i') }}
+                        </span>
+                    </div>
+                    <div style="font-size:13px;line-height:1.6;color:var(--text2);white-space:pre-wrap">{{ $comment->body }}</div>
+                </div>
+            @empty
+                <div style="color:var(--text3);font-size:12px">Nessun commento ancora presente.</div>
+            @endforelse
+        </x-panel>
     </div>
 
     {{-- Allegati --}}

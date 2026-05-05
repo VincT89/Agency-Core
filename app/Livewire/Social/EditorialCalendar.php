@@ -2,10 +2,10 @@
 
 namespace App\Livewire\Social;
 
-use App\Models\EditorialSlot;
-use App\Models\Project;
+use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaign;
 use App\Models\Client;
-use App\Enums\Social\SocialPlatform;
+use App\Enums\Social\MarketingCampaignPostStatus;
 use Livewire\Component;
 
 class EditorialCalendar extends Component
@@ -16,47 +16,49 @@ class EditorialCalendar extends Component
 
     public function fetchEvents()
     {
-        $query = EditorialSlot::with(['post.project', 'post.currentVersion'])
-            ->where('status', '!=', \App\Enums\Social\EditorialSlotStatus::Cancelled);
+        $query = MarketingCampaignPost::with(['campaign.client', 'currentVersion'])
+            ->whereNotNull('scheduled_date')
+            ->where('status', '!=', MarketingCampaignPostStatus::Cancelled);
 
         // Applica i filtri impostati dall'utente
         if ($this->clientFilter) {
-            $query->whereHas('post.project', function($q) {
+            $query->whereHas('campaign', function($q) {
                 $q->where('client_id', $this->clientFilter);
             });
         }
 
         if ($this->projectFilter) {
-            $query->where('project_id', $this->projectFilter);
+            $query->where('marketing_campaign_id', $this->projectFilter);
         }
 
-        if ($this->platformFilter) {
-            $query->where('platform', $this->platformFilter);
-        }
+        // TODO: Aggiungere filtro piattaforma se introdotto nel nuovo modulo
 
-        // Applica le policy di sicurezza basate sull'assegnazione dei progetti
+        // Applica le policy di sicurezza basate sui clienti visibili
         if (!auth()->user()->canManageSystem() && !auth()->user()->isMarketing()) {
-            $query->whereHas('project', function($q) {
+            $query->whereHas('campaign.client', function($q) {
                 $q->whereHas('users', function($q2) {
                     $q2->where('user_id', auth()->id());
                 });
             });
         }
 
-        $slots = $query->get();
+        $posts = $query->get();
 
-        return $slots->map(function ($slot) {
+        return $posts->map(function ($post) {
+            $date = $post->scheduled_date->format('Y-m-d');
+            $time = $post->scheduled_time ? date('H:i:s', strtotime($post->scheduled_time)) : '12:00:00';
+            
             return [
-                'id' => $slot->id,
-                'title' => $slot->post->title ?? 'Post senza titolo',
-                'start' => $slot->scheduled_at->format('Y-m-d\TH:i:s'),
-                'url' => route('social.posts.show', $slot->post_id ?? $slot->social_post_id),
-                'backgroundColor' => $slot->status->color(),
-                'borderColor' => $slot->status->color(),
+                'id' => $post->id,
+                'title' => $post->title ?? 'Post senza titolo',
+                'start' => $date . 'T' . $time,
+                'url' => route('marketing-campaigns.show', $post->marketing_campaign_id),
+                'backgroundColor' => $post->status->color(),
+                'borderColor' => $post->status->color(),
                 'extendedProps' => [
-                    'platform' => $slot->platform->label(),
-                    'project' => $slot->post->project->name ?? '',
-                    'status' => $slot->status->label(),
+                    'platform' => 'Social', // Placeholder finché non aggiungiamo la piattaforma
+                    'project' => $post->campaign->name ?? '',
+                    'status' => $post->status->label(),
                 ]
             ];
         })->toArray();
@@ -65,13 +67,13 @@ class EditorialCalendar extends Component
     public function render()
     {
         // Carica i dati per le select di filtraggio in base ai permessi
-        $projects = Project::when(!auth()->user()->canManageSystem() && !auth()->user()->isMarketing(), function ($q) {
-            $q->whereHas('users', function ($q2) {
+        $projects = MarketingCampaign::when(!auth()->user()->canManageSystem() && !auth()->user()->isMarketing(), function ($q) {
+            $q->whereHas('client.users', function ($q2) {
                 $q2->where('user_id', auth()->id());
             });
         })->get();
 
-        $platforms = SocialPlatform::cases();
+        $platforms = []; // Rimuoviamo SocialPlatform momentaneamente
 
         $clients = Client::query()->visibleTo(auth()->user())->orderBy('name')->get();
 

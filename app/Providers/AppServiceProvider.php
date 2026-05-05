@@ -34,6 +34,10 @@ class AppServiceProvider extends ServiceProvider
         // Shooting Policies
         Gate::policy(\App\Models\Shooting\Shoot::class, \App\Policies\ShootPolicy::class);
 
+        // Marketing Campaign Policies
+        Gate::policy(\App\Models\MarketingCampaign::class, \App\Policies\MarketingCampaignPolicy::class);
+        Gate::policy(\App\Models\MarketingCampaignPost::class, \App\Policies\MarketingCampaignPostPolicy::class);
+
         Gate::define('system.admin', function (\App\Models\User $user) {
             return $user->canManageSystem();
         });
@@ -49,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
                         'openTickets'     => \App\Models\Ticket::whereIn('status', ['open', 'in_progress'])->count(),
                         'overdueInvoices' => \App\Models\Invoice::where('status', 'overdue')->count(),
                         'openTasks'       => \App\Models\Task::open()->count(),
+                        'marketingProjectsCount' => \App\Models\MarketingCampaign::whereIn('status', ['draft', 'active'])->count(),
                     ];
                 });
 
@@ -58,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
                     'openTickets'     => $counts['openTickets'],
                     'overdueInvoices' => $counts['overdueInvoices'],
                     'openTasks'       => $counts['openTasks'],
+                    'marketingProjectsCount' => $counts['marketingProjectsCount'],
                     'unreadNotificationsCount' => $user->unreadNotifications()->count(),
                     'latestNotifications'      => $user->notifications()->latest()->limit(5)->get(),
                 ]);

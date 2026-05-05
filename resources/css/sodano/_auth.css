@@ -1,53 +1,25 @@
 /* Login / Authentication */
 
 .guest-body {
-  /* Sfondo chiaro per schermate pubbliche/login in base al nuovo canvas Ice */
-  --bg:         #ffffff;
-  --bg1:        #f9fafb;
-  --bg2:        #f3f4f6;
-  --bg3:        #e5e7eb;
-
-  --line:       rgba(0,0,0,0.08);
-  --line2:      rgba(0,0,0,0.12);
-  --line3:      rgba(0,0,0,0.18);
-  --border:     rgba(0,0,0,0.08);
-
-  --text:       #111827;
-  --text1:      #1f2937;
-  --text2:      #4b5563;
-  --text3:      #6b7280;
+  /* Eredita i colori da :root (_variables.css) per uniformità con il gestionale */
 }
 
 .login-shell {
   display: grid;
   grid-template-columns: 2fr 1fr;
   min-height: 100vh;
-  background: transparent;
+  background: var(--bg);
 }
 
 /* Destra: Form */
 .login-right {
-  /* Ripristina tema scuro (come la sidebar) per la colonna destra */
-  --bg:         #111115;
-  --bg1:        #18181d;
-  --bg2:        #1e1e24;
-  --bg3:        #26262e;
-  --line:       rgba(255,255,255,0.07);
-  --line2:      rgba(255,255,255,0.11);
-  --line3:      rgba(255,255,255,0.18);
-  --border:     rgba(255,255,255,0.07);
-  --text:       #f0ede8;
-  --text1:      #f0ede8;
-  --text2:      #b0afb4;
-  --text3:      #6e6d74;
-
   background: var(--bg1);
   border-left: 1px solid var(--line);
   padding: 80px 100px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: -20px 0 40px rgba(0,0,0,0.5);
+  box-shadow: -20px 0 40px rgba(0,0,0,0.05); /* alleggerita l'ombra dato lo sfondo chiaro */
   position: relative;
   z-index: 10;
 }

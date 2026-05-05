@@ -9,14 +9,31 @@ class RequestSingleSocialPostGenerationAction
 {
     public function __construct(private N8nClient $n8nClient) {}
 
-    public function execute(MarketingProject $project): void
+    public function execute(MarketingProject $project, array $clientContext = []): void
     {
+        $project->loadMissing(['client.socialAccounts', 'project', 'shoots', 'media']);
         $shoot = $project->shoots()->first();
+
+        // Costruzione dinamica client base context
+        $clientPayload = [
+            'id' => $project->client->id,
+            'name' => $project->client->name,
+            'company_name' => $project->client->company_name,
+        ];
+
+        if (!empty($clientContext['include_logo']) && !empty($clientContext['logo_url'])) {
+            $clientPayload['logo_url'] = $clientContext['logo_url'];
+        }
+
+        if (!empty($clientContext['include_header']) && !empty($clientContext['activity_description'])) {
+            $clientPayload['activity_description'] = $clientContext['activity_description'];
+        }
 
         $payload = [
             'type' => 'one_shot',
             'marketing_project_id' => $project->id,
             'client_id' => $project->client_id,
+            'client' => $clientPayload,
             'brief' => $project->brief,
             'description' => $project->description,
             'marketing_campaign' => [

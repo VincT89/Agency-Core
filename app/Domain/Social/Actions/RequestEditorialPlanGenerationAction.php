@@ -9,15 +9,32 @@ class RequestEditorialPlanGenerationAction
 {
     public function __construct(private N8nClient $n8nClient) {}
 
-    public function execute(EditorialPlan $plan): void
+    public function execute(EditorialPlan $plan, array $clientContext = []): void
     {
+        $plan->loadMissing(['marketingProject.client.socialAccounts', 'marketingProject.project', 'marketingProject.shoots', 'marketingProject.media', 'slots']);
         $project = $plan->marketingProject;
+
+        // Costruzione dinamica client base context
+        $clientPayload = [
+            'id' => $project->client->id,
+            'name' => $project->client->name,
+            'company_name' => $project->client->company_name,
+        ];
+
+        if (!empty($clientContext['include_logo']) && !empty($clientContext['logo_url'])) {
+            $clientPayload['logo_url'] = $clientContext['logo_url'];
+        }
+
+        if (!empty($clientContext['include_header']) && !empty($clientContext['activity_description'])) {
+            $clientPayload['activity_description'] = $clientContext['activity_description'];
+        }
 
         $payload = [
             'type' => 'editorial_plan',
             'marketing_project_id' => $project->id,
             'editorial_plan_id' => $plan->id,
             'client_id' => $project->client_id,
+            'client' => $clientPayload,
             'brief' => $project->brief,
             'description' => $project->description,
             'duration_days' => $plan->duration_days,

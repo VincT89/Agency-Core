@@ -106,7 +106,7 @@ class AdminDashboardQuery
                 project_name: $slot->post->project->name ?? '',
                 status_label: 'Pubblicazione Scaduta',
                 action_label: 'Vedi Post',
-                action_url: route('social.posts.show', $slot->social_post_id),
+                action_url: '#',
                 priority: 1,
                 reason_code: 'social_past_due'
             );

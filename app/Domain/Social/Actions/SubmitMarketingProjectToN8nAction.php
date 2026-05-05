@@ -10,7 +10,7 @@ class SubmitMarketingProjectToN8nAction
 {
     public function __construct(private RequestSingleSocialPostGenerationAction $requestSingleAction) {}
 
-    public function execute(MarketingProject $project): void
+    public function execute(MarketingProject $project, array $clientContext = []): void
     {
         if (!in_array($project->status->value, [MarketingProjectStatus::Draft->value, MarketingProjectStatus::N8nFailed->value])) {
             throw new \Exception('Il progetto è già stato inviato a n8n o non è in stato valido per l\'invio.');
@@ -30,14 +30,30 @@ class SubmitMarketingProjectToN8nAction
             'submitted_to_n8n_at' => now(), // can keep this or queued_at
         ]);
 
-        $project->loadMissing(['shoots', 'media']);
+        $project->loadMissing(['client.socialAccounts', 'project', 'shoots', 'media']);
         $shoot = $project->shoots()->first();
+
+        // Costruzione dinamica client base context
+        $clientPayload = [
+            'id' => $project->client->id,
+            'name' => $project->client->name,
+            'company_name' => $project->client->company_name,
+        ];
+
+        if (!empty($clientContext['include_logo']) && !empty($clientContext['logo_url'])) {
+            $clientPayload['logo_url'] = $clientContext['logo_url'];
+        }
+
+        if (!empty($clientContext['include_header']) && !empty($clientContext['activity_description'])) {
+            $clientPayload['activity_description'] = $clientContext['activity_description'];
+        }
 
         if ($project->type->value === 'one_shot') {
             $payload = [
                 'type' => 'one_shot',
                 'marketing_project_id' => $project->id, // deprecated
                 'client_id' => $project->client_id,
+                'client' => $clientPayload,
                 'project_id' => $project->project_id,
                 'project' => $project->project ? [
                     'id' => $project->project->id,
@@ -86,7 +102,7 @@ class SubmitMarketingProjectToN8nAction
                 })->values()->toArray(),
             ];
 
-            \App\Jobs\SendN8nRequestJob::dispatch($payload, $project->id, 'one_shot');
+            \App\Jobs\SendN8nRequestJob::dispatch($payload, $project->id, 'one_shot', $clientContext['tempPathToDeleteAfterSend'] ?? null);
         }
     }
 }

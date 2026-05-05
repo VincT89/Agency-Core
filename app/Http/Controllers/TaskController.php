@@ -87,7 +87,15 @@ class TaskController extends Controller
     public function show(Task $task): View
     {
         $this->authorize('view', $task);
-        $task->load(['project.client', 'creator', 'assignee', 'attachments', 'auditLogs.user']);
+        $task->load([
+            'project.client', 
+            'creator', 
+            'assignee', 
+            'attachments', 
+            'auditLogs.user',
+            'comments.user',
+            'checklistItems.completedBy'
+        ]);
 
         return view('tasks.show', compact('task'));
     }

@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\User;
 
+/**
+ * @deprecated Replaced by MarketingCampaign module.
+ */
 class SocialPost extends Model
 {
     use HasFactory;

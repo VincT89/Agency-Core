@@ -124,7 +124,13 @@ class ReceiveSocialPostFromN8nAction
     {
         if (!$post->wasRecentlyCreated && $post->versions()->exists()) {
             $versionAction = app(AddSocialPostVersionFromN8nAction::class);
-            return $versionAction->execute($post, $data);
+            
+            // Adatta il payload di "Receive" (creazione) a quello di "AddVersion" (rigenerazione)
+            $versionData = $data;
+            $versionData['external_generation_id'] = $data['n8n_execution_id'] ?? null;
+            $versionData['regeneration_type'] = 'full';
+            
+            return $versionAction->execute($post, $versionData);
         }
 
         return SocialPostVersion::create([

@@ -25,7 +25,8 @@ class SendN8nRequestJob implements ShouldQueue
     public function __construct(
         public array $payload,
         public int $projectId,
-        public string $type = 'one_shot'
+        public string $type = 'one_shot',
+        public ?string $tempPathToDeleteAfterSend = null
     ) {}
 
     public function handle(N8nClient $client): void
@@ -49,10 +50,18 @@ class SendN8nRequestJob implements ShouldQueue
                 ]);
             }
         }
+
+        if ($this->tempPathToDeleteAfterSend) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($this->tempPathToDeleteAfterSend);
+        }
     }
 
     public function failed(\Throwable $e): void
     {
+        if ($this->tempPathToDeleteAfterSend) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($this->tempPathToDeleteAfterSend);
+        }
+
         Log::error('N8n job definitely failed after retries', [
             'project_id' => $this->projectId,
             'error' => $e->getMessage(),

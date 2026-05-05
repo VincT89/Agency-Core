@@ -39,6 +39,7 @@ return [
         'token' => env('N8N_API_TOKEN'),
         'regenerate_social_post_webhook_url' => env('N8N_REGENERATE_SOCIAL_POST_WEBHOOK_URL'),
         'generate_social_post_webhook_url' => env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL'),
+        'submit_marketing_campaign_post_webhook_url' => env('N8N_SUBMIT_MARKETING_CAMPAIGN_POST_WEBHOOK_URL', env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL')),
         'generate_editorial_plan_webhook_url' => env('N8N_GENERATE_EDITORIAL_PLAN_WEBHOOK_URL'),
         'send_whatsapp_review_webhook_url' => env('N8N_SEND_WHATSAPP_REVIEW_WEBHOOK_URL'),
         'publish_social_post_webhook_url' => env('N8N_PUBLISH_SOCIAL_POST_WEBHOOK_URL'),

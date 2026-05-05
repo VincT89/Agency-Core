@@ -31,9 +31,9 @@
   --purple: #a78bfa;
 
   /* Typography */
-  --serif: 'Instrument Serif', serif;
+  --serif: 'Ubuntu', sans-serif;
   --sans: 'Ubuntu', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
+  --mono: 'Ubuntu', sans-serif;
 
   /* Spacing / Radius */
   --sidebar: 64px;

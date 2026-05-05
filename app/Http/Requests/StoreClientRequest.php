@@ -39,6 +39,8 @@ class StoreClientRequest extends FormRequest
             'sdi_code'         => ['nullable', 'string', 'max:7'],
             'status'           => ['required', 'in:active,inactive'],
             'notes'            => ['nullable', 'string'],
+            'activity_description' => ['nullable', 'string', 'max:2000'],
+            'logo'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ];
     }
 }

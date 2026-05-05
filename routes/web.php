@@ -9,6 +9,8 @@ use App\Http\Controllers\EconomicSummaryController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TaskCommentController;
+use App\Http\Controllers\TaskChecklistItemController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,8 +23,36 @@ Route::get('/', function () {
 Route::get('/client/social-posts/{token}', \App\Livewire\Client\Social\SocialPostReview::class)
     ->name('client.social-posts.review');
 
+Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\MarketingCampaignPostReview::class)
+    ->name('public.marketing-campaign-posts.review');
+
 Route::get('/review/{token}', \App\Livewire\Client\ReviewTokenHandler::class)
     ->name('client.review');
+
+Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
+    abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
+    $fullPath = 'marketing/campaign-posts/' . $path;
+    abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($fullPath), 404);
+
+    $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+    abort_unless(in_array($extension, ['jpg', 'jpeg', 'png', 'webp']), 404);
+
+    $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($fullPath);
+    abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp']), 404);
+
+    return \Illuminate\Support\Facades\Storage::disk('public')->response($fullPath);
+})->where('path', '.*')->name('media.marketing-campaign-posts');
+
+Route::get('/media/{path}', function (string $path) {
+    abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
+    abort_unless(str_starts_with($path, 'clients/logos/'), 404);
+    abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($path), 404);
+
+    $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($path);
+    abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp']), 404);
+
+    return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+})->where('path', '.*')->name('media.public');
 
 Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'force.password.change'])->name('dashboard');
@@ -48,6 +78,21 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('tasks', \App\Http\Controllers\TaskController::class);
     Route::patch('tasks/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])
         ->name('tasks.update-status');
+
+    Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store'])
+        ->name('tasks.comments.store');
+
+    Route::post('tasks/{task}/checklist-items', [TaskChecklistItemController::class, 'store'])
+        ->name('tasks.checklist-items.store');
+
+    Route::patch('task-checklist-items/{item}', [TaskChecklistItemController::class, 'update'])
+        ->name('task-checklist-items.update');
+
+    Route::patch('task-checklist-items/{item}/toggle', [TaskChecklistItemController::class, 'toggle'])
+        ->name('task-checklist-items.toggle');
+
+    Route::delete('task-checklist-items/{item}', [TaskChecklistItemController::class, 'destroy'])
+        ->name('task-checklist-items.destroy');
         
     // Team
     Route::resource('teams', \App\Http\Controllers\TeamController::class);
@@ -59,13 +104,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     // SOCIAL (Marketing)
     Route::get('social/calendar', \App\Livewire\Social\EditorialCalendar::class)->name('social.calendar');
 
-    Route::prefix('social/marketing-projects')->name('marketing-projects.')->group(function () {
-        Route::get('/publication-board', \App\Livewire\Social\PublicationBoard::class)
-            ->name('publication-board');
-            
-        Route::get('/', \App\Livewire\Social\MarketingProjects\MarketingProjectsIndex::class)->name('index');
-        Route::get('/create', \App\Livewire\Social\MarketingProjects\MarketingProjectCreate::class)->name('create');
-        Route::get('/{project}', \App\Livewire\Social\MarketingProjects\MarketingProjectShow::class)->name('show');
+
+
+    Route::prefix('social/campaigns')->name('marketing-campaigns.')->group(function () {
+        Route::get('/', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignsIndex::class)->name('index');
+        Route::get('/create', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignCreate::class)->name('create');
+        Route::get('/{campaign}', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignShow::class)->name('show');
     });
 
     Route::prefix('social/shooting')->name('social.shooting.')->group(function () {
@@ -74,10 +118,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/{shoot}', \App\Livewire\Social\Shooting\RequestShow::class)->name('show');
     });
 
-    Route::prefix('social/posts')->name('social.posts.')->group(function () {
-        Route::get('/', \App\Livewire\Social\Posts\SocialPostsIndex::class)->name('index');
-        Route::get('/{post}', \App\Livewire\Social\Posts\SocialPostShow::class)->name('show');
-    });
+
 
     // FOTOGRAFIA
     Route::prefix('fotografia/shooting')->name('photography.shooting.')->group(function () {

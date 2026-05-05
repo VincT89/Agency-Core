@@ -34,7 +34,7 @@ class CreateRequest extends Component
 
     public function addSlot()
     {
-        $this->proposedSlots[] = ['date' => '', 'morning' => false, 'afternoon' => false];
+        $this->proposedSlots[] = ['date' => '', 'period' => 'morning'];
     }
     
     public function removeSlot($index)
@@ -70,16 +70,13 @@ class CreateRequest extends Component
         // Mappa e formatta gli slot temporali per il salvataggio
         $formattedSlots = [];
         foreach ($this->proposedSlots as $slot) {
-            if ($slot['morning']) {
-                $formattedSlots[] = ['date' => $slot['date'], 'period' => 'morning'];
-            }
-            if ($slot['afternoon']) {
-                $formattedSlots[] = ['date' => $slot['date'], 'period' => 'afternoon'];
+            if (!empty($slot['date']) && !empty($slot['period'])) {
+                $formattedSlots[] = ['date' => $slot['date'], 'period' => $slot['period']];
             }
         }
 
         if (empty($formattedSlots)) {
-            $this->addError('slots', 'Seleziona almeno un orario (mattina o pomeriggio) per gli slot.');
+            $this->addError('slots', 'Compila tutti i dettagli degli slot temporali.');
             return;
         }
 

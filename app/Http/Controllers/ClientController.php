@@ -66,7 +66,21 @@ class ClientController extends Controller
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
-        $client->update($request->validated());
+        $data = $request->validated();
+        
+        $oldLogo = $client->logo_path;
+        $logo = $request->file('logo');
+        unset($data['logo']);
+
+        if ($logo) {
+            $data['logo_path'] = $logo->store('clients/logos', 'public');
+        }
+
+        $client->update($data);
+
+        if (isset($data['logo_path']) && $oldLogo) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($oldLogo);
+        }
 
         return redirect()->route('clients.show', $client)
             ->with('success', 'Cliente aggiornato correttamente.');

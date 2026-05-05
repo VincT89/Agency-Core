@@ -184,7 +184,7 @@
                     </thead>
                     <tbody>
                         @foreach($project->marketingProjects as $mp)
-                        <tr onclick="window.location='{{ route('marketing-projects.show', $mp) }}'" style="cursor:pointer">
+                        <tr>
                             <td class="name-col">{{ $mp->title }}</td>
                             <td><x-badge :status="$mp->status->value ?? $mp->status" :label="$mp->status->label ?? $mp->status" /></td>
                             <td>

@@ -57,6 +57,15 @@ class N8nClient
         }
     }
 
+    public function requestMarketingCampaignPostRegeneration(array $payload): array
+    {
+        return $this->sendRequest(
+            config('services.n8n.regenerate_social_post_webhook_url'),
+            'marketing_campaign_post_regeneration',
+            $payload
+        );
+    }
+
     public function requestSingleSocialPostGeneration(array $payload): array
     {
         return $this->sendRequest(config('services.n8n.generate_social_post_webhook_url'), 'generate_social_post', $payload);
@@ -75,6 +84,15 @@ class N8nClient
     public function requestSocialPostPublication(array $payload): array
     {
         return $this->sendRequest(config('services.n8n.publish_social_post_webhook_url'), 'publish_social_post', $payload);
+    }
+
+    public function submitMarketingCampaignPost(array $payload): array
+    {
+        // Usa una url dedicata se presente, o ripiega su quella generale dei post per ora
+        $url = config('services.n8n.submit_marketing_campaign_post_webhook_url') 
+            ?? config('services.n8n.generate_social_post_webhook_url');
+            
+        return $this->sendRequest($url, 'submit_marketing_campaign_post', $payload);
     }
 
     private function sendRequest(?string $url, string $event, array $payload): array

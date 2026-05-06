@@ -12,7 +12,7 @@ use Exception;
 
 class SendMarketingCampaignPostToClientAction
 {
-    public function execute(MarketingCampaignPost $post): void
+    public function execute(MarketingCampaignPost $post): ClientReviewToken
     {
         if (!in_array($post->status, [
             MarketingCampaignPostStatus::Generated,
@@ -28,9 +28,8 @@ class SendMarketingCampaignPostToClientAction
 
         $client = $post->campaign->client;
 
-        if (empty($client->email)) {
-            throw new Exception("Il cliente non ha un'email configurata.");
-        }
+        // Non blocchiamo se manca la mail, generiamo comunque il link
+        $hasEmail = !empty($client->email);
 
         $token = ClientReviewToken::create([
             'token' => Str::random(60),
@@ -47,6 +46,10 @@ class SendMarketingCampaignPostToClientAction
             'sent_to_client_at' => now(),
         ]);
 
-        Mail::to($client->email)->queue(new MarketingCampaignPostReviewMail($post, $token));
+        if ($hasEmail) {
+            Mail::to($client->email)->queue(new MarketingCampaignPostReviewMail($post, $token));
+        }
+
+        return $token;
     }
 }

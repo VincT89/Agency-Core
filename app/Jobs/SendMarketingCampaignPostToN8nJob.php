@@ -44,6 +44,12 @@ class SendMarketingCampaignPostToN8nJob implements ShouldQueue
 
         if ($this->shouldDeleteTempFile()) {
             Storage::disk('public')->delete($this->temp_path);
+            
+            $n8nInternalContext = $this->post->n8n_internal_context ?? [];
+            if (isset($n8nInternalContext['_internal_temp_logo_path'])) {
+                unset($n8nInternalContext['_internal_temp_logo_path']);
+                $this->post->update(['n8n_internal_context' => $n8nInternalContext]);
+            }
         }
     }
 

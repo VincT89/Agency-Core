@@ -1,6 +1,6 @@
 <x-panel title="Shooting da Gestire" dot="var(--purple)">
     <x-slot:headerActions>
-        <a href="{{ route('admin.shooting.index') }}" style="font-size:12px; color:var(--text2); text-decoration:none; font-weight:500; display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:4px; transition:background 0.2s;" onmouseover="this.style.background='var(--bg3)'; this.style.color='var(--text1)'" onmouseout="this.style.background='transparent'; this.style.color='var(--text2)'">
+        <a href="{{ route('admin.shooting.index') }}" class="social-header-link">
             Vedi tutti <i data-lucide="arrow-right" style="width:14px; height:14px;"></i>
         </a>
     </x-slot:headerActions>

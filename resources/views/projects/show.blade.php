@@ -166,44 +166,6 @@
         </x-panel>
     </div>
 
-    <div style="margin-bottom:20px;">
-        <x-panel title="Campagne Marketing ({{ $project->marketingProjects->count() }})">
-            @if($project->marketingProjects->isEmpty())
-                <div style="padding:16px;">
-                    <x-empty-state message="Nessuna campagna marketing per questa commessa." icon="megaphone" />
-                </div>
-            @else
-                <table class="t-table">
-                    <thead>
-                        <tr>
-                            <th>Titolo Campagna</th>
-                            <th>Stato</th>
-                            <th>Shooting</th>
-                            <th>Data Inserimento</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($project->marketingProjects as $mp)
-                        <tr>
-                            <td class="name-col">{{ $mp->title }}</td>
-                            <td><x-badge :status="$mp->status->value ?? $mp->status" :label="$mp->status->label ?? $mp->status" /></td>
-                            <td>
-                                @if($mp->shoots->isNotEmpty())
-                                    @php $shoot = $mp->shoots->first(); @endphp
-                                    <span style="font-size:11px; color:var(--text2);">{{ $shoot->status->label() }}</span>
-                                @else
-                                    <span style="font-size:11px; color:var(--text3); font-style:italic;">Nessuno</span>
-                                @endif
-                            </td>
-                            <td class="mono-col">{{ $mp->created_at->format('d/m/Y') }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
-        </x-panel>
-    </div>
-
     
     <x-audit-timeline :logs="$project->auditLogs" />
     

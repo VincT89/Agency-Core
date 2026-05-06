@@ -156,3 +156,23 @@
 .ca-info-text { font-size: 11px; color: var(--text3); margin: 12px 0; }
 .ca-error-text { color: var(--red); font-size: 10px; font-family: var(--mono); margin-top: 4px; }
 .ca-actions { display: flex; gap: 8px; align-items: center; }
+
+.form-in:focus-visible,
+.form-sel:focus-visible,
+.form-ta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#toast[data-type="error"] {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+#toast[data-type="warning"] {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+
+.form-stack { display: flex; flex-direction: column; gap: 20px; }

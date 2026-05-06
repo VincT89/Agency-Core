@@ -8,55 +8,6 @@ use Exception;
 
 class N8nClient
 {
-    // Invia un payload a n8n per la rigenerazione di un post social
-    public function requestSocialPostRegeneration(array $payload): array
-    {
-        $url = config('services.n8n.regenerate_social_post_webhook_url');
-
-        if (! $url) {
-            throw new Exception('N8N_REGENERATE_SOCIAL_POST_WEBHOOK_URL non configurato.');
-        }
-
-        $log = IntegrationLog::create([
-            'provider' => 'n8n',
-            'direction' => 'outbound',
-            'endpoint' => $url,
-            'event' => 'regenerate_social_post',
-            'payload' => $this->sanitizePayload($payload),
-            'status' => 'processing',
-        ]);
-
-        try {
-            $request = Http::timeout(10);
-            if ($token = config('services.n8n.token')) {
-                $request = $request->withToken($token);
-            }
-            $response = $request->post($url, $payload);
-            
-            $log->update([
-                'response' => $response->json() ?? $response->body(),
-                'status_code' => $response->status(),
-                'status' => $response->successful() ? 'processed' : 'failed',
-                'processed_at' => now(),
-            ]);
-
-            if (! $response->successful()) {
-                throw new Exception('N8n ha risposto con errore: ' . $response->status());
-            }
-
-            return $response->json() ?? [];
-            
-        } catch (Exception $e) {
-            $log->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-                'processed_at' => now(),
-            ]);
-
-            throw $e;
-        }
-    }
-
     public function requestMarketingCampaignPostRegeneration(array $payload): array
     {
         return $this->sendRequest(
@@ -66,24 +17,9 @@ class N8nClient
         );
     }
 
-    public function requestSingleSocialPostGeneration(array $payload): array
-    {
-        return $this->sendRequest(config('services.n8n.generate_social_post_webhook_url'), 'generate_social_post', $payload);
-    }
-
-    public function requestEditorialPlanGeneration(array $payload): array
-    {
-        return $this->sendRequest(config('services.n8n.generate_editorial_plan_webhook_url'), 'generate_editorial_plan', $payload);
-    }
-
     public function sendWhatsappReviewLink(array $payload): array
     {
         return $this->sendRequest(config('services.n8n.send_whatsapp_review_webhook_url'), 'send_whatsapp_review', $payload);
-    }
-
-    public function requestSocialPostPublication(array $payload): array
-    {
-        return $this->sendRequest(config('services.n8n.publish_social_post_webhook_url'), 'publish_social_post', $payload);
     }
 
     public function submitMarketingCampaignPost(array $payload): array

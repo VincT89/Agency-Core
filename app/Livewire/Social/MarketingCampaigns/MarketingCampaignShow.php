@@ -19,9 +19,29 @@ class MarketingCampaignShow extends Component
 
     public MarketingCampaign $campaign;
 
-    // Modal state
     public $showPostModal = false;
     public ?MarketingCampaignPost $editingPost = null;
+    public $newInternalComment = '';
+    public ?string $generatedReviewLink = null;
+
+    // --- NUOVI STATI LIFECYCLE CAMPAGNA ---
+    public bool $showCampaignModal = false;
+    public array $campaignForm = [];
+
+    public bool $showExtendModal = false;
+    public array $extendForm = [];
+
+    public bool $showRenewModal = false;
+    public array $renewForm = [];
+
+    public bool $showExtraModal = false;
+    public array $extraForm = [];
+
+    public bool $showInvoiceModal = false;
+    public array $invoiceForm = [];
+    public array $pendingPeriodsForInvoice = [];
+    public array $pendingExtrasForInvoice = [];
+    // --------------------------------------
 
     // Form state strutturato (Punto 1)
     public $form = [
@@ -131,7 +151,9 @@ class MarketingCampaignShow extends Component
     public function resetForm()
     {
         $this->resetValidation();
+        $this->showPostModal = false;
         $this->editingPost = null;
+        $this->generatedReviewLink = null;
         $this->form = [
             'title' => null,
             'description' => null,
@@ -214,6 +236,11 @@ class MarketingCampaignShow extends Component
     {
         $this->validate();
 
+        if ($this->editingPost && $this->editingPost->status === MarketingCampaignPostStatus::Published) {
+            $this->addError('post', 'Impossibile modificare un post già pubblicato.');
+            return;
+        }
+
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
 
@@ -227,7 +254,7 @@ class MarketingCampaignShow extends Component
                         . '_' . time() . '.' . $this->media->getClientOriginalExtension();
             $path = $this->media->storeAs('marketing/campaign-posts', $filename, 'public');
 
-            $data['media_path'] = $filename;
+            $data['media_path'] = $path;
             $data['media_original_name'] = $this->media->getClientOriginalName();
             $data['media_mime'] = $this->media->getMimeType();
 
@@ -259,6 +286,11 @@ class MarketingCampaignShow extends Component
     {
         $this->validate();
         
+        if ($this->editingPost && $this->editingPost->status === MarketingCampaignPostStatus::Published) {
+            $this->addError('post', 'Impossibile inviare a N8n un post già pubblicato.');
+            return;
+        }
+
         // Forziamo lo stato a pending_n8n
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
@@ -274,7 +306,7 @@ class MarketingCampaignShow extends Component
                         . '_' . time() . '.' . $this->media->getClientOriginalExtension();
             $path = $this->media->storeAs('marketing/campaign-posts', $filename, 'public');
 
-            $data['media_path'] = $filename;
+            $data['media_path'] = $path;
             $data['media_original_name'] = $this->media->getClientOriginalName();
             $data['media_mime'] = $this->media->getMimeType();
 
@@ -298,47 +330,13 @@ class MarketingCampaignShow extends Component
             Storage::disk('public')->delete($oldMediaPath);
         }
 
-        // Process Runtime Client Identity
-        $client = clone $this->campaign->client;
-        $runtimeLogoUrl = null;
-        $runtimeActivity = null;
-        $tempPathToDelete = null;
-
-        if ($this->include_client_logo) {
-            if ($client->logo_path) {
-                $runtimeLogoUrl = $client->logo_url;
-            } elseif ($this->runtime_logo) {
-                $filename = 'temp_logo_' . time() . '.' . $this->runtime_logo->getClientOriginalExtension();
-                $path = $this->runtime_logo->storeAs('clients/logos/temp', $filename, 'public');
-                
-                if ($this->save_runtime_logo_to_client) {
-                    $this->runtime_logo->storeAs('clients/logos', $filename, 'public'); // Permamente
-                    $client->update(['logo_path' => 'clients/logos/' . $filename]);
-                    $runtimeLogoUrl = $client->logo_url;
-                } else {
-                    $tempPathToDelete = $path;
-                    $runtimeLogoUrl = route('media.public', ['path' => $path]);
-                }
-            }
-        }
-
-        if ($this->include_client_header) {
-            if ($client->activity_description) {
-                $runtimeActivity = $client->activity_description;
-            } elseif ($this->runtime_activity_description) {
-                $runtimeActivity = $this->runtime_activity_description;
-                if ($this->save_runtime_activity_to_client) {
-                    $client->update(['activity_description' => $runtimeActivity]);
-                }
-            }
-        }
-
         $runtimeClientData = [
-            'include_logo' => $this->include_client_logo,
-            'include_header' => $this->include_client_header,
-            'runtime_logo_url' => $runtimeLogoUrl,
-            'runtime_activity_description' => $runtimeActivity,
-            'tempPathToDelete' => $tempPathToDelete,
+            'include_client_logo' => $this->include_client_logo,
+            'include_client_header' => $this->include_client_header,
+            'runtime_logo' => $this->runtime_logo, // This is the UploadedFile or null
+            'runtime_activity_description' => $this->runtime_activity_description,
+            'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
+            'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
         ];
 
         // Lancia Action N8n
@@ -351,6 +349,11 @@ class MarketingCampaignShow extends Component
     {
         $post = MarketingCampaignPost::findOrFail($postId);
         $this->authorize('update', $post);
+
+        if ($post->status === MarketingCampaignPostStatus::Published) {
+            $this->addError('post', 'Impossibile rigenerare un post già pubblicato.');
+            return;
+        }
 
         try {
             $action->execute($post, auth()->user(), $type);
@@ -366,9 +369,15 @@ class MarketingCampaignShow extends Component
         $post = MarketingCampaignPost::findOrFail($postId);
         $this->authorize('update', $post);
 
+        if ($post->status === MarketingCampaignPostStatus::Published) {
+            $this->addError('post', 'Impossibile inviare in revisione un post già pubblicato.');
+            return;
+        }
+
         try {
-            $action->execute($post);
-            $this->closePostModal();
+            $token = $action->execute($post);
+            $this->generatedReviewLink = route('public.marketing-campaign-posts.review', ['token' => $token->token]);
+            $this->editingPost->refresh();
             $this->dispatch('post-sent-to-client');
         } catch (\Exception $e) {
             $this->addError('post', $e->getMessage());
@@ -380,6 +389,11 @@ class MarketingCampaignShow extends Component
         $post = MarketingCampaignPost::findOrFail($postId);
         $this->authorize('update', $post);
 
+        if ($post->status === MarketingCampaignPostStatus::Published) {
+            $this->addError('post', 'Post già pubblicato.');
+            return;
+        }
+
         $post->update([
             'status' => \App\Enums\Social\MarketingCampaignPostStatus::Approved->value,
         ]);
@@ -387,6 +401,27 @@ class MarketingCampaignShow extends Component
         $this->closePostModal();
         $this->dispatch('post-approved');
     }
+
+    public function addInternalComment(int $postId)
+    {
+        $this->validate(['newInternalComment' => 'required|string']);
+        
+        $post = MarketingCampaignPost::findOrFail($postId);
+        $this->authorize('update', $post);
+
+        $post->comments()->create([
+            'marketing_campaign_post_version_id' => $post->current_version_id,
+            'user_id' => auth()->id(),
+            'body' => $this->newInternalComment,
+            'visibility' => \App\Enums\Social\MarketingCampaignPostCommentVisibility::Internal->value,
+            'type' => \App\Enums\Social\MarketingCampaignPostCommentType::Text->value,
+        ]);
+
+        $this->newInternalComment = '';
+        $this->editingPost->refresh();
+        $this->dispatch('internal-comment-added');
+    }
+
     // Punto 8
     public function deletePost(int $postId)
     {
@@ -402,6 +437,215 @@ class MarketingCampaignShow extends Component
         $this->closePostModal();
         $this->dispatch('post-deleted');
     }
+
+    // --- NUOVI METODI LIFECYCLE CAMPAGNA ---
+
+    public function openCampaignModal()
+    {
+        $this->authorize('update', $this->campaign);
+        $this->campaignForm = [
+            'client_id' => $this->campaign->client_id,
+            'name' => $this->campaign->name,
+            'description' => $this->campaign->description,
+            'status' => $this->campaign->status->value,
+            'starts_at' => $this->campaign->starts_at ? $this->campaign->starts_at->format('Y-m-d') : null,
+            'ends_at' => $this->campaign->ends_at ? $this->campaign->ends_at->format('Y-m-d') : null,
+            'monthly_fee' => $this->campaign->monthly_fee,
+            'notes' => $this->campaign->notes,
+        ];
+        $this->showCampaignModal = true;
+    }
+
+    public function closeCampaignModal()
+    {
+        $this->showCampaignModal = false;
+    }
+
+    public function saveCampaign(\App\Domain\Social\Actions\UpdateMarketingCampaignAction $action)
+    {
+        $this->authorize('update', $this->campaign);
+        
+        $this->validate([
+            'campaignForm.name' => 'required|string|max:255',
+            'campaignForm.monthly_fee' => 'nullable|numeric|min:0',
+        ]);
+
+        $action->execute($this->campaign, $this->campaignForm);
+        $this->closeCampaignModal();
+        $this->dispatch('campaign-updated');
+    }
+
+    public function openExtendModal()
+    {
+        $this->authorize('update', $this->campaign);
+        
+        // Suggeriamo come "from_date" il giorno successivo all'ends_at attuale, se c'è
+        $suggestedFrom = $this->campaign->ends_at ? clone $this->campaign->ends_at : now();
+        if ($this->campaign->ends_at) {
+            $suggestedFrom->addDay();
+        }
+
+        $this->extendForm = [
+            'from_date' => $suggestedFrom->format('Y-m-d'),
+            'to_date' => null,
+            'amount' => $this->campaign->monthly_fee,
+            'description' => 'Prolungamento gestione',
+        ];
+        $this->showExtendModal = true;
+    }
+
+    public function closeExtendModal()
+    {
+        $this->showExtendModal = false;
+    }
+
+    public function extendCampaign(\App\Domain\Social\Actions\ExtendMarketingCampaignAction $action)
+    {
+        $this->authorize('update', $this->campaign);
+        
+        $this->validate([
+            'extendForm.from_date' => 'required|date',
+            'extendForm.to_date' => 'nullable|date|after_or_equal:extendForm.from_date',
+            'extendForm.amount' => 'nullable|numeric|min:0',
+            'extendForm.description' => 'required|string',
+        ]);
+
+        $action->execute($this->campaign, $this->extendForm);
+        $this->closeExtendModal();
+        $this->dispatch('campaign-extended');
+    }
+
+    public function openRenewModal()
+    {
+        $this->authorize('update', $this->campaign);
+        
+        $this->renewForm = [
+            'starts_at' => now()->format('Y-m-d'),
+            'from_date' => now()->format('Y-m-d'),
+            'to_date' => null,
+            'amount' => $this->campaign->monthly_fee,
+            'description' => 'Rinnovo contratto',
+        ];
+        $this->showRenewModal = true;
+    }
+
+    public function closeRenewModal()
+    {
+        $this->showRenewModal = false;
+    }
+
+    public function renewCampaign(\App\Domain\Social\Actions\RenewMarketingCampaignAction $action)
+    {
+        $this->authorize('update', $this->campaign);
+
+        $this->validate([
+            'renewForm.starts_at' => 'nullable|date',
+            'renewForm.from_date' => 'required|date',
+            'renewForm.to_date' => 'nullable|date|after_or_equal:renewForm.from_date',
+            'renewForm.amount' => 'nullable|numeric|min:0',
+            'renewForm.description' => 'required|string',
+        ]);
+
+        $action->execute($this->campaign, $this->renewForm);
+        $this->closeRenewModal();
+        $this->dispatch('campaign-renewed');
+    }
+
+    public function openExtraModal()
+    {
+        $this->authorize('update', $this->campaign);
+        $this->extraForm = [
+            'description' => '',
+            'amount' => null,
+            'occurred_on' => now()->format('Y-m-d'),
+        ];
+        $this->showExtraModal = true;
+    }
+
+    public function closeExtraModal()
+    {
+        $this->showExtraModal = false;
+    }
+
+    public function addExtra(\App\Domain\Social\Actions\AddMarketingCampaignExtraAction $action)
+    {
+        $this->authorize('update', $this->campaign);
+
+        $this->validate([
+            'extraForm.description' => 'required|string',
+            'extraForm.amount' => 'required|numeric|min:0',
+            'extraForm.occurred_on' => 'nullable|date',
+        ]);
+
+        $action->execute($this->campaign, $this->extraForm);
+        $this->closeExtraModal();
+        $this->dispatch('campaign-extra-added');
+    }
+
+    public function deleteExtra(int $extraId, \App\Domain\Social\Actions\CancelMarketingCampaignExtraAction $action)
+    {
+        $this->authorize('update', $this->campaign);
+
+        $extra = $this->campaign->extras()->findOrFail($extraId);
+
+        try {
+            $action->execute($extra);
+            $this->dispatch('campaign-extra-deleted');
+        } catch (\Exception $e) {
+            $this->addError('extraForm', $e->getMessage());
+        }
+    }
+
+    public function openInvoiceModal()
+    {
+        $this->authorize('update', $this->campaign);
+        
+        $pendingPeriods = $this->campaign->periods()->whereNull('invoice_id')->get();
+        $pendingExtras = $this->campaign->extras()->whereNull('invoice_id')->where('status', \App\Enums\Social\MarketingCampaignExtraStatus::Pending)->get();
+        
+        $this->pendingPeriodsForInvoice = $pendingPeriods->map(fn($p) => ['id' => $p->id, 'description' => $p->description, 'amount' => $p->amount])->toArray();
+        $this->pendingExtrasForInvoice = $pendingExtras->map(fn($e) => ['id' => $e->id, 'description' => $e->description, 'amount' => $e->amount])->toArray();
+
+        $this->invoiceForm = [
+            'number' => '',
+            'issue_date' => now()->format('Y-m-d'),
+            'due_date' => now()->addDays(30)->format('Y-m-d'),
+            'tax_amount' => 0,
+            'period_ids' => $pendingPeriods->pluck('id')->toArray(),
+            'extra_ids' => $pendingExtras->pluck('id')->toArray(),
+        ];
+        $this->showInvoiceModal = true;
+    }
+
+    public function closeInvoiceModal()
+    {
+        $this->showInvoiceModal = false;
+    }
+
+    public function generateInvoice(\App\Domain\Social\Actions\GenerateMarketingCampaignInvoiceAction $action)
+    {
+        $this->authorize('update', $this->campaign);
+
+        $this->validate([
+            'invoiceForm.number' => 'required|string|unique:invoices,number',
+            'invoiceForm.issue_date' => 'required|date',
+            'invoiceForm.due_date' => 'nullable|date|after_or_equal:invoiceForm.issue_date',
+            'invoiceForm.tax_amount' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $action->execute($this->campaign, $this->invoiceForm);
+            
+            $this->campaign->refresh();
+            $this->campaign->load(['periods', 'extras', 'invoices.items']);
+            
+            $this->closeInvoiceModal();
+            $this->dispatch('campaign-invoice-generated');
+        } catch (\Exception $e) {
+            $this->addError('invoiceForm', $e->getMessage());
+        }
+    }
+    // ---------------------------------------------
 
     public function render()
     {

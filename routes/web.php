@@ -20,14 +20,8 @@ Route::get('/', function () {
 });
 
 // Route pubbliche per Clienti
-Route::get('/client/social-posts/{token}', \App\Livewire\Client\Social\SocialPostReview::class)
-    ->name('client.social-posts.review');
-
 Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\MarketingCampaignPostReview::class)
     ->name('public.marketing-campaign-posts.review');
-
-Route::get('/review/{token}', \App\Livewire\Client\ReviewTokenHandler::class)
-    ->name('client.review');
 
 Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
@@ -102,7 +96,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::get('/shoots/{shoot}', [\App\Http\Controllers\ShootRedirectController::class, 'show'])->name('shoots.show');
 
     // SOCIAL (Marketing)
-    Route::get('social/calendar', \App\Livewire\Social\EditorialCalendar::class)->name('social.calendar');
+    Route::get('social/calendar', \App\Livewire\Social\MarketingCampaignCalendar::class)->name('social.calendar');
 
 
 

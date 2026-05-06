@@ -13,13 +13,14 @@
 
 /* Destra: Form */
 .login-right {
+  /* Variabili dark rimosse perché ereditate da _shell.css / .theme-dark */
+
   background: var(--bg1);
   border-left: 1px solid var(--line);
   padding: 80px 100px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: -20px 0 40px rgba(0,0,0,0.05); /* alleggerita l'ombra dato lo sfondo chiaro */
   position: relative;
   z-index: 10;
 }

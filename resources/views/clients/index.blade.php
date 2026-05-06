@@ -12,7 +12,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+    <div class="filter-bar justify-end">
         <form method="GET" action="{{ route('clients.index') }}" style="display:flex;gap:8px">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca cliente (nome, email, p.iva)..." class="form-in" style="padding:5px 10px;font-size:11px;width:250px">
             @if(request('search'))

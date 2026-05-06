@@ -57,8 +57,6 @@ class Ticket extends Model
         'resolution_notes',
         'notes',
         'external_id',
-        'marketing_project_id',
-        'social_post_id',
         'source',
         'context',
         'received_at',
@@ -117,15 +115,7 @@ class Ticket extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function marketingProject(): BelongsTo
-    {
-        return $this->belongsTo(\App\Models\MarketingProject::class);
-    }
 
-    public function socialPost(): BelongsTo
-    {
-        return $this->belongsTo(\App\Models\SocialPost::class);
-    }
 
     public function creator(): BelongsTo
     {

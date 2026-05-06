@@ -17,7 +17,7 @@
     </x-page-header>
 
     {{-- Filtri --}}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    <div class="filter-bar">
         @php
             $currentStatus   = request('status');
             $currentPriority = request('priority');

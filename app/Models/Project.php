@@ -104,8 +104,5 @@ class Project extends Model
         return $this->morphMany(AuditLog::class, 'auditable');
     }
 
-    public function marketingProjects(): HasMany
-    {
-        return $this->hasMany(MarketingProject::class);
-    }
+
 }

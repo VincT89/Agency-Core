@@ -1,4 +1,4 @@
-<div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--line); transition:background 0.15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+<div class="u-flex-between hover-bg" style="padding:16px 20px; border-bottom:1px solid var(--line);">
     <div style="display:flex; flex-direction:column; gap:4px;">
         <div style="display:flex; align-items:center; gap:8px;">
             <a href="{{ $item->action_url }}" style="font-family:var(--sans); font-size:14px; font-weight:600; color:var(--text); text-decoration:none;">{{ $item->shoot_name }}</a>

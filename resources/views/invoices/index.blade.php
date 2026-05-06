@@ -30,7 +30,7 @@
         </div>
     </div>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    <div class="filter-bar">
         @php $currentStatus = request('status'); @endphp
         <div class="pills" style="margin:0">
             <a href="{{ route('invoices.index', array_filter(['search' => request('search')])) }}" class="pill {{ !$currentStatus ? 'on' : '' }}">Tutte</a>

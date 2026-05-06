@@ -3,10 +3,7 @@
 namespace App\Domain\Dashboard\Queries;
 
 use App\Models\Shooting\Shoot;
-use App\Models\SocialPost;
-use App\Models\EditorialSlot;
-use App\Enums\Social\SocialPostStatus;
-use App\Enums\Social\EditorialSlotStatus;
+
 use App\Domain\Dashboard\DTOs\AdminDashboardData;
 use App\Domain\Dashboard\DTOs\WorkQueueItemData;
 use Illuminate\Support\Carbon;
@@ -79,34 +76,49 @@ class AdminDashboardQuery
         }
 
         // Statistiche modulo social
-        $socialApprovedNotScheduled = SocialPost::where('status', SocialPostStatus::ClientApproved)
-            ->whereDoesntHave('activeEditorialSlot')
+        $socialApprovedNotScheduled = \App\Models\MarketingCampaignPost::whereIn('status', [
+                \App\Enums\Social\MarketingCampaignPostStatus::ClientApproved,
+                \App\Enums\Social\MarketingCampaignPostStatus::Approved
+            ])
+            ->whereNull('scheduled_date')
             ->count();
             
-        $socialScheduledThisWeek = EditorialSlot::where('status', EditorialSlotStatus::Scheduled)
-            ->whereBetween('scheduled_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])
+        $socialScheduledThisWeek = \App\Models\MarketingCampaignPost::whereNotNull('scheduled_date')
+            ->whereNotIn('status', [
+                \App\Enums\Social\MarketingCampaignPostStatus::Published, 
+                \App\Enums\Social\MarketingCampaignPostStatus::Cancelled
+            ])
+            ->whereBetween('scheduled_date', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])
             ->count();
             
-        $socialPublishToday = EditorialSlot::where('status', EditorialSlotStatus::Scheduled)
-            ->whereDate('scheduled_at', Carbon::today())
+        $socialPublishToday = \App\Models\MarketingCampaignPost::whereNotNull('scheduled_date')
+            ->whereNotIn('status', [
+                \App\Enums\Social\MarketingCampaignPostStatus::Published, 
+                \App\Enums\Social\MarketingCampaignPostStatus::Cancelled
+            ])
+            ->whereDate('scheduled_date', Carbon::today())
             ->count();
 
         // Segnala post non pubblicati nei tempi previsti
-        $pastDueSlots = EditorialSlot::with('post.project')
-            ->where('status', EditorialSlotStatus::Scheduled)
-            ->where('scheduled_at', '<', Carbon::now())
+        $pastDuePosts = \App\Models\MarketingCampaignPost::with('campaign')
+            ->whereNotNull('scheduled_date')
+            ->whereNotIn('status', [
+                \App\Enums\Social\MarketingCampaignPostStatus::Published, 
+                \App\Enums\Social\MarketingCampaignPostStatus::Cancelled
+            ])
+            ->where('scheduled_date', '<', Carbon::today())
             ->get();
             
-        foreach ($pastDueSlots as $slot) {
+        foreach ($pastDuePosts as $post) {
             $attentionList[] = new WorkQueueItemData(
                 bucket: 'issue',
-                shoot_id: $slot->social_post_id,
-                shoot_code: 'SOC-' . $slot->social_post_id,
-                shoot_name: $slot->post->title ?? 'Post',
-                project_name: $slot->post->project->name ?? '',
+                shoot_id: $post->id,
+                shoot_code: 'MKT-' . $post->id,
+                shoot_name: $post->title ?? 'Post Marketing',
+                project_name: $post->campaign->name ?? '',
                 status_label: 'Pubblicazione Scaduta',
-                action_label: 'Vedi Post',
-                action_url: '#',
+                action_label: 'Vedi Campagna',
+                action_url: route('marketing-campaigns.show', $post->marketing_campaign_id),
                 priority: 1,
                 reason_code: 'social_past_due'
             );

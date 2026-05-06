@@ -42,4 +42,19 @@ class MarketingCampaign extends Model
     {
         return $this->hasMany(MarketingCampaignExtra::class);
     }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->periods()
+            ->whereIn('status', [
+                \App\Enums\Social\MarketingCampaignPeriodStatus::Active->value,
+                \App\Enums\Social\MarketingCampaignPeriodStatus::Planned->value,
+            ])
+            ->exists();
+    }
 }

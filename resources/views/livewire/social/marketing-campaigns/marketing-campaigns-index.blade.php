@@ -6,7 +6,7 @@
         </x-slot>
     </x-page-header>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:flex-end">
+    <div class="filter-bar justify-end">
         <input type="text" class="form-in" placeholder="Cerca progetto..." wire:model.live.debounce.300ms="search" style="padding:5px 10px;font-size:11px;width:250px">
         <select class="form-sel" wire:model.live="clientId" style="padding:5px 10px;font-size:11px;width:160px">
           <option value="">Tutti i Clienti</option>

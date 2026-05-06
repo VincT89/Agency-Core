@@ -118,10 +118,7 @@ class Client extends Model
         return $this->socialAccounts->firstWhere('platform', $platform);
     }
 
-    public function marketingProjects(): HasMany
-    {
-        return $this->hasMany(MarketingProject::class);
-    }
+
 
     public function marketingCampaigns(): HasMany
     {

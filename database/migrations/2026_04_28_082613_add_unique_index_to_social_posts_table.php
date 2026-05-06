@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
-use App\Models\SocialPost;
+
 
 return new class extends Migration
 {
@@ -14,7 +14,8 @@ return new class extends Migration
     public function up(): void
     {
         // 1. Verifica duplicati
-        $duplicates = SocialPost::whereNotNull('editorial_plan_slot_id')
+        $duplicates = DB::table('social_posts')
+            ->whereNotNull('editorial_plan_slot_id')
             ->select('editorial_plan_slot_id')
             ->groupBy('editorial_plan_slot_id')
             ->havingRaw('COUNT(*) > 1')

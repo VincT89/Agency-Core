@@ -47,12 +47,12 @@
 
             <div class="form-row">
                 <x-form-group label="Data di emissione" name="issue_date" required>
-                    <input type="date" name="issue_date" class="form-in @error('issue_date') is-invalid @enderror"
+                    <input type="date" id="issue_date" name="issue_date" class="form-in @error('issue_date') is-invalid @enderror"
                            value="{{ old('issue_date', now()->toDateString()) }}">
                 </x-form-group>
                 <x-form-group label="Data di scadenza" name="due_date">
-                    <input type="date" name="due_date" class="form-in @error('due_date') is-invalid @enderror"
-                           value="{{ old('due_date') }}">
+                    <input type="date" id="due_date" name="due_date" class="form-in @error('due_date') is-invalid @enderror"
+                           value="{{ old('due_date', now()->addDays(30)->toDateString()) }}">
                 </x-form-group>
             </div>
 
@@ -84,6 +84,19 @@
     document.addEventListener('DOMContentLoaded', () => {
         if(typeof initProjectSelect !== 'undefined') {
             initProjectSelect('client_sel', 'project_sel', null);
+        }
+
+        const issueDateInput = document.getElementById('issue_date');
+        const dueDateInput = document.getElementById('due_date');
+
+        if (issueDateInput && dueDateInput) {
+            issueDateInput.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    const issueDate = new Date(e.target.value);
+                    issueDate.setDate(issueDate.getDate() + 30);
+                    dueDateInput.value = issueDate.toISOString().split('T')[0];
+                }
+            });
         }
     });
     </script>

@@ -11,6 +11,9 @@ use App\Models\Task;
 use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\MarketingCampaign;
+use App\Models\MarketingCampaignPeriod;
+use App\Models\MarketingCampaignPost;
 use App\Enums\UserRole;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -561,5 +564,42 @@ class DemoDataSeeder extends Seeder
             'reference' => 'TRN-554422',
             'notes' => 'Acconto primo step operativo.',
         ]);
+
+        // ── 10. Create Marketing Campaigns ─────────────────────────────────────
+        $campaign1 = MarketingCampaign::create([
+            'client_id' => $betaClient->id,
+            'name' => 'Campagna Estiva 2026',
+            'status' => 'active',
+            'description' => 'Lancio nuovi servizi estivi sui social.',
+            'created_by' => $marketing->id,
+            'starts_at' => now()->startOfMonth()->toDateString(),
+            'ends_at' => now()->addMonths(3)->endOfMonth()->toDateString(),
+            'monthly_fee' => 1500.00,
+        ]);
+
+        $period1 = MarketingCampaignPeriod::create([
+            'marketing_campaign_id' => $campaign1->id,
+            'from_date' => now()->startOfMonth()->toDateString(),
+            'to_date' => now()->endOfMonth()->toDateString(),
+            'amount' => 1500.00,
+            'status' => 'active',
+        ]);
+
+        MarketingCampaignPost::create([
+            'marketing_campaign_id' => $campaign1->id,
+            'title' => 'Post Lancio Estivo',
+            'description' => 'Siamo pronti per l\'estate con i nostri nuovi servizi! Scopri le promozioni in corso.',
+            'status' => 'approved',
+            'scheduled_date' => now()->addDays(2)->toDateString(),
+            'scheduled_time' => '10:00:00',
+        ]);
+
+        MarketingCampaignPost::create([
+            'marketing_campaign_id' => $campaign1->id,
+            'title' => 'Post B2B LinkedIn',
+            'description' => 'Come ottimizzare le vendite nel periodo estivo: ecco la nostra guida B2B.',
+            'status' => 'draft',
+        ]);
+
     }
 }

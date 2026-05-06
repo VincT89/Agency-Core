@@ -151,3 +151,10 @@
 }
 .pagination .page-link:hover { background: var(--bg3); color: var(--text); }
 .pagination .page-item.active .page-link { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Tasks Detail */
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}

@@ -87,11 +87,11 @@ class AddMarketingCampaignPostVersionFromN8nAction
             $post->status = MarketingCampaignPostStatus::Generated;
             
             // Clean up temp logo path if it was saved internally
-            $n8nPayload = $post->n8n_payload ?? [];
-            if (!empty($n8nPayload['_internal_temp_logo_path'])) {
-                Storage::disk('public')->delete($n8nPayload['_internal_temp_logo_path']);
-                unset($n8nPayload['_internal_temp_logo_path']);
-                $post->n8n_payload = $n8nPayload;
+            $n8nInternalContext = $post->n8n_internal_context ?? [];
+            if (!empty($n8nInternalContext['_internal_temp_logo_path'])) {
+                Storage::disk('public')->delete($n8nInternalContext['_internal_temp_logo_path']);
+                unset($n8nInternalContext['_internal_temp_logo_path']);
+                $post->n8n_internal_context = $n8nInternalContext;
             }
 
             $post->save();

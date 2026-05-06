@@ -40,8 +40,7 @@
                 @endphp
                 <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;
                                border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s"
-                       onmouseover="this.style.background='var(--bg2)'"
-                       onmouseout="this.style.background=''">
+                       class="hover-bg">
                     <input type="checkbox" name="members[]" value="{{ $user->id }}"
                            id="member_{{ $user->id }}"
                            {{ $isMember ? 'checked' : '' }}

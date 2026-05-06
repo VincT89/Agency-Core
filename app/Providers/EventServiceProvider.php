@@ -26,17 +26,5 @@ class EventServiceProvider extends ServiceProvider
             \App\Domain\Finance\Events\PaymentRecorded::class,
             \App\Domain\Finance\Listeners\SendPaymentRecordedNotification::class
         );
-        Event::listen(
-            \App\Events\SocialPostApprovedByClient::class,
-            \App\Listeners\GenerateTaskForApprovedSocialPost::class
-        );
-        Event::listen(
-            \App\Events\EditorialPlanApprovedByClient::class,
-            \App\Listeners\GenerateTasksForApprovedEditorialPlan::class
-        );
-        Event::listen(
-            \App\Events\EditorialSlotPublished::class,
-            \App\Listeners\CloseTaskWhenSocialPostPublished::class
-        );
     }
 }

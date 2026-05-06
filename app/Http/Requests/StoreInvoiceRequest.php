@@ -21,7 +21,8 @@ class StoreInvoiceRequest extends FormRequest
     {
         return [
             'client_id' => ['required', 'exists:clients,id'],
-            'project_id' => ['required', 'exists:projects,id'],
+            'project_id' => ['nullable', 'exists:projects,id', 'prohibits:marketing_campaign_id', 'required_without:marketing_campaign_id'],
+            'marketing_campaign_id' => ['nullable', 'exists:marketing_campaigns,id', 'prohibits:project_id', 'required_without:project_id'],
 
             'number' => ['required', 'string', 'max:255', 'unique:invoices,number'],
             'issue_date' => ['required', 'date'],
@@ -43,6 +44,20 @@ class StoreInvoiceRequest extends FormRequest
         return [
             function (Validator $validator) {
                 $this->withProjectOwnershipCheck($validator);
+
+                if ($this->input('marketing_campaign_id') && $this->input('client_id')) {
+                    $exists = \App\Models\MarketingCampaign::query()
+                        ->where('id', $this->input('marketing_campaign_id'))
+                        ->where('client_id', $this->input('client_id'))
+                        ->exists();
+
+                    if (! $exists) {
+                        $validator->errors()->add(
+                            'marketing_campaign_id',
+                            'La campagna selezionata non appartiene al cliente indicato.'
+                        );
+                    }
+                }
 
                 $subtotal = (float) $this->input('subtotal', 0);
                 $taxAmount = (float) $this->input('tax_amount', 0);

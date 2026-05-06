@@ -1,0 +1,63 @@
+/* _utilities.css — classi monouso per sostituire stili inline ripetuti */
+
+/* Layout */
+.u-flex            { display: flex; }
+.u-flex-col        { display: flex; flex-direction: column; }
+.u-flex-center     { display: flex; align-items: center; }
+.u-flex-between    { display: flex; align-items: center; justify-content: space-between; }
+.u-flex-end        { display: flex; justify-content: flex-end; }
+.u-flex-1          { flex: 1; }
+.u-gap-xs          { gap: 6px; }
+.u-gap-sm          { gap: 8px; }
+.u-gap-md          { gap: 12px; }
+.u-gap-lg          { gap: 16px; }
+.u-gap-xl          { gap: 24px; }
+
+/* Spacing */
+.u-mt-sm           { margin-top: 8px; }
+.u-mt-md           { margin-top: 16px; }
+.u-mt-lg           { margin-top: 24px; }
+.u-mb-sm           { margin-bottom: 8px; }
+.u-mb-md           { margin-bottom: 16px; }
+.u-mb-lg           { margin-bottom: 20px; }
+.u-p-md            { padding: 16px; }
+.u-p-lg            { padding: 24px; }
+
+/* Typography */
+.u-text-mono       { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+.u-text-meta       { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.u-text-label      { font-size: 12px; color: var(--text3); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+.u-text-accent-link { color: var(--accent); text-decoration: none; }
+.u-text-red        { color: var(--red); }
+.u-text-muted      { font-size: 13px; color: var(--text3); }
+.u-text-strong     { font-weight: 500; color: var(--text1); }
+.u-text-italic     { font-style: italic; }
+
+/* Misc */
+.u-cursor-pointer  { cursor: pointer; }
+.u-truncate        { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.u-w-full          { width: 100%; box-sizing: border-box; }
+.u-text-right      { text-align: right; }
+.u-text-center     { text-align: center; }
+.u-overflow-hidden { overflow: hidden; }
+
+/* Icone Lucide */
+.u-icon-xs         { width: 12px; height: 12px; display: inline-block; vertical-align: text-bottom; }
+.u-icon-sm         { width: 14px; height: 14px; display: inline-block; vertical-align: text-bottom; margin-right: 4px; }
+.u-icon-md         { width: 16px; height: 16px; display: inline-block; vertical-align: middle; }
+.u-icon-lg         { width: 20px; height: 20px; display: inline-block; vertical-align: middle; }
+
+/* Separatori con padding */
+.u-section-sep     { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+.u-empty-state     { text-align: center; color: var(--text3); padding: 32px; }
+.u-empty-state-sm  { text-align: center; color: var(--text3); padding: 16px; }
+
+/* Hover Utilities */
+.hover-bg:hover        { background: var(--bg2); }
+.hover-bg-alt:hover    { background: var(--bg3); }
+.hover-text:hover      { color: var(--text); }
+.hover-danger:hover    { background: rgba(245, 75, 75, 0.08); color: var(--red); }
+
+
+.u-text-orange { color: var(--orange); }
+.u-accent-blue { accent-color: var(--blue); }

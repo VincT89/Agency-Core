@@ -19,6 +19,7 @@ class MarketingCampaignPost extends Model
         'ai_analysis_enabled' => 'boolean',
         'submitted_to_n8n_at' => 'datetime',
         'n8n_payload' => 'array',
+        'n8n_internal_context' => 'array',
         'status' => MarketingCampaignPostStatus::class,
         'content_type' => MarketingCampaignPostType::class,
         'generated_at' => 'datetime',

@@ -80,7 +80,7 @@
                         <div style="background:var(--bg3); border-radius:8px; padding:16px; position:relative; display:flex; flex-direction:column; gap:12px;">
                             
                             @if(count($proposedSlots) > 1)
-                            <button wire:click="removeSlot({{ $index }})" style="position:absolute; top:12px; right:12px; background:none; border:none; color:var(--text3); cursor:pointer; transition:color 0.2s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
+                            <button wire:click="removeSlot({{ $index }})" style="position:absolute; top:12px; right:12px; background:none; border:none; cursor:pointer;" class="hover-danger">
                                 <i data-lucide="x" style="width:16px; height:16px;"></i>
                             </button>
                             @endif

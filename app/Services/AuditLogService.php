@@ -128,7 +128,6 @@ class AuditLogService
         if ($model instanceof \App\Models\Task) return "il task \"{$model->title}\"";
         if ($model instanceof \App\Models\CalendarEvent) return "l'evento \"{$model->title}\"";
         if ($model instanceof \App\Models\User) return "l'utente {$model->name}";
-        if ($model instanceof \App\Models\SocialPost) return "il post social \"{$model->title}\"";
         return "l'entità";
     }
 

@@ -7,10 +7,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{{ $title ?? 'Sodano Consulting' }}</title>
   <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap"
-    rel="stylesheet">
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
   @vite(['resources/css/app.css', 'resources/js/app.js'])
   @livewireStyles
 </head>
@@ -22,7 +19,7 @@
     style="position:fixed;inset:0;z-index:0;pointer-events:none;display:block"></canvas>
 
   {{-- TOAST (flash messages) --}}
-  <div id="toast"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <div class="shell expanded" id="shell">
 
@@ -39,7 +36,7 @@
           @isset($breadcrumb)
             @foreach($breadcrumb as $label => $url)
               @if(!$loop->last)
-                <a href="{{ $url }}" style="color:var(--text2);text-decoration:none">{{ $label }}</a>
+                <a href="{{ $url }}" >{{ $label }}</a>
                 <span class="sep">/</span>
               @else
                 <span class="cur">{{ $label }}</span>
@@ -52,9 +49,8 @@
       </div>
       <div class="topbar-right">
         <span class="tb-date">{{ strtoupper(now()->locale('it')->isoFormat('ddd D MMM YYYY')) }}</span>
-        <div style="position:relative" id="notif-wrap">
-          <button class="tb-btn" id="notif-btn" style="position:relative"
-            onclick="event.stopPropagation(); const m = document.getElementById('notif-menu'); m.style.display = m.style.display === 'none' ? 'block' : 'none';">
+        <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+          <button class="tb-btn" @click="open = !open">
             @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
               <div class="badge-notif">{{ $unreadNotificationsCount }}</div>
             @endif
@@ -63,46 +59,26 @@
             </svg>
           </button>
 
-          <div id="notif-menu" style="
-              display:none; position:absolute; top:38px; right:0;
-              background:var(--bg2); border:1px solid var(--line2);
-              border-radius:var(--r); min-width:280px; z-index:300;
-              box-shadow:0 4px 16px rgba(0,0,0,.4);
-          ">
-            <div
-              style="padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:12px;font-weight:600;color:var(--text)">Notifiche</div>
+          <div class="dropdown-menu dropdown-menu-wide" x-show="open" x-transition style="display:none;">
+            <div class="dropdown-header">
+              <div class="dropdown-header-title">Notifiche</div>
               @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
-                <div style="display:flex;align-items:center;gap:12px">
-                  <form method="POST" action="{{ route('notifications.readAll') }}" style="margin:0"
-                    onsubmit="event.stopPropagation();">
+                <div class="u-flex-center u-gap-md">
+                  <form method="POST" action="{{ route('notifications.readAll') }}"  @click.stop>
                     @csrf
-                    <button type="submit"
-                      style="background:transparent;border:none;cursor:pointer;color:var(--text2);font-size:10px;text-decoration:underline;white-space:nowrap"
-                      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">
-                      Segna tutte lette
-                    </button>
+                    <button type="submit" class="notif-mark-all">Segna tutte lette</button>
                   </form>
-                  <span
-                    style="font-size:10px;background:var(--red);color:#fff;padding:2px 6px;border-radius:10px;white-space:nowrap">{{ $unreadNotificationsCount }}
-                    nuove</span>
+                  <span class="notif-count-badge">{{ $unreadNotificationsCount }} nuove</span>
                 </div>
               @endif
             </div>
-            <div style="max-height:300px;overflow-y:auto">
+            <div class="dropdown-body">
               @forelse($latestNotifications ?? [] as $notification)
                 @php /** @var \Illuminate\Notifications\DatabaseNotification $notification */ @endphp
-                <div
-                  style="position:relative;border-bottom:1px solid var(--line);background: {{ $notification->read_at ? 'transparent' : 'var(--bg3)' }};"
-                  onmouseover="this.style.background='var(--bg)'"
-                  onmouseout="this.style.background='{{ $notification->read_at ? 'transparent' : 'var(--bg3)' }}'">
-                  <form method="POST" action="{{ route('notifications.read', $notification->id) }}" style="margin:0">
+                <div class="notif-item {{ $notification->read_at ? '' : 'unread' }}">
+                  <form method="POST" action="{{ route('notifications.read', $notification->id) }}" >
                     @csrf
-                    <button type="submit" style="
-                                    width:100%;text-align:left;padding:12px 14px; padding-right: 40px;
-                                    background: transparent;
-                                    border:none; cursor:pointer; display:block;
-                                ">
+                    <button type="submit" class="notif-item-btn">
                       @php
                         $iconName = 'bell';
                         $nType = $notification->data['type'] ?? '';
@@ -113,76 +89,50 @@
                         elseif (in_array($nType, ['invoice_overdue', 'payment_recorded']))
                           $iconName = 'credit-card';
                       @endphp
-                      <div
-                        style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="{{ $iconName }}" width="14" height="14" stroke-width="2"
-                          style="color:var(--text2)"></i>
+                      <div class="notif-item-title">
+                        <i data-lucide="{{ $iconName }}" class="u-icon-sm notif-item-icon"></i>
                         <span>{{ $notification->data['title'] ?? 'Nuova Notifica' }}</span>
                       </div>
-                      <div style="font-size:11px;color:var(--text2);line-height:1.4">
-                        {{ $notification->data['message'] ?? '' }}</div>
-                      <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)">
-                        {{ $notification->created_at->diffForHumans() }}</div>
+                      <div class="notif-item-body">{{ $notification->data['message'] ?? '' }}</div>
+                      <div class="notif-item-time">{{ $notification->created_at->diffForHumans() }}</div>
                     </button>
                   </form>
-                  {{-- Clear Button --}}
                   <form method="POST" action="{{ route('notifications.destroy', $notification->id) }}"
-                    style="position:absolute;top:10px;right:10px;margin:0" onsubmit="event.stopPropagation();">
+                    class="notif-item-delete-form" @click.stop>
                     @csrf
                     @method('DELETE')
-                    <button type="submit"
-                      style="background:transparent;border:none;cursor:pointer;color:var(--text3);padding:4px;display:flex;align-items:center;justify-content:center"
-                      onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'"
-                      title="Elimina notifica">
+                    <button type="submit" class="notif-item-delete" title="Elimina notifica">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                          d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
                       </svg>
                     </button>
                   </form>
                 </div>
               @empty
-                <div
-                  style="padding:40px 20px;text-align:center;color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:12px">
-                  <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.5"></i>
-                  <div style="font-size:13px;font-weight:500;color:var(--text2)">Tutto tranquillo!</div>
-                  <div style="font-size:11px">Non hai nuove notifiche da leggere.</div>
+                <div class="notif-empty">
+                  <i data-lucide="inbox" class="u-icon-lg notif-empty-icon"></i>
+                  <div class="u-text-strong">Tutto tranquillo!</div>
+                  <div class="u-text-mono">Non hai nuove notifiche da leggere.</div>
                 </div>
               @endforelse
             </div>
           </div>
         </div>
-        <div style="position:relative" id="avatar-wrap">
-          <div class="avatar-btn" title="{{ auth()->user()->name }}"
-            onclick="document.getElementById('user-menu').classList.toggle('open')" style="cursor:pointer">
+
+        <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+          <div class="avatar-btn" title="{{ auth()->user()->name }}" @click="open = !open" >
             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(strstr(auth()->user()->name, ' '), 1, 1)) }}
           </div>
-          <div id="user-menu" style="
-              display:none; position:absolute; top:38px; right:0;
-              background:var(--bg2); border:1px solid var(--line2);
-              border-radius:var(--r); min-width:160px; z-index:300;
-              box-shadow:0 4px 16px rgba(0,0,0,.4);
-          ">
-            <div style="padding:10px 14px;border-bottom:1px solid var(--line)">
-              <div style="font-size:12px;font-weight:600;color:var(--text)">{{ auth()->user()->name }}</div>
-              <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">{{ auth()->user()->role->value }}
-              </div>
+          <div class="dropdown-menu" x-show="open" x-transition style="display:none;">
+            <div class="dropdown-header stacked">
+              <div class="dropdown-header-title">{{ auth()->user()->name }}</div>
+              <div class="u-text-meta">{{ auth()->user()->role->value }}</div>
             </div>
-            <a href="{{ route('profile.edit') }}"
-              style="display:block;padding:9px 14px;font-size:12px;color:var(--text2);text-decoration:none;transition:background .12s"
-              onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-              Profilo
-            </a>
-            <form method="POST" action="{{ route('logout') }}">
+            <a href="{{ route('profile.edit') }}" class="dropdown-item">Profilo</a>
+            <div class="dropdown-divider"></div>
+            <form method="POST" action="{{ route('logout') }}" >
               @csrf
-              <button type="submit" style="
-                      width:100%;text-align:left;padding:9px 14px;
-                      font-size:12px;font-family:var(--sans);
-                      color:var(--red);background:transparent;
-                      border:none;cursor:pointer;transition:background .12s;
-                  " onmouseover="this.style.background='rgba(245,75,75,.08)'" onmouseout="this.style.background=''">
-                Esci
-              </button>
+              <button type="submit" class="dropdown-item danger">Esci</button>
             </form>
           </div>
         </div>
@@ -198,26 +148,17 @@
         </svg>
       </button>
 
-      <style>
-        .shell:not(.expanded) .sidebar-btn-text { display: none; }
-        .shell:not(.expanded) .sidebar-btn { 
-            padding: 8px !important; 
-            margin: 4px auto 8px auto !important; 
-            width: 40px !important; 
-            border-radius: 8px !important; 
-            justify-content: center; 
-        }
-      </style>
+
 
       {{-- Azioni Rapide --}}
       @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
-      <div style="padding: 16px 16px 8px 16px; display: flex; flex-direction: column; gap: 8px;">
-          <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-p sidebar-btn" style="font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px 0; border-radius: 6px;">
-              <i data-lucide="plus" style="width: 14px; height: 14px; flex-shrink: 0;"></i> <span class="sidebar-btn-text">Nuovo task</span>
+      <div class="sidebar-action-group">
+          <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+              <i data-lucide="plus" class="u-icon-sm"></i> <span class="sidebar-btn-text">Nuovo task</span>
           </a>
           @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-          <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-p sidebar-btn" style="font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px 0; border-radius: 6px;">
-              <i data-lucide="plus" style="width: 14px; height: 14px; flex-shrink: 0;"></i> <span class="sidebar-btn-text">Nuovo ticket</span>
+          <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+              <i data-lucide="plus" class="u-icon-sm"></i> <span class="sidebar-btn-text">Nuovo ticket</span>
           </a>
           @endif
       </div>
@@ -266,9 +207,9 @@
 
       {{-- 3. Social Media Management --}}
       @can('viewAny', \App\Models\Shooting\Shoot::class)
-        <div style="padding: 16px 16px 0 16px; display: flex; flex-direction: column; gap: 8px;">
-            <a href="{{ route('marketing-campaigns.create') }}" wire:navigate class="btn btn-p sidebar-btn" style="font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px 0; border-radius: 6px;">
-                <i data-lucide="plus" style="width: 14px; height: 14px; flex-shrink: 0;"></i> <span class="sidebar-btn-text">Nuovo Progetto Marketing</span>
+        <div class="sidebar-action-group mt">
+            <a href="{{ route('marketing-campaigns.create') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+                <i data-lucide="plus" class="u-icon-sm"></i> <span class="sidebar-btn-text">Nuovo Progetto Marketing</span>
             </a>
         </div>
         @if(!auth()->user()->isPhotographer() && !auth()->user()->canManageSystem())
@@ -280,7 +221,7 @@
             <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
               :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
 
-            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Editoriale"
+            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
               :active="request()->routeIs('social.calendar')" />
           </div>
         @endif
@@ -291,7 +232,7 @@
             <div class="nav-group-label">Social Media Management</div>
             <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
               :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
-            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Editoriale"
+            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
               :active="request()->routeIs('social.calendar')" />
           </div>
         @endif
@@ -356,10 +297,10 @@
       <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
         :active="request()->routeIs('profile.*')" />
 
-      <form method="POST" action="{{ route('logout') }}" style="width: 100%;">
+      <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
         @csrf
         <a href="#" onclick="event.preventDefault(); this.closest('form').submit();" class="nav-item"
-          style="text-decoration:none; color: var(--red);">
+          class="logout">
           <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
           <span class="nav-label">Logout</span>
           <div class="nav-tooltip">Logout</div>
@@ -385,93 +326,13 @@
   </div>
 
   <script>
-    window.sidebarOpen = window.sidebarOpen ?? true;
-    window.toggleSidebar = function () {
-      window.sidebarOpen = !window.sidebarOpen;
-      document.getElementById('shell').classList.toggle('expanded', window.sidebarOpen);
-      const icon = document.getElementById('sidebar-toggle-icon');
-      if (icon) {
-        icon.innerHTML = window.sidebarOpen
-          ? '<path d="m15 18-6-6 6-6"/>'
-          : '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
-      }
-    };
-
     // Flash → toast automatico
     @if(session('success'))
-      document.addEventListener('DOMContentLoaded', () => toast('{{ session('success') }} ✓'));
+      document.addEventListener('DOMContentLoaded', () => toast("{{ session('success') }}", 'success'));
     @endif
-
-    window.toast = function(msg) {
-      const t = document.getElementById('toast');
-      if (t) {
-        t.textContent = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 2600);
-      }
-    };
-
-    // Setup event listeners solo una volta usando un flag sul document
-    if (!window.appListenersAdded) {
-      window.appListenersAdded = true;
-
-      // Chiudi modal con Escape
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
-      });
-
-      document.addEventListener('click', e => {
-        // Chiudi modali cliccando fuori
-        document.querySelectorAll('.overlay.open').forEach(o => {
-          if (e.target === o) o.classList.remove('open');
-        });
-
-        // Chiudi user menu e notif menu cliccando fuori
-        const wrap = document.getElementById('avatar-wrap');
-        const menu = document.getElementById('user-menu');
-        if (wrap && !wrap.contains(e.target)) {
-          if (menu) {
-            menu.style.display = 'none';
-            menu.classList.remove('open');
-          }
-        }
-
-        const notifWrap = document.getElementById('notif-wrap');
-        const notifMenu = document.getElementById('notif-menu');
-        if (notifWrap && !notifWrap.contains(e.target)) {
-          if (notifMenu) {
-            notifMenu.style.display = 'none';
-          }
-        }
-      });
-
-      // Toggle open/close avatar menu delegato
-      document.addEventListener('click', function (e) {
-        if (e.target.closest('.avatar-btn')) {
-          const menu = document.getElementById('user-menu');
-          if (menu) {
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-          }
-        }
-
-        if (e.target.closest('#user-menu') || e.target.closest('#notif-menu')) {
-          e.stopPropagation();
-        }
-      });
-    }
-
-    document.addEventListener('livewire:navigated', () => {
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    });
-
-    // Fallback
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof window.Livewire === 'undefined' && typeof lucide !== 'undefined') {
-        lucide.createIcons();
-      }
-    });
-
-
+    @if(session('error'))
+      document.addEventListener('DOMContentLoaded', () => toast("{{ session('error') }}", 'error'));
+    @endif
   </script>
 
   @stack('scripts')

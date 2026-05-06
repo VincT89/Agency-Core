@@ -19,33 +19,58 @@ class SubmitMarketingCampaignPostToN8nAction
         $client = $campaign->client;
 
         // Sicurezza: l'action decide logo e activity
-        $includeLogo = $runtimeClientData['include_logo'] ?? false;
+        $includeLogo = $runtimeClientData['include_client_logo'] ?? false;
         $logoUrl = null;
+        $tempPathToDelete = null;
+        $savedToClientLogo = false;
 
         if ($includeLogo) {
             if ($client->logo_path) {
                 $logoUrl = $client->logo_url;
-            } elseif (!empty($runtimeClientData['runtime_logo_url'])) {
-                $logoUrl = $runtimeClientData['runtime_logo_url'];
+            } elseif (!empty($runtimeClientData['runtime_logo'])) {
+                $runtimeLogoFile = $runtimeClientData['runtime_logo'];
+                
+                if ($runtimeLogoFile instanceof \Illuminate\Http\UploadedFile) {
+                    $filename = 'temp_logo_' . time() . '.' . $runtimeLogoFile->getClientOriginalExtension();
+                    
+                    if (!empty($runtimeClientData['save_runtime_logo_to_client'])) {
+                        $runtimeLogoFile->storeAs('clients/logos', $filename, 'public');
+                        $client->update(['logo_path' => 'clients/logos/' . $filename]);
+                        $logoUrl = $client->logo_url;
+                        $savedToClientLogo = true;
+                    } else {
+                        $path = $runtimeLogoFile->storeAs('clients/logos/temp', $filename, 'public');
+                        $tempPathToDelete = $path;
+                        $logoUrl = route('media.public', ['path' => $path]);
+                    }
+                } elseif (is_string($runtimeLogoFile)) {
+                    $logoUrl = $runtimeLogoFile;
+                }
             } else {
                 $includeLogo = false; // fallback automatico
             }
         }
 
-        $includeHeader = $runtimeClientData['include_header'] ?? false;
+        $includeHeader = $runtimeClientData['include_client_header'] ?? false;
         $activityDescription = null;
+        $savedToClientActivity = false;
 
         if ($includeHeader) {
             if ($client->activity_description) {
                 $activityDescription = $client->activity_description;
             } elseif (!empty($runtimeClientData['runtime_activity_description'])) {
                 $activityDescription = $runtimeClientData['runtime_activity_description'];
+                
+                if (!empty($runtimeClientData['save_runtime_activity_to_client'])) {
+                    $client->update(['activity_description' => $activityDescription]);
+                    $savedToClientActivity = true;
+                }
             } else {
                 $includeHeader = false;
             }
         }
 
-        // Payload N8n pulito: niente flag interni
+        // Payload N8n pulito: solo i dati finali che il tutor deve effettivamente usare
         $clientPayload = [
             'id' => $client->id,
             'name' => $client->name,
@@ -84,18 +109,22 @@ class SubmitMarketingCampaignPostToN8nAction
             'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
         ];
 
-        $tempPathToDelete = $runtimeClientData['tempPathToDelete'] ?? null;
+        $n8nInternalContext = [
+            'include_client_logo' => $includeLogo,
+            'include_client_header' => $includeHeader,
+            'save_runtime_logo_to_client' => $savedToClientLogo,
+            'save_runtime_activity_to_client' => $savedToClientActivity,
+            '_internal_temp_logo_path' => $tempPathToDelete,
+        ];
 
-        // Salva stato e payload
+        // Salva stato, payload pulito e contesto interno
         $post->update([
             'status' => \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value,
-            'n8n_payload' => array_merge($payload, ['_internal_temp_logo_path' => $tempPathToDelete]),
+            'n8n_payload' => $payload,
+            'n8n_internal_context' => $n8nInternalContext,
         ]);
 
-        $tempPathToDelete = $runtimeClientData['tempPathToDelete'] ?? null;
-        $savedToClient = $runtimeClientData['save_runtime_logo_to_client'] ?? false;
-
-        // Dispatch del Job con eventuale path temporaneo da cancellare post invio
-        SendMarketingCampaignPostToN8nJob::dispatch($post, $payload, $tempPathToDelete, $savedToClient);
+        // Dispatch del Job con eventuale path temporaneo da cancellare post invio (in caso di fail definitivo)
+        SendMarketingCampaignPostToN8nJob::dispatch($post, $payload, $tempPathToDelete, $savedToClientLogo);
     }
 }

@@ -1,0 +1,84 @@
+/* Override FullCalendar per dark theme */
+.fc {
+    --fc-border-color: var(--line);
+    --fc-button-bg-color: var(--bg2);
+    --fc-button-border-color: var(--line2);
+    --fc-button-hover-bg-color: var(--bg3);
+    --fc-button-hover-border-color: var(--line3);
+    --fc-button-active-bg-color: var(--accent);
+    --fc-button-active-border-color: var(--accent);
+    --fc-button-text-color: var(--text2);
+    --fc-today-bg-color: rgba(200, 16, 46, 0.06);
+    --fc-page-bg-color: transparent;
+    --fc-neutral-bg-color: var(--bg1);
+    --fc-list-event-hover-bg-color: var(--bg2);
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: var(--line);
+}
+
+.fc-col-header-cell {
+    background: var(--bg1);
+}
+
+.fc-col-header-cell-cushion {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    text-decoration: none;
+}
+
+.fc-daygrid-day-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+}
+
+.fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.fc-button {
+    font-family: var(--sans) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.03em !important;
+    border-radius: var(--r) !important;
+    padding: 5px 12px !important;
+}
+
+.fc-button-primary:not(:disabled).fc-button-active,
+.fc-button-primary:not(:disabled):active {
+    background-color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
+}
+
+.fc-event {
+    font-family: var(--sans);
+    font-size: 11px;
+    border-radius: 3px !important;
+    padding: 1px 4px !important;
+    cursor: pointer;
+}
+
+.fc-toolbar-title {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 20px !important;
+    color: var(--text);
+}
+
+.fc-list-event:hover td {
+    background: var(--bg2) !important;
+}
+
+.fc-list-event-title a {
+    color: var(--text) !important;
+    text-decoration: none;
+}

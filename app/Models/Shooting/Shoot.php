@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\AuditLog;
-use App\Models\MarketingProject;
+
 use App\Enums\Shooting\ShootStatus;
 
 class Shoot extends Model
@@ -22,7 +22,6 @@ class Shoot extends Model
 
     protected $fillable = [
         'project_id',
-        'marketing_project_id',
         'photographer_id',
         'created_by',
         'title',
@@ -51,11 +50,6 @@ class Shoot extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
-    }
-
-    public function marketingProject(): BelongsTo
-    {
-        return $this->belongsTo(MarketingProject::class, 'marketing_project_id');
     }
 
     public function photographer(): BelongsTo

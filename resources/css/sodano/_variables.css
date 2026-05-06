@@ -17,6 +17,7 @@
   --text1: #1a1a2e;
   --text2: #6b7280;
   --text3: #9ca3af;
+  --text-inv: #ffffff;
 
   /* Brand / Accents */
   --accent: #c8102e;
@@ -29,6 +30,7 @@
   --red: #f54b4b;
   --green: #3ecf8e;
   --purple: #a78bfa;
+  --gray: #9ca3af;
 
   /* Typography */
   --serif: 'Ubuntu', sans-serif;
@@ -46,5 +48,24 @@
   --shadow-sm: 0 2px 6px rgba(10, 20, 40, 0.06), 0 1px 2px rgba(10, 20, 40, 0.04);
   --shadow-md: 0 8px 24px rgba(10, 20, 40, 0.12), 0 3px 8px rgba(10, 20, 40, 0.06);
   --shadow-md-hv: 0 16px 40px rgba(10, 20, 40, 0.16), 0 6px 16px rgba(10, 20, 40, 0.08);
+  --shadow-lg: 0 20px 60px rgba(10, 20, 40, 0.20), 0 8px 20px rgba(10, 20, 40, 0.10);
   --shadow-btn: 0 3px 0 rgba(10, 20, 40, 0.08);
+
+  /* Transitions */
+  --transition: all .15s;
+}
+
+.theme-dark, .lw-modal-hd {
+  --bg: #111115;
+  --bg1: #18181d;
+  --bg2: #1e1e24;
+  --bg3: #26262e;
+  --line: rgba(255, 255, 255, 0.07);
+  --line2: rgba(255, 255, 255, 0.11);
+  --line3: rgba(255, 255, 255, 0.18);
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #f0ede8;
+  --text1: #f0ede8;
+  --text2: #b0afb4;
+  --text3: #6e6d74;
 }

@@ -21,6 +21,7 @@ class Invoice extends Model
     protected $fillable = [
         'client_id',
         'project_id',
+        'marketing_campaign_id',
         'created_by',
         'number',
         'issue_date',
@@ -69,6 +70,16 @@ class Invoice extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function marketingCampaign(): BelongsTo
+    {
+        return $this->belongsTo(MarketingCampaign::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class);
     }
 
     public function creator(): BelongsTo

@@ -10,9 +10,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
     'project_id',
-    'marketing_project_id',
-    'social_post_id',
-    'editorial_plan_slot_id',
     'created_by',
     'assigned_to',
     'title',
@@ -71,21 +68,6 @@ class Task extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
-    }
-
-    public function marketingProject(): BelongsTo
-    {
-        return $this->belongsTo(MarketingProject::class);
-    }
-
-    public function socialPost(): BelongsTo
-    {
-        return $this->belongsTo(SocialPost::class);
-    }
-
-    public function editorialPlanSlot(): BelongsTo
-    {
-        return $this->belongsTo(EditorialPlanSlot::class);
     }
 
     public function creator(): BelongsTo

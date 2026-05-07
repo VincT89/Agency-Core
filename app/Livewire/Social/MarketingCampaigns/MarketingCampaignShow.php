@@ -649,9 +649,8 @@ class MarketingCampaignShow extends Component
 
     public function render()
     {
-        // Ottimizzazione: separo post senza data (Aside) da quelli nel Calendario
-        $postsToSchedule = $this->campaign->posts()
-            ->whereNull('scheduled_date')
+        // Ottimizzazione: tutti i post nella lista
+        $allPosts = $this->campaign->posts()
             ->orderBy('created_at', 'desc')
             ->get();
         
@@ -705,7 +704,7 @@ class MarketingCampaignShow extends Component
         }
 
         return view('livewire.social.marketing-campaigns.marketing-campaign-show', [
-            'posts' => $postsToSchedule, // passo solo quelli senza data all'aside
+            'posts' => $allPosts, // passiamo tutti i post all'aside
             'calendarGrid' => $calendarGrid,
             'monthName' => $firstDayOfMonth->translatedFormat('F Y'),
             'totalPostsCount' => $this->campaign->posts()->count(), // Passiamo il conteggio totale corretto

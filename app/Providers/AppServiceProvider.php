@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
         \Illuminate\Support\Facades\Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');
 

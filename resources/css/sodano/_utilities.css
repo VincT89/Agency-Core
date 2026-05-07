@@ -14,6 +14,7 @@
 .u-gap-xl          { gap: 24px; }
 
 /* Spacing */
+.u-mt-xs           { margin-top: 4px; }
 .u-mt-sm           { margin-top: 8px; }
 .u-mt-md           { margin-top: 16px; }
 .u-mt-lg           { margin-top: 24px; }

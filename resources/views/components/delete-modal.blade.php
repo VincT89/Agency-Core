@@ -1,12 +1,13 @@
 @props([
-    'action', 
+    'action' => null,
+    'wireClick' => null, 
     'title' => 'Conferma Eliminazione', 
     'message' => 'Sei sicuro di voler eliminare questo elemento? Questa azione non può essere annullata.',
     'confirmText' => null,
 ])
 
 <div x-data="{ open: false, confirm: '' }" style="display: inline-block;">
-    <div @click="open = true; confirm = ''">
+    <div @click.stop="open = true; confirm = ''">
         {{ $slot }}
     </div>
 
@@ -36,6 +37,13 @@
             
             <div style="display: flex; justify-content: flex-end; gap: 12px;">
                 <button type="button" @click="open = false" class="btn btn-g" style="padding: 8px 16px;">Annulla</button>
+                @if($wireClick)
+                    <button type="button" wire:click="{{ $wireClick }}" class="btn" 
+                            style="background: var(--red); border-color: var(--red); color: white; padding: 8px 16px; transition: opacity 0.2s;"
+                            @click="open = false">
+                        Sì, elimina
+                    </button>
+                @else
                 <form action="{{ $action }}" method="POST" style="margin: 0;">
                     @csrf
                     @method('DELETE')
@@ -45,6 +53,7 @@
                         Sì, elimina
                     </button>
                 </form>
+                @endif
             </div>
         </div>
     </div>

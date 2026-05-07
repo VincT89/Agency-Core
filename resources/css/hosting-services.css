@@ -1,0 +1,256 @@
+/* 
+ * Stili dedicati per il modulo Hosting e Manutenzioni 
+ * Niente style inline.
+ */
+
+.hosting-password-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hosting-password-value {
+    font-family: var(--mono, monospace);
+    font-size: 0.9em;
+    color: var(--text);
+    background-color: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    user-select: all;
+    min-width: 80px;
+    display: inline-block;
+}
+
+.hosting-password-toggle,
+.hosting-password-copy {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.8em;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.hosting-password-toggle:hover,
+.hosting-password-copy:hover {
+    background-color: var(--line);
+    text-decoration: none;
+}
+
+.hosting-password-copy {
+    color: var(--text3);
+}
+.hosting-password-copy:hover {
+    background-color: var(--bg-card);
+    color: var(--text);
+}
+
+.hosting-interventions-table th {
+    font-size: 0.85em;
+    color: var(--text3);
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+/* Classi utility e layout specifiche per il modulo */
+.hosting-col-full {
+    grid-column: 1 / -1;
+}
+
+.hosting-filters-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.hosting-filters-form {
+    margin-bottom: 1.5rem;
+}
+
+.hosting-search-group {
+    flex: 1;
+}
+
+.hosting-notes-text {
+    color: var(--text);
+    font-family: var(--sans);
+    white-space: pre-wrap;
+    font-size: 13px;
+}
+
+.hosting-intervention-form {
+    background: var(--bg-card);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.hosting-intervention-title {
+    font-weight: 600;
+    font-size: 0.9em;
+    margin-bottom: 0.5rem;
+}
+
+.hosting-desc-truncate {
+    max-width: 200px;
+    font-size: 11px;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hosting-row-link {
+    cursor: pointer;
+}
+
+.hosting-input-sm {
+    padding: 5px 10px;
+    font-size: 11px;
+}
+
+.hosting-w-150 { width: 150px; }
+.hosting-w-250 { width: 250px; }
+
+.hosting-provider-sub {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--sans);
+}
+
+.hosting-type-badge {
+    font-size: 11px;
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+}
+
+.hosting-text-na {
+    color: var(--text3);
+    font-size: 11px;
+}
+
+.hosting-user-lbl {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 2px;
+}
+
+.hosting-user-val {
+    color: var(--text);
+    font-family: var(--mono);
+}
+
+.hosting-past-due {
+    color: var(--red);
+    font-weight: 600;
+}
+
+.hosting-empty-row td {
+    text-align: center;
+    color: var(--text3);
+    padding: 32px;
+}
+
+.hosting-client-link {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.hosting-sec-divider {
+    margin-top: 16px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+}
+
+.hosting-btn-right {
+    text-align: right;
+    margin-top: 8px;
+}
+
+.hosting-btn-sm {
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+.hosting-empty-p {
+    padding: 16px;
+}
+
+.hosting-services-help {
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text3);
+}
+
+.hosting-services-help-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    vertical-align: text-bottom;
+    margin-right: 4px;
+}
+
+.hosting-services-relative {
+    position: relative;
+}
+
+.hosting-services-error {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.hosting-services-section-title {
+    margin-top: 16px;
+}
+
+.hosting-services-mt-4 {
+    margin-top: 4px;
+}
+
+.hosting-services-footer {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+.hosting-services-help-text {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+}
+
+.hosting-services-pagination {
+    padding: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.hosting-services-border-line {
+    border-color: var(--line);
+}
+
+.hosting-detail-row {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.hosting-detail-row:first-child {
+    padding-top: 0;
+}
+
+.hosting-detail-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.hosting-detail-row .form-lbl {
+    margin-bottom: 4px;
+}
+
+.hosting-detail-val {
+    text-align: left;
+}

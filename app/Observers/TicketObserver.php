@@ -9,6 +9,15 @@ use App\Services\AuditLogService;
 
 class TicketObserver
 {
+    public function saved(Ticket $ticket): void
+    {
+        if ($ticket->wasChanged(['title', 'description', 'status', 'priority', 'assigned_to', 'client_id'])) {
+            \App\Jobs\Chatbot\SyncChatbotClientDataJob::dispatch($ticket->client_id)
+                ->delay(now()->addSeconds(10))
+                ->onQueue('chatbot');
+        }
+    }
+
     public function __construct(protected AuditLogService $auditLog) {}
 
     public function created(Ticket $ticket): void
@@ -35,5 +44,9 @@ class TicketObserver
     public function deleted(Ticket $ticket): void
     {
         $this->auditLog->log('deleted', $ticket, $ticket->getOriginal(), null);
+        
+        \App\Jobs\Chatbot\SyncChatbotClientDataJob::dispatch($ticket->client_id)
+            ->delay(now()->addSeconds(10))
+            ->onQueue('chatbot');
     }
 }

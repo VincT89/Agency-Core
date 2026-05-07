@@ -19,3 +19,9 @@ Schedule::command('notify:due-tasks')
     ->dailyAt('08:30')
     ->name('notify-due-tasks')
     ->withoutOverlapping();
+
+
+Schedule::command('chatbot:sync-tables')
+    ->hourly()
+    ->name('chatbot-sync-tables')
+    ->withoutOverlapping();

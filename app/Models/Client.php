@@ -16,6 +16,7 @@ use App\Models\User;
     'company_name',
     'email',
     'phone',
+    'normalized_phone',
     'reference_person',
     'vat_number',
     'tax_code',
@@ -165,5 +166,10 @@ class Client extends Model
         return $query->whereHas('projects.users', function ($q) use ($user) {
             $q->where('users.id', $user->id);
         });
+    }
+
+    public function hostingServices(): HasMany
+    {
+        return $this->hasMany(HostingService::class);
     }
 }

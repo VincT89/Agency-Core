@@ -25,7 +25,10 @@ Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\Mark
 
 Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
-    $fullPath = 'marketing/campaign-posts/' . $path;
+    
+    $fullPath = str_starts_with($path, 'marketing/campaign-posts/') 
+        ? $path 
+        : 'marketing/campaign-posts/' . $path;
     abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($fullPath), 404);
 
     $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
@@ -139,6 +142,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])
         ->name('attachments.destroy');
+
+    // Hosting e Manutenzioni
+    Route::get('hosting-services/{hosting_service}/password', [\App\Http\Controllers\HostingServicePasswordController::class, 'show'])
+        ->name('hosting-services.password.show');
+    Route::resource('hosting-services', \App\Http\Controllers\HostingServiceController::class);
+    Route::post('hosting-services/{hosting_service}/interventions', [\App\Http\Controllers\HostingServiceInterventionController::class, 'store'])
+        ->name('hosting-services.interventions.store');
+    Route::delete('hosting-services/{hosting_service}/interventions/{intervention}', [\App\Http\Controllers\HostingServiceInterventionController::class, 'destroy'])
+        ->name('hosting-services.interventions.destroy');
 
     Route::resource('users', \App\Http\Controllers\UserController::class)->except(['show']);
     Route::post('users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])

@@ -601,5 +601,80 @@ class DemoDataSeeder extends Seeder
             'status' => 'draft',
         ]);
 
+        // ── 11. Create Hosting Services ───────────────────────────────────────
+        $domain1 = \App\Models\HostingService::create([
+            'client_id' => $alphaClient->id,
+            'type' => 'domain',
+            'name' => 'Dominio Principale Alpha',
+            'domain' => 'alphasrl.it',
+            'provider' => 'Aruba',
+            'location' => 'Arezzo IT',
+            'status' => 'active',
+            'access_url' => 'https://admin.aruba.it',
+            'username' => 'admin_alpha',
+            'password' => 'secret_aruba_123!',
+            'renewal_date' => now()->addMonths(2)->toDateString(),
+            'renewal_cost' => 15.00,
+            'billing_cycle' => 'yearly',
+            'notes' => 'Registrato originariamente nel 2018.',
+        ]);
+
+        \App\Models\HostingService::create([
+            'client_id' => $betaClient->id,
+            'type' => 'domain',
+            'name' => 'Dominio Beta Studio',
+            'domain' => 'betastudio.com',
+            'provider' => 'Register',
+            'status' => 'active',
+            'username' => 'beta_reg',
+            'password' => 'B3t4$tud10!',
+            'renewal_date' => now()->addMonths(8)->toDateString(),
+            'renewal_cost' => 25.00,
+        ]);
+
+        $hosting1 = \App\Models\HostingService::create([
+            'client_id' => $alphaClient->id,
+            'type' => 'hosting',
+            'name' => 'Server Dedicato Alpha',
+            'domain' => 'alphasrl.it',
+            'provider' => 'SiteGround',
+            'status' => 'active',
+            'access_url' => 'https://tools.siteground.com',
+            'username' => 'tech@alphasrl.it',
+            'password' => 'SG_alpha_2026',
+            'renewal_date' => now()->addMonths(5)->toDateString(),
+            'renewal_cost' => 150.00,
+            'notes' => 'Server Cloud 4 Core, 8GB RAM.',
+        ]);
+
+        $maint1 = \App\Models\HostingService::create([
+            'client_id' => $gammaClient->id,
+            'type' => 'maintenance',
+            'name' => 'Manutenzione E-commerce Gamma',
+            'domain' => 'shop.gamma.it',
+            'provider' => 'Interno',
+            'status' => 'active',
+            'renewal_date' => now()->addMonths(1)->toDateString(),
+            'renewal_cost' => 800.00,
+            'billing_cycle' => 'yearly',
+            'notes' => 'Include 10 ore/mese di interventi e aggiornamenti plugin WooCommerce.',
+        ]);
+
+        \App\Models\HostingServiceIntervention::create([
+            'hosting_service_id' => $maint1->id,
+            'user_id' => $developer->id,
+            'title' => 'Aggiornamento Major WooCommerce',
+            'description' => 'Aggiornamento alla versione 9.0 con fix template checkout.',
+            'intervention_date' => now()->subDays(5)->toDateString(),
+        ]);
+
+        \App\Models\HostingServiceIntervention::create([
+            'hosting_service_id' => $hosting1->id,
+            'user_id' => $admin->id,
+            'title' => 'Upgrade RAM Server',
+            'description' => 'Passaggio da 4GB a 8GB su richiesta cliente causa picchi traffico.',
+            'intervention_date' => now()->subDays(20)->toDateString(),
+            'cost' => 50.00,
+        ]);
     }
 }

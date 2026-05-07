@@ -47,3 +47,8 @@
 .btn-purple:hover { background: color-mix(in srgb, var(--purple) 80%, black); }
 .btn-green { background: var(--green); color: var(--text-inv); border-color: var(--green); }
 .btn-green:hover { background: color-mix(in srgb, var(--green) 80%, black); }
+
+.btn-xs {
+  font-size: 10px;
+  padding: 2px 4px;
+}

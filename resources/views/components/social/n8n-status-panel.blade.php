@@ -8,36 +8,36 @@
         'draft' => [
             'icon' => 'edit-3',
             'title' => 'Pronto per l\'invio',
-            'desc' => 'Il progetto è in bozza e pronto per essere inviato a n8n.',
+            'desc' => 'Il progetto è in bozza e pronto per essere inviato a Sody.',
             'color' => 'var(--text2)',
             'bg' => 'var(--bg2)'
         ],
         'queued_to_n8n' => [
             'icon' => 'loader',
             'title' => 'Richiesta in coda',
-            'desc' => 'Il sistema sta preparando l\'invio a n8n. Attendi qualche istante...',
+            'desc' => 'Il sistema sta preparando l\'invio a Sody. Attendi qualche istante...',
             'color' => 'var(--orange)',
             'bg' => 'var(--orange-bg, rgba(245, 158, 11, 0.1))',
             'spin' => true
         ],
         'submitted_to_n8n' => [
             'icon' => 'send',
-            'title' => 'Inviato a n8n',
-            'desc' => "Richiesta presa in carico da n8n. In attesa di ricezione dei contenuti.",
+            'title' => 'Inviato a Sody',
+            'desc' => "Richiesta presa in carico da Sody. In attesa di ricezione dei contenuti.",
             'color' => 'var(--blue)',
             'bg' => 'var(--blue-bg, rgba(59, 130, 246, 0.1))'
         ],
         'n8n_failed' => [
             'icon' => 'alert-triangle',
             'title' => 'Invio fallito',
-            'desc' => "C'è stato un problema di connessione con n8n.",
+            'desc' => "C'è stato un problema di connessione con Sody.",
             'color' => 'var(--red)',
             'bg' => 'var(--red-bg, rgba(239, 68, 68, 0.1))'
         ],
         'posts_received' => [
             'icon' => 'check-circle',
             'title' => 'Contenuti Ricevuti',
-            'desc' => 'n8n ha elaborato con successo la richiesta e generato i post.',
+            'desc' => 'Sody ha elaborato con successo la richiesta e generato i post.',
             'color' => 'var(--green)',
             'bg' => 'var(--green-bg, rgba(16, 185, 129, 0.1))'
         ],

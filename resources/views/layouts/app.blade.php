@@ -140,173 +140,171 @@
     </div>
 
     {{-- SIDEBAR --}}
-    <div class="sidebar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <svg id="sidebar-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-      </button>
+<div class="sidebar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">
+    <svg id="sidebar-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  </button>
 
-
-
-      {{-- Azioni Rapide --}}
-      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
-      <div class="sidebar-action-group">
-          <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
-              <i data-lucide="plus" class="u-icon-sm"></i> <span class="sidebar-btn-text">Nuovo task</span>
-          </a>
-          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-          <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
-              <i data-lucide="plus" class="u-icon-sm"></i> <span class="sidebar-btn-text">Nuovo ticket</span>
-          </a>
-          @endif
-      </div>
+  {{-- ACCESSO RAPIDO --}}
+  @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
+  <div class="nav-group">
+    <div class="nav-group-label">Accesso Rapido</div>
+    <div class="sidebar-action-group">
+      <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+        <i data-lucide="plus" class="u-icon-sm"></i>
+        <span class="sidebar-btn-text">Nuovo Task</span>
+      </a>
+      @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+      <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+        <i data-lucide="plus" class="u-icon-sm"></i>
+        <span class="sidebar-btn-text">Nuovo Ticket</span>
+      </a>
       @endif
-
-      {{-- 1. Principale --}}
-      <div class="nav-group">
-        <div class="nav-group-label">Principale</div>
-        <x-nav-item href="{{ route('dashboard') }}" icon="layout-dashboard" label="Dashboard"
-          :active="request()->routeIs('dashboard')" />
-        @can('viewAny', \App\Models\Client::class)
-          @if(!auth()->user()->isPhotographer())
-            <x-nav-item href="{{ route('clients.index') }}" icon="building-2" label="Clienti"
-              :active="request()->routeIs('clients.*')" :badge="$clientsCount ?? null" />
-          @endif
-        @endcan
-        <x-nav-item href="{{ route('projects.index') }}" icon="folder-kanban" label="Progetti"
-          :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
-      </div>
-
-      {{-- 2. Operatività --}}
-      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
-        <div class="nav-divider"></div>
-        <div class="nav-group">
-          <div class="nav-group-label">Operatività</div>
-
-          @can('viewAny', \App\Models\Team::class)
-            @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-              <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
-                :active="request()->routeIs('teams.*')" />
-            @endif
-          @endcan
-
-          <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
-            :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
-
-          <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
-            :active="request()->routeIs('calendar-events.*')" />
-
-          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-            <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
-              :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
-          @endif
-        </div>
-      @endif
-
-      {{-- 3. Social Media Management --}}
-      @can('viewAny', \App\Models\Shooting\Shoot::class)
-        <div class="sidebar-action-group mt">
-            <a href="{{ route('marketing-campaigns.create') }}" wire:navigate class="btn btn-p sidebar-action-btn">
-                <i data-lucide="plus" class="u-icon-sm"></i> <span class="sidebar-btn-text">Nuovo Progetto Marketing</span>
-            </a>
-        </div>
-        @if(!auth()->user()->isPhotographer() && !auth()->user()->canManageSystem())
-          <div class="nav-divider"></div>
-          <div class="nav-group">
-            <div class="nav-group-label">Social Media Management</div>
-            <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting"
-              :active="request()->routeIs('social.shooting.*')" />
-            <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
-              :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
-
-            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
-              :active="request()->routeIs('social.calendar')" />
-          </div>
-        @endif
-
-        @if(auth()->user()->canManageSystem())
-          <div class="nav-divider"></div>
-          <div class="nav-group">
-            <div class="nav-group-label">Social Media Management</div>
-            <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
-              :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
-            <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
-              :active="request()->routeIs('social.calendar')" />
-          </div>
-        @endif
-      @endcan
-
-      {{-- 4. Amministrazione --}}
-      @if(auth()->user()->canAccessFinance())
-        <div class="nav-divider"></div>
-        <div class="nav-group">
-          <div class="nav-group-label">Amministrazione</div>
-          <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
-            :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" />
-          <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
-            :active="request()->routeIs('payments.*')" />
-          <x-nav-item href="{{ route('economic-summary.index') }}" icon="bar-chart-2" label="Riepilogo"
-            :active="request()->routeIs('economic-summary.*')" />
-        </div>
-      @endif
-
-      {{-- 5. Shooting --}}
-      @can('viewAny', \App\Models\Shooting\Shoot::class)
-        @if(auth()->user()->isPhotographer())
-          <div class="nav-divider"></div>
-          <div class="nav-group">
-            <div class="nav-group-label">Shooting</div>
-            <x-nav-item href="{{ route('photography.shooting.index') }}" icon="camera" label="I Miei Shooting"
-              :active="request()->routeIs('photography.shooting.*')" />
-          </div>
-        @endif
-
-        @if(auth()->user()->canManageSystem())
-          <div class="nav-divider"></div>
-          <div class="nav-group">
-            <div class="nav-group-label">Shooting</div>
-            <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
-              :active="request()->routeIs('admin.shooting.*')" />
-          </div>
-        @endif
-      @endcan
-
-      {{-- 6. Hosting e Domini --}}
-      @if(auth()->user()->canManageSystem())
-        <div class="nav-divider"></div>
-        <div class="nav-group">
-          <div class="nav-group-label">Hosting e Domini</div>
-          <x-nav-item href="#" icon="server" label="Gestione Hosting" />
-        </div>
-      @endif
-
-      {{-- 7. Admin --}}
-      @can('system.admin')
-        <div class="nav-divider"></div>
-        <div class="nav-group">
-          <div class="nav-group-label">Admin</div>
-          <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
-            :active="request()->routeIs('users.*')" />
-        </div>
-      @endcan
-
-      <div class="nav-spacer"></div>
-      <div class="nav-divider"></div>
-      <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
-        :active="request()->routeIs('profile.*')" />
-
-      <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
-        @csrf
-        <a href="#" onclick="event.preventDefault(); this.closest('form').submit();" class="nav-item"
-          class="logout">
-          <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
-          <span class="nav-label">Logout</span>
-          <div class="nav-tooltip">Logout</div>
-        </a>
-      </form>
     </div>
+  </div>
+  @endif
+
+  {{-- 1. OPERATIVITÀ --}}
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Operatività</div>
+
+    <x-nav-item href="{{ route('dashboard') }}" icon="layout-dashboard" label="Dashboard"
+      :active="request()->routeIs('dashboard')" />
+
+    <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
+      :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
+
+    @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+      <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
+        :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
+    @endif
+
+    <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
+      :active="request()->routeIs('calendar-events.*')" />
+
+    @can('viewAny', \App\Models\Team::class)
+      @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+        <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
+          :active="request()->routeIs('teams.*')" />
+      @endif
+    @endcan
+  </div>
+
+  {{-- 2. SOCIAL MEDIA — marketing e admin --}}
+  @if(auth()->user()->isMarketing() || auth()->user()->canManageSystem())
+    <div class="nav-divider"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Social Media</div>
+
+      <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
+        :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
+
+      <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
+        :active="request()->routeIs('social.calendar')" />
+
+      @if(auth()->user()->isMarketing())
+        <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting"
+          :active="request()->routeIs('social.shooting.*')" />
+      @endif
+
+      @if(auth()->user()->canManageSystem())
+        <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
+          :active="request()->routeIs('admin.shooting.*')" />
+      @endif
+    </div>
+  @endif
+
+  {{-- 2. SOCIAL MEDIA — fotografo --}}
+  @if(auth()->user()->isPhotographer())
+    <div class="nav-divider"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Social Media</div>
+      <x-nav-item href="{{ route('photography.shooting.index') }}" icon="camera" label="I Miei Shooting"
+        :active="request()->routeIs('photography.shooting.*')" />
+    </div>
+  @endif
+
+  {{-- 3. AMMINISTRAZIONE --}}
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Amministrazione</div>
+
+    @can('viewAny', \App\Models\Client::class)
+      @if(!auth()->user()->isPhotographer())
+        <x-nav-item href="{{ route('clients.index') }}" icon="building-2" label="Clienti"
+          :active="request()->routeIs('clients.*')" :badge="$clientsCount ?? null" />
+      @endif
+    @endcan
+
+    <x-nav-item href="{{ route('projects.index') }}" icon="folder-kanban" label="Progetti"
+      :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
+
+    @if(auth()->user()->canAccessFinance())
+      <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
+        :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" />
+      <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
+        :active="request()->routeIs('payments.*')" />
+      <x-nav-item href="{{ route('economic-summary.index') }}" icon="bar-chart-2" label="Riepilogo"
+        :active="request()->routeIs('economic-summary.*')" />
+    @endif
+  </div>
+
+  {{-- 4. GESTIONE DOMINI --}}
+  @if(auth()->user()->canManageSystem())
+    <div class="nav-divider"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Gestione Domini</div>
+      <x-nav-item 
+        href="{{ route('hosting-services.index', ['type' => 'domain']) }}" 
+        icon="globe" 
+        label="Domini" 
+        :active="request()->routeIs('hosting-services.*') && request('type') === 'domain'" 
+      />
+    </div>
+  @endif
+
+  {{-- 5. HOSTING E MANUTENZIONI --}}
+  @if(auth()->user()->canManageSystem())
+    <div class="nav-divider"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Hosting e Manutenzioni</div>
+      <x-nav-item 
+        href="{{ route('hosting-services.index', ['exclude_type' => 'domain']) }}" 
+        icon="server" 
+        label="Hosting e Manutenzioni" 
+        :active="request()->routeIs('hosting-services.*') && request('exclude_type') === 'domain'" 
+      />
+    </div>
+  @endif
+
+  {{-- ADMIN --}}
+  @can('system.admin')
+    <div class="nav-divider"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Admin</div>
+      <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
+        :active="request()->routeIs('users.*')" />
+    </div>
+  @endcan
+
+  <div class="nav-spacer"></div>
+  <div class="nav-divider"></div>
+  <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
+    :active="request()->routeIs('profile.*')" />
+
+  <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
+    @csrf
+    <a href="#" onclick="event.preventDefault(); this.closest('form').submit();" class="nav-item logout">
+      <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
+      <span class="nav-label">Logout</span>
+      <div class="nav-tooltip">Logout</div>
+    </a>
+  </form>
+</div>
 
     {{-- MAIN --}}
     <div class="main">

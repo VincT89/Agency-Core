@@ -16,8 +16,7 @@
                     title="Elimina Task" 
                     message="Sei sicuro di voler eliminare questo task? L'azione è irreversibile."
                     confirmText="elimina">
-                    <button type="button" class="btn btn-g"
-                            style="color:var(--red);border-color:rgba(245,75,75,.3)">Elimina</button>
+                    <button type="button" class="btn btn-g btn-danger">Elimina</button>
                 </x-delete-modal>
             @endcan
         </x-slot:actions>
@@ -33,9 +32,9 @@
                 <div class="step-seg {{ $index < $currentIndex ? 'completed' : ($index === $currentIndex ? 'active' : '') }}" title="{{ (new \App\Models\Task(['status' => $s]))->status_label }}"></div>
             @endforeach
         </div>
-        <div class="u-flex-between u-mt-sm u-text-meta" style="text-transform:uppercase;">
+        <div class="u-flex-between u-mt-sm task-step-labels">
             @foreach($statuses as $index => $s)
-                <div style="flex:1; text-align:{{ $index === 0 ? 'left' : ($index === count($statuses) - 1 ? 'right' : 'center') }}">
+                <div class="task-step-label {{ $index === 0 ? 'task-step-label-left' : ($index === count($statuses) - 1 ? 'task-step-label-right' : 'task-step-label-center') }}">
                     {{ (new \App\Models\Task(['status' => $s]))->status_label }}
                 </div>
             @endforeach
@@ -46,14 +45,14 @@
         <div>
             <x-panel title="Descrizione" dot="var(--blue)" padded>
                 @if($task->description)
-                    <div class="u-text-strong" style="line-height:1.7;white-space:pre-wrap">{{ $task->description }}</div>
+                    <div class="u-text-strong task-description">{{ $task->description }}</div>
                 @else
-                    <div class="u-text-muted" style="font-style:italic">Nessuna descrizione.</div>
+                    <div class="u-text-muted task-empty">Nessuna descrizione.</div>
                 @endif
                 @if($task->notes)
                     <div class="u-section-sep">
                         <div class="u-text-label">Note interne</div>
-                        <div class="u-text-muted" style="white-space:pre-wrap">{{ $task->notes }}</div>
+                        <div class="u-text-muted task-notes">{{ $task->notes }}</div>
                     </div>
                 @endif
             </x-panel>
@@ -61,7 +60,7 @@
             {{-- Cambio rapido status --}}
             <div class="u-mt-md">
                 <x-panel title="Aggiornamento rapido" dot="var(--teal)" padded>
-                    <div class="u-flex u-gap-sm" style="flex-wrap:wrap">
+                    <div class="u-flex u-gap-sm task-status-grid">
                         @foreach(\App\Http\Controllers\TaskController::STATUSES as $s)
                             <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                 @csrf @method('PATCH')
@@ -88,7 +87,7 @@
                     </div>
 
                     @forelse($task->checklistItems as $item)
-                        <div class="u-flex-center u-gap-sm" style="padding:8px 0;border-bottom:1px solid var(--line)">
+                        <div class="u-flex-center u-gap-sm task-checklist-item">
                             <form action="{{ route('task-checklist-items.toggle', $item) }}" method="POST">
                                 @csrf
                                 @method('PATCH')
@@ -97,7 +96,7 @@
                                 </button>
                             </form>
 
-                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted' : 'u-text-strong' }}" style="{{ $item->is_completed ? 'text-decoration:line-through' : '' }}">
+                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}">
                                 {{ $item->title }}
                             </div>
 
@@ -108,7 +107,7 @@
                             @endif
 
                             <form action="{{ route('task-checklist-items.destroy', $item) }}" method="POST"
-                                  onsubmit="return confirm('Eliminare questa voce checklist?')">
+                                  class="js-confirm-form" data-confirm-message="Eliminare questa voce checklist?">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn-icon u-text-red">✕</button>
@@ -143,6 +142,14 @@
                         @endif
                     </div>
                 </div>
+                @if($task->ticket)
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Origine</div>
+                    <div class="u-text-strong">
+                        <a href="{{ route('tickets.show', $task->ticket) }}" class="u-text-accent-link">Generato dal Ticket #{{ $task->ticket->id }}</a>
+                    </div>
+                </div>
+                @endif
                 @if($task->project?->client)
                 <div class="form-g mb-3">
                     <div class="u-text-label">Cliente</div>
@@ -162,19 +169,19 @@
                 @if($task->start_date)
                 <div class="form-g mb-3">
                     <div class="u-text-label">Data inizio</div>
-                    <div class="u-text-mono" style="color:var(--text)">{{ $task->start_date->format('d/m/Y') }}</div>
+                    <div class="u-text-mono u-color-text">{{ $task->start_date->format('d/m/Y') }}</div>
                 </div>
                 @endif
                 <div class="form-g mb-3">
                     <div class="u-text-label">Scadenza</div>
-                    <div class="u-text-mono" style="{{ $task->due_date?->isPast() && $task->status !== 'done' ? 'color:var(--red)' : 'color:var(--text)' }}">
+                    <div class="u-text-mono {{ $task->due_date?->isPast() && $task->status !== 'done' ? 'u-color-red' : 'u-color-text' }}">
                         {{ $task->due_date?->format('d/m/Y') ?? '—' }}
                     </div>
                 </div>
                 @if($task->completed_at)
                 <div class="form-g mb-3">
                     <div class="u-text-label">Completato il</div>
-                    <div class="u-text-mono" style="color:var(--green)">{{ $task->completed_at->format('d/m/Y H:i') }}</div>
+                    <div class="u-text-mono u-color-green">{{ $task->completed_at->format('d/m/Y H:i') }}</div>
                 </div>
                 @endif
                 <div class="form-g mb-3">
@@ -217,12 +224,12 @@
             @endcan
 
             @forelse($task->comments as $comment)
-                <div style="padding:12px 0;border-top:1px solid var(--line)">
+                <div class="task-comment-item">
                     <div class="u-flex-between u-mb-sm">
                         <strong class="u-text-strong">{{ $comment->user?->name ?? 'Sistema' }}</strong>
                         <span class="u-text-meta">{{ $comment->created_at->format('d/m/Y H:i') }}</span>
                     </div>
-                    <div class="u-text-muted" style="line-height:1.6;white-space:pre-wrap">{{ $comment->body }}</div>
+                    <div class="u-text-muted task-comment-body">{{ $comment->body }}</div>
                 </div>
             @empty
                 <div class="u-empty-state-sm">Nessun commento ancora presente.</div>
@@ -234,7 +241,7 @@
     <div class="u-mt-lg">
         <x-panel title="Allegati ({{ $task->attachments->count() }})" dot="var(--accent)" padded>
             @forelse($task->attachments as $att)
-                <div class="u-flex-between" style="padding:10px 0;border-bottom:1px solid var(--line)">
+                <div class="u-flex-between task-attachment-item">
                     <div>
                         <div class="u-text-strong">{{ $att->original_name }}</div>
                         <div class="u-text-meta">
@@ -262,14 +269,13 @@
             @can('create', App\Models\Attachment::class)
                 <form action="{{ route('attachments.store') }}" method="POST"
                       enctype="multipart/form-data"
-                      class="u-flex u-gap-sm u-section-sep" style="align-items:flex-end">
+                      class="u-flex u-gap-sm u-section-sep task-attachment-form">
                     @csrf
                     <input type="hidden" name="attachable_type" value="task">
                     <input type="hidden" name="attachable_id" value="{{ $task->id }}">
                     <div class="u-flex-1">
                         <div class="u-text-label">Carica allegato</div>
-                        <input type="file" name="file" required class="form-in"
-                               style="padding:6px 10px;cursor:pointer">
+                        <input type="file" name="file" required class="form-in task-file-input">
                     </div>
                     <button type="submit" class="btn btn-g">Carica</button>
                 </form>

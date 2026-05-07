@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,12 +48,18 @@ class TaskController extends Controller
         // Precompila l'ID progetto se fornito via querystring
         $preselectedProjectId = $request->project_id;
 
+        $sourceTicket = null;
+        if ($request->filled('ticket_id')) {
+            $sourceTicket = Ticket::with(['project', 'client'])->findOrFail($request->ticket_id);
+        }
+
         return view('tasks.create', [
             'projects'            => $projects,
             'users'               => $users,
             'statuses'            => self::STATUSES,
             'priorities'          => self::PRIORITIES,
             'preselectedProjectId'=> $preselectedProjectId,
+            'sourceTicket'        => $sourceTicket,
         ]);
     }
 
@@ -62,6 +69,7 @@ class TaskController extends Controller
 
         $data = $request->validate([
             'project_id'  => ['required', 'exists:projects,id'],
+            'ticket_id'   => ['nullable', 'exists:tickets,id'],
             'assigned_to' => ['nullable', 'exists:users,id'],
             'title'       => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -79,6 +87,10 @@ class TaskController extends Controller
         }
 
         $task = $action->execute($data);
+
+        if ($task->ticket && $task->ticket->status === 'open') {
+            $task->ticket->update(['status' => 'in_progress']);
+        }
 
         return redirect()->route('tasks.show', $task)
             ->with('success', 'Task creato correttamente.');
@@ -122,6 +134,7 @@ class TaskController extends Controller
 
         $data = $request->validate([
             'project_id'  => ['required', 'exists:projects,id'],
+            'ticket_id'   => ['nullable', 'exists:tickets,id'],
             'assigned_to' => ['nullable', 'exists:users,id'],
             'title'       => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

@@ -9,6 +9,7 @@ class SyncFullChatbotClientAction
 {
     public function __construct(
         private SyncChatbotClientAction $syncClientAction,
+        private SyncChatbotProjectsAction $syncProjectsAction,
         private SyncChatbotMarketingCampaignsAction $syncCampaignsAction,
         private SyncChatbotMarketingPostsAction $syncPostsAction,
         private SyncChatbotTicketsAction $syncTicketsAction
@@ -19,6 +20,7 @@ class SyncFullChatbotClientAction
     {
         DB::transaction(function () use ($client) {
             $chatbotClient = $this->syncClientAction->execute($client);
+            $this->syncProjectsAction->execute($client, $chatbotClient);
             $this->syncCampaignsAction->execute($client, $chatbotClient);
             $this->syncPostsAction->execute($client, $chatbotClient);
             $this->syncTicketsAction->execute($client, $chatbotClient);

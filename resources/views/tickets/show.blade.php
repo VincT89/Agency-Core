@@ -9,12 +9,15 @@
             @can('update', $ticket)
                 <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-g">Modifica</a>
             @endcan
+            @can('create', \App\Models\Task::class)
+                <a href="{{ route('tasks.create', ['ticket_id' => $ticket->id]) }}" class="btn btn-p">Crea Task Collegato</a>
+            @endcan
         
             @can('delete', $ticket)
                 <form action="{{ route('tickets.destroy', $ticket) }}" method="POST"
-                      onsubmit="return confirm('Eliminare il ticket #{{ $ticket->id }}?')">
+                      class="js-confirm-form" data-confirm-message="Eliminare il ticket #{{ $ticket->id }}?">
                     @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-g" style="color:var(--red);border-color:rgba(245,75,75,.3)">
+                    <button type="submit" class="btn btn-g btn-danger">
                         Elimina
                     </button>
                 </form>
@@ -25,39 +28,62 @@
     <div class="g-2col-main">
         <div>
             <x-panel title="Dettagli Ticket" padded>
-                <div style="display:flex;gap:12px;margin-bottom:20px">
+                <div class="ticket-badges">
                     <x-badge :status="$ticket->type" :label="$ticket->type_label" />
                     <x-badge :status="$ticket->priority" :label="$ticket->priority_label" />
                 </div>
                 
                 @if($ticket->description)
-                <div style="color:var(--text);font-size:14px;line-height:1.6;white-space:pre-wrap">{{ $ticket->description }}</div>
+                <div class="ticket-description">{{ $ticket->description }}</div>
                 @else
-                <div style="color:var(--text3);font-style:italic">Nessuna descrizione fornita.</div>
+                <div class="ticket-description-empty">Nessuna descrizione fornita.</div>
                 @endif
 
                 @if($ticket->resolution_notes)
-                <div style="margin-top:24px;padding:16px;background:var(--bg2);border-radius:6px;border:1px solid var(--green);border-left:4px solid var(--green);">
-                    <div style="font-weight:600;font-size:13px;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Note di Risoluzione
+                <div class="ticket-resolution">
+                    <div class="ticket-resolution-header">
+                        <i data-lucide="check-circle" class="ticket-resolution-icon"></i> Note di Risoluzione
                     </div>
-                    <div style="color:var(--text);font-size:13px;line-height:1.5;">{{ $ticket->resolution_notes }}</div>
+                    <div class="ticket-resolution-body">{{ $ticket->resolution_notes }}</div>
                 </div>
                 @endif
             </x-panel>
+
+            @if($ticket->tasks->count() > 0)
+            <div class="u-mt-md">
+                <x-panel title="Task Generati" dot="var(--blue)" padded>
+                    @foreach($ticket->tasks as $task)
+                        <div class="u-flex-between u-mb-sm u-section-sep">
+                            <div>
+                                <a href="{{ route('tasks.show', $task) }}" class="u-text-strong u-text-accent-link">{{ $task->title }}</a>
+                                <div class="u-text-meta">
+                                    {{ $task->project?->name }} • Assegnato a: {{ $task->assignee?->name ?? 'Nessuno' }}
+                                </div>
+                            </div>
+                            <div class="u-text-right">
+                                <x-badge :status="$task->status" :label="$task->status_label" />
+                                <div class="u-text-meta">
+                                    Scadenza: {{ $task->due_date?->format('d/m/Y') ?? '—' }}
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </x-panel>
+            </div>
+            @endif
         </div>
 
         <div>
             <x-panel title="Info Base" dot="var(--yellow)" padded>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Codice Ticket</div>
-                    <div style="color:var(--text);font-family:var(--mono)">{{ $ticket->code ?? '—' }}</div>
+                    <div class="ticket-info-mono">{{ $ticket->code ?? '—' }}</div>
                 </div>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Cliente</div>
-                    <div style="color:var(--text);font-family:var(--sans)">
+                    <div class="ticket-info-value">
                         @if($ticket->client)
-                            <a href="{{ route('clients.show', $ticket->client) }}" style="color:var(--accent);text-decoration:none">{{ $ticket->client->name }}</a>
+                            <a href="{{ route('clients.show', $ticket->client) }}" class="ticket-info-link">{{ $ticket->client->name }}</a>
                         @else
                             —
                         @endif
@@ -65,9 +91,9 @@
                 </div>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Progetto</div>
-                    <div style="color:var(--text);font-family:var(--sans)">
+                    <div class="ticket-info-value">
                         @if($ticket->project)
-                            <a href="{{ route('projects.show', $ticket->project) }}" style="color:var(--accent);text-decoration:none">{{ $ticket->project->name }}</a>
+                            <a href="{{ route('projects.show', $ticket->project) }}" class="ticket-info-link">{{ $ticket->project->name }}</a>
                         @else
                             —
                         @endif
@@ -75,20 +101,20 @@
                 </div>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Assegnato a</div>
-                    <div style="color:var(--text);font-family:var(--sans)">{{ $ticket->assignee?->name ?? 'Non assegnato' }}</div>
+                    <div class="ticket-info-value">{{ $ticket->assignee?->name ?? 'Non assegnato' }}</div>
                 </div>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Creato da</div>
-                    <div style="color:var(--text);font-family:var(--sans)">{{ $ticket->creator?->name ?? 'Sistema' }}</div>
+                    <div class="ticket-info-value">{{ $ticket->creator?->name ?? 'Sistema' }}</div>
                 </div>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Aperto il</div>
-                    <div style="color:var(--text);font-family:var(--mono)">{{ $ticket->opened_at?->isoFormat('D MMMM YYYY') ?? $ticket->created_at->isoFormat('D MMMM YYYY') }}</div>
+                    <div class="ticket-info-mono">{{ $ticket->opened_at?->isoFormat('D MMMM YYYY') ?? $ticket->created_at->isoFormat('D MMMM YYYY') }}</div>
                 </div>
                 @if($ticket->due_date)
                 <div class="form-g mb-2">
                     <div class="form-lbl">Scadenza</div>
-                    <div style="color:var(--text);font-family:var(--mono)">{{ $ticket->due_date->isoFormat('D MMMM YYYY') }}</div>
+                    <div class="ticket-info-mono">{{ $ticket->due_date->isoFormat('D MMMM YYYY') }}</div>
                 </div>
                 @endif
             </x-panel>

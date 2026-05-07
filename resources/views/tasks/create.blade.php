@@ -13,10 +13,14 @@
         <form action="{{ route('tasks.store') }}" method="POST">
             @csrf
 
+            @if(isset($sourceTicket) && $sourceTicket)
+                <input type="hidden" name="ticket_id" value="{{ $sourceTicket->id }}">
+            @endif
+
             <div class="form-row full">
                 <x-form-group label="Titolo task" name="title" required>
                     <input name="title" class="form-in @error('title') is-invalid @enderror"
-                           value="{{ old('title') }}" placeholder="Descrizione sintetica del task...">
+                           value="{{ old('title', isset($sourceTicket) ? $sourceTicket->title : '') }}" placeholder="Descrizione sintetica del task...">
                 </x-form-group>
             </div>
 
@@ -26,7 +30,7 @@
                         <option value="">Seleziona progetto...</option>
                         @foreach($projects as $project)
                             <option value="{{ $project->id }}"
-                                {{ (old('project_id') ?? $preselectedProjectId) == $project->id ? 'selected' : '' }}>
+                                {{ (old('project_id', isset($sourceTicket) ? $sourceTicket->project_id : $preselectedProjectId)) == $project->id ? 'selected' : '' }}>
                                 {{ $project->name }}
                                 @if($project->client) — {{ $project->client->name }}@endif
                             </option>
@@ -80,7 +84,7 @@
             <div class="form-row full">
                 <x-form-group label="Descrizione" name="description">
                     <textarea name="description" class="form-ta @error('description') is-invalid @enderror"
-                              rows="4" placeholder="Dettagli del task...">{{ old('description') }}</textarea>
+                              rows="4" placeholder="Dettagli del task...">{{ old('description', isset($sourceTicket) ? "Generato dal Ticket #{$sourceTicket->id}\n\n{$sourceTicket->description}" : '') }}</textarea>
                 </x-form-group>
             </div>
 

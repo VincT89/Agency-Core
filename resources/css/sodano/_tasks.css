@@ -1,0 +1,72 @@
+/* Container e Struttura Task */
+.task-step-labels {
+    text-transform: uppercase;
+}
+
+.task-step-label {
+    flex: 1;
+}
+.task-step-label-left { text-align: left; }
+.task-step-label-center { text-align: center; }
+.task-step-label-right { text-align: right; }
+
+.task-description {
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+.task-empty {
+    font-style: italic;
+}
+
+.task-notes {
+    white-space: pre-wrap;
+}
+
+.task-status-grid {
+    flex-wrap: wrap;
+}
+
+/* Checklist Task */
+.task-checklist-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.task-checklist-text {
+    /* base */
+}
+.task-checklist-completed {
+    text-decoration: line-through;
+}
+
+/* Storico Commenti Task */
+.task-comment-item {
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+}
+
+.task-comment-body {
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+/* Allegati Task */
+.task-attachment-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.task-attachment-form {
+    align-items: flex-end;
+}
+
+.task-file-input {
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+/* Utilità Generiche per i Testi (Colori) */
+.u-color-text { color: var(--text); }
+.u-color-red { color: var(--red); }
+.u-color-green { color: var(--green); }

@@ -57,7 +57,16 @@ class TicketController extends Controller
     public function show(Ticket $ticket): View
     {
         $this->authorize('view', $ticket);
-        $ticket->load(['client', 'project', 'creator', 'assignee', 'attachments.uploader', 'auditLogs.user']);
+        $ticket->load([
+            'client', 
+            'project', 
+            'creator', 
+            'assignee', 
+            'attachments.uploader', 
+            'auditLogs.user',
+            'tasks.project',
+            'tasks.assignee',
+        ]);
 
         return view('tickets.show', compact('ticket'));
     }

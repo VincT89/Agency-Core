@@ -19,6 +19,11 @@ class ChatbotClient extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function projects()
+    {
+        return $this->hasMany(ChatbotProject::class);
+    }
+
     public function marketingCampaigns()
     {
         return $this->hasMany(ChatbotMarketingCampaign::class);

@@ -4,6 +4,7 @@ namespace App\Domain\Chatbot\Actions;
 
 use App\Models\Client;
 use App\Models\Chatbot\ChatbotClient;
+use App\Models\HostingService;
 use App\Services\Chatbot\PhoneNormalizer;
 
 class SyncChatbotClientAction
@@ -22,6 +23,14 @@ class SyncChatbotClientAction
             $client->updateQuietly(['normalized_phone' => $normalizedPhone]);
         }
 
+        $website = HostingService::query()
+            ->where('client_id', $client->id)
+            ->whereNotNull('domain')
+            ->where('domain', '!=', '')
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+            ->orderByDesc('id')
+            ->value('domain');
+
         return ChatbotClient::updateOrCreate(
             ['client_id' => $client->id],
             [
@@ -30,6 +39,7 @@ class SyncChatbotClientAction
                 'email' => $client->email,
                 'phone' => $client->phone,
                 'normalized_phone' => $normalizedPhone,
+                'website' => $website,
                 'status' => $client->status,
                 'activity_description' => $client->activity_description,
                 'source_updated_at' => $client->updated_at,

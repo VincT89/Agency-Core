@@ -67,8 +67,8 @@
                     @if($hostingService->password)
                         <div class="hosting-password-container" data-id="{{ $hostingService->id }}">
                             <span class="hosting-password-value" data-hidden="true">••••••••</span>
-                            <button type="button" class="hosting-password-toggle" title="Mostra/Nascondi"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
-                            <button type="button" class="hosting-password-copy" title="Copia"><i data-lucide="copy" style="width:14px;height:14px"></i></button>
+                            <button type="button" class="hosting-password-toggle" title="Mostra/Nascondi"><i data-lucide="eye" class="u-icon-sm"></i></button>
+                            <button type="button" class="hosting-password-copy" title="Copia"><i data-lucide="copy" class="u-icon-sm"></i></button>
                         </div>
                     @else
                         —

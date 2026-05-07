@@ -4,9 +4,16 @@ namespace App\Domain\Core\Actions;
 
 use App\Models\Ticket;
 use Illuminate\Support\Facades\DB;
+use App\Notifications\TicketUnassignedNotification;
+use App\Services\Tickets\TicketNotificationRecipientResolver;
 
 class CreateTicketAction
 {
+    public function __construct(
+        private TicketNotificationRecipientResolver $resolver
+    ) {
+    }
+
     public function execute(array $data): Ticket
     {
         return DB::transaction(function () use ($data) {
@@ -23,6 +30,10 @@ class CreateTicketAction
 
             if (!empty($data['assigned_to'])) {
                 event(new \App\Domain\Core\Events\TicketAssigned($ticket));
+            } else {
+                foreach ($this->resolver->admins() as $admin) {
+                    $admin->notify(new TicketUnassignedNotification($ticket));
+                }
             }
 
             return $ticket;

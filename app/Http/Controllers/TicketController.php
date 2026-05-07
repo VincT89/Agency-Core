@@ -112,7 +112,15 @@ class TicketController extends Controller
             $data['opened_at'] = now();
         }
 
+        $oldAssignedTo = $ticket->assigned_to;
         $ticket->update($data);
+
+        if (
+            !empty($data['assigned_to']) &&
+            (int) $data['assigned_to'] !== (int) $oldAssignedTo
+        ) {
+            event(new \App\Domain\Core\Events\TicketAssigned($ticket));
+        }
 
         return redirect()
             ->route('tickets.show', $ticket)

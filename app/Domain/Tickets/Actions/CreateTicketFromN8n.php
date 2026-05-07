@@ -4,9 +4,16 @@ namespace App\Domain\Tickets\Actions;
 
 use App\Models\Project;
 use App\Models\Ticket;
+use App\Notifications\TicketUnassignedNotification;
+use App\Services\Tickets\TicketNotificationRecipientResolver;
 
 class CreateTicketFromN8n
 {
+    public function __construct(
+        private TicketNotificationRecipientResolver $resolver
+    ) {
+    }
+
     public function execute(array $data): array
     {
         $source = $data['source'];
@@ -55,6 +62,10 @@ class CreateTicketFromN8n
                 'received_at' => now(),
                 'opened_at' => now(),
             ]);
+
+            foreach ($this->resolver->admins() as $admin) {
+                $admin->notify(new TicketUnassignedNotification($ticket));
+            }
 
             return [
                 'ticket' => $ticket,

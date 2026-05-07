@@ -21,6 +21,8 @@
 .u-mb-sm           { margin-bottom: 8px; }
 .u-mb-md           { margin-bottom: 16px; }
 .u-mb-lg           { margin-bottom: 20px; }
+.u-m-0             { margin: 0; }
+.u-ml-auto         { margin-left: auto; }
 .u-p-md            { padding: 16px; }
 .u-p-lg            { padding: 24px; }
 
@@ -33,6 +35,8 @@
 .u-text-muted      { font-size: 13px; color: var(--text3); }
 .u-text-strong     { font-weight: 500; color: var(--text1); }
 .u-text-italic     { font-style: italic; }
+.u-text-strike     { text-decoration: line-through; color: var(--text3); }
+.u-text-normal-case { text-transform: none; }
 
 /* Misc */
 .u-cursor-pointer  { cursor: pointer; }
@@ -62,3 +66,15 @@
 
 .u-text-orange { color: var(--orange); }
 .u-accent-blue { accent-color: var(--blue); }
+
+/* Form & Button Sizes */
+.btn-sm,
+.form-in-sm,
+.form-sel-sm {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+}
+
+.filter-search {
+    width: 200px;
+}

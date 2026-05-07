@@ -38,5 +38,15 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
     }
 }
 
-// globale
+// Auto-inizializzazione
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-client-select]').forEach(clientSelect => {
+        const projectSelectId = clientSelect.dataset.projectSelect;
+        const currentProject = clientSelect.dataset.currentProject || null;
+        if (projectSelectId) {
+            initProjectSelect(clientSelect.id, projectSelectId, currentProject);
+        }
+    });
+});
+
 window.initProjectSelect = initProjectSelect;

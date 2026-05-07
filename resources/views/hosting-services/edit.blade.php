@@ -50,7 +50,7 @@
                         this.isOpen = false;
                     }
                 }" @click.outside="isOpen = false">
-                    <div class="form-lbl">Cliente <span style="color:var(--red)">*</span></div>
+                    <div class="form-lbl">Cliente <span class="u-text-red">*</span></div>
                     <div class="hosting-services-relative">
                         <input type="hidden" name="client_id" x-model="selectedId">
                         <input type="text" class="form-in @error('client_id') is-invalid @enderror" x-model="search" @focus="isOpen = true; if(search.length === 0) fetchResults()" @input.debounce.300ms="fetchResults" placeholder="Cerca cliente..." autocomplete="off">

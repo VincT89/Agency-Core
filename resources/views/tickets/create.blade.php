@@ -10,7 +10,7 @@
     </x-page-header>
 
     <x-panel padded>
-        <div style="font-size:14px;color:var(--text3);margin-bottom:24px;border-bottom:1px solid var(--line);padding-bottom:16px;">
+        <div class="ticket-create-note">
             <strong>Nota:</strong> Usa questo modulo per tracciare guasti, richieste di supporto o comunicazioni dirette dal cliente.<br>
             Per la pianificazione esecutiva dei lavori interni, usa il modulo Task.
         </div>
@@ -26,7 +26,7 @@
 
             <div class="form-row">
                 <x-form-group label="Cliente" name="client_id">
-                    <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror" required>
+                    <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror" data-client-select data-project-select="project_sel" required>
                         <option value="">Seleziona cliente (Obbligatorio)...</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}" {{ old('client_id') == $client->id ? 'selected' : '' }}>
@@ -39,7 +39,7 @@
                     <select name="project_id" id="project_sel" class="form-sel @error('project_id') is-invalid @enderror">
                         <option value="">Nessun progetto specifico...</option>
                     </select>
-                    <div style="font-size:11px;color:var(--text3);margin-top:4px">Opzionale. Se selezionato, deve appartenere al cliente indicato.</div>
+                    <div class="u-text-meta u-mt-xs">Opzionale. Se selezionato, deve appartenere al cliente indicato.</div>
                 </x-form-group>
             </div>
 
@@ -86,7 +86,7 @@
                 </x-form-group>
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('tickets.index') }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Crea ticket</button>
             </div>
@@ -94,13 +94,4 @@
     </x-panel>
 
 
-    @push('scripts')
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        if(typeof initProjectSelect !== 'undefined') {
-            initProjectSelect('client_sel', 'project_sel', null);
-        }
-    });
-    </script>
-    @endpush
 </x-app-layout>

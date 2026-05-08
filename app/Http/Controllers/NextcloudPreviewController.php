@@ -28,18 +28,6 @@ class NextcloudPreviewController extends Controller
             403
         );
 
-        $cacheKey = "nx_preview_" . md5("{$path}_{$width}_{$height}");
-
-        $cachedData = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(15), function () use ($nextcloud, $path, $width, $height) {
-            $resp = $nextcloud->previewResponse($path, $width, $height);
-            return [
-                'body' => $resp->getContent(),
-                'content_type' => $resp->headers->get('Content-Type', 'image/jpeg'),
-            ];
-        });
-
-        return response($cachedData['body'], 200)
-            ->header('Content-Type', $cachedData['content_type'])
-            ->header('Cache-Control', 'private, max-age=900');
+        return $nextcloud->previewResponse($path, $width, $height);
     }
 }

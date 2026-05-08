@@ -520,32 +520,48 @@
                               <span>{{ $ncFile['name'] }}</span>
                           </button>
                       @else
-                          <button
-                              type="button"
-                              wire:click="openNextcloudPreview(@js($ncFile['path']))"
-                              class="nc-picker-card {{ ($pending_nextcloud_file['path'] ?? null) === $ncFile['path'] ? 'is-selected' : '' }}"
-                          >
-                              <div class="nc-picker-thumb nc-picker-thumb-large">
-                                  @if($ncFile['is_image'] ?? false)
-                                      <img
-                                          src="{{ route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 600, 'h' => 600]) }}"
-                                          alt="{{ $ncFile['name'] }}"
-                                          class="nc-picker-thumb-img"
-                                          loading="lazy"
-                                      >
-                                  @else
-                                      <i data-lucide="{{ $nextcloud_media_kind === 'video' ? 'video' : 'image' }}" class="nc-picker-icon"></i>
-                                  @endif
-                              </div>
+                          <div class="u-flex-col u-gap-xs">
+                              <button
+                                  type="button"
+                                  wire:click="selectNextcloudFile(
+                                      @js($ncFile['path']),
+                                      @js($ncFile['name']),
+                                      @js($ncFile['size']),
+                                      @js($ncFile['content_type']),
+                                      @js($ncFile['file_id'])
+                                  )"
+                                  class="nc-picker-card {{ ($pending_nextcloud_file['path'] ?? null) === $ncFile['path'] ? 'is-selected' : '' }}"
+                              >
+                                  <div class="nc-picker-thumb nc-picker-thumb-large">
+                                      @if($ncFile['is_image'] ?? false)
+                                          <img
+                                              src="{{ route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 600, 'h' => 600]) }}"
+                                              alt="{{ $ncFile['name'] }}"
+                                              class="nc-picker-thumb-img"
+                                              loading="lazy"
+                                          >
+                                      @else
+                                          <i data-lucide="{{ $nextcloud_media_kind === 'video' ? 'video' : 'image' }}" class="nc-picker-icon"></i>
+                                      @endif
+                                  </div>
 
-                              <div class="nc-picker-file-name">
-                                  {{ $ncFile['name'] }}
-                              </div>
+                                  <div class="nc-picker-file-name">
+                                      {{ $ncFile['name'] }}
+                                  </div>
 
-                              <div class="nc-picker-file-meta">
-                                  {{ ($ncFile['size'] ?? 0) > 1048576 ? round(($ncFile['size'] ?? 0) / 1048576, 2) . ' MB' : round(($ncFile['size'] ?? 0) / 1024) . ' KB' }}
-                              </div>
-                          </button>
+                                  <div class="nc-picker-file-meta">
+                                      {{ ($ncFile['size'] ?? 0) > 1048576 ? round(($ncFile['size'] ?? 0) / 1048576, 2) . ' MB' : round(($ncFile['size'] ?? 0) / 1024) . ' KB' }}
+                                  </div>
+                              </button>
+                              
+                              <button
+                                  type="button"
+                                  wire:click.stop="openNextcloudPreview(@js($ncFile['path']))"
+                                  class="btn btn-xs btn-sec u-w-full"
+                              >
+                                  Anteprima
+                              </button>
+                          </div>
                       @endif
                   @empty
                       <div class="nc-picker-empty u-p-md">
@@ -603,7 +619,7 @@
                           <video src="{{ route('nextcloud.download', ['path' => $preview_nextcloud_file['path']]) }}" controls class="nc-preview-image"></video>
                       @else
                           <img
-                              src="{{ route('nextcloud.preview', ['path' => $preview_nextcloud_file['path'], 'w' => 1400, 'h' => 1400]) }}"
+                              src="{{ route('nextcloud.preview', ['path' => $preview_nextcloud_file['path'], 'w' => 800, 'h' => 800]) }}"
                               alt="{{ $preview_nextcloud_file['name'] }}"
                               class="nc-preview-image"
                           >

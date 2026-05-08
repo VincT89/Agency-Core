@@ -38,6 +38,8 @@ class SendMarketingCampaignPostToN8nJob implements ShouldQueue
 
     public function failed(Throwable $e): void
     {
+        $this->post->refresh();
+
         $updates = [
             'n8n_error' => substr($e->getMessage(), 0, 255)
         ];

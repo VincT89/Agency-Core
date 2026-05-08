@@ -316,23 +316,53 @@ class NextcloudService
 
     public function previewResponse(string $path, int $width = 900, int $height = 900)
     {
-        $baseUrl = rtrim(config('services.nextcloud.base_url'), '/');
-
         $path = $this->normalizePath($path);
 
-        $response = Http::timeout(15)
-            ->withBasicAuth($this->username, $this->password)
-            ->get($baseUrl . '/index.php/core/preview.png', [
-                'file' => $path,
-                'x' => $width,
-                'y' => $height,
-                'a' => 'true',
+        // 1. Prova preview nativa Nextcloud
+        $previewUrl = rtrim(config('services.nextcloud.base_url'), '/')
+            . '/index.php/core/preview.png';
+
+        try {
+            $preview = Http::timeout(8)
+                ->withBasicAuth($this->username, $this->password)
+                ->get($previewUrl, [
+                    'file' => $path,
+                    'x' => $width,
+                    'y' => $height,
+                    'a' => 'true',
+                ]);
+
+            $contentType = $preview->header('Content-Type', '');
+
+            if (
+                $preview->successful()
+                && str_starts_with($contentType, 'image/')
+                && strlen($preview->body()) > 100
+            ) {
+                return response($preview->body(), 200)
+                    ->header('Content-Type', $contentType)
+                    ->header('Cache-Control', 'private, max-age=600');
+            }
+        } catch (\Throwable $e) {
+            logger()->warning('Nextcloud preview endpoint failed', [
+                'path' => $path,
+                'error' => $e->getMessage(),
             ]);
+        }
 
-        abort_unless($response->successful(), 404);
+        // 2. Fallback sicuro: scarica il file via WebDAV
+        $download = Http::timeout(12)
+            ->withBasicAuth($this->username, $this->password)
+            ->get($this->buildWebdavUrl($path));
 
-        return response($response->body(), 200)
-            ->header('Content-Type', $response->header('Content-Type', 'image/jpeg'))
+        abort_unless($download->successful(), 404);
+
+        $contentType = $download->header('Content-Type', 'application/octet-stream');
+
+        abort_unless(str_starts_with($contentType, 'image/'), 415);
+
+        return response($download->body(), 200)
+            ->header('Content-Type', $contentType)
             ->header('Cache-Control', 'private, max-age=600');
     }
 }

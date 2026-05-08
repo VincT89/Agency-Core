@@ -28,9 +28,9 @@ class StoreMarketingCampaignPostResultRequest extends FormRequest
             'external_generation_id' => ['nullable', 'string'],
             'regeneration_type' => ['required', 'in:full,caption,image'],
             'title' => ['nullable', 'string'],
-            'caption' => ['nullable', 'string'],
+            'caption' => ['required_if:regeneration_type,full,caption', 'string', 'nullable'],
             'hashtags' => ['nullable', 'array'],
-            'image_url' => ['nullable', 'url'],
+            'image_url' => ['required_if:regeneration_type,full,image', 'url', 'nullable'],
             'prompt_used' => ['nullable', 'string'],
             'raw_payload' => ['nullable', 'array'],
         ];

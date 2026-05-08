@@ -81,6 +81,7 @@ class MarketingCampaignPostCreate extends Component
     {
         $this->authorize('update', $campaign);
         $this->campaign = $campaign;
+        $this->form['scheduled_date'] = now()->format('Y-m-d');
     }
 
     public function updatedFormAiAnalysisEnabled($value)

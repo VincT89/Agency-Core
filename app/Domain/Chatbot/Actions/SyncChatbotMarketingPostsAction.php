@@ -46,6 +46,9 @@ class SyncChatbotMarketingPostsAction
                     'published_at' => $post->published_at,
                     'source_created_at' => $post->created_at,
                     'source_updated_at' => $post->updated_at,
+                    'nextcloud_file_id' => $post->nextcloud_file_id,
+                    'nextcloud_path' => $post->nextcloud_path,
+                    'nextcloud_share_url' => $post->nextcloud_share_url,
                     'synced_at' => now(),
                 ]
             );

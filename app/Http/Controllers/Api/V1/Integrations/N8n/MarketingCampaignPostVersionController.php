@@ -14,6 +14,16 @@ class MarketingCampaignPostVersionController extends Controller
 {
     public function store(StoreMarketingCampaignPostVersionRequest $request, MarketingCampaignPost $post, AddMarketingCampaignPostVersionFromN8nAction $action): JsonResponse
     {
+        if ($request->filled('request_id') && $post->n8n_request_id !== $request->validated('request_id')) {
+            \Illuminate\Support\Facades\Log::warning('N8n Callback Security Mismatch', [
+                'post_id' => $post->id,
+                'expected_request_id' => $post->n8n_request_id,
+                'received_request_id' => $request->validated('request_id'),
+                'ip' => $request->ip(),
+            ]);
+            abort(409, 'Conflict: request_id mismatch.');
+        }
+
         $version = $action->execute($post, $request->validated());
 
         return response()->json([

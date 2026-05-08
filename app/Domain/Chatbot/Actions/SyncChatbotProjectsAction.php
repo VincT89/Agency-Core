@@ -5,6 +5,7 @@ namespace App\Domain\Chatbot\Actions;
 use App\Models\Client;
 use App\Models\Chatbot\ChatbotClient;
 use App\Models\Chatbot\ChatbotProject;
+use App\Domain\Chatbot\Support\ChatbotLabelMapper;
 
 class SyncChatbotProjectsAction
 {
@@ -23,7 +24,7 @@ class SyncChatbotProjectsAction
                     'client_id' => $client->id,
                     'name' => $project->name,
                     'code' => $project->code,
-                    'status' => $project->status,
+                    'status' => ChatbotLabelMapper::status($project->status),
                     'description' => $project->description,
                     'start_date' => $project->start_date,
                     'end_date' => $project->end_date,

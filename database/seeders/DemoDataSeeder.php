@@ -153,6 +153,17 @@ class DemoDataSeeder extends Seeder
         ]);
 
         // ── 4. Create Projects ───────────────────────────────────────────────
+        $internalProject = Project::firstOrCreate(
+            ['slug' => 'progetto-interno'],
+            [
+                'client_id'   => null,
+                'name'        => 'Interno',
+                'code'        => 'INT',
+                'status'      => 'active',
+                'description' => 'Progetto interno per attività operative, organizzative e task non legati a nessun cliente specifico.',
+            ]
+        );
+
         $proj1 = Project::firstOrCreate(['slug' => 'restyling-sito-alpha'], [
             'client_id' => $alphaClient->id,
             'name' => 'Restyling Sito Alpha',

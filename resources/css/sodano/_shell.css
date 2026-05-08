@@ -494,11 +494,119 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
-.shell:not(.expanded) .sidebar-btn-text { display: none; }
-.shell:not(.expanded) .sidebar-action-btn { padding: 8px !important; margin: 4px auto 8px auto !important; width: 40px !important; border-radius: 8px !important; justify-content: center; }
-.avatar-btn { cursor: pointer; }
-.sidebar-logout-form { width: 100%; }
-.nav-item.logout { text-decoration: none; color: var(--red); }
 
-.breadcrumb a { color: var(--text2); text-decoration: none; }
+.shell:not(.expanded) .sidebar-btn-text {
+  display: none;
+}
 
+.shell:not(.expanded) .sidebar-action-btn {
+  padding: 8px !important;
+  margin: 4px auto 8px auto !important;
+  width: 40px !important;
+  border-radius: 8px !important;
+  justify-content: center;
+}
+
+.avatar-btn {
+  cursor: pointer;
+}
+
+.sidebar-logout-form {
+  width: 100%;
+}
+
+.nav-item.logout {
+  text-decoration: none;
+  color: var(--red);
+}
+
+.breadcrumb a {
+  color: var(--text2);
+  text-decoration: none;
+}
+
+/* Ticket alarm indicator */
+.sidebar-ticket-alarm {
+  background: var(--accent);
+  color: var(--text-inv);
+  border: none;
+  animation: pulse-alarm 2s infinite;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r);
+  width: 100%;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.sidebar-ticket-alarm:hover {
+  background: var(--accent2);
+  animation: none;
+}
+
+.sidebar-alarm-icon {
+  flex-shrink: 0;
+  animation: shake-icon 2s infinite;
+}
+
+.sidebar-alarm-badge {
+  margin-left: auto;
+  background: var(--text-inv);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-family: var(--mono);
+}
+
+@keyframes pulse-alarm {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(200, 16, 46, 0);
+  }
+}
+
+@keyframes shake-icon {
+
+  0%,
+  85%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  88% {
+    transform: rotate(-15deg);
+  }
+
+  92% {
+    transform: rotate(15deg);
+  }
+
+  96% {
+    transform: rotate(-8deg);
+  }
+}
+
+/* Sidebar collassata */
+.shell:not(.expanded) .sidebar-ticket-alarm {
+  padding: 8px !important;
+  width: 40px !important;
+  border-radius: 8px !important;
+  justify-content: center;
+  margin: 4px auto 6px auto !important;
+}
+
+.shell:not(.expanded) .sidebar-ticket-alarm .sidebar-btn-text,
+.shell:not(.expanded) .sidebar-ticket-alarm .sidebar-alarm-badge {
+  display: none;
+}

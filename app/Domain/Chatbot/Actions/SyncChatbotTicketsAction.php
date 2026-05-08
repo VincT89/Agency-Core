@@ -5,6 +5,7 @@ namespace App\Domain\Chatbot\Actions;
 use App\Models\Client;
 use App\Models\Chatbot\ChatbotClient;
 use App\Models\Chatbot\ChatbotTicket;
+use App\Domain\Chatbot\Support\ChatbotLabelMapper;
 
 class SyncChatbotTicketsAction
 {
@@ -30,10 +31,15 @@ class SyncChatbotTicketsAction
                     'client_id' => $client->id,
                     'title' => $ticket->title,
                     'description' => $ticket->description,
-                    'status' => $ticket->status,
-                    'priority' => $ticket->priority,
+                    'type' => ChatbotLabelMapper::ticketType($ticket->type),
+                    'code' => $ticket->code,
+                    'status' => ChatbotLabelMapper::status($ticket->status),
+                    'priority' => ChatbotLabelMapper::priority($ticket->priority),
                     'assigned_to_user_id' => $ticket->assigned_to,
                     'assigned_to_name' => $ticket->assignee->name ?? null,
+                    'due_date' => $ticket->due_date,
+                    'opened_at' => $ticket->opened_at,
+                    'closed_at' => $ticket->closed_at,
                     'source_created_at' => $ticket->created_at,
                     'source_updated_at' => $ticket->updated_at,
                     'synced_at' => now(),

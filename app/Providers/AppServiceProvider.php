@@ -58,6 +58,11 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 });
 
+                $newTickets = \App\Models\Ticket::where('status', 'open')
+                    ->where('created_by', '!=', $user->id)
+                    ->where('created_at', '>', $user->last_tickets_viewed_at ?? now()->subYears(10))
+                    ->count();
+
                 $view->with([
                     'clientsCount'    => $counts['clientsCount'],
                     'projectsCount'   => $counts['projectsCount'],
@@ -65,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
                     'overdueInvoices' => $counts['overdueInvoices'],
                     'openTasks'       => $counts['openTasks'],
                     'marketingProjectsCount' => $counts['marketingProjectsCount'],
+                    'newTickets'      => $newTickets,
                     'unreadNotificationsCount' => $user->unreadNotifications()->count(),
                     'latestNotifications'      => $user->notifications()->latest()->limit(5)->get(),
                 ]);

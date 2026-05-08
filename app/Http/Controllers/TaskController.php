@@ -32,7 +32,7 @@ class TaskController extends Controller
             $taskList = $taskQuery->forIndex($request->all())->paginate(20)->withQueryString();
         }
 
-        $projects = Project::orderBy('name')->get(['id', 'name']);
+        $projects = Project::where('status', 'active')->orderBy('name')->get(['id', 'name']);
         $users    = User::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('tasks.index', compact('viewMode', 'taskList', 'kanbanTasks', 'projects', 'users'));
@@ -42,11 +42,17 @@ class TaskController extends Controller
     {
         $this->authorize('create', Task::class);
 
-        $projects = Project::with('client')->orderBy('name')->get();
+        $projects = Project::with('client')->where('status', 'active')->orderBy('name')->get();
         $users    = User::where('status', 'active')->orderBy('name')->get();
 
         // Precompila l'ID progetto se fornito via querystring
         $preselectedProjectId = $request->project_id;
+
+        if (empty($preselectedProjectId)) {
+            $preselectedProjectId = \App\Models\Project::where('slug', 'progetto-interno')
+                ->where('status', 'active')
+                ->value('id');
+        }
 
         $sourceTicket = null;
         if ($request->filled('ticket_id')) {
@@ -92,7 +98,7 @@ class TaskController extends Controller
             $task->ticket->update(['status' => 'in_progress']);
         }
 
-        return redirect()->route('tasks.show', $task)
+        return redirect()->route('tasks.index')
             ->with('success', 'Task creato correttamente.');
     }
 
@@ -116,7 +122,7 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
 
-        $projects = Project::with('client')->orderBy('name')->get();
+        $projects = Project::with('client')->where('status', 'active')->orderBy('name')->get();
         $users    = User::where('status', 'active')->orderBy('name')->get();
 
         return view('tasks.edit', [

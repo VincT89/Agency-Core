@@ -44,6 +44,15 @@ class MarketingCampaignPostReview extends Component
             'clientEmail' => 'required|email|max:255',
         ]);
 
+        $updated = ClientReviewToken::whereKey($this->tokenRecord->id)
+            ->whereNull('used_at')
+            ->update(['used_at' => now()]);
+
+        if ($updated === 0) {
+            session()->flash('error', 'Questo link di revisione è già stato utilizzato.');
+            return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
+        }
+
         $this->post->comments()->create([
             'marketing_campaign_post_version_id' => $this->post->current_version_id,
             'client_name' => $this->clientName,
@@ -58,8 +67,6 @@ class MarketingCampaignPostReview extends Component
             'client_approved_at' => now(),
         ]);
 
-        $this->tokenRecord->markAsUsed();
-
         session()->flash('success', 'Post approvato con successo. Grazie!');
         return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
     }
@@ -71,6 +78,15 @@ class MarketingCampaignPostReview extends Component
             'clientEmail' => 'required|email|max:255',
             'commentBody' => 'required|string',
         ]);
+
+        $updated = ClientReviewToken::whereKey($this->tokenRecord->id)
+            ->whereNull('used_at')
+            ->update(['used_at' => now()]);
+
+        if ($updated === 0) {
+            session()->flash('error', 'Questo link di revisione è già stato utilizzato.');
+            return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
+        }
 
         $this->post->comments()->create([
             'marketing_campaign_post_version_id' => $this->post->current_version_id,
@@ -84,8 +100,6 @@ class MarketingCampaignPostReview extends Component
         $this->post->update([
             'status' => MarketingCampaignPostStatus::ClientChangesRequested->value,
         ]);
-
-        $this->tokenRecord->markAsUsed();
 
         session()->flash('success', 'Richiesta di modifiche inviata con successo. Il team si metterà al lavoro a breve.');
         return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);

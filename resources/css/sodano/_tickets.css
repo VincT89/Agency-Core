@@ -68,3 +68,14 @@
     color: var(--accent);
     text-decoration: none;
 }
+
+/* Commenti Ticket */
+.ticket-comment-item {
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+}
+.ticket-comment-body {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--text2);
+}

@@ -97,6 +97,7 @@ class SubmitMarketingCampaignPostToN8nAction
                 'scheduled_date' => $post->scheduled_date ? $post->scheduled_date->format('Y-m-d') : null,
                 'scheduled_time' => $post->scheduled_time ? date('H:i', strtotime($post->scheduled_time)) : null,
                 'ai_analysis_enabled' => $post->ai_analysis_enabled,
+                'publishing_platforms' => $post->publishing_platforms ?? [],
                 'media_url' => $mediaUrl,
                 'media' => [
                     'source' => $post->media_source,
@@ -118,7 +119,9 @@ class SubmitMarketingCampaignPostToN8nAction
         ];
 
         // Salva stato, payload pulito e contesto interno
+        $previousStatus = $post->status;
         $post->update([
+            'n8n_previous_status' => $previousStatus->value,
             'status' => \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value,
             'n8n_payload' => $payload,
             'n8n_internal_context' => $n8nInternalContext,

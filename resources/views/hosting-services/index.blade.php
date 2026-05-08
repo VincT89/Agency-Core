@@ -1,6 +1,6 @@
-<x-app-layout title="{{ request('type') === 'domain' ? 'Domini' : 'Hosting e Manutenzioni' }}">
+<x-app-layout title="{{ request('type') === 'domain' ? 'Domini' : 'Hosting' }}">
     <x-page-header eyebrow="Servizi IT" :meta="$services->total() . (request('type') === 'domain' ? ' domini trovati' : ' servizi trovati')">
-        <x-slot:title><strong>{{ request('type') === 'domain' ? 'Domini' : 'Hosting e Manutenzioni' }}</strong></x-slot:title>
+        <x-slot:title><strong>{{ request('type') === 'domain' ? 'Domini' : 'Hosting' }}</strong></x-slot:title>
         <x-slot:actions>
             <a href="{{ route('hosting-services.create', ['type' => request('type'), 'exclude_type' => request('exclude_type')]) }}" class="btn btn-p">
                 + Aggiungi {{ request('type') === 'domain' ? 'Dominio' : 'Servizio' }}

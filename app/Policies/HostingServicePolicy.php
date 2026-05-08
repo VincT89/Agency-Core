@@ -11,33 +11,31 @@ class HostingServicePolicy
 
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isDeveloper();
     }
 
     public function view(User $user, HostingService $hostingService): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isDeveloper();
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isDeveloper();
     }
 
     public function update(User $user, HostingService $hostingService): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isDeveloper();
     }
 
     public function delete(User $user, HostingService $hostingService): bool
     {
-        return true;
+        return $user->isAdmin();
     }
 
     public function viewPassword(User $user, HostingService $hostingService): bool
     {
-        // Al momento ogni operatore autenticato può vedere le password, 
-        // in futuro questa logica può essere ristretta per ruoli specifici.
-        return true;
+        return $user->isAdmin() || $user->isDeveloper();
     }
 }

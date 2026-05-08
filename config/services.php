@@ -55,4 +55,14 @@ return [
         'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
     ],
 
+    'nextcloud' => [
+        'base_url' => env('NEXTCLOUD_BASE_URL'),
+        'username' => env('NEXTCLOUD_USERNAME'),
+        'password' => env('NEXTCLOUD_PASSWORD'),
+        'webdav_path' => env('NEXTCLOUD_WEBDAV_PATH', '/remote.php/dav/files'),
+        'photos_root' => env('NEXTCLOUD_PHOTOS_ROOT', '/FotoClienti'),
+        'videos_root' => env('NEXTCLOUD_VIDEOS_ROOT', '/VideoClienti'),
+        'share_expire_days' => env('NEXTCLOUD_SHARE_EXPIRE_DAYS', 7),
+    ],
+
 ];

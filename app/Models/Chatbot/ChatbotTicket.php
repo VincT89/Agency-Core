@@ -9,6 +9,9 @@ class ChatbotTicket extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'due_date' => 'date',
+        'opened_at' => 'datetime',
+        'closed_at' => 'datetime',
         'source_created_at' => 'datetime',
         'source_updated_at' => 'datetime',
         'synced_at' => 'datetime',

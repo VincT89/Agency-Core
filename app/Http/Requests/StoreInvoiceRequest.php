@@ -35,6 +35,11 @@ class StoreInvoiceRequest extends FormRequest
             'tax_amount' => ['required', 'numeric', 'min:0'],
             'paid_total' => ['nullable', 'numeric', 'min:0'],
 
+            'items'                  => ['nullable', 'array'],
+            'items.*.description'    => ['required_with:items', 'string', 'max:255'],
+            'items.*.quantity'       => ['required_with:items', 'numeric', 'min:0.01'],
+            'items.*.unit_price'     => ['required_with:items', 'numeric', 'min:0'],
+
             'notes' => ['nullable', 'string'],
         ];
     }

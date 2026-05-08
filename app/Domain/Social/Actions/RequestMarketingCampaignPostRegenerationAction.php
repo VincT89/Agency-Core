@@ -7,13 +7,13 @@ use App\Models\User;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostCommentType;
 use App\Enums\Social\MarketingCampaignPostCommentVisibility;
-use App\Services\Integrations\N8n\N8nClient;
+use App\Jobs\RequestMarketingCampaignPostRegenerationJob;
 use Illuminate\Support\Str;
 use Exception;
 
 class RequestMarketingCampaignPostRegenerationAction
 {
-    public function __construct(private N8nClient $n8nClient)
+    public function __construct()
     {
     }
 
@@ -34,12 +34,12 @@ class RequestMarketingCampaignPostRegenerationAction
             'type' => MarketingCampaignPostCommentType::ChangeRequest->value,
         ]);
 
-        $post->update([
-            'status' => MarketingCampaignPostStatus::Regenerating->value,
-            'n8n_request_id' => $requestId,
-        ]);
+        $post->loadMissing(['campaign.client', 'currentVersion']);
 
+        $campaign = $post->campaign;
+        $client = $campaign->client;
         $currentVersion = $post->currentVersion;
+        $previousStatus = $post->status->value ?? $post->status;
 
         $payload = [
             'type' => 'marketing_campaign_post_regeneration',
@@ -47,17 +47,59 @@ class RequestMarketingCampaignPostRegenerationAction
             'request_id' => $requestId,
             'regeneration_type' => $regenerationType,
             'prompt' => $prompt,
+
+            'campaign' => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+            ],
+
+            'client' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'logo_url' => $client->logo_url,
+                'activity_description' => $client->activity_description,
+            ],
+
+            'post' => [
+                'id' => $post->id,
+                'title' => $post->title,
+                'description' => $post->description,
+                'content_type' => $post->content_type->value ?? $post->content_type,
+                'publishing_platforms' => $post->publishing_platforms ?? [],
+                'media_url' => $post->media_url,
+                'media' => [
+                    'source' => $post->media_source,
+                    'url' => $post->media_url,
+                    'nextcloud_path' => $post->nextcloud_path,
+                    'nextcloud_share_url' => $post->nextcloud_share_url,
+                    'nextcloud_file_id' => $post->nextcloud_file_id,
+                ],
+            ],
+
             'current_version' => $currentVersion ? [
+                'id' => $currentVersion->id,
                 'version_number' => $currentVersion->version_number,
                 'title' => $currentVersion->title,
                 'caption' => $currentVersion->caption,
                 'hashtags' => $currentVersion->hashtags,
                 'image_url' => $currentVersion->image_url,
             ] : null,
+
             'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
         ];
 
-        // Se vogliamo farlo in background possiamo creare un Job, per ora chiamiamo N8n
-        $this->n8nClient->requestMarketingCampaignPostRegeneration($payload);
+        $post->update([
+            'n8n_previous_status' => $previousStatus,
+            'status' => MarketingCampaignPostStatus::Regenerating->value,
+            'n8n_request_id' => $requestId,
+            'n8n_error' => null,
+            'n8n_payload' => $payload,
+        ]);
+
+        RequestMarketingCampaignPostRegenerationJob::dispatch(
+            $post,
+            $payload,
+            $previousStatus
+        );
     }
 }

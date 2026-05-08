@@ -13,6 +13,10 @@ class TicketController extends Controller
 {
     public function index(\Illuminate\Http\Request $request, \App\Domain\Core\Queries\TicketQuery $ticketQuery): View
     {
+        $user = auth()->user();
+        $user->update(['last_tickets_viewed_at' => now()]);
+        \Illuminate\Support\Facades\Cache::forget('sidebar_counts_' . $user->id);
+
         $this->authorize('viewAny', Ticket::class);
         
         $tickets = $ticketQuery->forIndex($request->all())->paginate(15)->withQueryString();
@@ -50,7 +54,7 @@ class TicketController extends Controller
         $ticket = $action->execute($request->validated());
 
         return redirect()
-            ->route('tickets.show', $ticket)
+            ->route('tickets.index')
             ->with('success', 'Ticket creato correttamente.');
     }
 
@@ -66,6 +70,7 @@ class TicketController extends Controller
             'auditLogs.user',
             'tasks.project',
             'tasks.assignee',
+            'comments.user',
         ]);
 
         return view('tickets.show', compact('ticket'));

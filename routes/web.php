@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\CalendarEventController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceItemController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\EconomicSummaryController;
 use App\Http\Controllers\AttachmentController;
@@ -21,7 +23,8 @@ Route::get('/', function () {
 
 // Route pubbliche per Clienti
 Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\MarketingCampaignPostReview::class)
-    ->name('public.marketing-campaign-posts.review');
+    ->name('public.marketing-campaign-posts.review')
+    ->middleware('throttle:30,1');
 
 Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
@@ -32,10 +35,10 @@ Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($fullPath), 404);
 
     $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
-    abort_unless(in_array($extension, ['jpg', 'jpeg', 'png', 'webp']), 404);
+    abort_unless(in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm', 'm4v']), 404);
 
     $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($fullPath);
-    abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp']), 404);
+    abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime']), 404);
 
     return \Illuminate\Support\Facades\Storage::disk('public')->response($fullPath);
 })->where('path', '.*')->name('media.marketing-campaign-posts');
@@ -50,6 +53,22 @@ Route::get('/media/{path}', function (string $path) {
 
     return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
 })->where('path', '.*')->name('media.public');
+
+Route::get('/nextcloud/preview', \App\Http\Controllers\NextcloudPreviewController::class)
+    ->middleware(['auth', 'throttle:120,1'])
+    ->name('nextcloud.preview');
+
+Route::get('/nextcloud/download', function (\Illuminate\Http\Request $request, \App\Services\Integrations\Nextcloud\NextcloudService $nextcloud) {
+    $path = $request->query('path');
+    abort_unless($path, 404);
+    $path = $nextcloud->normalizePath($path);
+    $content = $nextcloud->downloadFile($path);
+    abort_unless($content, 404);
+    $mime = str_ends_with(strtolower($path), 'mp4') ? 'video/mp4' : 'application/octet-stream';
+    if (str_ends_with(strtolower($path), 'webm')) $mime = 'video/webm';
+    if (str_ends_with(strtolower($path), 'mov')) $mime = 'video/quicktime';
+    return response($content, 200)->header('Content-Type', $mime);
+})->middleware(['auth', 'throttle:60,1'])->name('nextcloud.download');
 
 Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'force.password.change'])->name('dashboard');
@@ -70,6 +89,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('clients', ClientController::class);
     Route::resource('projects', ProjectController::class);
     Route::resource('tickets', TicketController::class);
+    Route::post('tickets/{ticket}/comments', [TicketCommentController::class, 'store'])
+        ->name('tickets.comments.store');
     
     // Task
     Route::resource('tasks', \App\Http\Controllers\TaskController::class);
@@ -107,6 +128,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignsIndex::class)->name('index');
         Route::get('/create', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignCreate::class)->name('create');
         Route::get('/{campaign}', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignShow::class)->name('show');
+        Route::get('/{campaign}/posts/create', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate::class)->name('posts.create');
+        Route::get('/{campaign}/posts/{post}', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostShow::class)->name('posts.show');
     });
 
     Route::prefix('social/shooting')->name('social.shooting.')->group(function () {
@@ -131,6 +154,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         
     Route::resource('calendar-events', CalendarEventController::class);
     Route::resource('invoices', InvoiceController::class);
+    Route::post('invoices/{invoice}/items', [InvoiceItemController::class, 'store'])->name('invoices.items.store');
+    Route::delete('invoices/{invoice}/items/{item}', [InvoiceItemController::class, 'destroy'])->name('invoices.items.destroy');
     Route::resource('payments', PaymentController::class);
     Route::get('/economic-summary', EconomicSummaryController::class)->name('economic-summary.index');
 

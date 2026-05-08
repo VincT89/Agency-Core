@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Chatbot\ChatbotClient;
 use App\Models\Chatbot\ChatbotMarketingPost;
 use App\Models\MarketingCampaignPost;
+use App\Domain\Chatbot\Support\ChatbotLabelMapper;
 
 class SyncChatbotMarketingPostsAction
 {
@@ -35,11 +36,14 @@ class SyncChatbotMarketingPostsAction
                     'campaign_name' => $post->campaign?->name,
                     'title' => $post->title,
                     'description' => $post->description,
-                    'status' => $post->status->value ?? $post->status,
+                    'content_type' => ChatbotLabelMapper::contentType($post->content_type),
+                    'status' => ChatbotLabelMapper::status($post->status),
                     'media_path' => $post->media_path,
                     'media_source' => $post->media_source,
+                    'publishing_platforms' => ChatbotLabelMapper::platforms($post->publishing_platforms ?? []),
                     'scheduled_date' => $post->scheduled_date,
                     'scheduled_time' => $post->scheduled_time,
+                    'published_at' => $post->published_at,
                     'source_created_at' => $post->created_at,
                     'source_updated_at' => $post->updated_at,
                     'synced_at' => now(),

@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Chatbot\ChatbotClient;
 use App\Models\HostingService;
 use App\Services\Chatbot\PhoneNormalizer;
+use App\Domain\Chatbot\Support\ChatbotLabelMapper;
 
 class SyncChatbotClientAction
 {
@@ -40,7 +41,7 @@ class SyncChatbotClientAction
                 'phone' => $client->phone,
                 'normalized_phone' => $normalizedPhone,
                 'website' => $website,
-                'status' => $client->status,
+                'status' => ChatbotLabelMapper::status($client->status),
                 'activity_description' => $client->activity_description,
                 'source_updated_at' => $client->updated_at,
                 'synced_at' => now(),

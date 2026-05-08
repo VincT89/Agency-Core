@@ -5,6 +5,7 @@ namespace App\Domain\Chatbot\Actions;
 use App\Models\Client;
 use App\Models\Chatbot\ChatbotClient;
 use App\Models\Chatbot\ChatbotMarketingCampaign;
+use App\Domain\Chatbot\Support\ChatbotLabelMapper;
 
 class SyncChatbotMarketingCampaignsAction
 {
@@ -32,7 +33,8 @@ class SyncChatbotMarketingCampaignsAction
                     'chatbot_client_id' => $chatbotClient->id,
                     'client_id' => $client->id,
                     'name' => $campaign->name,
-                    'status' => $campaign->status->value ?? $campaign->status,
+                    'description' => $campaign->description,
+                    'status' => ChatbotLabelMapper::status($campaign->status),
                     'starts_at' => $campaign->starts_at,
                     'ends_at' => $campaign->ends_at,
                     'source_created_at' => $campaign->created_at,

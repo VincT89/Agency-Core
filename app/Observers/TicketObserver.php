@@ -11,7 +11,19 @@ class TicketObserver
 {
     public function saved(Ticket $ticket): void
     {
-        if ($ticket->wasChanged(['title', 'description', 'status', 'priority', 'assigned_to', 'client_id'])) {
+        if ($ticket->wasChanged([
+            'title', 
+            'description', 
+            'type', 
+            'code', 
+            'status', 
+            'priority', 
+            'assigned_to', 
+            'client_id',
+            'due_date',
+            'opened_at',
+            'closed_at'
+        ])) {
             \App\Jobs\Chatbot\SyncChatbotClientDataJob::dispatch($ticket->client_id)
                 ->delay(now()->addSeconds(10))
                 ->onQueue('chatbot');

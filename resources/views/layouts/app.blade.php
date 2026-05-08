@@ -36,7 +36,7 @@
           @isset($breadcrumb)
             @foreach($breadcrumb as $label => $url)
               @if(!$loop->last)
-                <a href="{{ $url }}" >{{ $label }}</a>
+                <a href="{{ $url }}">{{ $label }}</a>
                 <span class="sep">/</span>
               @else
                 <span class="cur">{{ $label }}</span>
@@ -64,7 +64,7 @@
               <div class="dropdown-header-title">Notifiche</div>
               @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
                 <div class="u-flex-center u-gap-md">
-                  <form method="POST" action="{{ route('notifications.readAll') }}"  @click.stop>
+                  <form method="POST" action="{{ route('notifications.readAll') }}" @click.stop>
                     @csrf
                     <button type="submit" class="notif-mark-all">Segna tutte lette</button>
                   </form>
@@ -76,7 +76,7 @@
               @forelse($latestNotifications ?? [] as $notification)
                 @php /** @var \Illuminate\Notifications\DatabaseNotification $notification */ @endphp
                 <div class="notif-item {{ $notification->read_at ? '' : 'unread' }}">
-                  <form method="POST" action="{{ route('notifications.read', $notification->id) }}" >
+                  <form method="POST" action="{{ route('notifications.read', $notification->id) }}">
                     @csrf
                     <button type="submit" class="notif-item-btn">
                       @php
@@ -103,7 +103,8 @@
                     @method('DELETE')
                     <button type="submit" class="notif-item-delete" title="Elimina notifica">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        <path
+                          d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
                       </svg>
                     </button>
                   </form>
@@ -120,7 +121,7 @@
         </div>
 
         <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
-          <div class="avatar-btn" title="{{ auth()->user()->name }}" @click="open = !open" >
+          <div class="avatar-btn" title="{{ auth()->user()->name }}" @click="open = !open">
             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(strstr(auth()->user()->name, ' '), 1, 1)) }}
           </div>
           <div class="dropdown-menu" x-show="open" x-transition style="display:none;">
@@ -130,7 +131,7 @@
             </div>
             <a href="{{ route('profile.edit') }}" class="dropdown-item">Profilo</a>
             <div class="dropdown-divider"></div>
-            <form method="POST" action="{{ route('logout') }}" >
+            <form method="POST" action="{{ route('logout') }}">
               @csrf
               <button type="submit" class="dropdown-item danger">Esci</button>
             </form>
@@ -140,171 +141,160 @@
     </div>
 
     {{-- SIDEBAR --}}
-<div class="sidebar">
-  <button class="sidebar-toggle" onclick="toggleSidebar()">
-    <svg id="sidebar-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  </button>
+    <div class="sidebar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <svg id="sidebar-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
 
-  {{-- ACCESSO RAPIDO --}}
-  @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
-  <div class="nav-group">
-    <div class="nav-group-label">Accesso Rapido</div>
-    <div class="sidebar-action-group">
-      <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
-        <i data-lucide="plus" class="u-icon-sm"></i>
-        <span class="sidebar-btn-text">Nuovo Task</span>
-      </a>
-      @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-      <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-p sidebar-action-btn">
-        <i data-lucide="plus" class="u-icon-sm"></i>
-        <span class="sidebar-btn-text">Nuovo Ticket</span>
-      </a>
-      @endif
-    </div>
-  </div>
-  @endif
-
-  {{-- 1. OPERATIVITÀ --}}
-  <div class="nav-divider"></div>
-  <div class="nav-group">
-    <div class="nav-group-label">Operatività</div>
-
-    <x-nav-item href="{{ route('dashboard') }}" icon="layout-dashboard" label="Dashboard"
-      :active="request()->routeIs('dashboard')" />
-
-    <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
-      :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
-
-    @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-      <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
-        :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
-    @endif
-
-    <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
-      :active="request()->routeIs('calendar-events.*')" />
-
-    @can('viewAny', \App\Models\Team::class)
-      @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
-        <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
-          :active="request()->routeIs('teams.*')" />
-      @endif
-    @endcan
-  </div>
-
-  {{-- 2. SOCIAL MEDIA — marketing e admin --}}
-  @if(auth()->user()->isMarketing() || auth()->user()->canManageSystem())
-    <div class="nav-divider"></div>
-    <div class="nav-group">
-      <div class="nav-group-label">Social Media</div>
-
-      <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
-        :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
-
-      <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
-        :active="request()->routeIs('social.calendar')" />
-
-      @if(auth()->user()->isMarketing())
-        <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting"
-          :active="request()->routeIs('social.shooting.*')" />
+      {{-- ACCESSO RAPIDO --}}
+      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
+        <div class="nav-group">
+          <div class="nav-group-label">Accesso Rapido</div>
+          <div class="sidebar-action-group">
+            <a href="{{ route('tasks.create') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+              <i data-lucide="plus" class="u-icon-sm"></i>
+              <span class="sidebar-btn-text">Nuovo Task</span>
+            </a>
+            @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+              @if(isset($newTickets) && $newTickets > 0)
+                <a href="{{ route('tickets.index') }}" wire:navigate class="sidebar-ticket-alarm">
+                  <i data-lucide="bell-ring" class="u-icon-sm sidebar-alarm-icon"></i>
+                  <span class="sidebar-btn-text">
+                    {{ $newTickets }} {{ $newTickets === 1 ? 'nuovo ticket' : 'nuovi ticket' }}
+                  </span>
+                  <span class="sidebar-alarm-badge">{{ $newTickets }}</span>
+                </a>
+              @endif
+            @endif
+          </div>
+        </div>
       @endif
 
+      {{-- 1. OPERATIVITÀ --}}
+      <div class="nav-divider"></div>
+      <div class="nav-group">
+        <div class="nav-group-label">Operatività</div>
+
+        <x-nav-item href="{{ route('dashboard') }}" icon="layout-dashboard" label="Dashboard"
+          :active="request()->routeIs('dashboard')" />
+
+        <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
+          :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
+
+        @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+          <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
+            :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
+        @endif
+
+        <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
+          :active="request()->routeIs('calendar-events.*')" />
+
+        @can('viewAny', \App\Models\Team::class)
+          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+            <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
+              :active="request()->routeIs('teams.*')" />
+          @endif
+        @endcan
+      </div>
+
+      {{-- 2. SOCIAL MEDIA — marketing e admin --}}
+      @if(auth()->user()->isMarketing() || auth()->user()->canManageSystem())
+        <div class="nav-divider"></div>
+        <div class="nav-group">
+          <div class="nav-group-label">Social Media</div>
+
+          <x-nav-item href="{{ route('marketing-campaigns.index') }}" icon="megaphone" label="Progetti Marketing"
+            :active="request()->routeIs('marketing-campaigns.*')" :badge="$marketingProjectsCount ?? null" />
+
+          <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
+            :active="request()->routeIs('social.calendar')" />
+
+          @if(auth()->user()->isMarketing())
+            <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting"
+              :active="request()->routeIs('social.shooting.*')" />
+          @endif
+
+          @if(auth()->user()->canManageSystem())
+            <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
+              :active="request()->routeIs('admin.shooting.*')" />
+          @endif
+        </div>
+      @endif
+
+      {{-- 2. SOCIAL MEDIA — fotografo --}}
+      @if(auth()->user()->isPhotographer())
+        <div class="nav-divider"></div>
+        <div class="nav-group">
+          <div class="nav-group-label">Social Media</div>
+          <x-nav-item href="{{ route('photography.shooting.index') }}" icon="camera" label="I Miei Shooting"
+            :active="request()->routeIs('photography.shooting.*')" />
+        </div>
+      @endif
+
+      {{-- 3. AMMINISTRAZIONE --}}
+      <div class="nav-divider"></div>
+      <div class="nav-group">
+        <div class="nav-group-label">Amministrazione</div>
+
+        @can('viewAny', \App\Models\Client::class)
+          @if(!auth()->user()->isPhotographer())
+            <x-nav-item href="{{ route('clients.index') }}" icon="building-2" label="Clienti"
+              :active="request()->routeIs('clients.*')" :badge="$clientsCount ?? null" />
+          @endif
+        @endcan
+
+        <x-nav-item href="{{ route('projects.index') }}" icon="folder-kanban" label="Progetti"
+          :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
+
+        @if(auth()->user()->canAccessFinance())
+          <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
+            :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" />
+          <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
+            :active="request()->routeIs('payments.*')" />
+          <x-nav-item href="{{ route('economic-summary.index') }}" icon="bar-chart-2" label="Riepilogo"
+            :active="request()->routeIs('economic-summary.*')" />
+        @endif
+      </div>
+
+      {{-- HOSTING E DOMINI --}}
       @if(auth()->user()->canManageSystem())
-        <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
-          :active="request()->routeIs('admin.shooting.*')" />
+        <div class="nav-divider"></div>
+        <div class="nav-group">
+          <div class="nav-group-label">Hosting e Domini</div>
+          <x-nav-item href="{{ route('hosting-services.index', ['type' => 'domain']) }}" icon="globe" label="Domini"
+            :active="request()->routeIs('hosting-services.*') && request('type') === 'domain'" />
+          <x-nav-item href="{{ route('hosting-services.index', ['exclude_type' => 'domain']) }}" icon="server"
+            label="Hosting" :active="request()->routeIs('hosting-services.*') && request('exclude_type') === 'domain'" />
+        </div>
       @endif
+
+      {{-- ADMIN --}}
+      @can('system.admin')
+        <div class="nav-divider"></div>
+        <div class="nav-group">
+          <div class="nav-group-label">Admin</div>
+          <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
+            :active="request()->routeIs('users.*')" />
+        </div>
+      @endcan
+
+      <div class="nav-spacer"></div>
+      <div class="nav-divider"></div>
+      <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
+        :active="request()->routeIs('profile.*')" />
+
+      <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
+        @csrf
+        <a href="#" onclick="event.preventDefault(); this.closest('form').submit();" class="nav-item logout">
+          <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
+          <span class="nav-label">Logout</span>
+          <div class="nav-tooltip">Logout</div>
+        </a>
+      </form>
     </div>
-  @endif
-
-  {{-- 2. SOCIAL MEDIA — fotografo --}}
-  @if(auth()->user()->isPhotographer())
-    <div class="nav-divider"></div>
-    <div class="nav-group">
-      <div class="nav-group-label">Social Media</div>
-      <x-nav-item href="{{ route('photography.shooting.index') }}" icon="camera" label="I Miei Shooting"
-        :active="request()->routeIs('photography.shooting.*')" />
-    </div>
-  @endif
-
-  {{-- 3. AMMINISTRAZIONE --}}
-  <div class="nav-divider"></div>
-  <div class="nav-group">
-    <div class="nav-group-label">Amministrazione</div>
-
-    @can('viewAny', \App\Models\Client::class)
-      @if(!auth()->user()->isPhotographer())
-        <x-nav-item href="{{ route('clients.index') }}" icon="building-2" label="Clienti"
-          :active="request()->routeIs('clients.*')" :badge="$clientsCount ?? null" />
-      @endif
-    @endcan
-
-    <x-nav-item href="{{ route('projects.index') }}" icon="folder-kanban" label="Progetti"
-      :active="request()->routeIs('projects.*')" :badge="$projectsCount ?? null" />
-
-    @if(auth()->user()->canAccessFinance())
-      <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
-        :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" />
-      <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
-        :active="request()->routeIs('payments.*')" />
-      <x-nav-item href="{{ route('economic-summary.index') }}" icon="bar-chart-2" label="Riepilogo"
-        :active="request()->routeIs('economic-summary.*')" />
-    @endif
-  </div>
-
-  {{-- 4. GESTIONE DOMINI --}}
-  @if(auth()->user()->canManageSystem())
-    <div class="nav-divider"></div>
-    <div class="nav-group">
-      <div class="nav-group-label">Gestione Domini</div>
-      <x-nav-item 
-        href="{{ route('hosting-services.index', ['type' => 'domain']) }}" 
-        icon="globe" 
-        label="Domini" 
-        :active="request()->routeIs('hosting-services.*') && request('type') === 'domain'" 
-      />
-    </div>
-  @endif
-
-  {{-- 5. HOSTING E MANUTENZIONI --}}
-  @if(auth()->user()->canManageSystem())
-    <div class="nav-divider"></div>
-    <div class="nav-group">
-      <div class="nav-group-label">Hosting e Manutenzioni</div>
-      <x-nav-item 
-        href="{{ route('hosting-services.index', ['exclude_type' => 'domain']) }}" 
-        icon="server" 
-        label="Hosting e Manutenzioni" 
-        :active="request()->routeIs('hosting-services.*') && request('exclude_type') === 'domain'" 
-      />
-    </div>
-  @endif
-
-  {{-- ADMIN --}}
-  @can('system.admin')
-    <div class="nav-divider"></div>
-    <div class="nav-group">
-      <div class="nav-group-label">Admin</div>
-      <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
-        :active="request()->routeIs('users.*')" />
-    </div>
-  @endcan
-
-  <div class="nav-spacer"></div>
-  <div class="nav-divider"></div>
-  <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
-    :active="request()->routeIs('profile.*')" />
-
-  <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
-    @csrf
-    <a href="#" onclick="event.preventDefault(); this.closest('form').submit();" class="nav-item logout">
-      <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
-      <span class="nav-label">Logout</span>
-      <div class="nav-tooltip">Logout</div>
-    </a>
-  </form>
-</div>
 
     {{-- MAIN --}}
     <div class="main">

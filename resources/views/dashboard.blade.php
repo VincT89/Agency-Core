@@ -5,13 +5,7 @@
         :meta="today()->isoFormat('D MMMM YYYY')"
     >
     <x-slot:title><strong>Bentornato</strong>, {{ auth()->user()->name }}</x-slot:title>
-        <x-slot:actions>
-            @can('create', \App\Models\Ticket::class)
-                @if(!auth()->user()->isMarketing())
-                <a href="{{ route('tickets.create') }}" class="btn btn-p">+ Nuovo ticket</a>
-                @endif
-            @endcan
-        </x-slot:actions>
+
     </x-page-header>
 
     @can('system.admin')

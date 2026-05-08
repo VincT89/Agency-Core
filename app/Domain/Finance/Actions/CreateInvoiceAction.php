@@ -16,6 +16,19 @@ class CreateInvoiceAction
 
             $invoice = Invoice::create($data);
 
+            foreach ($data['items'] ?? [] as $line) {
+                $qty   = (float) $line['quantity'];
+                $price = (float) $line['unit_price'];
+                $invoice->items()->create([
+                    'billable_type' => null,
+                    'billable_id'   => null,
+                    'description'   => $line['description'],
+                    'quantity'      => $qty,
+                    'unit_price'    => $price,
+                    'total'         => $qty * $price,
+                ]);
+            }
+
             return $invoice;
         });
     }

@@ -9,10 +9,26 @@ class MarketingCampaignPostObserver
 {
     public function saved(MarketingCampaignPost $post): void
     {
-        if ($post->wasChanged(['title', 'description', 'status', 'media_path', 'media_source', 'scheduled_date', 'scheduled_time', 'marketing_campaign_id'])) {
-            // we need client_id from campaign
-            if ($post->campaign) {
-                SyncChatbotClientDataJob::dispatch($post->campaign->client_id)
+        if ($post->wasChanged([
+            'title', 
+            'description', 
+            'status', 
+            'media_path', 
+            'media_source', 
+            'scheduled_date', 
+            'scheduled_time', 
+            'marketing_campaign_id',
+            'content_type',
+            'publishing_platforms',
+            'published_at',
+            'nextcloud_path',
+            'nextcloud_share_url',
+            'nextcloud_file_id'
+        ])) {
+            $client = $post->campaign?->client;
+            
+            if ($client) {
+                SyncChatbotClientDataJob::dispatch($client->id)
                     ->delay(now()->addSeconds(10))
                     ->onQueue('chatbot');
             }

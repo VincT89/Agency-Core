@@ -1,4 +1,9 @@
 <x-app-layout title="{{ $task->title }}">
+    <div class="u-mb-lg u-flex-end">
+        <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+        </a>
+    </div>
     <x-page-header
         eyebrow="Task · {{ $task->project?->name ?? '—' }}"
         

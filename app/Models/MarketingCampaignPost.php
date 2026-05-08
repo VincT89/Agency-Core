@@ -21,11 +21,13 @@ class MarketingCampaignPost extends Model
         'n8n_payload' => 'array',
         'n8n_internal_context' => 'array',
         'status' => MarketingCampaignPostStatus::class,
+        'n8n_previous_status' => MarketingCampaignPostStatus::class,
         'content_type' => MarketingCampaignPostType::class,
         'generated_at' => 'datetime',
         'n8n_completed_at' => 'datetime',
         'sent_to_client_at' => 'datetime',
         'client_approved_at' => 'datetime',
+        'publishing_platforms' => 'array',
     ];
 
     public function campaign(): BelongsTo
@@ -78,6 +80,12 @@ class MarketingCampaignPost extends Model
 
     public function getMediaUrlAttribute(): ?string
     {
+        if ($this->media_source === 'nextcloud') {
+            return $this->nextcloud_share_url
+                ? rtrim($this->nextcloud_share_url, '/') . '/download'
+                : null;
+        }
+
         if (!$this->media_path) {
             return null;
         }
@@ -85,5 +93,18 @@ class MarketingCampaignPost extends Model
         return route('media.marketing-campaign-posts', [
             'path' => $this->media_path
         ]);
+    }
+
+    public function getPreviewUrlAttribute(): ?string
+    {
+        if ($this->media_source === 'nextcloud' && $this->nextcloud_path) {
+            return route('nextcloud.preview', [
+                'path' => $this->nextcloud_path,
+                'w' => 800,
+                'h' => 800,
+            ]);
+        }
+
+        return $this->media_url;
     }
 }

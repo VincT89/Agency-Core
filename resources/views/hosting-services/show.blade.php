@@ -1,4 +1,9 @@
 <x-app-layout title="{{ $hostingService->name }}">
+    <div class="u-mb-lg u-flex-end">
+        <a href="{{ route('hosting-services.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+        </a>
+    </div>
     <x-page-header eyebrow="Servizio · {{ ucfirst($hostingService->type) }}">
         <x-slot:title><strong>{{ $hostingService->name }}</strong></x-slot:title>
         <x-slot:actions>

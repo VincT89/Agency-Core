@@ -22,6 +22,7 @@ use App\Enums\UserRole;
     'primary_specialization',
     'role',
     'password_changed_at',
+    'last_tickets_viewed_at',
 ])]
 #[Hidden([
     'password',
@@ -38,6 +39,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'last_tickets_viewed_at' => 'datetime',
         ];
     }
 

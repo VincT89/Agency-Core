@@ -14,6 +14,7 @@ class Ticket extends Model
 
         static::deleting(function ($ticket) {
             $ticket->attachments->each(fn($attachment) => $attachment->delete());
+            $ticket->comments()->delete();
         });
     }
 
@@ -141,6 +142,11 @@ class Ticket extends Model
     }
 
 
+
+    public function comments()
+    {
+        return $this->hasMany(TicketComment::class)->latest();
+    }
 
     public function scopeAssignedTo($query, $userOrId)
     {

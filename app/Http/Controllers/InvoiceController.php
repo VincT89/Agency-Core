@@ -57,7 +57,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->authorize('view', $invoice);
-        $invoice->load(['client', 'project', 'creator', 'payments', 'auditLogs.user', 'attachments.uploader']);
+        $invoice->load(['client', 'project', 'creator', 'items', 'payments', 'auditLogs.user', 'attachments.uploader']);
 
         return view('invoices.show', compact('invoice'));
     }
@@ -65,15 +65,18 @@ class InvoiceController extends Controller
     public function edit(Invoice $invoice): View
     {
         $this->authorize('update', $invoice);
+        $invoice->load(['client', 'project', 'items']);
         $clients = Client::query()
             ->with('projects')
             ->orderBy('name')
             ->get();
 
         return view('invoices.edit', [
-            'invoice' => $invoice,
-            'clients' => $clients,
-            'statuses' => Invoice::STATUSES,
+            'invoice'       => $invoice,
+            'clients'       => $clients,
+            'statuses'      => Invoice::STATUSES,
+            'existingItems' => $invoice->items->whereNull('billable_type')->values(),
+            'linkedTotal'   => $invoice->items->whereNotNull('billable_type')->sum('total'),
         ]);
     }
 
@@ -85,6 +88,40 @@ class InvoiceController extends Controller
         $data['total'] = (float) $data['subtotal'] + (float) $data['tax_amount'];
 
         $invoice->update($data);
+
+        $incomingItems = collect($data['items'] ?? []);
+        $incomingIds   = $incomingItems->pluck('id')->filter()->map(fn($id) => (int) $id);
+
+        // Elimina le voci manuali che non sono più nel payload
+        $invoice->items()
+            ->whereNull('billable_type')
+            ->whereNotIn('id', $incomingIds)
+            ->delete();
+
+        // Aggiorna o crea
+        foreach ($incomingItems as $line) {
+            $qty   = (float) $line['quantity'];
+            $price = (float) $line['unit_price'];
+            $attrs = [
+                'description' => $line['description'],
+                'quantity'    => $qty,
+                'unit_price'  => $price,
+                'total'       => $qty * $price,
+            ];
+
+            if (!empty($line['id'])) {
+                // Aggiorna solo se la voce è manuale e appartiene a questa fattura
+                $invoice->items()
+                    ->whereNull('billable_type')
+                    ->where('id', (int) $line['id'])
+                    ->update($attrs);
+            } else {
+                $invoice->items()->create(array_merge($attrs, [
+                    'billable_type' => null,
+                    'billable_id'   => null,
+                ]));
+            }
+        }
 
         return redirect()
             ->route('invoices.show', $invoice)

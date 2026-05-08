@@ -1,4 +1,9 @@
 <x-app-layout title="{{ $team->name }}">
+    <div class="u-mb-lg u-flex-end">
+        <a href="{{ route('teams.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+        </a>
+    </div>
     <x-page-header
         eyebrow="Dettaglio · Team"
         

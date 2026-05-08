@@ -35,11 +35,15 @@ class GenerateMarketingCampaignInvoiceAction
                 ->lockForUpdate()
                 ->get();
 
-            if ($periods->isEmpty() && $extras->isEmpty()) {
-                throw new \Exception("Nessun periodo o extra valido selezionato per la fatturazione.");
+            $customLines = collect($data['custom_lines'] ?? [])->filter(fn($l) => !empty($l['description']) && isset($l['unit_price']));
+
+            if ($periods->isEmpty() && $extras->isEmpty() && $customLines->isEmpty()) {
+                throw new \Exception("Nessun periodo, extra o voce personalizzata valida.");
             }
 
-            $subtotal = $periods->sum('amount') + $extras->sum('amount');
+            $subtotal = $periods->sum('amount') 
+                      + $extras->sum('amount') 
+                      + $customLines->sum(fn($l) => ((float)($l['quantity'] ?? 1)) * (float)$l['unit_price']);
             $taxAmount = $data['tax_amount'] ?? 0;
             $total = $subtotal + $taxAmount;
 
@@ -89,6 +93,19 @@ class GenerateMarketingCampaignInvoiceAction
                 $extra->update([
                     'invoice_id' => $invoice->id,
                     'status' => MarketingCampaignExtraStatus::Invoiced,
+                ]);
+            }
+
+            foreach ($customLines as $line) {
+                $qty = (float) ($line['quantity'] ?? 1);
+                $price = (float) $line['unit_price'];
+                $invoice->items()->create([
+                    'billable_type' => null,
+                    'billable_id'   => null,
+                    'description'   => $line['description'],
+                    'quantity'      => $qty,
+                    'unit_price'    => $price,
+                    'total'         => $qty * $price,
                 ]);
             }
 

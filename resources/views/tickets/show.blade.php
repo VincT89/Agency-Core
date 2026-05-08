@@ -1,4 +1,9 @@
 <x-app-layout title="{{ $ticket->title }}">
+    <div class="u-mb-lg u-flex-end">
+        <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+        </a>
+    </div>
     <x-page-header
         eyebrow="Ticket #{{ $ticket->id }}"
         
@@ -121,6 +126,39 @@
         </div>
     </div>
 
+    {{-- Commenti --}}
+    <div class="u-mt-lg">
+        <x-panel title="Commenti / Note operative" dot="var(--blue)" padded>
+            @can('update', $ticket)
+                <form action="{{ route('tickets.comments.store', $ticket) }}" method="POST" class="u-mb-md">
+                    @csrf
+                    <textarea name="body"
+                              class="form-ta @error('body') is-invalid @enderror"
+                              rows="3"
+                              placeholder="Aggiungi un aggiornamento, una nota o un'azione intrapresa..."
+                              required>{{ old('body') }}</textarea>
+                    @error('body')
+                        <div class="u-text-red u-mt-sm">{{ $message }}</div>
+                    @enderror
+                    <div class="u-mt-sm u-text-right">
+                        <button type="submit" class="btn btn-p">Aggiungi commento</button>
+                    </div>
+                </form>
+            @endcan
+
+            @forelse($ticket->comments as $comment)
+                <div class="ticket-comment-item">
+                    <div class="u-flex-between u-mb-sm">
+                        <strong class="u-text-strong">{{ $comment->user?->name ?? 'Sistema' }}</strong>
+                        <span class="u-text-meta">{{ $comment->created_at->format('d/m/Y H:i') }}</span>
+                    </div>
+                    <div class="ticket-comment-body">{{ $comment->body }}</div>
+                </div>
+            @empty
+                <div class="u-empty-state-sm">Nessun commento ancora presente.</div>
+            @endforelse
+        </x-panel>
+    </div>
     <x-audit-timeline :logs="$ticket->auditLogs" />
 
     {{-- Allegati --}}

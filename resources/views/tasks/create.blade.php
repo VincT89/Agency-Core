@@ -73,7 +73,7 @@
             <div class="form-row">
                 <x-form-group label="Data inizio" name="start_date">
                     <input type="date" name="start_date" class="form-in @error('start_date') is-invalid @enderror"
-                           value="{{ old('start_date') }}">
+                           value="{{ old('start_date', now()->format('Y-m-d')) }}">
                 </x-form-group>
                 <x-form-group label="Scadenza" name="due_date">
                     <input type="date" name="due_date" class="form-in @error('due_date') is-invalid @enderror"

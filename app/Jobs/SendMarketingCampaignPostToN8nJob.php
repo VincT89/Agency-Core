@@ -38,9 +38,18 @@ class SendMarketingCampaignPostToN8nJob implements ShouldQueue
 
     public function failed(Throwable $e): void
     {
-        $this->post->update([
-            'status' => \App\Enums\Social\MarketingCampaignPostStatus::Draft->value,
-        ]);
+        $updates = [
+            'n8n_error' => substr($e->getMessage(), 0, 255)
+        ];
+
+        if (in_array($this->post->status->value, [
+            \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value,
+            \App\Enums\Social\MarketingCampaignPostStatus::SubmittedToN8n->value
+        ])) {
+            $updates['status'] = $this->post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+        }
+
+        $this->post->update($updates);
 
         if ($this->shouldDeleteTempFile()) {
             Storage::disk('public')->delete($this->temp_path);

@@ -23,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
         \Illuminate\Support\Facades\Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');
 
+        \Illuminate\Support\Facades\RateLimiter::for('nextcloud-preview', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
         Gate::policy(Ticket::class,        TicketPolicy::class);
         Gate::policy(Invoice::class,       InvoicePolicy::class);
         Gate::policy(Payment::class,       PaymentPolicy::class);

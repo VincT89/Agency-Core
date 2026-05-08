@@ -55,7 +55,7 @@ Route::get('/media/{path}', function (string $path) {
 })->where('path', '.*')->name('media.public');
 
 Route::get('/nextcloud/preview', \App\Http\Controllers\NextcloudPreviewController::class)
-    ->middleware(['auth', 'throttle:120,1'])
+    ->middleware(['auth', 'throttle:nextcloud-preview'])
     ->name('nextcloud.preview');
 
 Route::get('/nextcloud/download', function (\Illuminate\Http\Request $request, \App\Services\Integrations\Nextcloud\NextcloudService $nextcloud) {
@@ -68,7 +68,7 @@ Route::get('/nextcloud/download', function (\Illuminate\Http\Request $request, \
     if (str_ends_with(strtolower($path), 'webm')) $mime = 'video/webm';
     if (str_ends_with(strtolower($path), 'mov')) $mime = 'video/quicktime';
     return response($content, 200)->header('Content-Type', $mime);
-})->middleware(['auth', 'throttle:60,1'])->name('nextcloud.download');
+})->middleware(['auth', 'throttle:nextcloud-preview'])->name('nextcloud.download');
 
 Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'force.password.change'])->name('dashboard');

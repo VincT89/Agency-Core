@@ -66,39 +66,17 @@
                     {{ $post->scheduled_date ? $post->scheduled_date->format('d/m/Y') : 'Da def.' }}
                 </td>
                 <td><span class="cmp-post-type-badge">{{ $post->content_type->label() }}</span></td>
-                <td x-data="{ show: false }">
+                <td>
                   @if($post->currentVersion && $post->currentVersion->image_url)
-                    <div class="relative inline-block z-30" @mouseenter="show = true" @mouseleave="show = false">
-                        <img src="{{ $post->currentVersion->image_url }}" class="cmp-post-thumb">
-                        <div x-show="show" x-cloak 
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 scale-75"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-75"
-                             class="bg-white p-2 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-[var(--line)] pointer-events-none"
-                             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100;">
-                            <img src="{{ $post->currentVersion->image_url }}" class="w-full h-auto min-w-[200px] max-w-[280px] max-h-[320px] object-contain rounded-lg">
-                        </div>
-                    </div>
+                        <img src="{{ $post->currentVersion->image_url }}" class="cmp-post-thumb" loading="lazy" alt="Anteprima media post">
                   @elseif($post->preview_url)
-                    <div class="relative inline-block z-30" @mouseenter="show = true" @mouseleave="show = false">
-                        <img src="{{ $post->preview_url }}" class="cmp-post-thumb">
-                        <div x-show="show" x-cloak 
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 scale-75"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-75"
-                             class="bg-white p-2 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-[var(--line)] pointer-events-none"
-                             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100;">
-                            <img src="{{ $post->preview_url }}" class="w-full h-auto min-w-[200px] max-w-[280px] max-h-[320px] object-contain rounded-lg">
-                        </div>
-                    </div>
+                    @if($post->media_mime && \Illuminate\Support\Str::startsWith($post->media_mime, 'video/'))
+                        <video src="{{ $post->preview_url }}" class="cmp-post-thumb" muted playsinline></video>
+                    @else
+                        <img src="{{ $post->preview_url }}" class="cmp-post-thumb" loading="lazy" alt="Anteprima media post">
+                    @endif
                   @else
-                    <div class="cmp-post-thumb-empty relative z-30"><i data-lucide="image" class="w-5 h-5"></i></div>
+                    <div class="cmp-post-thumb-empty"><i data-lucide="image" class="w-5 h-5"></i></div>
                   @endif
                 </td>
                 <td class="font-semibold">{{ $post->title ?: 'Senza Titolo' }}</td>

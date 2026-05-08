@@ -39,9 +39,14 @@ class RequestMarketingCampaignPostRegenerationJob implements ShouldQueue
     {
         $this->post->refresh();
 
-        $this->post->update([
-            'status' => $this->previousStatus,
-            'n8n_error' => 'Rigenerazione fallita dopo 3 tentativi: ' . $e->getMessage(),
-        ]);
+        $updates = [
+            'n8n_error' => substr('Rigenerazione fallita dopo 3 tentativi: ' . $e->getMessage(), 0, 255),
+        ];
+
+        if ($this->post->status && $this->post->status->value === \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value) {
+            $updates['status'] = $this->previousStatus;
+        }
+
+        $this->post->update($updates);
     }
 }

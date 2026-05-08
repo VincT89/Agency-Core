@@ -23,7 +23,7 @@ class StoreMarketingCampaignPostVersionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'request_id' => ['nullable', 'string'],
+            'request_id' => ['required', 'string'],
             'external_generation_id' => ['nullable', 'string'],
             'regeneration_type' => ['required', 'in:full,caption,image'],
             'title' => ['nullable', 'string'],

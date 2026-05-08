@@ -278,11 +278,11 @@
 
             <div class="u-mt-lg u-flex u-gap-sm">
                 @if($form['ai_analysis_enabled'])
-                    <button type="button" wire:click="save" class="btn btn-s" wire:loading.attr="disabled">
-                      <span wire:loading.remove wire:target="save">
+                    <button type="button" wire:click="savePost" class="btn btn-s" wire:loading.attr="disabled">
+                      <span wire:loading.remove wire:target="savePost">
                         {{ $post->status->value !== 'draft' ? 'Aggiorna Dati' : 'Salva Bozza' }}
                       </span>
-                      <span wire:loading wire:target="save">Salvataggio...</span>
+                      <span wire:loading wire:target="savePost">Salvataggio...</span>
                     </button>
                     <button type="button" wire:click="saveAndSubmitToN8n" class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
                       <i data-lucide="sparkles" class="u-icon-md"></i>
@@ -292,12 +292,12 @@
                       <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
                     </button>
                 @else
-                    <button type="button" wire:click="save" class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
+                    <button type="button" wire:click="savePost" class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
                       <i data-lucide="save" class="u-icon-md"></i>
-                      <span wire:loading.remove wire:target="save">
+                      <span wire:loading.remove wire:target="savePost">
                         {{ $post->status->value !== 'draft' ? 'Aggiorna Post' : 'Salva Post' }}
                       </span>
-                      <span wire:loading wire:target="save">Salvataggio...</span>
+                      <span wire:loading wire:target="savePost">Salvataggio...</span>
                     </button>
                 @endif
             </div>

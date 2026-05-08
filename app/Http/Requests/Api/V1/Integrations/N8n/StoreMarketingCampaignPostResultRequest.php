@@ -24,7 +24,7 @@ class StoreMarketingCampaignPostResultRequest extends FormRequest
     {
         return [
             'post_id' => ['required', 'exists:marketing_campaign_posts,id'],
-            'request_id' => ['nullable', 'string'],
+            'request_id' => ['required', 'string'],
             'external_generation_id' => ['nullable', 'string'],
             'regeneration_type' => ['required', 'in:full,caption,image'],
             'title' => ['nullable', 'string'],

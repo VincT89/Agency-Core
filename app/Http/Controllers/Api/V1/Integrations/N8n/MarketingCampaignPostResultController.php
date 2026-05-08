@@ -16,7 +16,7 @@ class MarketingCampaignPostResultController extends Controller
     {
         $post = MarketingCampaignPost::findOrFail($request->validated('post_id'));
 
-        if ($request->filled('request_id') && $post->n8n_request_id !== $request->validated('request_id')) {
+        if ($post->n8n_request_id !== $request->validated('request_id')) {
             \Illuminate\Support\Facades\Log::warning('N8n Callback Security Mismatch', [
                 'post_id' => $post->id,
                 'expected_request_id' => $post->n8n_request_id,

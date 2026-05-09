@@ -15,86 +15,7 @@
     <div class="lw-modal-body u-p-lg custom-scrollbar">
       <form class="form-stack">
         
-        {{-- Blocco 1: Titolo --}}
-        <div class="form-g mb-0">
-          <label class="form-lbl">Titolo Post</label>
-          <input type="text" class="form-in" wire:model="form.title" placeholder="Es: Lancio prodotto X">
-          @error('form.title') <span class="form-err">{{ $message }}</span> @enderror
-        </div>
-
-        {{-- Blocco 2: Identità Cliente per AI --}}
-        <div class="panel cmp-panel-pad cmp-identity-panel">
-          <label class="cmp-ai-check-wrap">
-            <input type="checkbox" wire:model.live="form.ai_analysis_enabled" class="cmp-ai-check-input">
-            <div class="cmp-ai-check-content">
-              <div class="cmp-ai-check-title">Richiedi Analisi AI Sody</div>
-              <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà un copy se assente.</div>
-            </div>
-          </label>
-
-          @if($form['ai_analysis_enabled'])
-            <div class="cmp-identity-body">
-                {{-- Riga logo --}}
-                <div class="cmp-identity-row">
-                    <div class="cmp-identity-col-check">
-                        <label class="cmp-check-label u-mb-sm">
-                            <input type="checkbox" wire:model.live="include_client_logo" class="u-cursor-pointer">
-                            Includi logo cliente nel briefing
-                        </label>
-                        @if($campaign->client->logo_path)
-                            <div x-show="$wire.include_client_logo" class="cmp-identity-logo-preview">
-                                <span class="u-text-meta muted">Logo attuale:</span>
-                                <img src="{{ $campaign->client->logo_url }}" alt="Logo Cliente" class="cmp-identity-logo-img">
-                            </div>
-                        @else
-                            <div x-show="$wire.include_client_logo">
-                                <div class="u-text-meta u-text-orange u-mb-sm">Nessun logo presente. Caricane uno.</div>
-                                <input type="file" wire:model="runtime_logo" class="form-in cmp-file-sm" accept="image/jpeg,image/png,image/webp">
-                                @error('runtime_logo') <div class="form-err form-err-sm">{{ $message }}</div> @enderror
-                                <label class="cmp-save-label u-mt-sm">
-                                    <input type="checkbox" wire:model="save_runtime_logo_to_client" class="u-cursor-pointer">
-                                    Salva e imposta come logo ufficiale
-                                </label>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Riga attività --}}
-                <div class="cmp-identity-row">
-                    <div class="cmp-identity-col-check">
-                        <label class="cmp-check-label u-mb-sm">
-                            <input type="checkbox" wire:model.live="include_client_header" class="u-cursor-pointer">
-                            Includi descrizione attività nel briefing
-                        </label>
-                        @if($campaign->client->activity_description)
-                            <div x-show="$wire.include_client_header" x-data="{ expActivity: false }">
-                                <div class="u-text-meta muted u-mb-xs">Testo attuale:</div>
-                                <div class="cmp-identity-activity-full custom-scrollbar" :style="expActivity ? 'max-height:none' : 'max-height:80px'">
-                                    {{ $campaign->client->activity_description }}
-                                </div>
-                                @if(strlen($campaign->client->activity_description) > 150)
-                                    <button type="button" @click="expActivity = !expActivity" class="btn-ghost-primary btn-xs u-mt-xs">Espandi/Comprimi</button>
-                                @endif
-                            </div>
-                        @else
-                            <div x-show="$wire.include_client_header">
-                                <div class="u-text-meta u-text-orange u-mb-sm">Nessuna descrizione presente. Scrivine una.</div>
-                                <textarea wire:model="runtime_activity_description" class="form-ta cmp-ta-sm" placeholder="Descrivi l'attività del cliente..."></textarea>
-                                @error('runtime_activity_description') <div class="form-err form-err-sm">{{ $message }}</div> @enderror
-                                <label class="cmp-save-label u-mt-sm">
-                                    <input type="checkbox" wire:model="save_runtime_activity_to_client" class="u-cursor-pointer">
-                                    Salva e imposta come descrizione ufficiale
-                                </label>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-          @endif
-        </div>
-
-        {{-- Blocco 3: Piattaforme --}}
+        {{-- Blocco 1: Piattaforme --}}
         <div class="panel cmp-panel-pad">
             <div class="cmp-section-label mb-2">Piattaforme di pubblicazione</div>
             <div class="cmp-platform-options">
@@ -125,65 +46,93 @@
             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
         </div>
 
-        {{-- Blocco 4: Tipo + Stato --}}
-        <div class="u-flex u-gap-lg">
-          <div class="form-g mb-0 u-flex-1">
-            <label class="form-lbl">Tipo Contenuto <span class="mkt-text-red">*</span></label>
-            <select class="form-sel" wire:model="form.content_type" required>
-              <option value="post">Post</option>
-              <option value="story">Story</option>
-              <option value="reel">Reel</option>
-            </select>
-            @error('form.content_type') <span class="form-err">{{ $message }}</span> @enderror
-          </div>
+        {{-- Box 1: Dati Principali --}}
+        <div class="panel cmp-panel-pad u-mb-md">
+            {{-- Blocco 2: Titolo --}}
+            <div class="form-g">
+              <label class="form-lbl">Titolo Post</label>
+              <input type="text" class="form-in" wire:model="form.title" placeholder="Es: Lancio prodotto X">
+              @error('form.title') <span class="form-err">{{ $message }}</span> @enderror
+            </div>
 
-          <div class="form-g mb-0 u-flex-1">
-            <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
-            <select class="form-sel" wire:model="form.status" required>
-              <option value="draft">Bozza</option>
-              <option value="pending_n8n">In Coda AI</option>
-              <option value="submitted_to_n8n">In Elaborazione AI</option>
-              <option value="generated">Generato</option>
-              <option value="approved">Approvato</option>
-              <option value="published">Pubblicato</option>
-              <option value="cancelled">Annullato</option>
-            </select>
-            @error('form.status') <span class="form-err">{{ $message }}</span> @enderror
-          </div>
-        </div>
+            {{-- Blocco 3: Tipo Contenuto + Stato + Data/Ora --}}
+            <div class="u-flex u-gap-lg">
+              <div class="form-g mb-0 u-flex-1">
+                <label class="form-lbl">Tipo Contenuto <span class="mkt-text-red">*</span></label>
+                <select class="form-sel" wire:model="form.content_type" required>
+                  <option value="post">Post</option>
+                  <option value="story">Story</option>
+                  <option value="reel">Reel</option>
+                </select>
+                @error('form.content_type') <span class="form-err">{{ $message }}</span> @enderror
+              </div>
 
-        {{-- Blocco 5: Data + Ora --}}
-        <div class="u-flex u-gap-lg">
-          <div class="form-g mb-0 u-flex-1">
-            <label class="form-lbl">Data Pubblicazione</label>
-            <input type="date" class="form-in" wire:model="form.scheduled_date">
-            @error('form.scheduled_date') <span class="form-err">{{ $message }}</span> @enderror
-          </div>
-          <div class="form-g mb-0 u-flex-1">
-            <label class="form-lbl">Ora Pubblicazione</label>
-            <input type="time" class="form-in" wire:model="form.scheduled_time">
-            @error('form.scheduled_time') <span class="form-err">{{ $message }}</span> @enderror
-          </div>
-        </div>
+              <div class="form-g mb-0 u-flex-1">
+                <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
+                <select class="form-sel" wire:model="form.status" required>
+                  <option value="draft">Bozza</option>
+                  <option value="pending_n8n">In Coda AI</option>
+                  <option value="submitted_to_n8n">In Elaborazione AI</option>
+                  <option value="generated">Generato</option>
+                  <option value="approved">Approvato</option>
+                  <option value="published">Pubblicato</option>
+                  <option value="cancelled">Annullato</option>
+                </select>
+                @error('form.status') <span class="form-err">{{ $message }}</span> @enderror
+              </div>
+            </div>
 
-        {{-- Blocco 6: Preview Media --}}
-        @if ($media)
-        <div class="cmp-media-preview-box">
-            <div class="cmp-media-preview-item">
-                @if(\Illuminate\Support\Str::startsWith($media->getMimeType(), 'video/'))
-                    <video src="{{ $media->temporaryUrl() }}" class="cmp-media-preview-video" controls></video>
-                @else
-                    <img src="{{ $media->temporaryUrl() }}" class="cmp-media-preview-img">
-                @endif
-                <div class="cmp-media-preview-label">Nuovo Upload in corso</div>
+            <div class="u-flex u-gap-lg u-mt-md">
+              <div class="form-g mb-0 u-flex-1">
+                <label class="form-lbl">Data Pubblicazione</label>
+                <input type="date" class="form-in" wire:model="form.scheduled_date">
+                @error('form.scheduled_date') <span class="form-err">{{ $message }}</span> @enderror
+              </div>
+              <div class="form-g mb-0 u-flex-1">
+                <label class="form-lbl">Ora Pubblicazione</label>
+                <input type="time" class="form-in" wire:model="form.scheduled_time">
+                @error('form.scheduled_time') <span class="form-err">{{ $message }}</span> @enderror
+              </div>
             </div>
         </div>
-        @endif
 
-        {{-- Blocco 7: Sorgente Media --}}
-        <div class="panel cmp-panel-pad">
+        {{-- Box 2: Media e Copy --}}
+        <div class="panel cmp-panel-pad u-mb-md">
+            {{-- Blocco 4: Preview Media --}}
+            @if ($media && count($media) > 0)
+            <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md"
+                 x-data="{
+                    draggingIndex: null,
+                    dropIndex: null,
+                    dragStart(index) { this.draggingIndex = index; },
+                    dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
+                    drop(index) {
+                        if (this.draggingIndex !== null && this.draggingIndex !== index) {
+                            $wire.reorderLocalMedia(this.draggingIndex, index);
+                        }
+                        this.draggingIndex = null;
+                        this.dropIndex = null;
+                    }
+                 }">
+                @foreach($media as $index => $m)
+                <div class="cmp-media-preview-item"
+                     wire:key="media-{{ $index }}"
+                     draggable="true"
+                     @dragstart="dragStart({{ $index }})"
+                     @dragover="dragOver($event, {{ $index }})"
+                     @drop="drop({{ $index }})"
+                     @dragend="draggingIndex = null; dropIndex = null"
+                     :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
+                    <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i></div>
+                    <img src="{{ $m->temporaryUrl() }}" class="cmp-media-preview-img cmp-local-preview-img">
+                    <div class="cmp-media-preview-label">Upload {{ $index + 1 }}</div>
+                </div>
+                @endforeach
+            </div>
+            @endif
+
             <div class="cmp-media-source-hd">
-                <label class="form-lbl mb-0">Sorgente Media</label>
+                <label class="form-lbl mb-0">Aggiungi Media</label>
                 <div class="cmp-media-source-options">
                     <label class="cmp-radio-label">
                         <input type="radio" wire:model.live="form.media_source" value="local">
@@ -197,46 +146,142 @@
             </div>
 
             @if($form['media_source'] === 'local')
-                <input type="file" wire:model="media" class="form-in p-2 text-sm" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
+                <input type="file" wire:model="media" multiple class="form-in p-2 text-sm" accept="image/jpeg,image/png,image/webp">
                 <div wire:loading wire:target="media" class="text-xs text-blue-500 mt-1">Caricamento anteprima...</div>
+                <div class="text-xs text-gray-500 mt-1 u-mb-md">Puoi selezionare più file (max 10 in totale).</div>
                 @error('media') <span class="form-err">{{ $message }}</span> @enderror
             @else
                 {{-- Nextcloud Section --}}
-                @if($selected_nextcloud_file)
-                    <div class="cmp-nc-file-selected">
-                        <div class="cmp-nc-file-selected-text">
-                            <i data-lucide="check-circle" class="u-icon-sm"></i>
-                            File Selezionato: {{ $selected_nextcloud_file['name'] }}
-                        </div>
-                        <button type="button" wire:click="removeNextcloudFile" class="btn btn-s btn-xs">Rimuovi</button>
+                @if(!empty($selected_nextcloud_files))
+                    <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-sm"
+                         x-data="{
+                            draggingIndex: null,
+                            dropIndex: null,
+                            dragStart(index) { this.draggingIndex = index; },
+                            dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
+                            drop(index) {
+                                if (this.draggingIndex !== null && this.draggingIndex !== index) {
+                                    $wire.reorderNextcloudMedia(this.draggingIndex, index);
+                                }
+                                this.draggingIndex = null;
+                                this.dropIndex = null;
+                            }
+                         }">
+                        @foreach($selected_nextcloud_files as $index => $ncFile)
+                            <div class="cmp-nc-preview-item"
+                                 wire:key="nc-{{ $index }}"
+                                 draggable="true"
+                                 @dragstart="dragStart({{ $index }})"
+                                 @dragover="dragOver($event, {{ $index }})"
+                                 @drop="drop({{ $index }})"
+                                 @dragend="draggingIndex = null; dropIndex = null"
+                                 :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
+                                <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i></div>
+                                <img src="{{ route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 150, 'h' => 150]) }}" class="cmp-nc-preview-img">
+                                <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="{{ $ncFile['name'] }}">{{ $index + 1 }}. {{ $ncFile['name'] }}</div>
+                                <button type="button" wire:click="removeNextcloudFile('{{ addslashes($ncFile['path']) }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
+                            </div>
+                        @endforeach
                     </div>
                 @endif
 
-                <div class="form-g mb-0 u-mt-md">
+                <div class="form-g u-mb-md">
                     <label class="form-lbl cmp-lbl-sm">Sfoglia Cartelle Nextcloud</label>
                     <div class="cmp-nc-browse-group">
                         <input type="text" wire:model="nextcloud_browse_path" class="form-in" placeholder="/" disabled>
                         <div class="u-flex u-gap-xs">
                             <button type="button" wire:click="openNextcloudPicker('photo')" class="btn btn-sec">Esplora Foto</button>
-                            <button type="button" wire:click="openNextcloudPicker('video')" class="btn btn-sec">Esplora Video</button>
                         </div>
                     </div>
-                    @error('form.nextcloud_path') <div class="form-err u-mb-md">{{ $message }}</div> @enderror
+                    @error('form.nextcloud_path') <div class="form-err">{{ $message }}</div> @enderror
 
                     @if($nextcloud_error)
-                        <div class="form-err u-mb-md">{{ $nextcloud_error }}</div>
+                        <div class="form-err">{{ $nextcloud_error }}</div>
                     @endif
-
-
                 </div>
             @endif
+
+            <div class="form-g mb-0 u-border-t u-border-line u-pt-md">
+              <label class="form-lbl">Copy / Descrizione</label>
+              <textarea class="form-ta" wire:model="form.description" rows="5" placeholder="Inserisci il testo del post..."></textarea>
+              @error('form.description') <span class="form-err">{{ $message }}</span> @enderror
+            </div>
         </div>
 
-        {{-- Blocco 8: Copy / Descrizione --}}
-        <div class="form-g mb-0">
-          <label class="form-lbl">Copy / Descrizione</label>
-          <textarea class="form-ta" wire:model="form.description" rows="5" placeholder="Inserisci il testo del post..."></textarea>
-          @error('form.description') <span class="form-err">{{ $message }}</span> @enderror
+        {{-- Blocco 5: Identità Cliente per AI --}}
+        <div class="panel cmp-panel-pad cmp-identity-panel">
+          <label class="cmp-ai-check-wrap">
+            <input type="checkbox" wire:model.live="form.ai_analysis_enabled" class="cmp-ai-check-input">
+            <div class="cmp-ai-check-content">
+              <div class="cmp-ai-check-title">Richiedi Analisi AI Sody</div>
+              <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà un copy se assente.</div>
+            </div>
+          </label>
+
+          @if($form['ai_analysis_enabled'])
+            <div class="cmp-identity-body">
+                {{-- Riga logo --}}
+                <div class="cmp-identity-row">
+                    <div class="cmp-identity-col-check">
+                        <label class="cmp-check-label u-mb-sm">
+                            <input type="checkbox" wire:model.live="include_client_logo" class="u-cursor-pointer">
+                            Includi logo cliente nel briefing
+                        </label>
+                        @if($campaign->client->logo_path)
+                            <div x-show="$wire.include_client_logo" class="cmp-identity-logo-preview">
+                                <span class="u-text-meta muted">Logo attuale:</span>
+                                @if($runtime_logo && method_exists($runtime_logo, 'temporaryUrl'))
+                                    <img src="{{ $runtime_logo->temporaryUrl() }}" alt="Logo Caricato" class="cmp-identity-logo-img">
+                                @else
+                                    <img src="{{ $campaign->client->logo_url }}" alt="Logo Cliente" class="cmp-identity-logo-img">
+                                @endif
+                            </div>
+                        @else
+                            <div x-show="$wire.include_client_logo">
+                                <div class="u-text-meta u-text-orange u-mb-sm">Nessun logo presente. Caricane uno.</div>
+                                <input type="file" wire:model="runtime_logo" class="form-in cmp-file-sm" accept="image/jpeg,image/png,image/webp">
+                                @error('runtime_logo') <div class="form-err form-err-sm">{{ $message }}</div> @enderror
+                                <label class="cmp-save-label u-mt-sm">
+                                    <input type="checkbox" wire:model="save_runtime_logo_to_client" class="u-cursor-pointer">
+                                    Salva e imposta come logo ufficiale
+                                </label>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Riga attività --}}
+                <div class="cmp-identity-row">
+                    <div class="cmp-identity-col-check">
+                        <label class="cmp-check-label u-mb-sm">
+                            <input type="checkbox" wire:model.live="include_client_header" class="u-cursor-pointer">
+                            Includi descrizione attività nel briefing
+                        </label>
+                        @if($campaign->client->activity_description)
+                            <div x-show="$wire.include_client_header" x-data="{ expActivity: false }">
+                                <div class="u-text-meta muted u-mb-xs">Testo attuale:</div>
+                                <div class="cmp-identity-activity-full custom-scrollbar" :class="expActivity ? 'is-expanded' : ''">
+                                    {{ $campaign->client->activity_description }}
+                                </div>
+                                @if(strlen($campaign->client->activity_description) > 150)
+                                    <button type="button" @click="expActivity = !expActivity" class="btn-ghost-primary btn-xs u-mt-xs">Espandi/Comprimi</button>
+                                @endif
+                            </div>
+                        @else
+                            <div x-show="$wire.include_client_header">
+                                <div class="u-text-meta u-text-orange u-mb-sm">Nessuna descrizione presente. Scrivine una.</div>
+                                <textarea wire:model="runtime_activity_description" class="form-ta cmp-ta-sm" placeholder="Descrivi l'attività del cliente..."></textarea>
+                                @error('runtime_activity_description') <div class="form-err form-err-sm">{{ $message }}</div> @enderror
+                                <label class="cmp-save-label u-mt-sm">
+                                    <input type="checkbox" wire:model="save_runtime_activity_to_client" class="u-cursor-pointer">
+                                    Salva e imposta come descrizione ufficiale
+                                </label>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+          @endif
         </div>
 
       </form>
@@ -309,6 +354,10 @@
 
 
                   @forelse($nextcloud_files as $ncFile)
+                      @if(!$ncFile['is_dir'] && !($ncFile['is_image'] ?? false))
+                          @continue
+                      @endif
+
                       @if($ncFile['is_dir'])
                           <button
                               type="button"
@@ -322,14 +371,14 @@
                           <div class="u-flex-col u-gap-xs">
                               <button
                                   type="button"
-                                  wire:click="selectNextcloudFile(
+                                  wire:click="toggleNextcloudFile(
                                       @js($ncFile['path']),
                                       @js($ncFile['name']),
                                       @js($ncFile['size']),
                                       @js($ncFile['content_type']),
                                       @js($ncFile['file_id'])
                                   )"
-                                  class="nc-picker-card {{ ($pending_nextcloud_file['path'] ?? null) === $ncFile['path'] ? 'is-selected' : '' }}"
+                                  class="nc-picker-card {{ collect($pending_nextcloud_files)->contains('path', $ncFile['path']) ? 'is-selected' : '' }}"
                               >
                                   <div class="nc-picker-thumb nc-picker-thumb-large">
                                       @if($ncFile['is_image'] ?? false)
@@ -370,9 +419,9 @@
               </div>
 
               <div class="nc-picker-footer">
-                  @if($pending_nextcloud_file)
+                  @if(!empty($pending_nextcloud_files))
                       <div class="nc-picker-selected">
-                          Selezionato: <strong>{{ $pending_nextcloud_file['name'] }}</strong>
+                          Selezionati: <strong>{{ count($pending_nextcloud_files) }} file</strong>
                       </div>
                   @else
                       <div class="nc-picker-selected u-text-muted">
@@ -386,7 +435,7 @@
                       </button>
 
                       <button type="button" wire:click="confirmNextcloudSelection" class="btn btn-p">
-                          Usa file selezionato
+                          Usa foto selezionate
                       </button>
                   </div>
               </div>
@@ -445,14 +494,6 @@
                               class="btn-sec"
                           >
                               Torna alla griglia
-                          </button>
-
-                          <button
-                              type="button"
-                              wire:click="confirmNextcloudSelection"
-                              class="btn btn-p"
-                          >
-                              Usa questa foto
                           </button>
                       </div>
                   </div>

@@ -11,6 +11,7 @@ class MarketingCampaignPostComment extends Model
     protected $casts = [
         'visibility' => \App\Enums\Social\MarketingCampaignPostCommentVisibility::class,
         'type' => \App\Enums\Social\MarketingCampaignPostCommentType::class,
+        'source' => \App\Enums\Social\CommentSource::class,
     ];
 
     public function post()

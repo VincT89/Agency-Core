@@ -30,6 +30,13 @@ class DashboardController extends Controller
 
     private function getAdminData($user): array
     {
+        $renewalService = new \App\Services\RenewalSummaryService();
+        $financialService = new \App\Services\FinancialSummaryService();
+        $operationalService = new \App\Services\OperationalAnalyticsService();
+
+        $financialChartData = $financialService->getMonthlyData(12);
+        $operationalChartData = $operationalService->getMonthlyData(12);
+
         return [
             'activeClients'    => Client::where('status', 'active')->count(),
             'openTicketsCount' => Ticket::whereIn('status', ['open', 'in_progress'])->count(),
@@ -47,11 +54,16 @@ class DashboardController extends Controller
             'weeklyEvents'     => \App\Models\CalendarEvent::whereBetween('start_at', [now(), now()->addDays(7)])
                                     ->orderBy('start_at', 'asc')
                                     ->get(),
+            'expiringHosting'  => $renewalService->getExpiringCount(30),
+            'expiredHosting'   => $renewalService->getExpiredCount(),
+            'financialChartData' => json_encode($financialChartData),
+            'operationalChartData' => json_encode($operationalChartData),
         ];
     }
 
     private function getAdministrationData($user): array
     {
+        $financialService = new \App\Services\FinancialSummaryService();
         $thirtyDaysAgo = now()->subDays(30);
         $totalCollected30d = \App\Models\Payment::where('payment_date', '>=', $thirtyDaysAgo)->sum('amount');
         $totalOutstanding = \App\Models\Invoice::whereIn('status', ['issued', 'partially_paid', 'overdue'])
@@ -66,6 +78,9 @@ class DashboardController extends Controller
             'upcomingDeadlines'    => Invoice::where('status', 'issued')
                                         ->whereDate('due_date', '<=', now()->addDays(14))
                                         ->orderBy('due_date')->limit(5)->get(),
+            'lineChartData'        => json_encode($financialService->getIncassatoVsDaIncassareMonthlyData(12)),
+            'donutChartData'       => json_encode($financialService->getYearlyDonutData()),
+            'sparklineData'        => json_encode($financialService->getSparklineData(6)),
         ];
     }
 

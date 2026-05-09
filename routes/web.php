@@ -151,6 +151,11 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Shooting\ShootsIndex::class)->name('index');
         Route::get('/{shoot}', \App\Livewire\Admin\Shooting\ShootShow::class)->name('show');
     });
+    // AMMINISTRAZIONE - SPESE
+    Route::get('/expenses', \App\Livewire\Expenses\ExpensesIndex::class)->name('expenses.index');
+    Route::get('/expenses/create', \App\Livewire\Expenses\ExpenseForm::class)->name('expenses.create');
+    Route::get('/expenses/{expense}', \App\Livewire\Expenses\ExpenseShow::class)->name('expenses.show');
+    Route::get('/expenses/{expense}/edit', \App\Livewire\Expenses\ExpenseForm::class)->name('expenses.edit');
         
     Route::resource('calendar-events', CalendarEventController::class);
     Route::resource('invoices', InvoiceController::class);
@@ -205,6 +210,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     // API interna: ricerca clienti e quick-store
     Route::get('/api/clients/search', [ClientController::class, 'search'])->name('api.clients.search');
     Route::post('/api/clients/quick-store', [ClientController::class, 'quickStore'])->name('api.clients.quick-store');
+
+    // Note Operative
+    Route::get('/daily-notes', \App\Livewire\Dashboard\UserDailyNotes::class)->name('daily-notes.index');
 });
 
 require __DIR__ . '/auth.php';

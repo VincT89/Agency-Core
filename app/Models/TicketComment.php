@@ -7,7 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TicketComment extends Model
 {
-    protected $fillable = ['ticket_id', 'user_id', 'body'];
+    protected $fillable = ['ticket_id', 'user_id', 'body', 'source'];
+
+    protected $casts = [
+        'source' => \App\Enums\Social\CommentSource::class,
+    ];
 
     public function ticket(): BelongsTo
     {

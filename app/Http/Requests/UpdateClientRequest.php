@@ -33,6 +33,15 @@ class UpdateClientRequest extends FormRequest
             'notes'            => ['nullable', 'string'],
             'activity_description' => ['nullable', 'string', 'max:2000'],
             'logo'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'nextcloud_folder_name' => [
+                'nullable',
+                'string',
+                'max:100',
+                'alpha_dash',
+                'unique:clients,nextcloud_folder_name,' . $this->route('client')->id,
+                'not_regex:/\.\./',
+                'not_regex:/[\/\\\\]/',
+            ],
         ];
     }
 }

@@ -5,7 +5,36 @@ import './confirm-forms.js';
 import './ui-helpers.js';
 import { initShell } from './app-shell.js';
 import { createIcons, icons } from 'lucide';
+import ApexCharts from 'apexcharts';
 
+window.ApexCharts = ApexCharts;
+
+window.Apex = {
+    chart: {
+        locales: [{
+            "name": "it",
+            "options": {
+                "months": ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"],
+                "shortMonths": ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"],
+                "days": ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
+                "shortDays": ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"],
+                "toolbar": {
+                    "exportToSVG": "Scarica SVG",
+                    "exportToPNG": "Scarica PNG",
+                    "exportToCSV": "Scarica CSV",
+                    "menu": "Menu",
+                    "selection": "Selezione",
+                    "selectionZoom": "Zoom Selezione",
+                    "zoomIn": "Zoom In",
+                    "zoomOut": "Zoom Out",
+                    "pan": "Sposta",
+                    "reset": "Reimposta Zoom"
+                }
+            }
+        }],
+        defaultLocale: "it"
+    }
+};
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('clientAutocomplete', clientAutocomplete);
 });

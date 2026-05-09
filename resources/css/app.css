@@ -21,3 +21,6 @@
 @import './sodano/_tickets.css';
 @import './sodano/_tasks.css';
 @import './hosting-services.css';
+
+@import './sodano/_dashboard.css';
+@import './sodano/_notes.css';

@@ -149,7 +149,18 @@
             @forelse($ticket->comments as $comment)
                 <div class="ticket-comment-item">
                     <div class="u-flex-between u-mb-sm">
-                        <strong class="u-text-strong">{{ $comment->user?->name ?? 'Sistema' }}</strong>
+                        <span class="u-flex u-items-center u-gap-xs">
+                            <strong class="u-text-strong">
+                                @if($comment->source === \App\Enums\Social\CommentSource::Client)
+                                    [Cliente]
+                                @else
+                                    {{ $comment->user?->name ?? 'Sistema' }}
+                                @endif
+                            </strong>
+                            @if($comment->source === \App\Enums\Social\CommentSource::Client)
+                                <span class="cmp-client-badge">Risposta cliente</span>
+                            @endif
+                        </span>
                         <span class="u-text-meta">{{ $comment->created_at->format('d/m/Y H:i') }}</span>
                     </div>
                     <div class="ticket-comment-body">{{ $comment->body }}</div>
@@ -162,5 +173,5 @@
     <x-audit-timeline :logs="$ticket->auditLogs" />
 
     {{-- Allegati --}}
-    <x-attachments-panel :model="$ticket" />
+    <livewire:shared.attachment-manager :model="$ticket" />
 </x-app-layout>

@@ -89,6 +89,14 @@ class AuditLogService
             return "{$userName} ha eliminato {$entityName}";
         }
         
+        if ($action === 'login') {
+            return "{$userName} ha effettuato l'accesso";
+        }
+        
+        if ($action === 'logout') {
+            return "{$userName} è uscito";
+        }
+        
         if ($action === 'payment_registered' || $action === 'registered_payment') {
             return "{$userName} ha registrato un pagamento su {$entityName}";
         }

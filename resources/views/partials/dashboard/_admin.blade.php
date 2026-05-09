@@ -1,23 +1,89 @@
 <div class="kpi-strip">
-    <div class="kpi-cell">
+    <a href="{{ route('clients.index') }}" class="kpi-cell">
         <div class="kpi-label-t">Clienti Attivi</div>
         <div class="kpi-val-t">{{ $activeClients }}</div>
         <div class="kpi-delta-t">Nel gestionale</div>
-    </div>
-    <div class="kpi-cell {{ $openTicketsCount > 0 ? 'accent-line' : '' }}">
+    </a>
+    <a href="{{ route('hosting-services.index', ['status_filter' => 'expiring']) }}" class="kpi-cell {{ $expiringHosting > 0 ? 'accent-line' : '' }}">
+        <div class="kpi-label-t">Rinnovi (30gg)</div>
+        <div class="kpi-val-t {{ $expiredHosting > 0 ? 'red' : '' }}">
+            {{ $expiringHosting }}
+            @if($expiredHosting > 0)
+                <span class="kpi-expired-text">+ {{ $expiredHosting }} scaduti</span>
+            @endif
+        </div>
+        <div class="kpi-delta-t {{ $expiringHosting > 0 || $expiredHosting > 0 ? 'down' : '' }}">Domini & Hosting</div>
+    </a>
+    <a href="{{ route('tickets.index') }}" class="kpi-cell {{ $openTicketsCount > 0 ? 'accent-line' : '' }}">
         <div class="kpi-label-t">Ticket Aperti</div>
         <div class="kpi-val-t">{{ $openTicketsCount }}</div>
         <div class="kpi-delta-t {{ $openTicketsCount > 0 ? 'down' : '' }}">Richiedono attenzione</div>
-    </div>
-    <div class="kpi-cell {{ $overdueInvoices > 0 ? 'accent-line' : '' }}">
+    </a>
+    <a href="{{ route('invoices.index', ['status' => 'overdue']) }}" class="kpi-cell {{ $overdueInvoices > 0 ? 'accent-line' : '' }}">
         <div class="kpi-label-t">Fatture Scadute</div>
         <div class="kpi-val-t">{{ $overdueInvoices }}</div>
         <div class="kpi-delta-t {{ $overdueInvoices > 0 ? 'down' : '' }}">Da sollecitare</div>
-    </div>
-    <div class="kpi-cell">
+    </a>
+    <a href="{{ route('tasks.index') }}" class="kpi-cell">
         <div class="kpi-label-t">Task in Scad.</div>
         <div class="kpi-val-t">{{ $expiringTasks->count() }}</div>
         <div class="kpi-delta-t">Prossimi 7 gg</div>
+    </a>
+</div>
+
+<div class="g-2col u-mb-lg">
+    <div>
+        <div class="mt-panel" x-data="{
+            initChart() {
+                const data = {{ $financialChartData }};
+                const options = {
+                    chart: { type: 'bar', height: 300, toolbar: { show: false }, background: 'transparent' },
+                    series: data.series,
+                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
+                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } } },
+                    colors: ['var(--blue)', 'var(--green)', 'var(--red)'],
+                    plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
+                    dataLabels: { enabled: false },
+                    stroke: { show: true, width: 2, colors: ['transparent'] },
+                    tooltip: { theme: 'dark', y: { formatter: function (val) { return '€ ' + val } } },
+                    grid: { borderColor: 'var(--line)', strokeDashArray: 4 }
+                };
+                if (window.ApexCharts) {
+                    const chart = new window.ApexCharts(this.$refs.chart, options);
+                    chart.render();
+                } else { setTimeout(() => this.initChart(), 200); }
+            }
+        }" x-init="initChart()">
+            <x-panel title="Andamento Finanziario" dot="var(--green)" padded>
+                <div x-ref="chart" class="u-min-h-300"></div>
+            </x-panel>
+        </div>
+    </div>
+    <div>
+        <div class="mt-panel" x-data="{
+            initChart() {
+                const data = {{ $operationalChartData }};
+                const options = {
+                    chart: { type: 'line', height: 300, toolbar: { show: false }, background: 'transparent' },
+                    series: data.series,
+                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
+                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' } }, min: 0, forceNiceScale: true },
+                    colors: ['var(--accent)', 'var(--purple)'],
+                    stroke: { curve: 'smooth', width: 3 },
+                    dataLabels: { enabled: false },
+                    tooltip: { theme: 'dark' },
+                    grid: { borderColor: 'var(--line)', strokeDashArray: 4 }
+                };
+                if (window.ApexCharts) {
+                    const chart = new window.ApexCharts(this.$refs.opchart, options);
+                    chart.render();
+                } else { setTimeout(() => this.initChart(), 200); }
+            }
+        }" x-init="initChart()">
+            <x-panel title="Andamento Operativo" dot="var(--accent)" padded>
+                <div x-ref="opchart" class="u-min-h-300"></div>
+            </x-panel>
+        </div>
     </div>
 </div>
 
@@ -25,7 +91,7 @@
     <div x-data="{ tab: 'tasks' }">
         <x-panel title="Panoramica Operativa" dot="var(--accent)">
             <x-slot:headerActions>
-                <div class="tab-switcher" style="margin-bottom:0">
+                <div class="tab-switcher no-margin">
                     <button @click="tab = 'tasks'" :class="tab === 'tasks' ? 'active' : ''" class="tab-btn">Task In
                         Scadenza</button>
                     <button @click="tab = 'tickets'" :class="tab === 'tickets' ? 'active' : ''" class="tab-btn">Ticket

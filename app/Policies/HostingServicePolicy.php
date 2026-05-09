@@ -11,22 +11,22 @@ class HostingServicePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isDeveloper();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
     }
 
     public function view(User $user, HostingService $hostingService): bool
     {
-        return $user->isAdmin() || $user->isDeveloper();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isDeveloper();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
     }
 
     public function update(User $user, HostingService $hostingService): bool
     {
-        return $user->isAdmin() || $user->isDeveloper();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
     }
 
     public function delete(User $user, HostingService $hostingService): bool

@@ -8,8 +8,18 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="filter-bar justify-end">
-        <form method="GET" action="{{ route('hosting-services.index') }}" class="hosting-filters-panel" x-data>
+    <div class="filter-bar">
+        <div class="pills u-m-0">
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => null]) }}" class="pill {{ !request('status_filter') ? 'on' : '' }}">Tutti</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'expiring']) }}" class="pill {{ request('status_filter') === 'expiring' ? 'on' : '' }}">In Scadenza</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'expired']) }}" class="pill {{ request('status_filter') === 'expired' ? 'on' : '' }}">Scaduti</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'active']) }}" class="pill {{ request('status_filter') === 'active' ? 'on' : '' }}">Attivi</a>
+        </div>
+
+        <form method="GET" action="{{ route('hosting-services.index') }}" class="hosting-filters-panel u-ml-auto" x-data>
+            @if(request('status_filter'))
+                <input type="hidden" name="status_filter" value="{{ request('status_filter') }}">
+            @endif
             <select name="type" class="form-sel hosting-input-sm hosting-w-150" @change="$el.form.submit()">
                 <option value="all">Tutti i tipi</option>
                 <option value="domain" {{ request('type') === 'domain' ? 'selected' : '' }}>Domini</option>
@@ -88,9 +98,19 @@
                     </td>
                     <td class="mono-col">
                         @if($service->renewal_date)
-                            <span class="{{ $service->renewal_date->isPast() ? 'hosting-past-due' : '' }}">
-                                {{ $service->renewal_date->format('d/m/Y') }}
-                            </span>
+                            @if($service->is_expired)
+                                <span class="badge badge-danger" title="{{ $service->renewal_date->format('d/m/Y') }}">
+                                    Scaduto ({{ $service->renewal_date->format('d/m/Y') }})
+                                </span>
+                            @elseif($service->is_expiring_soon)
+                                <span class="badge badge-warning" title="{{ $service->renewal_date->format('d/m/Y') }}">
+                                    Scade tra {{ $service->days_until_renewal }} gg
+                                </span>
+                            @else
+                                <span class="badge badge-gray">
+                                    {{ $service->renewal_date->format('d/m/Y') }}
+                                </span>
+                            @endif
                         @else
                             <span class="hosting-text-na">-</span>
                         @endif

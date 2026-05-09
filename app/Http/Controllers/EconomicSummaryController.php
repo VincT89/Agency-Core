@@ -8,7 +8,7 @@ use Illuminate\View\View;
 
 class EconomicSummaryController extends Controller
 {
-    public function __invoke(Request $request, EconomicSummaryService $economicSummaryService): View
+    public function __invoke(Request $request, EconomicSummaryService $economicSummaryService, \App\Services\FinancialSummaryService $financialService): View
     {
         $user = auth()->user();
 
@@ -28,6 +28,9 @@ class EconomicSummaryController extends Controller
             'globalSummary' => $globalSummary,
             'summaryByClient' => $summaryByClient,
             'summaryByProject' => $summaryByProject,
+            'lineChartData'    => json_encode($financialService->getIncassatoVsDaIncassareMonthlyData(12)),
+            'donutChartData'   => json_encode($financialService->getYearlyDonutData()),
+            'sparklineData'    => json_encode($financialService->getSparklineData(6)),
         ]);
     }
 }

@@ -89,6 +89,55 @@
             @endif
         </x-panel>
 
+        {{-- Spese Associate --}}
+        <div class="u-mt-lg">
+            <x-panel title="Spese Associate" dot="var(--orange)">
+                @if($hostingService->expenses->isEmpty())
+                    <div class="hosting-empty-p">
+                        <x-empty-state message="Nessuna spesa registrata per questo servizio." icon="receipt" />
+                    </div>
+                @else
+                    <table class="t-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Spesa</th>
+                                <th>Importo</th>
+                                <th>Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($hostingService->expenses()->orderBy('expense_date', 'desc')->get() as $expense)
+                            <tr onclick="window.location='{{ route('expenses.show', $expense) }}'" class="hosting-row-link hover-bg">
+                                <td class="mono-col">{{ $expense->expense_date->format('d/m/Y') }}</td>
+                                <td>{{ $expense->title }}</td>
+                                <td class="mono-col">&euro; {{ number_format($expense->amount, 2, ',', '.') }}</td>
+                                <td>
+                                    @if($expense->status === 'paid')
+                                        <span class="badge badge-success">Pagata</span>
+                                    @elseif($expense->status === 'cancelled')
+                                        <span class="badge badge-gray">Annullata</span>
+                                    @elseif($expense->is_overdue)
+                                        <span class="badge badge-danger">Scaduta</span>
+                                    @else
+                                        <span class="badge badge-warning">Da Pagare</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </x-panel>
+        </div>
+
+        {{-- Allegati --}}
+        <div class="u-mt-lg">
+            <x-panel title="Documenti e Credenziali" dot="var(--blue)" padded>
+                <livewire:shared.attachment-manager :model="$hostingService" />
+            </x-panel>
+        </div>
+
         {{-- Colonna Destra: Storico Interventi --}}
         <div>
             <x-panel title="Registra Intervento" dot="var(--accent)" padded class="u-mb-lg">

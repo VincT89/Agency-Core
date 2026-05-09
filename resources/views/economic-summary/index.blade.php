@@ -6,30 +6,29 @@
     >
     <x-slot:title>Riepiloghi Economici</x-slot:title>
         <x-slot:actions>
-            <form method="GET" action="{{ route('economic-summary.index') }}" style="display: flex; gap: 8px; align-items: center; margin: 0;">
-                <input type="date" name="from" value="{{ $from ?? '' }}" class="form-in" style="height: 36px; padding: 0 12px; font-size: 13px;" >
-    <x-slot:title>Dal</x-slot:title>
-                <span style="color: var(--text3); font-size: 14px;">-</span>
-                <input type="date" name="to" value="{{ $to ?? '' }}" class="form-in" style="height: 36px; padding: 0 12px; font-size: 13px;" title="Al">
-                <button type="submit" class="btn btn-p" style="height: 36px;">Applica</button>
+            <form method="GET" action="{{ route('economic-summary.index') }}" class="finance-filter-form">
+                <input type="date" name="from" value="{{ $from ?? '' }}" class="form-in finance-date-input" title="Dal">
+                <span class="finance-filter-sep">-</span>
+                <input type="date" name="to" value="{{ $to ?? '' }}" class="form-in finance-date-input" title="Al">
+                <button type="submit" class="btn btn-p finance-btn-sm">Applica</button>
                 @if($from || $to)
-                    <a href="{{ route('economic-summary.index') }}" class="btn btn-g" style="height: 36px; display: inline-flex; align-items: center;">Reset</a>
+                    <a href="{{ route('economic-summary.index') }}" class="btn btn-g finance-btn-sm">Reset</a>
                 @endif
             </form>
         </x-slot:actions>
     </x-page-header>
 
     @if($from || $to)
-    <div style="margin-bottom: 24px;">
-        <x-panel padded style="background:var(--bg2);">
-            <div style="font-size: 13px; color: var(--text2);">
-                <strong style="color:var(--text1)">Nota sul periodo:</strong> "Fatturato" e "Da Incassare" si basano sulla data di emissione delle fatture nel periodo. L'"Incassato" si basa sulla data dei pagamenti ricevuti nel periodo.
+    <div class="finance-note-wrap">
+        <x-panel padded class="finance-note-panel">
+            <div class="finance-note-text">
+                <strong class="u-text-main">Nota sul periodo:</strong> "Fatturato" e "Da Incassare" si basano sulla data di emissione delle fatture nel periodo. L'"Incassato" si basa sulla data dei pagamenti ricevuti nel periodo.
             </div>
         </x-panel>
     </div>
     @endif
 
-    <div class="g-3col" style="margin-bottom:32px;">
+    <div class="g-3col u-mb-lg">
         <x-panel padded>
             <x-stat-card 
                 label="Fatturato" 
@@ -37,6 +36,7 @@
                 sub="Da {{ $globalSummary['invoices_count'] }} fatture valide" 
             />
         </x-panel>
+        
         <x-panel padded>
             <x-stat-card 
                 label="Incassato" 
@@ -45,6 +45,7 @@
                 dot="var(--green)"
             />
         </x-panel>
+        
         <x-panel padded>
             <x-stat-card 
                 label="Da Incassare" 
@@ -54,6 +55,83 @@
                 :highlight="$globalSummary['total_outstanding'] > 0"
                 :subAlert="$globalSummary['total_outstanding'] > 0"
             />
+        </x-panel>
+    </div>
+
+    <div class="g-3col u-mb-lg">
+        <x-panel title="Trend Fatturato" dot="var(--purple)" padded>
+            <div x-data="{
+                initChart() {
+                    const data = {{ $sparklineData }};
+                    if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
+                    
+                    const opt0 = {
+                        chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
+                        series: [{ name: 'Fatturato', data: data.invoiced }],
+                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } }, min: 0, forceNiceScale: true },
+                        colors: ['var(--purple)'],
+                        stroke: { curve: 'smooth', width: 3 },
+                        fill: { opacity: 0.3 },
+                        dataLabels: { enabled: false },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4 },
+                        tooltip: { theme: 'dark' }
+                    };
+                    new window.ApexCharts(this.$refs.fatturato, opt0).render();
+                }
+            }" x-init="initChart()">
+                <div x-ref="fatturato" class="u-min-h-250"></div>
+            </div>
+        </x-panel>
+
+        <x-panel title="Trend Incassi" dot="var(--green)" padded>
+            <div x-data="{
+                initChart() {
+                    const data = {{ $sparklineData }};
+                    if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
+                    
+                    const opt1 = {
+                        chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
+                        series: [{ name: 'Incassato', data: data.collected }],
+                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } }, min: 0, forceNiceScale: true },
+                        colors: ['var(--green)'],
+                        stroke: { curve: 'smooth', width: 3 },
+                        fill: { opacity: 0.3 },
+                        dataLabels: { enabled: false },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4 },
+                        tooltip: { theme: 'dark' }
+                    };
+                    new window.ApexCharts(this.$refs.spark1, opt1).render();
+                }
+            }" x-init="initChart()">
+                <div x-ref="spark1" class="u-min-h-250"></div>
+            </div>
+        </x-panel>
+
+        <x-panel title="Trend Da Incassare" dot="var(--red)" padded>
+            <div x-data="{
+                initChart() {
+                    const data = {{ $sparklineData }};
+                    if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
+                    
+                    const opt2 = {
+                        chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
+                        series: [{ name: 'Da Incassare', data: data.pending }],
+                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } }, min: 0, forceNiceScale: true },
+                        colors: ['var(--red)'],
+                        stroke: { curve: 'smooth', width: 3 },
+                        fill: { opacity: 0.3 },
+                        dataLabels: { enabled: false },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4 },
+                        tooltip: { theme: 'dark' }
+                    };
+                    new window.ApexCharts(this.$refs.spark2, opt2).render();
+                }
+            }" x-init="initChart()">
+                <div x-ref="spark2" class="u-min-h-250"></div>
+            </div>
         </x-panel>
     </div>
 

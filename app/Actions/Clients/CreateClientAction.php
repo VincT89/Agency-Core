@@ -33,6 +33,16 @@ class CreateClientAction
             $data['logo_path'] = $logo->store('clients/logos', 'public');
         }
 
+        if (!empty($data['nextcloud_folder_name'])) {
+            $data['nextcloud_photos_path'] = '/Photos/' . $data['nextcloud_folder_name'];
+            $nextcloudService = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+            if (!$nextcloudService->ensureDirectoryExists($data['nextcloud_photos_path'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'nextcloud_folder_name' => 'Impossibile creare la cartella su Nextcloud. Verifica la connessione o prova con un altro nome.',
+                ]);
+            }
+        }
+
         return Client::create($data);
     }
 }

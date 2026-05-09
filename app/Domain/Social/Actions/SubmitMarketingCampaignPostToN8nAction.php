@@ -4,6 +4,7 @@ namespace App\Domain\Social\Actions;
 
 use App\Models\MarketingCampaignPost;
 use App\Jobs\SendMarketingCampaignPostToN8nJob;
+use App\Domain\Social\Builders\MarketingCampaignPostMediaPayloadBuilder;
 use Illuminate\Support\Str;
 
 class SubmitMarketingCampaignPostToN8nAction
@@ -78,7 +79,7 @@ class SubmitMarketingCampaignPostToN8nAction
             'activity_description' => $activityDescription,
         ];
 
-        $mediaUrl = $post->media_url;
+        $mediaPayload = MarketingCampaignPostMediaPayloadBuilder::build($post);
 
         // Costruisci il payload
         $payload = [
@@ -89,7 +90,7 @@ class SubmitMarketingCampaignPostToN8nAction
                 'name' => $campaign->name,
             ],
             'client' => $clientPayload,
-            'post' => [
+            'post' => array_merge([
                 'id' => $post->id,
                 'title' => $post->title,
                 'description' => $post->description,
@@ -98,15 +99,7 @@ class SubmitMarketingCampaignPostToN8nAction
                 'scheduled_time' => $post->scheduled_time ? date('H:i', strtotime($post->scheduled_time)) : null,
                 'ai_analysis_enabled' => $post->ai_analysis_enabled,
                 'publishing_platforms' => $post->publishing_platforms ?? [],
-                'media_url' => $mediaUrl,
-                'media' => [
-                    'source' => $post->media_source,
-                    'url' => $mediaUrl,
-                    'nextcloud_path' => $post->nextcloud_path,
-                    'nextcloud_share_url' => $post->nextcloud_share_url,
-                    'nextcloud_file_id' => $post->nextcloud_file_id,
-                ],
-            ],
+            ], $mediaPayload),
             'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
         ];
 

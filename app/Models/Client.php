@@ -32,6 +32,8 @@ use App\Models\User;
     'notes',
     'logo_path',
     'activity_description',
+    'nextcloud_folder_name',
+    'nextcloud_photos_path',
 ])]
 class Client extends Model
 {
@@ -87,6 +89,11 @@ class Client extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    public function expenses(): MorphMany
+    {
+        return $this->morphMany(Expense::class, 'expenseable');
     }
 
     public function auditLogs(): MorphMany

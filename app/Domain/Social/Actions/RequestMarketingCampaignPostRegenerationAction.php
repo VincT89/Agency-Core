@@ -8,6 +8,7 @@ use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostCommentType;
 use App\Enums\Social\MarketingCampaignPostCommentVisibility;
 use App\Jobs\RequestMarketingCampaignPostRegenerationJob;
+use App\Domain\Social\Builders\MarketingCampaignPostMediaPayloadBuilder;
 use Illuminate\Support\Str;
 use Exception;
 
@@ -41,6 +42,8 @@ class RequestMarketingCampaignPostRegenerationAction
         $currentVersion = $post->currentVersion;
         $previousStatus = $post->status->value ?? $post->status;
 
+        $mediaPayload = MarketingCampaignPostMediaPayloadBuilder::build($post);
+
         $payload = [
             'type' => 'marketing_campaign_post_regeneration',
             'post_id' => $post->id,
@@ -60,21 +63,13 @@ class RequestMarketingCampaignPostRegenerationAction
                 'activity_description' => $client->activity_description,
             ],
 
-            'post' => [
+            'post' => array_merge([
                 'id' => $post->id,
                 'title' => $post->title,
                 'description' => $post->description,
                 'content_type' => $post->content_type->value ?? $post->content_type,
                 'publishing_platforms' => $post->publishing_platforms ?? [],
-                'media_url' => $post->media_url,
-                'media' => [
-                    'source' => $post->media_source,
-                    'url' => $post->media_url,
-                    'nextcloud_path' => $post->nextcloud_path,
-                    'nextcloud_share_url' => $post->nextcloud_share_url,
-                    'nextcloud_file_id' => $post->nextcloud_file_id,
-                ],
-            ],
+            ], $mediaPayload),
 
             'current_version' => $currentVersion ? [
                 'id' => $currentVersion->id,

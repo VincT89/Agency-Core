@@ -6,17 +6,6 @@
     <x-slot:title><strong>Calendario</strong> Eventi</x-slot:title>
         <div style="font-size:14px;color:var(--text3);margin-top:8px">Pianificazione di incontri, appuntamenti cliente e milestone. Per il progresso operativo usa i <a href="{{ route('tasks.index') }}" style="color:var(--accent);text-decoration:none">Task</a>.</div>
         <x-slot:actions>
-            {{-- Toggle vista --}}
-            <div style="display:flex;border:1px solid var(--line2);border-radius:var(--r);overflow:hidden">
-                <button id="btn-cal" onclick="switchView('calendar')"
-                        class="btn" style="border:none;border-radius:0;padding:7px 14px;font-size:11px;background:var(--accent);color:#fff">
-                    Calendario
-                </button>
-                <button id="btn-list" onclick="switchView('list')"
-                        class="btn" style="border:none;border-radius:0;padding:7px 14px;font-size:11px;background:transparent;color:var(--text2)">
-                    Lista
-                </button>
-            </div>
             @can('create', App\Models\CalendarEvent::class)
                 <a href="{{ route('calendar-events.create') }}" class="btn btn-p">+ Nuovo evento</a>
             @endcan
@@ -36,72 +25,12 @@
     </div>
     @endif
 
-    {{-- Vista Calendario --}}
     <div id="view-calendar">
         <x-panel>
             <div class="panel-body pad">
                 <div id="js-error" style="color:var(--red);margin-bottom:10px;font-family:monospace;white-space:pre-wrap"></div>
                 <div id="fullcalendar" style="min-height:600px"></div>
             </div>
-        </x-panel>
-    </div>
-
-    {{-- Vista Lista --}}
-    <div id="view-list" style="display:none">
-        <div class="pills">
-            @php $currentStatus = request('status'); @endphp
-            <a href="{{ route('calendar-events.index') }}" class="pill {{ !$currentStatus ? 'on' : '' }}">Tutti</a>
-            <a href="{{ route('calendar-events.index', ['status'=>'scheduled']) }}"
-               class="pill {{ $currentStatus==='scheduled' ? 'on' : '' }}">Programmati</a>
-            <a href="{{ route('calendar-events.index', ['status'=>'completed']) }}"
-               class="pill {{ $currentStatus==='completed' ? 'on' : '' }}">Completati</a>
-            <a href="{{ route('calendar-events.index', ['status'=>'cancelled']) }}"
-               class="pill {{ $currentStatus==='cancelled' ? 'on' : '' }}">Annullati</a>
-        </div>
-        <x-panel>
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Data Inizio</th>
-                        <th>Titolo Evento</th>
-                        <th>Tipo</th>
-                        <th>Assegnato a</th>
-                        <th>Cliente</th>
-                        <th>Stato</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($calendarEvents as $event)
-                    <tr onclick="window.location='{{ route('calendar-events.show', $event) }}'" style="cursor:pointer">
-                        <td class="mono-col">
-                            {{ $event->start_at?->format('d/m/Y H:i') }}
-                            @if($event->is_all_day)
-                                <span style="font-size:10px;background:var(--line);padding:2px 4px;border-radius:4px;margin-left:4px">Tutto il giorno</span>
-                            @endif
-                        </td>
-                        <td class="name-col">
-                            {{ $event->title }}
-                            @if($event->meeting_url)
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:6px; color:var(--accent); vertical-align:middle"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
-                            @endif
-                        </td>
-                        <td><x-badge :status="$event->type" :label="$event->type_label" /></td>
-                        <td>{{ $event->assignee?->name ?? '—' }}</td>
-                        <td>{{ $event->client?->name ?? '—' }}</td>
-                        <td><x-badge :status="$event->status" :label="$event->status_label" /></td>
-                        <td>
-                            @can('update', $event)
-                                <a href="{{ route('calendar-events.edit', $event) }}" class="btn-icon" onclick="event.stopPropagation()">✎</a>
-                            @endcan
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px">Nessun evento trovato</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-            {{ $calendarEvents->links() }}
         </x-panel>
     </div>
 
@@ -117,22 +46,6 @@
     const CURRENT_DEPT = '{{ request('department') }}';
     let calendarInstance = null;
 
-    // Switch vista calendario/lista
-    function switchView(v) {
-        const isCalendar = v === 'calendar';
-        document.getElementById('view-calendar').style.display = isCalendar ? '' : 'none';
-        document.getElementById('view-list').style.display     = isCalendar ? 'none' : '';
-        document.getElementById('btn-cal').style.background    = isCalendar ? 'var(--accent)' : 'transparent';
-        document.getElementById('btn-cal').style.color         = isCalendar ? '#fff' : 'var(--text2)';
-        document.getElementById('btn-list').style.background   = isCalendar ? 'transparent' : 'var(--accent)';
-        document.getElementById('btn-list').style.color        = isCalendar ? 'var(--text2)' : '#fff';
-        localStorage.setItem('calView', v);
-        
-        if (isCalendar && calendarInstance) {
-            setTimeout(() => calendarInstance.updateSize(), 50);
-        }
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
         try {
             const jsErr = document.getElementById('js-error');
@@ -141,19 +54,23 @@
                 return;
             }
 
-            // Ripristina vista preferita
-            const savedView = localStorage.getItem('calView') || 'calendar';
-            if (savedView === 'list') switchView('list');
-
             // Inizializza FullCalendar
             const calEl = document.getElementById('fullcalendar');
             calendarInstance = new FullCalendar.Calendar(calEl, {
                 locale: 'it',
+                firstDay: 1, // Start on Monday
                 initialView: 'dayGridMonth',
                 headerToolbar: {
                     left:   'prev,next today',
                     center: 'title',
                     right:  'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                },
+                buttonText: {
+                    today: 'Oggi',
+                    month: 'Mese',
+                    week: 'Settimana',
+                    day: 'Giorno',
+                    list: 'Lista'
                 },
                 height: 'auto',
                 nowIndicator: true,

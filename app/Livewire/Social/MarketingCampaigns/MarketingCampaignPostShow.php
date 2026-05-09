@@ -45,18 +45,22 @@ class MarketingCampaignPostShow extends Component
     public $save_runtime_logo_to_client = false;
     public $save_runtime_activity_to_client = false;
 
-    public $media; // Uploaded file
-    public $existing_media_url = null; // Preview of existing file
+    public $media = []; // Uploaded file(s)
+    public array $existing_media = []; // Existing media from DB
 
     // Nextcloud State
     public $nextcloud_media_kind = 'photo';
     public $nextcloud_browse_path = '/';
     public $nextcloud_files = [];
-    public ?array $selected_nextcloud_file = null;
-    public ?array $pending_nextcloud_file = null;
+    public array $selected_nextcloud_files = [];
+    public array $pending_nextcloud_files = [];
     public ?array $preview_nextcloud_file = null;
     public bool $showNextcloudPicker = false;
     public ?string $nextcloud_error = null;
+
+    // Regeneration state
+    public bool $regeneration_timeout = false;
+    public int $regeneration_checks = 0;
 
     protected function rules()
     {
@@ -72,10 +76,11 @@ class MarketingCampaignPostShow extends Component
             'form.nextcloud_path' => 'nullable|string|max:255',
             'form.publishing_platforms' => 'nullable|array',
             'form.publishing_platforms.*' => 'string|in:instagram,facebook,tiktok',
-            'media' => [
-                'nullable',
+            'media' => ['nullable', 'array', 'max:10'],
+            'media.*' => [
                 'file',
-                'mimes:jpg,jpeg,png,webp,mp4,mov,webm,m4v',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
                 'max:51200',
             ],
             'runtime_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -91,6 +96,7 @@ class MarketingCampaignPostShow extends Component
         // Eager load related data
         $post->load(['currentVersion', 'comments.user']);
         $this->post = $post;
+        $this->loadExistingMedia();
 
         $this->form = [
             'title' => $post->title,
@@ -104,7 +110,6 @@ class MarketingCampaignPostShow extends Component
             'nextcloud_path' => $post->nextcloud_path,
             'publishing_platforms' => $post->publishing_platforms ?? [],
         ];
-        $this->existing_media_url = $post->preview_url;
     }
 
     #[On('post-saved')]
@@ -117,7 +122,131 @@ class MarketingCampaignPostShow extends Component
     {
         $this->post->refresh();
         $this->post->load(['currentVersion', 'comments.user']);
-        $this->existing_media_url = $this->post->preview_url;
+        $this->loadExistingMedia();
+        $this->form['status'] = $this->post->status->value;
+    }
+
+    public function checkRegenerationStatus()
+    {
+        $this->post->refresh();
+        $this->post->load(['currentVersion', 'comments.user']);
+        $this->loadExistingMedia();
+        
+        $this->form['status'] = $this->post->status->value;
+
+        if (in_array($this->post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'])) {
+            $this->regeneration_checks++;
+            if ($this->regeneration_checks >= 10) {
+                $this->regeneration_timeout = true;
+            }
+        } else {
+            $this->regeneration_timeout = false;
+            $this->regeneration_checks = 0;
+        }
+    }
+
+    public function abortRegeneration()
+    {
+        $newStatus = $this->post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+        
+        if (in_array($newStatus, ['pending_n8n', 'submitted_to_n8n', 'regenerating'])) {
+            $newStatus = \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+        }
+
+        $this->post->update([
+            'status' => $newStatus,
+            'n8n_error' => 'Operazione annullata dall\'utente (timeout n8n).',
+        ]);
+        $this->regeneration_timeout = false;
+        $this->regeneration_checks = 0;
+        $this->refreshPost();
+    }
+
+    private function loadExistingMedia()
+    {
+        $this->existing_media = $this->post->mediaItems()
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'source' => $item->source,
+                    'path' => $item->source === 'local' ? $item->path : $item->nextcloud_path,
+                    'preview_url' => $item->source === 'local' 
+                        ? Storage::disk('public')->url($item->path)
+                        : ($item->nextcloud_share_url ? $item->nextcloud_share_url . '/preview' : null),
+                    'original_name' => $item->original_name,
+                    'mime_type' => $item->mime_type,
+                    'nextcloud_share_url' => $item->nextcloud_share_url,
+                    'nextcloud_file_id' => $item->nextcloud_file_id,
+                    'sort_order' => $item->sort_order,
+                ];
+            })->toArray();
+    }
+
+    private function syncLegacyMediaFields()
+    {
+        $first = collect($this->existing_media)->first();
+        if ($first) {
+            $this->post->update([
+                'media_path' => $first['source'] === 'local' ? $first['path'] : null,
+                'media_original_name' => $first['original_name'],
+                'media_mime' => $first['mime_type'],
+                'nextcloud_path' => $first['source'] === 'nextcloud' ? $first['path'] : null,
+                'nextcloud_share_url' => $first['source'] === 'nextcloud' ? $first['nextcloud_share_url'] : null,
+                'nextcloud_file_id' => $first['source'] === 'nextcloud' ? $first['nextcloud_file_id'] : null,
+            ]);
+            $this->form['media_source'] = $first['source'];
+            $this->form['nextcloud_path'] = $first['source'] === 'nextcloud' ? $first['path'] : null;
+        } else {
+            $this->post->update([
+                'media_path' => null,
+                'media_original_name' => null,
+                'media_mime' => null,
+                'nextcloud_path' => null,
+                'nextcloud_share_url' => null,
+                'nextcloud_file_id' => null,
+            ]);
+            $this->form['nextcloud_path'] = null;
+        }
+        $this->post->refresh();
+    }
+
+    public function removeExistingMedia($id)
+    {
+        $this->authorize('update', $this->post);
+        
+        $item = \App\Models\MarketingCampaignPostMedia::find($id);
+        if ($item && $item->marketing_campaign_post_id === $this->post->id) {
+            if ($item->source === 'local' && $item->path) {
+                Storage::disk('public')->delete($item->path);
+            }
+            $item->delete();
+            $this->loadExistingMedia();
+            $this->syncLegacyMediaFields();
+        }
+    }
+
+    public function removeLocalMedia($index): void
+    {
+        if (isset($this->media[$index])) {
+            $newMedia = [];
+            foreach ($this->media as $i => $file) {
+                if ($i !== $index) $newMedia[] = $file;
+            }
+            $this->media = $newMedia;
+        }
+    }
+
+    public function reorderLocalMedia($fromIndex, $toIndex): void
+    {
+        if (!is_array($this->media) || !isset($this->media[$fromIndex])) return;
+        if ($toIndex < 0 || $toIndex >= count($this->media)) return;
+
+        $item = $this->media[$fromIndex];
+        array_splice($this->media, $fromIndex, 1);
+        array_splice($this->media, $toIndex, 0, [$item]);
+        $this->media = array_values($this->media);
     }
 
     public function updatedFormAiAnalysisEnabled($value)
@@ -157,52 +286,88 @@ class MarketingCampaignPostShow extends Component
 
     public function openNextcloudPicker(string $mediaKind = 'photo'): void
     {
-        $this->nextcloud_media_kind = $mediaKind;
+        $this->nextcloud_media_kind = 'photo'; // Force photo
         $this->showNextcloudPicker = true;
-        $this->pending_nextcloud_file = $this->selected_nextcloud_file;
+        $this->pending_nextcloud_files = $this->selected_nextcloud_files;
 
         $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
-        $this->browseNextcloud($service->mediaRoot($mediaKind));
+        $startPath = $service->mediaRoot('photo');
+        if ($this->campaign->client && !empty($this->campaign->client->nextcloud_photos_path)) {
+            $startPath = $this->campaign->client->nextcloud_photos_path;
+        }
+        $this->browseNextcloud($startPath);
     }
 
     public function closeNextcloudPicker(): void
     {
         $this->showNextcloudPicker = false;
-        $this->pending_nextcloud_file = null;
+        $this->pending_nextcloud_files = [];
     }
 
-    public function selectNextcloudFile($path, $name, $size, $mime = null, $fileId = null): void
+    public function toggleNextcloudFile($path, $name, $size, $mime = null, $fileId = null): void
     {
-        $this->pending_nextcloud_file = [
-            'path' => $path,
-            'name' => $name,
-            'size' => $size,
-            'mime' => $mime,
-            'file_id' => $fileId,
-        ];
+        $existingIndex = collect($this->pending_nextcloud_files)->search(fn($f) => $f['path'] === $path);
+        
+        if ($existingIndex !== false) {
+            unset($this->pending_nextcloud_files[$existingIndex]);
+            $this->pending_nextcloud_files = array_values($this->pending_nextcloud_files);
+        } else {
+            $totalCount = count($this->existing_media) + (is_array($this->media) ? count($this->media) : 0) + count($this->pending_nextcloud_files);
+            if ($totalCount >= 10) {
+                $this->addError('form.nextcloud_path', 'Puoi avere al massimo 10 file totali.');
+                return;
+            }
+            $this->pending_nextcloud_files[] = [
+                'path' => $path,
+                'name' => $name,
+                'size' => $size,
+                'mime' => $mime,
+                'file_id' => $fileId,
+            ];
+        }
     }
 
     public function confirmNextcloudSelection(): void
     {
-        if (!$this->pending_nextcloud_file) {
-            $this->addError('form.nextcloud_path', 'Seleziona una foto da Nextcloud.');
+        if (empty($this->pending_nextcloud_files)) {
+            $this->addError('form.nextcloud_path', 'Seleziona almeno una foto da Nextcloud.');
             return;
         }
 
-        $this->selected_nextcloud_file = $this->pending_nextcloud_file;
-        $this->form['nextcloud_path'] = $this->selected_nextcloud_file['path'];
+        $this->selected_nextcloud_files = $this->pending_nextcloud_files;
+        $this->form['nextcloud_path'] = $this->selected_nextcloud_files[0]['path'];
         $this->form['media_source'] = 'nextcloud';
 
         $this->showNextcloudPicker = false;
-        $this->pending_nextcloud_file = null;
+        $this->pending_nextcloud_files = [];
     }
 
-    public function removeNextcloudFile(): void
+    public function removeNextcloudFile($path = null): void
     {
-        $this->selected_nextcloud_file = null;
-        $this->pending_nextcloud_file = null;
-        $this->preview_nextcloud_file = null;
-        $this->form['nextcloud_path'] = null;
+        if ($path) {
+            $this->selected_nextcloud_files = array_filter($this->selected_nextcloud_files, fn($f) => $f['path'] !== $path);
+            $this->selected_nextcloud_files = array_values($this->selected_nextcloud_files);
+            
+            if (empty($this->selected_nextcloud_files)) {
+                $this->form['nextcloud_path'] = null;
+            } else {
+                $this->form['nextcloud_path'] = $this->selected_nextcloud_files[0]['path'];
+            }
+        } else {
+            $this->selected_nextcloud_files = [];
+            $this->form['nextcloud_path'] = null;
+        }
+    }
+
+    public function reorderNextcloudMedia($fromIndex, $toIndex): void
+    {
+        if (!isset($this->selected_nextcloud_files[$fromIndex])) return;
+        if ($toIndex < 0 || $toIndex >= count($this->selected_nextcloud_files)) return;
+
+        $item = $this->selected_nextcloud_files[$fromIndex];
+        array_splice($this->selected_nextcloud_files, $fromIndex, 1);
+        array_splice($this->selected_nextcloud_files, $toIndex, 0, [$item]);
+        $this->selected_nextcloud_files = array_values($this->selected_nextcloud_files);
     }
 
     public function openNextcloudPreview(string $path): void
@@ -215,7 +380,6 @@ class MarketingCampaignPostShow extends Component
         }
 
         $this->preview_nextcloud_file = $file;
-        $this->pending_nextcloud_file = $file;
     }
 
     public function closeNextcloudPreview(): void
@@ -264,9 +428,81 @@ class MarketingCampaignPostShow extends Component
             ->all();
     }
 
+    private function buildPostDataAndStoredMedia(array &$data): bool
+    {
+        $storedMedia = [];
+        $baseSortOrder = collect($this->existing_media)->max('sort_order');
+        $baseSortOrder = $baseSortOrder !== null ? $baseSortOrder + 1 : 0;
+
+        $totalCount = count($this->existing_media) + 
+            ($data['media_source'] === 'local' ? (is_array($this->media) ? count($this->media) : 0) : 0) + 
+            ($data['media_source'] === 'nextcloud' ? count($this->selected_nextcloud_files) : 0);
+            
+        if ($totalCount > 10) {
+            $this->addError('media', 'Il totale dei media non può superare i 10 elementi.');
+            return false;
+        }
+
+        if ($data['media_source'] === 'local' && !empty($this->media)) {
+            foreach ($this->media as $index => $uploadedFile) {
+                $filename = \Illuminate\Support\Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME))
+                    . '_' . time() . '_' . $index . '.' . $uploadedFile->getClientOriginalExtension();
+                
+                $path = $uploadedFile->storeAs('marketing/campaign-posts', $filename, 'public');
+
+                $storedMedia[] = [
+                    'marketing_campaign_post_id' => $this->post->id,
+                    'source' => 'local',
+                    'path' => $path,
+                    'original_name' => $uploadedFile->getClientOriginalName(),
+                    'mime_type' => $uploadedFile->getMimeType(),
+                    'sort_order' => $baseSortOrder + $index,
+                ];
+            }
+        } elseif ($data['media_source'] === 'nextcloud' && !empty($this->selected_nextcloud_files)) {
+            $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+            foreach ($this->selected_nextcloud_files as $index => $ncFile) {
+                $shareUrl = $service->createPublicShare($ncFile['path']);
+                
+                if (!$shareUrl) {
+                    $this->addError('form.nextcloud_path', "Impossibile creare link pubblico per: {$ncFile['name']}");
+                    return false;
+                }
+
+                $storedMedia[] = [
+                    'marketing_campaign_post_id' => $this->post->id,
+                    'source' => 'nextcloud',
+                    'nextcloud_path' => $ncFile['path'],
+                    'original_name' => $ncFile['name'] ?? basename($ncFile['path']),
+                    'mime_type' => $ncFile['mime'] ?? null,
+                    'nextcloud_file_id' => $ncFile['file_id'] ?? null,
+                    'nextcloud_share_url' => $shareUrl,
+                    'sort_order' => $baseSortOrder + $index,
+                ];
+            }
+        }
+
+        if (!empty($storedMedia)) {
+            \App\Models\MarketingCampaignPostMedia::insert($storedMedia);
+        }
+
+        $this->loadExistingMedia();
+        $this->syncLegacyMediaFields();
+
+        // Pulizia state per permettere ulteriori modifiche senza duplicati
+        $this->media = [];
+        $this->selected_nextcloud_files = [];
+        $this->form['nextcloud_path'] = null;
+        $this->form['media_source'] = collect($this->existing_media)->first()['source'] ?? 'local';
+        
+        return true;
+    }
+
     public function savePost()
     {
         $this->validate();
+
+        $this->processClientIdentity();
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
             $this->addError('post', 'Impossibile modificare un post già pubblicato.');
@@ -276,44 +512,11 @@ class MarketingCampaignPostShow extends Component
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
 
-        $oldMediaPath = null;
-        if ($data['media_source'] === 'local') {
-            $data['nextcloud_path'] = null;
-            $data['nextcloud_share_url'] = null;
-            $data['nextcloud_file_id'] = null;
-            
-            if ($this->media) {
-                $filename = Str::slug(pathinfo($this->media->getClientOriginalName(), PATHINFO_FILENAME))
-                    . '_' . time() . '.' . $this->media->getClientOriginalExtension();
-                $path = $this->media->storeAs('marketing/campaign-posts', $filename, 'public');
-
-                $data['media_path'] = $path;
-                $data['media_original_name'] = $this->media->getClientOriginalName();
-                $data['media_mime'] = $this->media->getMimeType();
-
-                if ($this->post->media_path) {
-                    $oldMediaPath = $this->post->media_path;
-                }
-            }
-        } elseif ($data['media_source'] === 'nextcloud') {
-            $data['media_path'] = null;
-            if ($this->post->media_source === 'local' && $this->post->media_path) {
-                $oldMediaPath = $this->post->media_path;
-            }
-            if (empty($data['nextcloud_path'])) {
-                $this->addError('form.nextcloud_path', 'Seleziona un file da Nextcloud.');
-                return;
-            }
-            if (!$this->prepareNextcloudMedia($data)) {
-                return;
-            }
-        }
-
         $this->authorize('update', $this->post);
-        $this->post->update($data);
+        $this->post->update($data); // first save normal data
 
-        if ($oldMediaPath) {
-            Storage::disk('public')->delete($oldMediaPath);
+        if (!$this->buildPostDataAndStoredMedia($data)) {
+            return;
         }
 
         $this->dispatch('post-saved');
@@ -324,6 +527,8 @@ class MarketingCampaignPostShow extends Component
     {
         $this->validate();
 
+        $this->processClientIdentity();
+
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
             $this->addError('post', 'Impossibile inviare a N8n un post già pubblicato.');
             return;
@@ -333,44 +538,11 @@ class MarketingCampaignPostShow extends Component
         $data['marketing_campaign_id'] = $this->campaign->id;
         $data['status'] = MarketingCampaignPostStatus::PendingN8n->value;
 
-        $oldMediaPath = null;
-        if ($data['media_source'] === 'local') {
-            $data['nextcloud_path'] = null;
-            $data['nextcloud_share_url'] = null;
-            $data['nextcloud_file_id'] = null;
-            
-            if ($this->media) {
-                $filename = Str::slug(pathinfo($this->media->getClientOriginalName(), PATHINFO_FILENAME))
-                    . '_' . time() . '.' . $this->media->getClientOriginalExtension();
-                $path = $this->media->storeAs('marketing/campaign-posts', $filename, 'public');
-
-                $data['media_path'] = $path;
-                $data['media_original_name'] = $this->media->getClientOriginalName();
-                $data['media_mime'] = $this->media->getMimeType();
-
-                if ($this->post->media_path) {
-                    $oldMediaPath = $this->post->media_path;
-                }
-            }
-        } elseif ($data['media_source'] === 'nextcloud') {
-            $data['media_path'] = null;
-            if ($this->post->media_source === 'local' && $this->post->media_path) {
-                $oldMediaPath = $this->post->media_path;
-            }
-            if (empty($data['nextcloud_path'])) {
-                $this->addError('form.nextcloud_path', 'Seleziona un file da Nextcloud.');
-                return;
-            }
-            if (!$this->prepareNextcloudMedia($data)) {
-                return;
-            }
-        }
-
         $this->authorize('update', $this->post);
         $this->post->update($data);
 
-        if ($oldMediaPath) {
-            Storage::disk('public')->delete($oldMediaPath);
+        if (!$this->buildPostDataAndStoredMedia($data)) {
+            return;
         }
 
         $runtimeClientData = [
@@ -382,9 +554,13 @@ class MarketingCampaignPostShow extends Component
             'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
         ];
 
-        $submitAction->execute($this->post, $runtimeClientData);
+        try {
+            $submitAction->execute($this->post, $runtimeClientData);
+            $this->dispatch('post-submitted-n8n');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("N8n dispatch error: " . $e->getMessage());
+        }
 
-        $this->dispatch('post-submitted-n8n');
         $this->refreshPost();
     }
 
@@ -399,6 +575,7 @@ class MarketingCampaignPostShow extends Component
 
         try {
             $action->execute($this->post, auth()->user(), $type);
+            $this->refreshPost();
             $this->dispatch('post-regenerating');
         } catch (\Exception $e) {
             $this->addError('post', $e->getMessage());
@@ -464,48 +641,42 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('delete', $this->post);
 
-        if ($this->post->media_path) {
-            Storage::disk('public')->delete($this->post->media_path);
+        foreach ($this->post->mediaItems as $item) {
+            if ($item->source === 'local' && $item->path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($item->path);
+            }
         }
-
         $this->post->delete();
 
         return redirect()->route('marketing-campaigns.show', $this->campaign);
     }
 
-    private function prepareNextcloudMedia(array &$data): bool
+    private function processClientIdentity()
     {
-        if (empty($data['nextcloud_path'])) {
-            return true;
-        }
+        $client = $this->campaign->client;
+        $updated = false;
 
-        if (!$this->selected_nextcloud_file) {
-            if ($this->post && $this->post->nextcloud_path === $data['nextcloud_path']) {
-                $data['nextcloud_share_url'] = $this->post->nextcloud_share_url;
-                $data['nextcloud_file_id'] = $this->post->nextcloud_file_id;
-                $data['media_original_name'] = $this->post->media_original_name;
-                $data['media_mime'] = $this->post->media_mime;
-                return true;
+        if ($this->include_client_logo && $this->runtime_logo && $this->save_runtime_logo_to_client) {
+            if ($this->runtime_logo instanceof \Illuminate\Http\UploadedFile) {
+                $filename = 'logo_' . time() . '.' . $this->runtime_logo->getClientOriginalExtension();
+                $path = $this->runtime_logo->storeAs('clients/logos', $filename, 'public');
+                $client->logo_path = $path;
+                $this->runtime_logo = null;
+                $this->save_runtime_logo_to_client = false;
+                $updated = true;
             }
-            $this->addError('form.nextcloud_path', 'Dati del file mancanti. Seleziona nuovamente il file da Nextcloud.');
-            return false;
         }
 
-        $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
-        $shareUrl = $service->createPublicShare($data['nextcloud_path']);
-
-        if (!$shareUrl) {
-            $this->addError('form.nextcloud_path', 'Impossibile creare il link pubblico Nextcloud.');
-            return false;
+        if ($this->include_client_header && $this->runtime_activity_description && $this->save_runtime_activity_to_client) {
+            $client->activity_description = $this->runtime_activity_description;
+            $this->runtime_activity_description = null;
+            $this->save_runtime_activity_to_client = false;
+            $updated = true;
         }
 
-        $data['nextcloud_share_url'] = $shareUrl;
-        $data['nextcloud_file_id'] = $this->selected_nextcloud_file['file_id'] ?? null;
-        $data['media_path'] = null;
-        $data['media_original_name'] = $this->selected_nextcloud_file['name'] ?? basename($data['nextcloud_path']);
-        $data['media_mime'] = $this->selected_nextcloud_file['mime'] ?? null;
-
-        return true;
+        if ($updated) {
+            $client->save();
+        }
     }
 
     public function render()

@@ -70,6 +70,21 @@ class MarketingCampaignPost extends Model
         return $this->morphMany(ClientReviewToken::class, 'reviewable');
     }
 
+    public function mediaItems(): HasMany
+    {
+        return $this->hasMany(MarketingCampaignPostMedia::class);
+    }
+
+    public function orderedMediaItems(): HasMany
+    {
+        return $this->mediaItems()->orderBy('sort_order', 'asc');
+    }
+
+    public function primaryMedia(): HasOne
+    {
+        return $this->hasOne(MarketingCampaignPostMedia::class)->orderBy('sort_order', 'asc');
+    }
+
     public function canRegenerate(): bool
     {
         return ! in_array($this->status, [
@@ -78,8 +93,36 @@ class MarketingCampaignPost extends Model
         ], true);
     }
 
+    public function getPrimaryMediaItem(): ?MarketingCampaignPostMedia
+    {
+        if ($this->relationLoaded('orderedMediaItems')) {
+            return $this->orderedMediaItems->first();
+        }
+        
+        if ($this->relationLoaded('mediaItems')) {
+            return $this->mediaItems->sortBy('sort_order')->first();
+        }
+
+        return $this->primaryMedia;
+    }
+
     public function getMediaUrlAttribute(): ?string
     {
+        $primary = $this->getPrimaryMediaItem();
+
+        if ($primary) {
+            if ($primary->source === 'nextcloud') {
+                return $primary->nextcloud_share_url
+                    ? rtrim($primary->nextcloud_share_url, '/') . '/download'
+                    : null;
+            }
+            if ($primary->path) {
+                return route('media.marketing-campaign-posts', [
+                    'path' => $primary->path
+                ]);
+            }
+        }
+
         if ($this->media_source === 'nextcloud') {
             return $this->nextcloud_share_url
                 ? rtrim($this->nextcloud_share_url, '/') . '/download'
@@ -97,6 +140,16 @@ class MarketingCampaignPost extends Model
 
     public function getPreviewUrlAttribute(): ?string
     {
+        $primary = $this->getPrimaryMediaItem();
+
+        if ($primary && $primary->source === 'nextcloud' && $primary->nextcloud_path) {
+            return route('nextcloud.preview', [
+                'path' => $primary->nextcloud_path,
+                'w' => 800,
+                'h' => 800,
+            ]);
+        }
+
         if ($this->media_source === 'nextcloud' && $this->nextcloud_path) {
             return route('nextcloud.preview', [
                 'path' => $this->nextcloud_path,

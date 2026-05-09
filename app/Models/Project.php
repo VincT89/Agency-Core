@@ -99,6 +99,11 @@ class Project extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    public function expenses(): MorphMany
+    {
+        return $this->morphMany(Expense::class, 'expenseable');
+    }
+
     public function auditLogs(): MorphMany
     {
         return $this->morphMany(AuditLog::class, 'auditable');

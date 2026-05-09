@@ -48,44 +48,44 @@
 
     </div>
 
-    <div class="mt-panel">
-        <x-panel title="Workflow (Attention List)" dot="var(--accent)">
-            @if(count($data->attention_list) === 0)
-                <div style="text-align:center;color:var(--text3);padding:32px">
-                    <i data-lucide="check-circle" style="width:32px; height:32px; margin-bottom:12px; opacity:0.5;"></i>
-                    <div style="font-weight:500; font-size:14px; color:var(--text2);">Nessun blocco rilevato</div>
-                    <div style="font-size:12px;">Nessuno shooting richiede l'intervento dell'admin.</div>
-                </div>
-            @else
-                <table class="t-table">
-                    <thead>
-                        <tr>
-                            <th>Shooting / Progetto</th>
-                            <th>Stato Attuale</th>
-                            <th style="text-align: right">Azione</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($data->attention_list as $item)
-                            <tr onclick="window.location='{{ $item->action_url }}'" style="cursor:pointer">
-                                <td class="name-col">
-                                    {{ $item->shoot_name }}
-                                    <div style="font-size:12px;color:var(--text3);font-weight:normal;margin-top:4px">{{ $item->project_name }} • {{ $item->shoot_code }}</div>
-                                </td>
-                                <td>
-                                    @php
-                                        $color = $item->priority === 1 ? 'var(--orange)' : ($item->priority === 2 ? 'var(--red)' : 'var(--blue)');
-                                    @endphp
-                                    <span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:4px; background:var(--bg3); color:{{ $color }};">{{ $item->status_label }}</span>
-                                </td>
-                                <td style="text-align: right">
-                                    <a href="{{ $item->action_url }}" class="btn btn-sm" style="background:var(--bg); border:1px solid var(--line); color:var(--text2); text-decoration:none;">{{ $item->action_label }}</a>
-                                </td>
+    <div class="dash-grid mt-panel">
+        <div>
+            <x-panel title="Workflow (Attention List)" dot="var(--accent)">
+                @if(count($data->attention_list) === 0)
+                    <div style="text-align:center;color:var(--text3);padding:32px">
+                        <i data-lucide="check-circle" style="width:32px; height:32px; margin-bottom:12px; opacity:0.5;"></i>
+                        <div style="font-weight:500; font-size:14px; color:var(--text2);">Nessun blocco rilevato</div>
+                        <div style="font-size:12px;">Nessuno shooting richiede l'intervento dell'admin.</div>
+                    </div>
+                @else
+                    <table class="t-table">
+                        <thead>
+                            <tr>
+                                <th>Shooting / Progetto</th>
+                                <th>Stato Attuale</th>
+                                <th style="text-align: right">Azione</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
-        </x-panel>
+                        </thead>
+                        <tbody>
+                            @foreach($data->attention_list as $item)
+                                <tr onclick="window.location='{{ $item->action_url }}'" style="cursor:pointer">
+                                    <td class="name-col">
+                                        {{ $item->shoot_name }}
+                                        <div style="font-size:12px;color:var(--text3);font-weight:normal;margin-top:4px">{{ $item->project_name }} • {{ $item->shoot_code }}</div>
+                                    </td>
+                                    <td>
+                                        @php
+                                            $color = $item->priority === 1 ? 'var(--orange)' : ($item->priority === 2 ? 'var(--red)' : 'var(--blue)');
+                                        @endphp
+                                        <span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:4px; background:var(--bg3); color:{{ $color }};">{{ $item->status_label }}</span>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <a href="{{ $item->action_url }}" class="btn btn-sm" style="background:var(--bg); border:1px solid var(--line); color:var(--text2); text-decoration:none;">{{ $item->action_label }}</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
     </div>
 </div>

@@ -48,7 +48,11 @@ class SendMarketingCampaignPostToN8nJob implements ShouldQueue
             \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value,
             \App\Enums\Social\MarketingCampaignPostStatus::SubmittedToN8n->value
         ])) {
-            $updates['status'] = $this->post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+            $newStatus = $this->post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+            if (in_array($newStatus, [\App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value, \App\Enums\Social\MarketingCampaignPostStatus::SubmittedToN8n->value, \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value])) {
+                $newStatus = \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+            }
+            $updates['status'] = $newStatus;
         }
 
         $this->post->update($updates);

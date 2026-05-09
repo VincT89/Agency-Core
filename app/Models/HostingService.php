@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class HostingService extends Model
@@ -47,5 +48,37 @@ class HostingService extends Model
     public function interventions(): HasMany
     {
         return $this->hasMany(HostingServiceIntervention::class);
+    }
+
+    public function expenses(): MorphMany
+    {
+        return $this->morphMany(Expense::class, 'expenseable');
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    // Accessors for renewal logic
+    public function getIsExpiredAttribute(): bool
+    {
+        return $this->renewal_date && $this->renewal_date->lt(today());
+    }
+
+    public function getIsExpiringSoonAttribute(): bool
+    {
+        if (!$this->renewal_date || $this->is_expired) {
+            return false;
+        }
+        return $this->renewal_date->diffInDays(today()) <= 30;
+    }
+
+    public function getDaysUntilRenewalAttribute(): ?int
+    {
+        if (!$this->renewal_date) {
+            return null;
+        }
+        return today()->diffInDays($this->renewal_date, false); // false means it can be negative if expired
     }
 }

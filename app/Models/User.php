@@ -111,6 +111,11 @@ class User extends Authenticatable
         return $this->hasMany(Payment::class, 'created_by');
     }
 
+    public function dailyNotes(): HasMany
+    {
+        return $this->hasMany(UserDailyNote::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === UserRole::Admin;

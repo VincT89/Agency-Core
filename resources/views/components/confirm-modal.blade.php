@@ -3,39 +3,36 @@
     'message' => 'Sei sicuro di voler procedere?',
     'confirmText' => 'Conferma',
     'confirmMethod' => null,
-    'btnClass' => 'btn btn-p',
-    'btnStyle' => '',
+    'confirmClass' => 'btn btn-p',
     'icon' => 'alert-circle',
-    'iconColor' => 'var(--orange)',
-    'iconBg' => 'rgba(255, 150, 0, 0.1)',
+    'variant' => 'warning',
     'disabled' => false
 ])
 
-<div x-data="{ open: false }" style="display: inline-block;">
+<div x-data="{ open: false }" class="confirm-modal-trigger">
     <div @click="if(!{{ $disabled ? 'true' : 'false' }}) open = true">
         {{ $slot }}
     </div>
 
     <template x-teleport="body" wire:ignore>
-        <div x-show="open" x-cloak style="display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999;" @click.self="open = false" @keydown.escape.window="open = false">
-        <div style="background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--r); width: 100%; max-width: 400px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" @click.stop>
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                <div style="background: {{ $iconBg }}; color: {{ $iconColor }}; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="{{ $icon }}" style="width: 20px; height: 20px;"></i>
+        <div x-show="open" x-cloak class="confirm-modal-overlay" @click.self="open = false" @keydown.escape.window="open = false">
+        <div class="confirm-modal-box" @click.stop>
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon {{ $variant }}">
+                    <i data-lucide="{{ $icon }}" class="confirm-modal-icon-svg"></i>
                 </div>
-                <h3 style="font-family: var(--sans); font-size: 16px; font-weight: 600; color: var(--text); margin: 0;">
+                <h3 class="confirm-modal-title">
                     {{ $title }}
                 </h3>
             </div>
             
-            <p style="color: var(--text2); font-size: 13.5px; margin-bottom: 24px; line-height: 1.5;">
+            <p class="confirm-modal-message">
                 {{ $message }}
             </p>
             
-            <div style="display: flex; justify-content: flex-end; gap: 12px;">
-                <button type="button" @click="open = false" class="btn btn-g" style="padding: 8px 16px;">Annulla</button>
-                <button type="button" class="{{ $btnClass }}" 
-                        style="padding: 8px 16px; {{ $btnStyle }}"
+            <div class="confirm-modal-footer">
+                <button type="button" @click="open = false" class="btn btn-g confirm-modal-btn">Annulla</button>
+                <button type="button" class="{{ $confirmClass }} confirm-modal-btn" 
                         @if($confirmMethod) wire:click="{{ $confirmMethod }}" @endif
                         @click="open = false">
                     {{ $confirmText }}

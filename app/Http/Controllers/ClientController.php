@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use App\Services\Integrations\Nextcloud\NextcloudService;
 
 class ClientController extends Controller
 {
@@ -76,10 +78,30 @@ class ClientController extends Controller
             $data['logo_path'] = $logo->store('clients/logos', 'public');
         }
 
+        if (array_key_exists('nextcloud_folder_name', $data) && $data['nextcloud_folder_name'] !== $client->nextcloud_folder_name) {
+            if (empty($data['nextcloud_folder_name']) && !empty($client->nextcloud_folder_name)) {
+                return back()->withInput()->withErrors([
+                    'nextcloud_folder_name' => 'Non è possibile scollegare la cartella Nextcloud una volta impostata. Seleziona un nuovo nome o mantieni quello attuale.'
+                ]);
+            }
+
+            if (!empty($data['nextcloud_folder_name'])) {
+                $data['nextcloud_photos_path'] = '/Photos/' . $data['nextcloud_folder_name'];
+                $nextcloudService = app(NextcloudService::class);
+                if (!$nextcloudService->ensureDirectoryExists($data['nextcloud_photos_path'])) {
+                    return back()->withInput()->withErrors([
+                        'nextcloud_folder_name' => 'Impossibile creare la nuova cartella su Nextcloud. Verifica la connessione o prova con un altro nome.'
+                    ]);
+                }
+            } else {
+                $data['nextcloud_photos_path'] = null;
+            }
+        }
+
         $client->update($data);
 
         if (isset($data['logo_path']) && $oldLogo) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($oldLogo);
+            Storage::disk('public')->delete($oldLogo);
         }
 
         return redirect()->route('clients.show', $client)

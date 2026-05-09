@@ -243,50 +243,7 @@
     </div>
 
     {{-- Allegati --}}
-    <div class="u-mt-lg">
-        <x-panel title="Allegati ({{ $task->attachments->count() }})" dot="var(--accent)" padded>
-            @forelse($task->attachments as $att)
-                <div class="u-flex-between task-attachment-item">
-                    <div>
-                        <div class="u-text-strong">{{ $att->original_name }}</div>
-                        <div class="u-text-meta">
-                            {{ strtoupper($att->extension) }} ·
-                            {{ number_format($att->size / 1024, 1) }} KB ·
-                            {{ $att->uploader?->name }} · {{ $att->created_at->diffForHumans() }}
-                        </div>
-                    </div>
-                    <div class="u-flex u-gap-sm">
-                        <a href="{{ route('attachments.download', $att) }}" class="btn btn-g btn-sm">↓</a>
-                        @can('delete', $att)
-                            <x-delete-modal 
-                                action="{{ route('attachments.destroy', $att) }}" 
-                                title="Elimina Allegato" 
-                                message="Sei sicuro di voler eliminare il file '{{ $att->original_name }}'?">
-                                <button type="button" class="btn-icon u-text-red">✕</button>
-                            </x-delete-modal>
-                        @endcan
-                    </div>
-                </div>
-            @empty
-                <div class="u-empty-state-sm">Nessun allegato.</div>
-            @endforelse
-
-            @can('create', App\Models\Attachment::class)
-                <form action="{{ route('attachments.store') }}" method="POST"
-                      enctype="multipart/form-data"
-                      class="u-flex u-gap-sm u-section-sep task-attachment-form">
-                    @csrf
-                    <input type="hidden" name="attachable_type" value="task">
-                    <input type="hidden" name="attachable_id" value="{{ $task->id }}">
-                    <div class="u-flex-1">
-                        <div class="u-text-label">Carica allegato</div>
-                        <input type="file" name="file" required class="form-in task-file-input">
-                    </div>
-                    <button type="submit" class="btn btn-g">Carica</button>
-                </form>
-            @endcan
-        </x-panel>
-    </div>
+    <livewire:shared.attachment-manager :model="$task" />
 
     {{-- Audit log --}}
     @if(auth()->user()->canViewAuditLogs())

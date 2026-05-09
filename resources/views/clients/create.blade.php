@@ -134,6 +134,15 @@
                               placeholder="Es. Ristorante di cucina mediterranea a Roma, specializzato in pesce fresco.">{{ old('activity_description') }}</textarea>
                 </x-form-group>
             </div>
+            
+            <div class="sec-lbl" style="margin-top:16px">Integrazione Nextcloud</div>
+            <div class="form-row full">
+                <x-form-group label="Nome Cartella Nextcloud *" name="nextcloud_folder_name" required>
+                    <input name="nextcloud_folder_name" class="form-in @error('nextcloud_folder_name') is-invalid @enderror"
+                           value="{{ old('nextcloud_folder_name') }}" placeholder="Es. acme-srl">
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px;">La cartella verrà creata in <code>/Photos/{nome_cartella}</code>. Usare solo lettere, numeri, trattini e underscore. Non inserire spazi o slash.</div>
+                </x-form-group>
+            </div>
 
             <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
                 <a href="{{ route('clients.index') }}" class="btn btn-g">Annulla</a>

@@ -18,6 +18,8 @@ class AuditLog extends Model
         'uploaded_attachment',
         'deleted_attachment',
         'payment_registered',
+        'login',
+        'logout',
     ];
 
     public $timestamps = false;

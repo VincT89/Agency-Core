@@ -11,9 +11,11 @@ class HostingServiceController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', HostingService::class);
+
         $query = HostingService::query()
             ->with('client')
-            ->latest();
+            ->orderByRaw('renewal_date IS NULL, renewal_date ASC');
 
         if ($request->filled('type') && $request->type !== 'all') {
             $query->where('type', $request->type);
@@ -32,6 +34,21 @@ class HostingServiceController extends Controller
             });
         }
 
+        if ($request->filled('status_filter')) {
+            $now = now()->startOfDay();
+            if ($request->status_filter === 'expired') {
+                $query->where('renewal_date', '<', $now);
+            } elseif ($request->status_filter === 'expiring') {
+                $query->where('renewal_date', '>=', $now)
+                      ->where('renewal_date', '<=', $now->copy()->addDays(30));
+            } elseif ($request->status_filter === 'active') {
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('renewal_date')
+                      ->orWhere('renewal_date', '>=', $now);
+                });
+            }
+        }
+
         $services = $query->paginate(20)->withQueryString();
 
         return view('hosting-services.index', compact('services'));
@@ -39,6 +56,7 @@ class HostingServiceController extends Controller
 
     public function create()
     {
+        $this->authorize('create', HostingService::class);
         return view('hosting-services.create');
     }
 
@@ -51,12 +69,14 @@ class HostingServiceController extends Controller
 
     public function show(HostingService $hostingService)
     {
+        $this->authorize('view', $hostingService);
         $hostingService->load(['client', 'interventions.user']);
         return view('hosting-services.show', compact('hostingService'));
     }
 
     public function edit(HostingService $hostingService)
     {
+        $this->authorize('update', $hostingService);
         return view('hosting-services.edit', compact('hostingService'));
     }
 
@@ -76,6 +96,8 @@ class HostingServiceController extends Controller
 
     public function destroy(HostingService $hostingService)
     {
+        $this->authorize('delete', $hostingService);
+        
         $type = $hostingService->type;
         $hostingService->delete();
 

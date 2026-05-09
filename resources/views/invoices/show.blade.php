@@ -238,5 +238,5 @@
     <x-audit-timeline :logs="$invoice->auditLogs" />
 
     {{-- Allegati --}}
-    <x-attachments-panel :model="$invoice" />
+    <livewire:shared.attachment-manager :model="$invoice" />
 </x-app-layout>

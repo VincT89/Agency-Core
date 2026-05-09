@@ -31,55 +31,72 @@
 
     <div class="g-2col" style="margin-bottom:20px;">
         <x-panel title="Info Base" dot="var(--teal)" padded>
-            @if($client->logo_url)
-                <div style="margin-bottom:16px">
-                    <img src="{{ $client->logo_url }}"
-                         alt="Logo {{ $client->name }}"
-                         style="max-height:90px;max-width:220px;object-fit:contain;"
-                         onerror="this.style.display='none'">
+            <div class="u-flex u-flex-col u-gap-md">
+                
+                {{-- Header with Logo and Name --}}
+                <div class="u-flex u-items-center u-gap-md u-pb-md" style="border-bottom: 1px solid var(--line);">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 1px solid var(--line); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; flex-shrink: 0;">
+                        @if($client->logo_url)
+                            <img src="{{ $client->logo_url }}" alt="Logo {{ $client->name }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+                        @else
+                            <i data-lucide="building" class="u-icon-lg" style="color: var(--text3)"></i>
+                        @endif
+                    </div>
+                    <div>
+                        <div class="u-text-strong u-text-lg">{{ $client->name }}</div>
+                        <div class="u-text-meta">{{ $client->company_name ?? 'Nessuna ragione sociale specificata' }}</div>
+                    </div>
                 </div>
-            @else
-                <div style="margin-bottom:16px;font-size:13px;color:var(--text3);font-style:italic;">
-                    Nessun logo caricato
-                </div>
-            @endif
 
-            <div class="form-g mb-2">
-                <div class="form-lbl">Descrizione attività cliente</div>
-                <div style="color:var(--text);font-family:var(--sans)">
-                    {{ $client->activity_description ?: '—' }}
+                {{-- Activity Description --}}
+                <div class="form-g mb-0">
+                    <div class="form-lbl">Descrizione attività cliente</div>
+                    <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">
+                        {{ $client->activity_description ?: '—' }}
+                    </div>
                 </div>
-            </div>
-            <div class="form-g mb-2">
-                <div class="form-lbl">Partita IVA / C.F.</div>
-                <div style="color:var(--text);font-family:var(--mono)">{{ $client->vat_number ?? '—' }}</div>
-            </div>
-            <div class="form-g mb-2">
-                <div class="form-lbl">Email / Telefono</div>
-                <div style="color:var(--text);font-family:var(--sans)">{{ $client->email ?? '—' }} <br> {{ $client->phone ?? '—' }}</div>
-            </div>
-            <div class="form-g mb-2">
-                <div class="form-lbl">Fatturazione (PEC / SDI)</div>
-                <div style="color:var(--text);font-family:var(--mono)">
-                    PEC: {{ $client->pec ?? '—' }} <br>
-                    SDI: {{ $client->sdi_code ?? '—' }} <br>
-                    Email: {{ $client->billing_email ?? '—' }}
+
+                {{-- 2-Col Grid for Details --}}
+                <div class="g-2col">
+                    <div class="form-g mb-0">
+                        <div class="form-lbl">Partita IVA / C.F.</div>
+                        <div style="color: var(--text); font-family: var(--mono); font-size: 14px;">{{ $client->vat_number ?? '—' }}</div>
+                    </div>
+                    <div class="form-g mb-0">
+                        <div class="form-lbl">Referente</div>
+                        <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">{{ $client->reference_person ?? '—' }}</div>
+                    </div>
+                    <div class="form-g mb-0">
+                        <div class="form-lbl">Email / Telefono</div>
+                        <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">
+                            {{ $client->email ?? '—' }} <br> 
+                            {{ $client->phone ?? '—' }}
+                        </div>
+                    </div>
+                    <div class="form-g mb-0">
+                        <div class="form-lbl">Fatturazione (PEC / SDI)</div>
+                        <div style="color: var(--text); font-family: var(--mono); font-size: 14px;">
+                            PEC: {{ $client->pec ?? '—' }} <br>
+                            SDI: {{ $client->sdi_code ?? '—' }} <br>
+                            Email: {{ $client->billing_email ?? '—' }}
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="form-g mb-2">
-                <div class="form-lbl">Referente</div>
-                <div style="color:var(--text);font-family:var(--sans)">{{ $client->reference_person ?? '—' }}</div>
-            </div>
-            <div class="form-g mb-2">
-                <div class="form-lbl">Sede</div>
-                <div style="color:var(--text);font-family:var(--sans)">
-                    {{ $client->address ?? '—' }}<br>
-                    {{ trim(implode(' ', array_filter([$client->postal_code, $client->city, $client->province ? "({$client->province})" : null, $client->country]))) }}
+
+                {{-- Full width details --}}
+                <div class="form-g mb-0">
+                    <div class="form-lbl">Sede</div>
+                    <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">
+                        {{ $client->address ?? '—' }}<br>
+                        {{ trim(implode(' ', array_filter([$client->postal_code, $client->city, $client->province ? "({$client->province})" : null, $client->country]))) }}
+                    </div>
                 </div>
-            </div>
-            <div class="form-g">
-                <div class="form-lbl">Registrato il</div>
-                <div style="color:var(--text);font-family:var(--mono)">{{ $client->created_at->isoFormat('D MMMM YYYY') }}</div>
+                
+                <div class="form-g mb-0">
+                    <div class="form-lbl">Registrato il</div>
+                    <div style="color: var(--text); font-family: var(--mono); font-size: 14px;">{{ $client->created_at->isoFormat('D MMMM YYYY') }}</div>
+                </div>
+
             </div>
         </x-panel>
         <div>

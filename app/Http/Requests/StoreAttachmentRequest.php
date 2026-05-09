@@ -28,6 +28,8 @@ class StoreAttachmentRequest extends FormRequest
         'calendar_event' => CalendarEvent::class,
         'invoice' => Invoice::class,
         'payment' => Payment::class,
+        'expense' => \App\Models\Expense::class,
+        'hosting_service' => \App\Models\HostingService::class,
     ];
 
     public function authorize(): bool

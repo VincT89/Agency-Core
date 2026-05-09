@@ -20,4 +20,6 @@ Route::prefix('v1/integrations/n8n')
 
         Route::post('/marketing-campaign-posts/result', [\App\Http\Controllers\Api\V1\Integrations\N8n\MarketingCampaignPostResultController::class, 'store'])->name('marketing-campaign-posts.result');
         Route::post('/marketing-campaign-posts/{post}/versions', [\App\Http\Controllers\Api\V1\Integrations\N8n\MarketingCampaignPostVersionController::class, 'store'])->name('marketing-campaign-posts.versions.store');
+        
+        Route::post('/chatbot/client-message', [\App\Http\Controllers\Api\V1\Integrations\N8n\N8nChatbotController::class, 'store'])->name('chatbot.client-message');
     });

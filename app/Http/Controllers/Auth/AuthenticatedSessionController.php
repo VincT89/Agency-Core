@@ -23,6 +23,15 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        
+        try {
+            $user = auth()->user();
+            if ($user) {
+                app(\App\Services\AuditLogService::class)->log('login', $user, null, null, null, $user->id);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to log login: " . $e->getMessage());
+        }
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
@@ -30,6 +39,15 @@ class AuthenticatedSessionController extends Controller
     // Distrugge la sessione di autenticazione (logout)
     public function destroy(Request $request): RedirectResponse
     {
+        try {
+            $user = auth()->user();
+            if ($user) {
+                app(\App\Services\AuditLogService::class)->log('logout', $user, null, null, null, $user->id);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to log logout: " . $e->getMessage());
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

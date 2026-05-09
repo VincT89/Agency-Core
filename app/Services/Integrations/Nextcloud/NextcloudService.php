@@ -257,6 +257,55 @@ class NextcloudService
         }
     }
 
+    /**
+     * Assicura che una directory esista su Nextcloud, creandola ricorsivamente se necessario.
+     * Ritorna true se la directory esiste o è stata creata con successo.
+     */
+    public function ensureDirectoryExists(string $path): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        $path = $this->normalizePath($path);
+        $segments = array_filter(explode('/', trim($path, '/')));
+        
+        $currentPath = '';
+        foreach ($segments as $segment) {
+            $currentPath .= '/' . $segment;
+            $url = rtrim($this->buildWebdavUrl($currentPath), '/') . '/';
+            
+            try {
+                // Verifica se esiste già
+                $check = Http::timeout(10)->retry(2, 300)
+                    ->withBasicAuth($this->username, $this->password)
+                    ->send('PROPFIND', $url, [
+                        'headers' => ['Depth' => '0']
+                    ]);
+                
+                if ($check->status() === 207) {
+                    continue; // Esiste già
+                }
+
+                $response = Http::timeout(10)->retry(2, 300)
+                    ->withBasicAuth($this->username, $this->password)
+                    ->send('MKCOL', $url);
+
+                $status = $response->status();
+                
+                if ($status !== 201 && $status !== 405) {
+                    Log::error("Nextcloud MKCOL fallito per URL: {$url}. Status: {$status} Body: " . $response->body());
+                    return false;
+                }
+            } catch (\Exception $e) {
+                Log::error("Errore Nextcloud WebDAV su {$url}: " . $e->getMessage());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private function buildWebdavUrl(string $path = '/'): string
     {
         $baseUrl = rtrim(config('services.nextcloud.base_url'), '/');

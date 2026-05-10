@@ -6,13 +6,6 @@
                 class="u-text-accent u-no-underline">Task</a>.</div>
     </x-page-header>
 
-    <style>
-        /* Blocca in modo assoluto lo scroll della pagina (scroll esterno) solo per il calendario */
-        body, html, .shell, .main, .content {
-            overflow: hidden !important;
-        }
-    </style>
-
     @php
         $currentDateStr = request('date', now()->toDateString());
         try {
@@ -98,7 +91,7 @@
         <main class="cal-gmain">
             <div class="cal-wrapper-modern">
                 <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
-                <div id="fullcalendar"></div>
+                <div id="fullcalendar" class="cal-full-height"></div>
             </div>
         </main>
     </div>

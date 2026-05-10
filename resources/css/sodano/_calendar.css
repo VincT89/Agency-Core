@@ -253,12 +253,19 @@
 }
 
 /* --- Layout Sidebar Google-like --- */
+.cal-full-height {
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
 .cal-gshell {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 24px;
     align-items: stretch;
-    height: calc(100vh - 190px); /* Calibrato perfettamente per eliminare ogni scroll residuo */
+    height: calc(100vh - 240px);
+    overflow: hidden;
     min-height: 600px;
 }
 
@@ -280,6 +287,8 @@
 .cal-gmain {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
     height: 100%;
     min-height: 0;
 }
@@ -343,6 +352,7 @@
     text-decoration: none;
     border-radius: 50%;
     font-weight: 500;
+    position: relative;
 }
 
 .cal-mini-day:hover {
@@ -363,6 +373,20 @@
 .cal-mini-day.is-selected {
     background: var(--accent);
     color: #fff;
+}
+
+.cal-mini-day.has-publication::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--accent);
+}
+
+.cal-mini-day.is-selected.has-publication::after {
+    background: #fff;
 }
 
 .cal-sidebar-filters {

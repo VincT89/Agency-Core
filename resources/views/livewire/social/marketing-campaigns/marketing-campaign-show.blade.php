@@ -88,51 +88,73 @@
         </table>
     </x-panel>
 
-    {{-- Calendario Editoriale --}}
-    <div class="panel u-overflow-hidden">
-      <div class="lw-modal-hd">
-        <div class="cmp-panel-title">Calendario Programmazione</div>
-        <div class="u-flex-center u-gap-lg">
-          <button type="button" wire:click="previousMonth" class="btn btn-s btn-cal-nav">&larr;</button>
-          <div class="cmp-month-nav">{{ Str::ucfirst($monthName) }}</div>
-          <button type="button" wire:click="nextMonth" class="btn btn-s btn-cal-nav">&rarr;</button>
-        </div>
-      </div>
-      
-      <div class="cal-day-header-grid">
-          <div class="mkt-cam-label">LUN</div>
-          <div class="mkt-cam-label">MAR</div>
-          <div class="mkt-cam-label">MER</div>
-          <div class="mkt-cam-label">GIO</div>
-          <div class="mkt-cam-label">VEN</div>
-          <div class="mkt-cam-label">SAB</div>
-          <div class="mkt-cam-label">DOM</div>
-      </div>
+    <div class="cal-gshell" id="mkt-calendar-wrapper">
+        <!-- SIDEBAR -->
+        <aside class="cal-gsidebar">
+            <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate class="btn btn-p u-flex-center u-gap-xs u-w-full u-mb-md">
+                <i data-lucide="plus" class="u-icon-sm"></i> Nuovo Post
+            </a>
 
-      <div class="cal-grid-7">
-        @foreach($calendarGrid as $row)
-          @foreach($row as $col)
-            <div class="cal-cell {{ $col && $col['isToday'] ? 'today' : '' }}">
-              @if($col)
-                <div class="mkt-flex-between-mb">
-                  <span class="mkt-fs-12 {{ $col['isToday'] ? 'mkt-fw-bold mkt-text-blue' : 'mkt-fw-normal mkt-text-inherit' }}">{{ $col['day'] }}</span>
-                  <a href="{{ route('marketing-campaigns.posts.create', ['campaign' => $campaign->id, 'date' => $col['date']]) }}" wire:navigate.hover class="btn-calendar-add">
-                      <i data-lucide="plus" class="mkt-icon-12"></i>
-                  </a>
+            <!-- Mini-Mese -->
+            <div class="cal-mini-month">
+                <div class="cal-mini-header">
+                    <div class="cal-mini-title">{{ Str::ucfirst($monthName) }}</div>
+                    <div class="cal-mini-nav">
+                        <a wire:click="goToPreviousCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
+                                data-lucide="chevron-left" class="u-icon-sm"></i></a>
+                        <a wire:click="goToNextCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
+                                data-lucide="chevron-right" class="u-icon-sm"></i></a>
+                    </div>
                 </div>
-                <div class="mkt-flex-col-gap4">
-                  @foreach($col['posts'] as $p)
-                    <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $p->id]) }}" wire:navigate.hover class="cal-post-pill block no-underline text-inherit" title="{{ $p->title }}">
-                      <span class="cal-post-dot {{ $p->status->value === 'draft' ? 'bg-gray-400' : ($p->status->value === 'published' ? 'bg-emerald-500' : 'bg-blue-500') }}"></span>
-                      {{ $p->scheduled_time ? date('H:i', strtotime($p->scheduled_time)) . ' - ' : '' }} {{ $p->title ?: 'Senza Titolo' }}
-                    </a>
-                  @endforeach
+                
+                <div class="cal-mini-grid">
+                    <div class="cal-mini-day-name">L</div>
+                    <div class="cal-mini-day-name">M</div>
+                    <div class="cal-mini-day-name">M</div>
+                    <div class="cal-mini-day-name">G</div>
+                    <div class="cal-mini-day-name">V</div>
+                    <div class="cal-mini-day-name">S</div>
+                    <div class="cal-mini-day-name">D</div>
+                    
+                    @foreach($days as $day)
+                        @php
+                            $isCurrentMonth = $day->month === $currentDate->month;
+                            $isToday = $day->isToday();
+                            $isSelected = $day->toDateString() === $currentDate->toDateString();
+                            $hasPublication = in_array($day->toDateString(), $publishedDates, true);
+                        @endphp
+                        <a wire:click="setCalendarDate('{{ $day->toDateString() }}')"
+                            data-date="{{ $day->toDateString() }}"
+                            class="cal-mini-day u-cursor-pointer {{ $isCurrentMonth ? '' : 'is-other-month' }} {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasPublication ? 'has-publication' : '' }}">
+                            {{ $day->day }}
+                        </a>
+                    @endforeach
                 </div>
-              @endif
             </div>
-          @endforeach
-        @endforeach
-      </div>
+
+            <!-- Stats/Filtri -->
+            <div class="cal-sidebar-filters">
+                <div class="mkt-filter-group">
+                    <label class="form-lbl">Stato Campagna</label>
+                    <div class="u-mt-xs">
+                        <x-badge :status="$campaign->status->value" :label="$campaign->status->label()" />
+                    </div>
+                </div>
+                <div class="mkt-filter-group u-mt-md">
+                    <label class="form-lbl">Totale Post</label>
+                    <div class="u-mt-xs">
+                        <strong>{{ $totalPostsCount }}</strong> post programmati
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CALENDARIO PRINCIPALE -->
+        <main class="cal-gmain">
+            <div class="cal-wrapper-modern cal-full-height" wire:ignore>
+                <div id="calendar" class="cal-full-height"></div>
+            </div>
+        </main>
     </div>
 
     @if(auth()->user()->isAdmin())
@@ -540,4 +562,105 @@
 
 </div>
 
+@push('scripts')
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/it.global.min.js"></script>
+<script>
+    document.addEventListener('livewire:initialized', function() {
+        try {
+            if (window.marketingCampaignDetailCalendar) {
+                window.marketingCampaignDetailCalendar.destroy();
+            }
 
+            var calendarEl = document.getElementById('calendar');
+            if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
+            window.marketingCampaignDetailCalendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                initialDate: '{{ $calendarDate }}',
+                locale: 'it',
+                firstDay: 1,
+                headerToolbar: {
+                    left: 'today prev,next',
+                    center: 'title',
+                    right: 'timeGridWeek,timeGridDay'
+                },
+                buttonText: {
+                    today: 'Oggi',
+                    month: 'Mese',
+                    week: 'Settimana',
+                    day: 'Giorno'
+                },
+                themeSystem: 'standard',
+                height: '100%',
+                expandRows: true,
+                dayMaxEvents: 3,
+                moreLinkClick: 'popover',
+                slotDuration: '01:00:00',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '20:00:00',
+                allDaySlot: false,
+                defaultTimedEventDuration: '01:00:00',
+                dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', omitZeroMinute: false, meridiem: false },
+                
+                selectable: true,
+                selectMirror: true,
+                select: function(info) {
+                    const start = encodeURIComponent(info.startStr);
+                    window.location.href = "{{ route('marketing-campaigns.posts.create', $campaign->id) }}" + "?date=" + start;
+                },
+
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    @this.fetchEvents().then(events => successCallback(events)).catch(err => failureCallback(err));
+                },
+                eventClick: function(info) {
+                    info.jsEvent.preventDefault();
+                    if (info.event.url) window.location.href = info.event.url;
+                },
+                eventContent: function(arg) {
+                    let wrapper = document.createElement('div');
+                    wrapper.classList.add('cal-mkt-event');
+                    
+                    let titleEl = document.createElement('div');
+                    titleEl.classList.add('cal-mkt-event-title');
+                    titleEl.textContent = arg.event.title;
+                    
+                    let subEl = document.createElement('div');
+                    subEl.classList.add('cal-mkt-event-sub');
+                    subEl.textContent = arg.event.extendedProps.platform + ' - ' + arg.event.extendedProps.status;
+                    
+                    wrapper.appendChild(titleEl);
+                    wrapper.appendChild(subEl);
+                    
+                    return { domNodes: [ wrapper ] };
+                }
+            });
+
+            window.marketingCampaignDetailCalendar.render();
+
+            Livewire.on('marketing-campaign-detail-calendar-date-changed', (payload) => {
+                if (!window.marketingCampaignDetailCalendar) return;
+
+                let date = Array.isArray(payload) ? payload[0].date : payload.date;
+
+                const dayEl = document.querySelector(`.cal-mini-day[data-date="${date}"]`);
+
+                if (dayEl && dayEl.classList.contains('has-publication')) {
+                    window.marketingCampaignDetailCalendar.changeView('timeGridDay', date);
+                } else {
+                    window.marketingCampaignDetailCalendar.gotoDate(date);
+                }
+            });
+
+            Livewire.on('campaign-updated', () => calendar.refetchEvents());
+            Livewire.on('campaign-extended', () => calendar.refetchEvents());
+            Livewire.on('campaign-renewed', () => calendar.refetchEvents());
+            Livewire.on('campaign-extra-added', () => calendar.refetchEvents());
+            Livewire.on('campaign-extra-deleted', () => calendar.refetchEvents());
+            Livewire.on('campaign-invoice-generated', () => calendar.refetchEvents());
+        } catch(e) { console.error(e); }
+    });
+</script>
+@endpush

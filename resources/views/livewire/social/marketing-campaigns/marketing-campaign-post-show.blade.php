@@ -1,6 +1,6 @@
 <div>
     <div class="u-mb-lg">
-        <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate
+        <a href="{{ route('marketing-campaigns.show', $campaign->id) }}"
             class="btn btn-g u-inline-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna al progetto
         </a>

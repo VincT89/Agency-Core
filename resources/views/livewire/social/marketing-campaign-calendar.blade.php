@@ -9,48 +9,106 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="mkt-calendar-filter-card u-mb-md">
-        <div class="mkt-calendar-filters">
-            <div class="u-flex-1">
-                <select wire:model.live="clientFilter" class="form-sel">
-                    <option value="">Tutti i Clienti</option>
-                    @foreach($clients as $client)
-                        <option value="{{ $client->id }}">{{ $client->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="u-flex-1">
-                <select wire:model.live="campaignFilter" class="form-sel">
-                    <option value="">Tutte le Campagne</option>
-                    @foreach($campaigns as $campaign)
-                        <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="u-flex-1">
-                <select wire:model.live="platformFilter" class="form-sel">
-                    <option value="">Tutte le Piattaforme</option>
-                    @foreach($platforms as $platform)
-                        <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
-                    @endforeach
-                </select>
-            </div>
-            @if($clientFilter || $campaignFilter || $platformFilter)
-                <div>
-                    <button wire:click="$set('clientFilter', ''); $set('campaignFilter', ''); $set('platformFilter', '')" class="btn btn-g">Reset</button>
+    @php
+        try {
+            $currentDate = \Carbon\Carbon::parse($calendarDate);
+        } catch(\Exception $e) {
+            $currentDate = now();
+        }
+
+        $startOfMonth = $currentDate->copy()->startOfMonth();
+        $endOfMonth = $currentDate->copy()->endOfMonth();
+        $startOfWeek = $startOfMonth->copy()->startOfWeek();
+        $endOfWeek = $endOfMonth->copy()->endOfWeek();
+
+        $days = [];
+        $dateCursor = $startOfWeek->copy();
+        while ($dateCursor <= $endOfWeek) {
+            $days[] = $dateCursor->copy();
+            $dateCursor->addDay();
+        }
+        $prevMonth = $currentDate->copy()->subMonth()->toDateString();
+        $nextMonth = $currentDate->copy()->addMonth()->toDateString();
+    @endphp
+
+    <div class="cal-gshell" id="mkt-calendar-wrapper">
+        <aside class="cal-gsidebar">
+            <div class="cal-mini-month u-mb-lg">
+                <div class="cal-mini-header">
+                    <span class="cal-mini-title">{{ ucfirst($currentDate->translatedFormat('F Y')) }}</span>
+                    <div class="cal-mini-nav">
+                        <a wire:click="goToPreviousCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
+                                data-lucide="chevron-left" class="u-icon-sm"></i></a>
+                        <a wire:click="goToNextCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
+                                data-lucide="chevron-right" class="u-icon-sm"></i></a>
+                    </div>
                 </div>
-            @endif
-        </div>
-    </div>
-
-
-    <div class="cal-page" id="view-calendar">
-        <div class="cal-wrapper-modern">
-            <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
-            <div wire:ignore>
-                <div id="calendar" class="u-min-h-600"></div>
+                <div class="cal-mini-grid">
+                    <div class="cal-mini-day-name">L</div>
+                    <div class="cal-mini-day-name">M</div>
+                    <div class="cal-mini-day-name">M</div>
+                    <div class="cal-mini-day-name">G</div>
+                    <div class="cal-mini-day-name">V</div>
+                    <div class="cal-mini-day-name">S</div>
+                    <div class="cal-mini-day-name">D</div>
+                    @foreach($days as $day)
+                        @php
+                            $isCurrentMonth = $day->month === $currentDate->month;
+                            $isToday = $day->isToday();
+                            $isSelected = $day->toDateString() === $currentDate->toDateString();
+                            $hasPublication = in_array($day->toDateString(), $publishedDates, true);
+                        @endphp
+                        <a wire:click="setCalendarDate('{{ $day->toDateString() }}')"
+                            data-date="{{ $day->toDateString() }}"
+                            class="cal-mini-day u-cursor-pointer {{ $isCurrentMonth ? '' : 'is-other-month' }} {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasPublication ? 'has-publication' : '' }}">
+                            {{ $day->day }}
+                        </a>
+                    @endforeach
+                </div>
             </div>
-        </div>
+
+            <div class="cal-sidebar-filters">
+                <span class="cal-sidebar-label">Filtra Calendario</span>
+                <div class="u-mb-xs">
+                    <select wire:model.live="clientFilter" class="form-sel">
+                        <option value="">Tutti i Clienti</option>
+                        @foreach($clients as $client)
+                            <option value="{{ $client->id }}">{{ $client->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="u-mb-xs">
+                    <select wire:model.live="campaignFilter" class="form-sel">
+                        <option value="">Tutte le Campagne</option>
+                        @foreach($campaigns as $campaign)
+                            <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="u-mb-xs">
+                    <select wire:model.live="platformFilter" class="form-sel">
+                        <option value="">Tutte le Piattaforme</option>
+                        @foreach($platforms as $platform)
+                            <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @if($clientFilter || $campaignFilter || $platformFilter)
+                    <div class="u-mt-sm">
+                        <button wire:click="$set('clientFilter', ''); $set('campaignFilter', ''); $set('platformFilter', '')" class="btn btn-g u-w-full">Reset Filtri</button>
+                    </div>
+                @endif
+            </div>
+        </aside>
+
+        <main class="cal-gmain">
+            <div class="cal-wrapper-modern">
+                <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
+                <div wire:ignore class="cal-full-height">
+                    <div id="calendar" class="cal-full-height"></div>
+                </div>
+            </div>
+        </main>
     </div>
 </div>
 
@@ -67,25 +125,41 @@
                 return;
             }
 
+            if (window.marketingGlobalCalendar) {
+                window.marketingGlobalCalendar.destroy();
+            }
+
             var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
+            window.marketingGlobalCalendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                initialDate: '{{ $calendarDate }}',
                 locale: 'it',
                 firstDay: 1,
                 headerToolbar: {
-                    left: 'prev,next today',
+                    left: 'today prev,next',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    right: 'timeGridWeek,timeGridDay'
                 },
                 buttonText: {
                     today: 'Oggi',
-                    month: 'Mese',
                     week: 'Settimana',
-                    day: 'Giorno',
-                    list: 'Lista'
+                    day: 'Giorno'
                 },
                 themeSystem: 'standard',
-                height: 'auto',
+                height: '100%',
+                expandRows: true,
+                slotDuration: '01:00:00',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '20:00:00',
+                allDaySlot: false,
+                defaultTimedEventDuration: '01:00:00',
+                dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+                slotLabelFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    omitZeroMinute: false,
+                    meridiem: false
+                },
                 events: function(fetchInfo, successCallback, failureCallback) {
                     @this.fetchEvents().then(events => {
                         successCallback(events);
@@ -107,11 +181,11 @@
                     
                     let titleEl = document.createElement('div');
                     titleEl.classList.add('cal-mkt-event-title');
-                    titleEl.textContent = (arg.timeText ? arg.timeText + ' ' : '') + arg.event.title;
+                    titleEl.textContent = arg.event.title;
                     
                     let subEl = document.createElement('div');
                     subEl.classList.add('cal-mkt-event-sub');
-                    subEl.textContent = arg.event.extendedProps.platform + ' - ' + arg.event.extendedProps.campaign;
+                    subEl.textContent = arg.event.extendedProps.client;
                     
                     wrapper.appendChild(titleEl);
                     wrapper.appendChild(subEl);
@@ -120,13 +194,27 @@
                 }
             });
 
-            calendar.render();
+            window.marketingGlobalCalendar.render();
 
-            // Ricarica eventi se i filtri cambiano
-            Livewire.hook('commit', ({ succeed }) => {
-                succeed(() => {
-                    calendar.refetchEvents();
-                });
+            Livewire.on('marketing-global-calendar-filters-updated', () => {
+                if (window.marketingGlobalCalendar) {
+                    window.marketingGlobalCalendar.refetchEvents();
+                }
+            });
+
+            Livewire.on('marketing-global-calendar-date-changed', (payload) => {
+                if (!window.marketingGlobalCalendar) return;
+
+                // Livewire 3 event payload can be an array [ { date: '...' } ] or object
+                let date = Array.isArray(payload) ? payload[0].date : payload.date;
+
+                const dayEl = document.querySelector(`.cal-mini-day[data-date="${date}"]`);
+
+                if (dayEl && dayEl.classList.contains('has-publication')) {
+                    window.marketingGlobalCalendar.changeView('timeGridDay', date);
+                } else {
+                    window.marketingGlobalCalendar.gotoDate(date);
+                }
             });
         } catch(err) {
             document.getElementById('js-error').innerText = "JS Exception: " + err.message + "\n" + err.stack;

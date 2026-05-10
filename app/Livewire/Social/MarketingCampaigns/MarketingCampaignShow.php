@@ -12,6 +12,36 @@ class MarketingCampaignShow extends Component
     use WithFileUploads, AuthorizesRequests;
 
     public MarketingCampaign $campaign;
+    public string $calendarDate;
+
+    public function mount(MarketingCampaign $campaign)
+    {
+        $this->authorize('view', $campaign);
+        $this->campaign = $campaign;
+        $this->calendarDate = request('date', now()->toDateString());
+    }
+
+    public function setCalendarDate(string $date): void
+    {
+        try {
+            $this->calendarDate = \Carbon\Carbon::parse($date)->toDateString();
+        } catch (\Throwable) {
+            $this->calendarDate = now()->toDateString();
+        }
+        $this->dispatch('marketing-campaign-detail-calendar-date-changed', date: $this->calendarDate);
+    }
+
+    public function goToPreviousCalendarMonth(): void
+    {
+        $this->calendarDate = \Carbon\Carbon::parse($this->calendarDate)->subMonth()->toDateString();
+        $this->dispatch('marketing-campaign-detail-calendar-date-changed', date: $this->calendarDate);
+    }
+
+    public function goToNextCalendarMonth(): void
+    {
+        $this->calendarDate = \Carbon\Carbon::parse($this->calendarDate)->addMonth()->toDateString();
+        $this->dispatch('marketing-campaign-detail-calendar-date-changed', date: $this->calendarDate);
+    }
 
     // --- NUOVI STATI LIFECYCLE CAMPAGNA ---
     public bool $showCampaignModal = false;
@@ -34,35 +64,46 @@ class MarketingCampaignShow extends Component
     // --------------------------------------
 
 
-    // Calendar state
-    public $currentMonth;
-    public $currentYear;
-
-    public function mount(MarketingCampaign $campaign)
+    public function fetchEvents()
     {
-        $this->authorize('view', $campaign);
-        $this->campaign = $campaign;
-        
-        $this->currentMonth = (int) date('n');
-        $this->currentYear = (int) date('Y');
+        $posts = $this->campaign->posts()
+            ->with('currentVersion')
+            ->whereNotNull('scheduled_date')
+            ->where('status', '!=', \App\Enums\Social\MarketingCampaignPostStatus::Cancelled)
+            ->get();
+
+        return $posts->map(function ($post) {
+            $date = $post->scheduled_date->format('Y-m-d');
+            $startStr = $date;
+            if ($post->scheduled_time) {
+                $startStr .= 'T' . date('H:i:s', strtotime($post->scheduled_time));
+            }
+            return [
+                'id' => $post->id,
+                'title' => $post->title ?: 'Senza Titolo',
+                'start' => $startStr,
+                'allDay' => empty($post->scheduled_time),
+                'url' => route('marketing-campaigns.posts.show', ['campaign' => $this->campaign->id, 'post' => $post->id]),
+                'backgroundColor' => $post->status->color(),
+                'borderColor' => $post->status->color(),
+                'extendedProps' => [
+                    'platform' => $post->content_type->label(),
+                    'status' => $post->status->label(),
+                ]
+            ];
+        })->toArray();
     }
 
-    public function previousMonth()
+    private function publishedDates()
     {
-        $this->currentMonth--;
-        if ($this->currentMonth < 1) {
-            $this->currentMonth = 12;
-            $this->currentYear--;
-        }
-    }
-
-    public function nextMonth()
-    {
-        $this->currentMonth++;
-        if ($this->currentMonth > 12) {
-            $this->currentMonth = 1;
-            $this->currentYear++;
-        }
+        return $this->campaign->posts()
+            ->whereNotNull('scheduled_date')
+            ->where('status', '!=', \App\Enums\Social\MarketingCampaignPostStatus::Cancelled)
+            ->pluck('scheduled_date')
+            ->map(fn($date) => $date->format('Y-m-d'))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     // --- NUOVI METODI LIFECYCLE CAMPAGNA ---
@@ -298,7 +339,8 @@ class MarketingCampaignShow extends Component
 
     public function render()
     {
-        // Ottimizzazione: tutti i post nella lista
+        $currentDate = \Carbon\Carbon::parse($this->calendarDate);
+
         $allPosts = $this->campaign->posts()
             ->with('currentVersion')
             ->orderBy('scheduled_date', 'asc')
@@ -306,60 +348,38 @@ class MarketingCampaignShow extends Component
             ->limit(10)
             ->get();
         
-        $calendarPostsRaw = $this->campaign->posts()
-            ->whereNotNull('scheduled_date')
-            ->whereYear('scheduled_date', $this->currentYear)
-            ->whereMonth('scheduled_date', $this->currentMonth)
-            ->orderBy('scheduled_date', 'asc')
-            ->orderBy('scheduled_time', 'asc')
-            ->get();
-        
-        // Raggruppiamo i post per il calendario
-        $calendarPosts = [];
-        foreach ($calendarPostsRaw as $p) {
-            $dateStr = $p->scheduled_date->format('Y-m-d');
-            if (!isset($calendarPosts[$dateStr])) {
-                $calendarPosts[$dateStr] = [];
-            }
-            $calendarPosts[$dateStr][] = $p;
-        }
-
-        // Generazione griglia calendario
-        $firstDayOfMonth = \Carbon\Carbon::createFromDate($this->currentYear, $this->currentMonth, 1);
+        $firstDayOfMonth = $currentDate->copy()->startOfMonth();
         $daysInMonth = $firstDayOfMonth->daysInMonth;
-        $startDayOfWeek = $firstDayOfMonth->dayOfWeekIso; // 1 = Lun, 7 = Dom
+        $startDayOfWeek = $firstDayOfMonth->dayOfWeekIso;
 
-        $calendarGrid = [];
-        $dayCounter = 1;
-
-        // Riempimento griglia 6 righe x 7 colonne (lun-dom)
-        for ($row = 0; $row < 6; $row++) {
-            for ($col = 1; $col <= 7; $col++) {
-                if ($row === 0 && $col < $startDayOfWeek) {
-                    // Giorni vuoti prima dell'inizio del mese
-                    $calendarGrid[$row][$col] = null;
-                } elseif ($dayCounter <= $daysInMonth) {
-                    $dateStr = sprintf('%04d-%02d-%02d', $this->currentYear, $this->currentMonth, $dayCounter);
-                    $calendarGrid[$row][$col] = [
-                        'day' => $dayCounter,
-                        'date' => $dateStr,
-                        'isToday' => $dateStr === date('Y-m-d'),
-                        'posts' => $calendarPosts[$dateStr] ?? []
-                    ];
-                    $dayCounter++;
-                } else {
-                    // Giorni vuoti dopo la fine del mese
-                    $calendarGrid[$row][$col] = null;
-                }
-            }
-            if ($dayCounter > $daysInMonth) break;
+        $days = [];
+        for ($i = 1; $i < $startDayOfWeek; $i++) {
+            $days[] = $firstDayOfMonth->copy()->subDays($startDayOfWeek - $i);
         }
+        for ($i = 1; $i <= $daysInMonth; $i++) {
+            $days[] = $firstDayOfMonth->copy()->addDays($i - 1);
+        }
+        $remaining = count($days) % 7;
+        if ($remaining > 0) {
+            $padding = 7 - $remaining;
+            $lastDay = end($days);
+            for ($i = 1; $i <= $padding; $i++) {
+                $days[] = $lastDay->copy()->addDays($i);
+            }
+        }
+
+        $prevMonth = $firstDayOfMonth->copy()->subMonth()->toDateString();
+        $nextMonth = $firstDayOfMonth->copy()->addMonth()->toDateString();
 
         return view('livewire.social.marketing-campaigns.marketing-campaign-show', [
-            'posts' => $allPosts, // passiamo tutti i post all'aside
-            'calendarGrid' => $calendarGrid,
+            'posts' => $allPosts,
+            'totalPostsCount' => $this->campaign->posts()->count(),
+            'currentDate' => $currentDate,
+            'days' => $days,
+            'prevMonth' => $prevMonth,
+            'nextMonth' => $nextMonth,
             'monthName' => $firstDayOfMonth->translatedFormat('F Y'),
-            'totalPostsCount' => $this->campaign->posts()->count(), // Passiamo il conteggio totale corretto
+            'publishedDates' => $this->publishedDates(),
         ])->layout('layouts.app');
     }
 

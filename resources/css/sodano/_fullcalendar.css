@@ -20,7 +20,8 @@
 }
 
 .fc-col-header-cell {
-    background: #111115 !important; /* Colore sidebar */
+    background: #111115 !important;
+    /* Colore sidebar */
     border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
     border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
@@ -130,13 +131,34 @@
     margin-bottom: 4px !important;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+    transition: box-shadow 0.2s ease;
 }
 
 .fc-event:hover {
-    transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    filter: brightness(1.05);
+}
+
+.fc-event-main {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* --- Centratura Box Evento (Boxettino) --- */
+.fc-timegrid-event-harness {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.fc-timegrid-event-harness .fc-v-event {
+    position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    height: auto !important;
+    width: 95% !important; /* Lieve margine laterale */
+    min-height: 0 !important;
 }
 
 .fc .fc-toolbar {
@@ -223,7 +245,8 @@
     padding-right: 8px !important;
 }
 
-.fc-timegrid-slot-label, .fc-timegrid-axis {
+.fc-timegrid-slot-label,
+.fc-timegrid-axis {
     background-color: #111115 !important;
     border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;

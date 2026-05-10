@@ -1,7 +1,7 @@
 <x-app-layout title="{{ $calendarEvent->title }}">
     <div class="u-mb-lg u-flex-end">
-        <a href="{{ route('calendar-events.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
-            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+        <a href="{{ route('calendar-events.index') }}" class="btn btn-g u-flex-center u-gap-xs">
+            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna al calendario
         </a>
     </div>
     <x-page-header

@@ -512,6 +512,12 @@
 
 .btn-cal-nav {
     padding: 4px 8px;
+    color: var(--accent);
+    transition: color 0.2s ease;
+}
+
+.btn-cal-nav:hover {
+    color: var(--text);
 }
 
 .cmp-notes-label {
@@ -1668,36 +1674,7 @@
     border-radius: 50%;
 }
 
-/* Eventi calendario marketing globale */
-.cal-mkt-event {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 2px 2px;
-    overflow: hidden;
-}
 
-.cal-mkt-event-title {
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.2;
-    color: var(--text);
-    white-space: normal;
-    word-break: break-word;
-}
-
-.cal-mkt-event-sub {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    display: inline-block;
-    background: var(--line);
-    color: var(--text);
-    padding: 2px 6px;
-    border-radius: 10px;
-    align-self: flex-start;
-}
 
 /* --- Restyling Calendario Campagne Globale --- */
 .mkt-calendar-filter-card {
@@ -1721,3 +1698,42 @@
         align-items: stretch;
     }
 }
+
+/* --- Stile Eventi Editoriali (Marketing Ibrido) --- */
+.cal-mkt-event {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.cal-mkt-event-title {
+    display: block;
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ffffff;
+    width: 100%;
+}
+
+.cal-mkt-event-sub {
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+

@@ -13,10 +13,53 @@ class MarketingCampaignCalendar extends Component
     public $clientFilter = '';
     public $campaignFilter = '';
     public $platformFilter = '';
+    public string $calendarDate;
 
-    public function fetchEvents()
+    public function mount()
     {
-        $query = MarketingCampaignPost::with(['campaign.client', 'currentVersion'])
+        $this->calendarDate = request('date', now()->toDateString());
+    }
+
+    public function setCalendarDate(string $date): void
+    {
+        try {
+            $this->calendarDate = \Carbon\Carbon::parse($date)->toDateString();
+        } catch (\Throwable) {
+            $this->calendarDate = now()->toDateString();
+        }
+        $this->dispatch('marketing-global-calendar-date-changed', date: $this->calendarDate);
+    }
+
+    public function goToPreviousCalendarMonth(): void
+    {
+        $this->calendarDate = \Carbon\Carbon::parse($this->calendarDate)->subMonth()->toDateString();
+        $this->dispatch('marketing-global-calendar-date-changed', date: $this->calendarDate);
+    }
+
+    public function goToNextCalendarMonth(): void
+    {
+        $this->calendarDate = \Carbon\Carbon::parse($this->calendarDate)->addMonth()->toDateString();
+        $this->dispatch('marketing-global-calendar-date-changed', date: $this->calendarDate);
+    }
+
+    public function updatedClientFilter(): void
+    {
+        $this->dispatch('marketing-global-calendar-filters-updated');
+    }
+
+    public function updatedCampaignFilter(): void
+    {
+        $this->dispatch('marketing-global-calendar-filters-updated');
+    }
+
+    public function updatedPlatformFilter(): void
+    {
+        $this->dispatch('marketing-global-calendar-filters-updated');
+    }
+
+    private function baseQuery()
+    {
+        $query = MarketingCampaignPost::query()
             ->whereNotNull('scheduled_date')
             ->where('status', '!=', MarketingCampaignPostStatus::Cancelled);
 
@@ -31,8 +74,6 @@ class MarketingCampaignCalendar extends Component
             $query->where('marketing_campaign_id', $this->campaignFilter);
         }
 
-        // TODO: Aggiungere filtro piattaforma se introdotto nel nuovo modulo
-
         // Applica le policy di sicurezza basate sui clienti visibili
         if (!auth()->user()->canManageSystem() && !auth()->user()->isMarketing()) {
             $query->whereHas('campaign.client', function($q) {
@@ -42,7 +83,14 @@ class MarketingCampaignCalendar extends Component
             });
         }
 
-        $posts = $query->get();
+        return $query;
+    }
+
+    public function fetchEvents()
+    {
+        $posts = $this->baseQuery()
+            ->with(['campaign.client', 'currentVersion'])
+            ->get();
 
         return $posts->map(function ($post) {
             $date = $post->scheduled_date->format('Y-m-d');
@@ -52,12 +100,16 @@ class MarketingCampaignCalendar extends Component
                 'id' => $post->id,
                 'title' => $post->title ?? 'Post senza titolo',
                 'start' => $date . 'T' . $time,
-                'url' => route('marketing-campaigns.show', $post->marketing_campaign_id),
+                'url' => route('marketing-campaigns.posts.show', [
+                    'campaign' => $post->marketing_campaign_id,
+                    'post' => $post->id
+                ]),
                 'backgroundColor' => $post->status->color(),
                 'borderColor' => $post->status->color(),
                 'extendedProps' => [
                     'platform' => 'Social', // Placeholder finché non aggiungiamo la piattaforma
                     'campaign' => $post->campaign->name ?? '',
+                    'client' => $post->campaign->client->name ?? '',
                     'status' => $post->status->label(),
                 ]
             ];
@@ -77,10 +129,18 @@ class MarketingCampaignCalendar extends Component
 
         $clients = Client::query()->visibleTo(auth()->user())->orderBy('name')->get();
 
+        $publishedDates = $this->baseQuery()
+            ->pluck('scheduled_date')
+            ->map(fn ($date) => $date->format('Y-m-d'))
+            ->unique()
+            ->values()
+            ->all();
+
         return view('livewire.social.marketing-campaign-calendar', [
             'clients' => $clients,
             'campaigns' => $campaigns,
             'platforms' => $platforms,
+            'publishedDates' => $publishedDates,
         ])->layout('layouts.app', ['title' => 'Calendario Campagne Marketing']);
     }
 }

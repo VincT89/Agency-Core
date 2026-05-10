@@ -62,10 +62,24 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 });
 
-                $newTickets = \App\Models\Ticket::where('status', 'open')
-                    ->where('created_by', '!=', $user->id)
-                    ->where('created_at', '>', $user->last_tickets_viewed_at ?? now()->subYears(10))
-                    ->count();
+                $newTickets = 0;
+                if ($user->can('viewAny', \App\Models\Ticket::class)) {
+                    $ticketQuery = \App\Models\Ticket::whereNotIn('status', ['resolved', 'closed'])
+                        ->where(function ($query) use ($user) {
+                            $query->where('created_by', '!=', $user->id)
+                                  ->orWhereNull('created_by');
+                        })
+                        ->where('created_at', '>', $user->last_tickets_viewed_at ?? now()->subYears(10));
+
+                    // Enforcement esplicito del perimetro (ridondante ma richiesto per policy user-specific)
+                    if (!$user->canBypassProjectScope()) {
+                        $ticketQuery->whereIn('project_id', function ($sub) use ($user) {
+                            $sub->select('project_id')->from('project_user')->where('user_id', $user->id);
+                        });
+                    }
+
+                    $newTickets = $ticketQuery->count();
+                }
 
                 $view->with([
                     'clientsCount'    => $counts['clientsCount'],

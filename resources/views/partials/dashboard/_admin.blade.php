@@ -36,17 +36,20 @@
         <div class="mt-panel" x-data="{
             initChart() {
                 const data = {{ $financialChartData }};
+                const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+                const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                 const options = {
                     chart: { type: 'bar', height: 300, toolbar: { show: false }, background: 'transparent' },
                     series: data.series,
-                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
-                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } } },
-                    colors: ['var(--blue)', 'var(--green)', 'var(--red)'],
-                    plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
+                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' } },
+                    colors: ['var(--purple)', '#14b8a6', 'var(--orange)'],
+                    plotOptions: { bar: { columnWidth: '55%', borderRadius: 6, borderRadiusApplication: 'end' } },
                     dataLabels: { enabled: false },
                     stroke: { show: true, width: 2, colors: ['transparent'] },
-                    tooltip: { theme: 'dark', y: { formatter: function (val) { return '€ ' + val } } },
-                    grid: { borderColor: 'var(--line)', strokeDashArray: 4 }
+                    tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } },
+                    legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '13px', fontFamily: 'var(--sans)', labels: { colors: 'var(--text2)' }, markers: { radius: 12 } },
+                    grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 }
                 };
                 if (window.ApexCharts) {
                     const chart = new window.ApexCharts(this.$refs.chart, options);
@@ -64,15 +67,18 @@
             initChart() {
                 const data = {{ $operationalChartData }};
                 const options = {
-                    chart: { type: 'line', height: 300, toolbar: { show: false }, background: 'transparent' },
+                    chart: { type: 'area', height: 300, toolbar: { show: false }, background: 'transparent' },
                     series: data.series,
-                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
-                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' } }, min: 0, forceNiceScale: true },
-                    colors: ['var(--accent)', 'var(--purple)'],
-                    stroke: { curve: 'smooth', width: 3 },
+                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k' : value }, min: 0, forceNiceScale: true },
+                    colors: ['var(--purple)', '#ec4899'],
+                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+                    stroke: { curve: 'smooth', width: 3, dashArray: [0, 5] },
+                    markers: { size: 4, colors: ['var(--purple)', '#ec4899'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                     dataLabels: { enabled: false },
                     tooltip: { theme: 'dark' },
-                    grid: { borderColor: 'var(--line)', strokeDashArray: 4 }
+                    legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '13px', fontFamily: 'var(--sans)', labels: { colors: 'var(--text2)' }, markers: { radius: 12 } },
+                    grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 }
                 };
                 if (window.ApexCharts) {
                     const chart = new window.ApexCharts(this.$refs.opchart, options);

@@ -30,7 +30,7 @@
                 <x-form-group label="Fine" name="end_at">
                     <input type="datetime-local" name="end_at" class="form-in @error('end_at') is-invalid @enderror"
                            value="{{ old('end_at', $calendarEvent->end_at?->format('Y-m-d\TH:i')) }}">
-                    <div style="font-size:11px;color:var(--text3);margin-top:4px">Opzionale. Se non specificata, l'evento sarà considerato "istantaneo" con chiusura immediata all'inizio.</div>
+                    <div class="u-text-mono u-mt-xs">Opzionale. Se non specificata, l'evento sarà considerato "istantaneo" con chiusura immediata all'inizio.</div>
                 </x-form-group>
             </div>
 
@@ -98,18 +98,18 @@
                     </select>
                 </x-form-group>
                 
-                <div x-show="provider !== 'none'" style="flex: 1;" x-cloak>
+                <div x-show="provider !== 'none'" class="cal-provider-panel" x-cloak>
                     <x-form-group label="Link Videochiamata" name="meeting_url">
                         <input type="url" name="meeting_url" class="form-in @error('meeting_url') is-invalid @enderror"
                                value="{{ old('meeting_url', $calendarEvent->meeting_url) }}"
                                :placeholder="provider === 'nextcloud_talk' ? 'https://cloud.tuodominio.it/call/...' : 'https://...'">
                     </x-form-group>
                 </div>
-                <div x-show="provider === 'none'" style="flex: 1; display: none;" x-cloak></div>
+                <div x-show="provider === 'none'" class="cal-provider-panel" x-cloak></div>
             </div>
 
             <div class="form-row full">
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:12px;cursor:pointer">
+                <label class="cal-checkbox-label">
                     <input type="checkbox" name="is_all_day" value="1" {{ old('is_all_day', $calendarEvent->is_all_day) ? 'checked' : '' }}>
                     Evento tutto il giorno
                 </label>
@@ -119,7 +119,7 @@
                 </x-form-group>
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="cal-form-actions">
                 <a href="{{ route('calendar-events.show', $calendarEvent) }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Aggiorna Evento</button>
             </div>

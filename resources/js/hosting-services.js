@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Fai fetch dell'endpoint sicuro
                 const hostingId = container.dataset.id;
                 try {
-                    btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px"></i>';
+                    btn.innerHTML = '<i data-lucide="loader" class="u-icon-sm"></i>';
                     createIcons({ icons });
                     btn.disabled = true;
 
@@ -34,12 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     valSpan.textContent = data.password;
                     valSpan.dataset.hidden = 'false';
-                    btn.innerHTML = '<i data-lucide="eye-off" style="width:14px;height:14px"></i>';
+                    btn.innerHTML = '<i data-lucide="eye-off" class="u-icon-sm"></i>';
                     createIcons({ icons });
                 } catch (error) {
                     console.error('Errore nel fetch password:', error);
                     if (window.toast) toast('Errore caricamento password', 'error');
-                    btn.innerHTML = '<i data-lucide="eye" style="width:14px;height:14px"></i>';
+                    btn.innerHTML = '<i data-lucide="eye" class="u-icon-sm"></i>';
                     createIcons({ icons });
                 } finally {
                     btn.disabled = false;
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Nascondi
                 valSpan.textContent = '••••••••';
                 valSpan.dataset.hidden = 'true';
-                btn.innerHTML = '<i data-lucide="eye" style="width:14px;height:14px"></i>';
+                btn.innerHTML = '<i data-lucide="eye" class="u-icon-sm"></i>';
                 createIcons({ icons });
             }
         });
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isHidden) {
                 const hostingId = container.dataset.id;
                 try {
-                    btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px"></i>';
+                    btn.innerHTML = '<i data-lucide="loader" class="u-icon-sm"></i>';
                     createIcons({ icons });
                     const res = await fetch(`/hosting-services/${hostingId}/password`, {
                         headers: {
@@ -81,17 +81,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     console.error('Errore nel fetch password per copia:', error);
                     if (window.toast) toast('Errore copia password', 'error');
-                    btn.innerHTML = '<i data-lucide="copy" style="width:14px;height:14px"></i>';
+                    btn.innerHTML = '<i data-lucide="copy" class="u-icon-sm"></i>';
                     createIcons({ icons });
                     return;
                 }
             }
 
             navigator.clipboard.writeText(passwordToCopy).then(() => {
-                btn.innerHTML = '<i data-lucide="check" style="width:14px;height:14px;color:var(--teal)"></i>';
+                btn.innerHTML = '<i data-lucide="check" class="u-icon-sm u-text-teal"></i>';
                 createIcons({ icons });
                 setTimeout(() => {
-                    btn.innerHTML = '<i data-lucide="copy" style="width:14px;height:14px"></i>';
+                    btn.innerHTML = '<i data-lucide="copy" class="u-icon-sm"></i>';
                     createIcons({ icons });
                 }, 2000);
             });

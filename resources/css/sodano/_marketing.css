@@ -1551,6 +1551,7 @@
     display: flex;
     width: 100%;
     transition: transform 0.3s ease-in-out;
+    transform: translateX(calc(var(--slide-offset, 0) * -100%));
 }
 
 .cmp-carousel-item {
@@ -1658,3 +1659,65 @@
 
 .cmp-floating-particle { position: absolute; pointer-events: none; z-index: 1; animation-name: mkt-float-particle; animation-iteration-count: infinite; animation-timing-function: ease-in-out; animation-direction: alternate; filter: brightness(0) invert(1); opacity: 0.8; }
 @keyframes mkt-float-particle { 0% { transform: translate(0, 0) rotate(-10deg) scale(1); } 100% { transform: translate(var(--tx), var(--ty)) rotate(20deg) scale(1.1); } }
+
+/* Avatar cleanup */
+.cmp-ig-preview-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Eventi calendario marketing globale */
+.cal-mkt-event {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 2px 2px;
+    overflow: hidden;
+}
+
+.cal-mkt-event-title {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+    white-space: normal;
+    word-break: break-word;
+}
+
+.cal-mkt-event-sub {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    display: inline-block;
+    background: var(--line);
+    color: var(--text);
+    padding: 2px 6px;
+    border-radius: 10px;
+    align-self: flex-start;
+}
+
+/* --- Restyling Calendario Campagne Globale --- */
+.mkt-calendar-filter-card {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.mkt-calendar-filters {
+    display: flex;
+    align-items: flex-end; /* allinea bottom per i label eventuali */
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .mkt-calendar-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

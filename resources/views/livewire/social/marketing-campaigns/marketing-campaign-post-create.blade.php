@@ -11,9 +11,15 @@
     </x-slot:title>
   </x-page-header>
 
-  <div class="panel u-p-0 u-overflow-hidden">
-    <div class="lw-modal-body u-p-lg custom-scrollbar">
-      <form class="form-stack">
+  <div class="cmp-post-detail-layout relative">
+    {{-- Colonna Sinistra (2fr): Modulo di modifica --}}
+    <div class="u-flex-col u-gap-lg">
+      <div class="panel u-overflow-hidden">
+        <div class="lw-modal-hd">
+          <div class="cmp-panel-title">Dati Principali</div>
+        </div>
+        <div class="u-p-lg relative">
+          <form class="form-stack">
         
         {{-- Blocco 1: Piattaforme --}}
         <div class="panel cmp-panel-pad">
@@ -203,7 +209,7 @@
 
             <div class="form-g mb-0 u-border-t u-border-line u-pt-md">
               <label class="form-lbl">Copy / Descrizione</label>
-              <textarea class="form-ta" wire:model="form.description" rows="5" placeholder="Inserisci il testo del post..."></textarea>
+              <textarea class="form-ta" wire:model.live="form.description" rows="5" placeholder="Inserisci il testo del post..."></textarea>
               @error('form.description') <span class="form-err">{{ $message }}</span> @enderror
             </div>
         </div>
@@ -284,32 +290,128 @@
           @endif
         </div>
 
-      </form>
+          </form>
+        </div>
+
+        <div class="u-p-lg u-bg-gray-50 u-border-t u-border-line u-flex u-justify-between">
+          <div></div>
+          <div class="u-flex u-gap-sm">
+            <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-s">Annulla</a>
+            
+            @if($form['ai_analysis_enabled'])
+                <button type="button" wire:click="save" class="btn btn-s">
+                  <span wire:loading.remove wire:target="save">Salva Bozza</span>
+                  <span wire:loading wire:target="save">Salvataggio...</span>
+                </button>
+                <button type="button" wire:click="saveAndSubmitToN8n" class="btn btn-p u-flex-center u-gap-xs">
+                  <i data-lucide="sparkles" class="u-icon-md"></i>
+                  <span wire:loading.remove wire:target="saveAndSubmitToN8n">Salva e Invia a Sody</span>
+                  <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
+                </button>
+            @else
+                <button type="button" wire:click="save" class="btn btn-p u-flex-center u-gap-xs">
+                  <i data-lucide="save" class="u-icon-md"></i>
+                  <span wire:loading.remove wire:target="save">Salva Post</span>
+                  <span wire:loading wire:target="save">Salvataggio...</span>
+                </button>
+            @endif
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="u-p-lg u-bg-gray-50 u-border-t u-border-line u-flex u-justify-between">
-      <div></div>
-      <div class="u-flex u-gap-sm">
-        <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-s">Annulla</a>
-        
-        @if($form['ai_analysis_enabled'])
-            <button type="button" wire:click="save" class="btn btn-s">
-              <span wire:loading.remove wire:target="save">Salva Bozza</span>
-              <span wire:loading wire:target="save">Salvataggio...</span>
-            </button>
-            <button type="button" wire:click="saveAndSubmitToN8n" class="btn btn-p u-flex-center u-gap-xs">
-              <i data-lucide="sparkles" class="u-icon-md"></i>
-              <span wire:loading.remove wire:target="saveAndSubmitToN8n">Salva e Invia a Sody</span>
-              <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
-            </button>
-        @else
-            <button type="button" wire:click="save" class="btn btn-p u-flex-center u-gap-xs">
-              <i data-lucide="save" class="u-icon-md"></i>
-              <span wire:loading.remove wire:target="save">Salva Post</span>
-              <span wire:loading wire:target="save">Salvataggio...</span>
-            </button>
-        @endif
-      </div>
+    {{-- Colonna Destra (1fr): Preview Sticky --}}
+    <div class="cmp-post-right-col">
+        <div class="cmp-sticky-preview">
+            <div class="panel u-overflow-hidden">
+                <div class="lw-modal-hd">
+                    <div class="cmp-panel-title">Anteprima Post</div>
+                </div>
+                <div class="cmp-ig-preview">
+                    <div class="cmp-ig-preview-hd">
+                        <div class="cmp-ig-preview-avatar">
+                            @if($runtime_logo && method_exists($runtime_logo, 'temporaryUrl'))
+                                <img src="{{ $runtime_logo->temporaryUrl() }}" alt="Logo Caricato" class="cmp-ig-preview-avatar-img">
+                            @elseif($campaign->client->logo_url)
+                                <img src="{{ $campaign->client->logo_url }}" alt="{{ $campaign->client->name }}" class="cmp-ig-preview-avatar-img">
+                            @endif
+                        </div>
+                        <div class="cmp-ig-preview-author">{{ $campaign->client->name }}</div>
+                    </div>
+
+                    @php
+                        $previewMedia = [];
+                        if ($form['media_source'] === 'local' && is_array($media)) {
+                            foreach($media as $m) {
+                                if (!$m) continue;
+                                $previewMedia[] = [
+                                    'type' => \Illuminate\Support\Str::startsWith($m->getMimeType(), 'video/') ? 'video' : 'image',
+                                    'url' => method_exists($m, 'temporaryUrl') ? $m->temporaryUrl() : ''
+                                ];
+                            }
+                        } elseif ($form['media_source'] === 'nextcloud' && !empty($selected_nextcloud_files)) {
+                            foreach($selected_nextcloud_files as $ncFile) {
+                                $previewMedia[] = [
+                                    'type' => ($ncFile['is_image'] ?? true) ? 'image' : 'video',
+                                    'url' => route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 600, 'h' => 600])
+                                ];
+                            }
+                        }
+                    @endphp
+
+                    <div class="cmp-ig-preview-media" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ count($previewMedia) }} }" @endif>
+                        @if(count($previewMedia) > 0)
+                            @if(count($previewMedia) == 1)
+                                @if($previewMedia[0]['type'] === 'video')
+                                    <video src="{{ $previewMedia[0]['url'] }}" controls></video>
+                                @else
+                                    <img src="{{ $previewMedia[0]['url'] }}" alt="Preview Media">
+                                @endif
+                            @else
+                                <div class="cmp-carousel-inner" x-effect="$el.style.setProperty('--slide-offset', currentSlide)">
+                                    @foreach($previewMedia as $index => $item)
+                                        <div class="cmp-carousel-item">
+                                            @if($item['type'] === 'video')
+                                                <video src="{{ $item['url'] }}" controls></video>
+                                            @else
+                                                <img src="{{ $item['url'] }}" alt="Preview Media {{ $index + 1 }}">
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <button type="button" class="cmp-carousel-prev" x-show="currentSlide > 0" @click="currentSlide--">
+                                    <i data-lucide="chevron-left" class="u-icon-sm"></i>
+                                </button>
+                                <button type="button" class="cmp-carousel-next" x-show="currentSlide < slides - 1" @click="currentSlide++">
+                                    <i data-lucide="chevron-right" class="u-icon-sm"></i>
+                                </button>
+                                <div class="cmp-carousel-dots">
+                                    <template x-for="i in slides">
+                                        <span class="cmp-carousel-dot" :class="currentSlide === i - 1 ? 'active' : ''" @click="currentSlide = i - 1"></span>
+                                    </template>
+                                </div>
+                            @endif
+                        @else
+                            <div class="cmp-ig-preview-placeholder">
+                                <i data-lucide="image" class="u-icon-lg u-text-muted"></i>
+                                <div class="u-mt-xs">Nessun media</div>
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="cmp-ig-preview-actions">
+                        <i data-lucide="heart" class="u-icon-sm"></i>
+                        <i data-lucide="message-circle" class="u-icon-sm"></i>
+                        <i data-lucide="send" class="u-icon-sm"></i>
+                    </div>
+
+                    <div class="cmp-ig-preview-body">
+                        <strong>{{ $campaign->client->name }}</strong>
+                        <span class="cmp-ig-preview-caption">{{ $form['description'] ?: 'Nessuna caption fornita...' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
   </div>
 

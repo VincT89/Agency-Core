@@ -9,39 +9,48 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="g-1col">
-        <div class="calendar-filters">
-            <select wire:model.live="clientFilter" class="form-in calendar-select calendar-select-md">
-                <option value="">Tutti i Clienti</option>
-                @foreach($clients as $client)
-                    <option value="{{ $client->id }}">{{ $client->name }}</option>
-                @endforeach
-            </select>
-            <select wire:model.live="campaignFilter" class="form-in calendar-select calendar-select-lg">
-                <option value="">Tutte le Campagne</option>
-                @foreach($campaigns as $campaign)
-                    <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
-                @endforeach
-            </select>
-            <select wire:model.live="platformFilter" class="form-in calendar-select calendar-select-md">
-                <option value="">Tutte le Piattaforme</option>
-                @foreach($platforms as $platform)
-                    <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
-                @endforeach
-            </select>
+    <div class="mkt-calendar-filter-card u-mb-md">
+        <div class="mkt-calendar-filters">
+            <div class="u-flex-1">
+                <select wire:model.live="clientFilter" class="form-sel">
+                    <option value="">Tutti i Clienti</option>
+                    @foreach($clients as $client)
+                        <option value="{{ $client->id }}">{{ $client->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="u-flex-1">
+                <select wire:model.live="campaignFilter" class="form-sel">
+                    <option value="">Tutte le Campagne</option>
+                    @foreach($campaigns as $campaign)
+                        <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="u-flex-1">
+                <select wire:model.live="platformFilter" class="form-sel">
+                    <option value="">Tutte le Piattaforme</option>
+                    @foreach($platforms as $platform)
+                        <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
+                    @endforeach
+                </select>
+            </div>
             @if($clientFilter || $campaignFilter || $platformFilter)
-                <button wire:click="$set('clientFilter', ''); $set('campaignFilter', ''); $set('platformFilter', '')" class="btn btn-g calendar-btn">Reset</button>
+                <div>
+                    <button wire:click="$set('clientFilter', ''); $set('campaignFilter', ''); $set('platformFilter', '')" class="btn btn-g">Reset</button>
+                </div>
             @endif
         </div>
+    </div>
 
-        <x-panel>
-            <div class="panel-body pad">
-                <div id="js-error" class="js-error-box"></div>
-                <div wire:ignore>
-                    <div id="calendar" style="min-height: 600px;"></div>
-                </div>
+
+    <div class="cal-page" id="view-calendar">
+        <div class="cal-wrapper-modern">
+            <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
+            <div wire:ignore>
+                <div id="calendar" class="u-min-h-600"></div>
             </div>
-        </x-panel>
+        </div>
     </div>
 </div>
 
@@ -91,27 +100,23 @@
                         window.location.href = info.event.url;
                     }
                 },
+
                 eventContent: function(arg) {
-                    let dotColor = arg.event.backgroundColor || 'var(--accent)';
-                    
                     let wrapper = document.createElement('div');
-                    wrapper.style.display = 'flex';
-                    wrapper.style.alignItems = 'flex-start';
-                    wrapper.style.gap = '6px';
-                    wrapper.style.padding = '2px 0';
+                    wrapper.classList.add('cal-mkt-event');
                     
-                    wrapper.innerHTML = `
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${dotColor}; margin-top: 3px; flex-shrink: 0; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>
-                        <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
-                            <div style="font-size: 11px; font-weight: bold; line-height: 1.2; white-space: normal; word-break: break-word; color: ${dotColor};">
-                                ${arg.timeText ? arg.timeText + ' ' : ''}${arg.event.title}
-                            </div>
-                            <div style="font-size: 10px; opacity: 0.8; white-space: normal; line-height: 1.1; color: var(--text3);">
-                                ${arg.event.extendedProps.platform} - ${arg.event.extendedProps.campaign}
-                            </div>
-                        </div>
-                    `;
-                    return { domNodes: [ wrapper ] }
+                    let titleEl = document.createElement('div');
+                    titleEl.classList.add('cal-mkt-event-title');
+                    titleEl.textContent = (arg.timeText ? arg.timeText + ' ' : '') + arg.event.title;
+                    
+                    let subEl = document.createElement('div');
+                    subEl.classList.add('cal-mkt-event-sub');
+                    subEl.textContent = arg.event.extendedProps.platform + ' - ' + arg.event.extendedProps.campaign;
+                    
+                    wrapper.appendChild(titleEl);
+                    wrapper.appendChild(subEl);
+                    
+                    return { domNodes: [ wrapper ] };
                 }
             });
 

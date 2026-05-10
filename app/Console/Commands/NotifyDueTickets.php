@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\TicketDueSoonNotification;
 use App\Notifications\TicketOverdueNotification;
 use App\Services\Tickets\TicketNotificationRecipientResolver;
+use App\Models\Scopes\ProjectSupremacyScope;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -24,13 +25,13 @@ class NotifyDueTickets extends Command
 
     public function handle()
     {
-        $dueSoonTickets = Ticket::query()
+        $dueSoonTickets = Ticket::withoutGlobalScope(ProjectSupremacyScope::class)
             ->open()
             ->dueSoon(1)
             ->with('assignee')
             ->get();
 
-        $overdueTickets = Ticket::query()
+        $overdueTickets = Ticket::withoutGlobalScope(ProjectSupremacyScope::class)
             ->open()
             ->overdue()
             ->with('assignee')

@@ -82,8 +82,27 @@ class MarketingCampaignPostCreate extends Component
     public function mount(MarketingCampaign $campaign)
     {
         $this->authorize('update', $campaign);
+
         $this->campaign = $campaign;
-        $this->form['scheduled_date'] = now()->format('Y-m-d');
+
+        $requestedDate = request()->query('date');
+
+        $this->form['scheduled_date'] = $this->isValidCalendarDate($requestedDate)
+            ? $requestedDate
+            : now()->format('Y-m-d');
+    }
+
+    private function isValidCalendarDate(?string $date): bool
+    {
+        if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return false;
+        }
+
+        try {
+            return \Carbon\Carbon::createFromFormat('Y-m-d', $date)->format('Y-m-d') === $date;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function updatedFormAiAnalysisEnabled($value)

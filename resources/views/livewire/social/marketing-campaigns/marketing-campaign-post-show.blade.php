@@ -21,7 +21,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="cmp-post-detail-layout" style="position: relative;">
+    <div class="cmp-post-detail-layout relative">
 
         @if(in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
             <div class="cmp-regeneration-loader" wire:poll.2s="checkRegenerationStatus" x-data="{
@@ -35,7 +35,7 @@
                       currentMsg: 0,
 
                       init() {
-                          document.body.style.overflow = 'hidden';
+                          document.body.classList.add('overflow-hidden');
                           
                           let interval = setInterval(() => {
                               this.currentMsg = (this.currentMsg + 1) % this.messages.length;
@@ -43,7 +43,7 @@
                           
                           this.$cleanup(() => {
                               clearInterval(interval);
-                              document.body.style.overflow = '';
+                              document.body.classList.remove('overflow-hidden');
                           });
                       }
                  }">
@@ -58,10 +58,10 @@
                     </div>
 
                     @if($regeneration_timeout)
-                        <div class="u-mt-md u-text-orange u-text-center" style="font-size: 13px;">
+                        <div class="u-mt-md u-text-orange u-text-center mkt-info-box">
                             L'operazione sta richiedendo più tempo del previsto o N8n non risponde.
                         </div>
-                        <div class="u-flex u-justify-center u-gap-sm u-mt-md" style="width: 100%;">
+                        <div class="u-flex u-justify-center u-gap-sm u-mt-md u-w-full">
                             <button type="button" wire:click="checkRegenerationStatus" class="btn btn-p btn-sm">Riprova
                                 connessione</button>
                             <button type="button" wire:click="abortRegeneration" class="btn btn-p btn-sm">Annulla
@@ -572,62 +572,91 @@
         {{-- Colonna Destra (1fr): Info Aggiuntive e Preview Sticky --}}
         <div class="cmp-post-right-col">
 
-            <div class="cmp-post-info-panel panel">
-
-                <div class="cmp-post-info-row">
-                    <div class="cmp-post-info-label">Progetto</div>
-                    <div class="cmp-post-info-value font-semibold">
-                        <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate
-                            class="no-underline text-blue-600 hover:text-blue-800">
-                            {{ $campaign->name }}
-                        </a>
-                    </div>
+            <div class="panel u-mb-lg u-overflow-hidden">
+                <div class="lw-modal-hd">
+                    <div class="cmp-panel-title">Dettagli Operativi</div>
                 </div>
+                <div class="u-p-lg u-flex-col u-gap-md">
+                    
+                    <div class="u-flex-center u-gap-md">
+                        <i data-lucide="folder" class="u-icon-lg u-text-muted"></i>
+                        <div class="u-flex-col">
+                            <div class="u-text-label">Progetto</div>
+                            <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate
+                                class="u-text-accent-link u-text-strong">
+                                {{ $campaign->name }}
+                            </a>
+                        </div>
+                    </div>
 
-                <div class="cmp-post-info-row">
-                    <div class="cmp-post-info-label">Cliente</div>
-                    <div class="cmp-post-info-value">{{ $campaign->client->name }}</div>
+                    <div class="u-flex-center u-gap-md">
+                        <i data-lucide="briefcase" class="u-icon-lg u-text-muted"></i>
+                        <div class="u-flex-col">
+                            <div class="u-text-label">Cliente</div>
+                            <div class="u-text-strong">{{ $campaign->client->name }}</div>
+                        </div>
+                    </div>
+
+                    <div class="u-flex-center u-gap-md">
+                        <i data-lucide="calendar" class="u-icon-lg u-text-muted"></i>
+                        <div class="u-flex-col">
+                            <div class="u-text-label">Creazione</div>
+                            <div>{{ $post->created_at->format('d/m/Y H:i') }}</div>
+                        </div>
+                    </div>
+
+                    <div class="u-flex-center u-gap-md">
+                        <i data-lucide="clock" class="u-icon-lg u-text-muted"></i>
+                        <div class="u-flex-col">
+                            <div class="u-text-label">Ultima Modifica</div>
+                            <div>{{ $post->updated_at->format('d/m/Y H:i') }}</div>
+                        </div>
+                    </div>
+
+                    @if($post->n8n_request_id || $post->submitted_to_n8n_at || $post->n8n_completed_at || $post->n8n_error)
+                        <div class="u-section-sep u-flex-col u-gap-md">
+                            @if($post->n8n_request_id)
+                                <div class="u-flex-center u-gap-md">
+                                    <i data-lucide="cpu" class="u-icon-lg u-text-muted"></i>
+                                    <div class="u-flex-col">
+                                        <div class="u-text-label">ID Richiesta Sody</div>
+                                        <div class="u-text-mono">{{ $post->n8n_request_id }}</div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($post->submitted_to_n8n_at)
+                                <div class="u-flex-center u-gap-md">
+                                    <i data-lucide="send" class="u-icon-lg u-text-muted"></i>
+                                    <div class="u-flex-col">
+                                        <div class="u-text-label">Inviato il</div>
+                                        <div class="u-text-muted">{{ $post->submitted_to_n8n_at->format('d/m/Y H:i:s') }}</div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($post->n8n_completed_at)
+                                <div class="u-flex-center u-gap-md">
+                                    <i data-lucide="check-circle" class="u-icon-lg u-text-muted"></i>
+                                    <div class="u-flex-col">
+                                        <div class="u-text-label">Completato il</div>
+                                        <div class="u-text-muted">{{ $post->n8n_completed_at->format('d/m/Y H:i:s') }}</div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($post->n8n_error)
+                                <div class="u-flex-center u-gap-md">
+                                    <i data-lucide="alert-triangle" class="u-icon-lg u-text-red"></i>
+                                    <div class="u-flex-col">
+                                        <div class="u-text-label u-text-red">Errore Sody</div>
+                                        <div class="u-text-red">{{ $post->n8n_error }}</div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
-
-                <div class="cmp-post-info-row">
-                    <div class="cmp-post-info-label">Creazione</div>
-                    <div class="cmp-post-info-value">{{ $post->created_at->format('d/m/Y H:i') }}</div>
-                </div>
-
-                <div class="cmp-post-info-row">
-                    <div class="cmp-post-info-label">Ultima Modifica</div>
-                    <div class="cmp-post-info-value">{{ $post->updated_at->format('d/m/Y H:i') }}</div>
-                </div>
-
-                @if($post->n8n_request_id)
-                    <div class="cmp-post-info-row mt-4 pt-4 border-t border-[var(--line)]">
-                        <div class="cmp-post-info-label">ID richiesta Sody</div>
-                        <div class="cmp-post-info-value text-xs font-mono text-gray-500">{{ $post->n8n_request_id }}</div>
-                    </div>
-                @endif
-
-                @if($post->submitted_to_n8n_at)
-                    <div class="cmp-post-info-row">
-                        <div class="cmp-post-info-label">Inviato il</div>
-                        <div class="cmp-post-info-value text-xs text-gray-500">
-                            {{ $post->submitted_to_n8n_at->format('d/m/Y H:i:s') }}</div>
-                    </div>
-                @endif
-
-                @if($post->n8n_completed_at)
-                    <div class="cmp-post-info-row">
-                        <div class="cmp-post-info-label">Completato il</div>
-                        <div class="cmp-post-info-value text-xs text-gray-500">
-                            {{ $post->n8n_completed_at->format('d/m/Y H:i:s') }}</div>
-                    </div>
-                @endif
-
-                @if($post->n8n_error)
-                    <div class="cmp-post-info-row">
-                        <div class="cmp-post-info-label text-red-500">Errore elaborazione</div>
-                        <div class="cmp-post-info-value text-xs text-red-500">{{ $post->n8n_error }}</div>
-                    </div>
-                @endif
             </div>
 
             {{-- Sticky Instagram Preview --}}
@@ -641,10 +670,10 @@
                             <div class="cmp-ig-preview-avatar">
                                 @if($runtime_logo && method_exists($runtime_logo, 'temporaryUrl'))
                                     <img src="{{ $runtime_logo->temporaryUrl() }}" alt="Logo Caricato"
-                                        style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                        class="cmp-ig-preview-avatar-img">
                                 @elseif($campaign->client->logo_url)
                                     <img src="{{ $campaign->client->logo_url }}" alt="{{ $campaign->client->name }}"
-                                        style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                        class="cmp-ig-preview-avatar-img">
                                 @endif
                             </div>
                             <div class="cmp-ig-preview-author">{{ $campaign->client->name }}</div>
@@ -663,7 +692,7 @@
                                         <img src="{{ $firstMedia['preview_url'] }}" alt="Preview Media">
                                     @endif
                                 @else
-                                    <div class="cmp-carousel-inner" :style="`transform: translateX(-${currentSlide * 100}%)`">
+                                    <div class="cmp-carousel-inner" x-effect="$el.style.setProperty('--slide-offset', currentSlide)">
                                         @foreach($existing_media as $index => $mediaItem)
                                             <div class="cmp-carousel-item">
                                                 @if(\Illuminate\Support\Str::startsWith($mediaItem['mime_type'], 'video/'))

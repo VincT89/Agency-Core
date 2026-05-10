@@ -34,6 +34,7 @@
                 label="Fatturato" 
                 value="€ {{ number_format($globalSummary['total_invoiced'], 2, ',', '.') }}" 
                 sub="Da {{ $globalSummary['invoices_count'] }} fatture valide" 
+                color="var(--purple)"
             />
         </x-panel>
         
@@ -42,7 +43,7 @@
                 label="Incassato" 
                 value="€ {{ number_format($globalSummary['total_collected'], 2, ',', '.') }}" 
                 sub="Flusso cassa reale"
-                dot="var(--green)"
+                color="var(--teal)"
             />
         </x-panel>
         
@@ -51,8 +52,7 @@
                 label="Da Incassare" 
                 value="€ {{ number_format($globalSummary['total_outstanding'], 2, ',', '.') }}" 
                 sub="Credito sospeso isolato"
-                dot="var(--red)"
-                :highlight="$globalSummary['total_outstanding'] > 0"
+                color="var(--orange)"
                 :subAlert="$globalSummary['total_outstanding'] > 0"
             />
         </x-panel>
@@ -65,17 +65,21 @@
                     const data = {{ $sparklineData }};
                     if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
                     
+                    const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+                    const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+                    
                     const opt0 = {
                         chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
                         series: [{ name: 'Fatturato', data: data.invoiced }],
-                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } }, min: 0, forceNiceScale: true },
+                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--purple)'],
                         stroke: { curve: 'smooth', width: 3 },
-                        fill: { opacity: 0.3 },
+                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+                        markers: { size: 4, colors: ['var(--purple)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4 },
-                        tooltip: { theme: 'dark' }
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 },
+                        tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
                     new window.ApexCharts(this.$refs.fatturato, opt0).render();
                 }
@@ -84,23 +88,27 @@
             </div>
         </x-panel>
 
-        <x-panel title="Trend Incassi" dot="var(--green)" padded>
+        <x-panel title="Trend Incassi" dot="var(--teal)" padded>
             <div x-data="{
                 initChart() {
                     const data = {{ $sparklineData }};
                     if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
                     
+                    const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+                    const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+                    
                     const opt1 = {
                         chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
                         series: [{ name: 'Incassato', data: data.collected }],
-                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } }, min: 0, forceNiceScale: true },
-                        colors: ['var(--green)'],
+                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
+                        colors: ['var(--teal)'],
                         stroke: { curve: 'smooth', width: 3 },
-                        fill: { opacity: 0.3 },
+                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+                        markers: { size: 4, colors: ['var(--teal)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4 },
-                        tooltip: { theme: 'dark' }
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 },
+                        tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
                     new window.ApexCharts(this.$refs.spark1, opt1).render();
                 }
@@ -109,23 +117,27 @@
             </div>
         </x-panel>
 
-        <x-panel title="Trend Da Incassare" dot="var(--red)" padded>
+        <x-panel title="Trend Da Incassare" dot="var(--orange)" padded>
             <div x-data="{
                 initChart() {
                     const data = {{ $sparklineData }};
                     if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
                     
+                    const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+                    const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+                    
                     const opt2 = {
                         chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
                         series: [{ name: 'Da Incassare', data: data.pending }],
-                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' } } },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => { return '€ ' + value } }, min: 0, forceNiceScale: true },
-                        colors: ['var(--red)'],
+                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
+                        colors: ['var(--orange)'],
                         stroke: { curve: 'smooth', width: 3 },
-                        fill: { opacity: 0.3 },
+                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+                        markers: { size: 4, colors: ['var(--orange)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4 },
-                        tooltip: { theme: 'dark' }
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 },
+                        tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
                     new window.ApexCharts(this.$refs.spark2, opt2).render();
                 }

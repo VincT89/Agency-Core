@@ -7,20 +7,15 @@
 
   <x-page-header eyebrow="Progetto Marketing">
     <x-slot:title>
-      <div class="flex items-center gap-3">
-        @if($campaign->client->logo_url)
-          <img src="{{ $campaign->client->logo_url }}" class="w-8 h-8 rounded-full object-cover border border-[var(--line)]">
+      <div>
+        <strong>{{ $campaign->name }}</strong>
+        @if($campaign->description)
+          <div class="cmp-campaign-desc">{{ $campaign->description }}</div>
         @endif
-        <div>
-          <strong>{{ $campaign->name }}</strong>
-          @if($campaign->description)
-            <div class="cmp-campaign-desc">{{ $campaign->description }}</div>
-          @endif
-          <div class="cmp-campaign-meta">
-            <span>{{ $campaign->starts_at ? $campaign->starts_at->format('d/m/Y') : 'Da def.' }} - {{ $campaign->ends_at ? $campaign->ends_at->format('d/m/Y') : 'In corso' }}</span>
-            <span class="cmp-campaign-meta-sep">•</span>
-            <span>{{ $totalPostsCount }} Post</span>
-          </div>
+        <div class="cmp-campaign-meta">
+          <span>{{ $campaign->starts_at ? $campaign->starts_at->format('d/m/Y') : 'Da def.' }} - {{ $campaign->ends_at ? $campaign->ends_at->format('d/m/Y') : 'In corso' }}</span>
+          <span class="cmp-campaign-meta-sep">•</span>
+          <span>{{ $totalPostsCount }} Post</span>
         </div>
       </div>
     </x-slot:title>
@@ -46,7 +41,9 @@
     {{-- Tabella Post --}}
     <x-panel title="Post in Programma" dot="var(--accent)">
         <x-slot:headerActions>
-            <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate.hover class="btn btn-p btn-sm">Nuovo Post</a>
+            <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate.hover class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                <i data-lucide="plus" class="u-icon-sm"></i> Nuovo Post
+            </a>
         </x-slot:headerActions>
         <table class="t-table">
           <thead>

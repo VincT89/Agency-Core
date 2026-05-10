@@ -13,11 +13,11 @@ class TicketController extends Controller
 {
     public function index(\Illuminate\Http\Request $request, \App\Domain\Core\Queries\TicketQuery $ticketQuery): View
     {
+        $this->authorize('viewAny', Ticket::class);
+
         $user = auth()->user();
         $user->update(['last_tickets_viewed_at' => now()]);
         \Illuminate\Support\Facades\Cache::forget('sidebar_counts_' . $user->id);
-
-        $this->authorize('viewAny', Ticket::class);
         
         $tickets = $ticketQuery->forIndex($request->all())->paginate(15)->withQueryString();
 

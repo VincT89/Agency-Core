@@ -3,10 +3,10 @@
     <x-slot:title>Attività Recenti</x-slot:title>
 </x-page-header>
 
-    <x-panel  style="margin-bottom:20px;">
+    <x-panel class="u-mb-md">
     <x-slot:title>Filtri</x-slot:title>
-        <form action="{{ route('audit-logs.index') }}" method="GET" style="display:flex;gap:16px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px">
+        <form action="{{ route('audit-logs.index') }}" method="GET" class="g-3col u-items-end">
+            <div>
                 <label class="form-lbl">Entità</label>
                 <select name="auditable_type" class="form-in">
                     <option value="">Tutte le entità</option>
@@ -19,7 +19,7 @@
                     <option value="User" {{ request('auditable_type') === 'User' ? 'selected' : '' }}>Utenti</option>
                 </select>
             </div>
-            <div style="flex:1;min-width:200px">
+            <div>
                 <label class="form-lbl">Utente</label>
                 <select name="user_id" class="form-in">
                     <option value="">Tutti gli utenti</option>
@@ -28,9 +28,9 @@
                     @endforeach
                 </select>
             </div>
-            <div style="display:flex;align-items:flex-end;">
+            <div class="u-flex u-gap-sm">
                 <button type="submit" class="btn btn-p">Filtra</button>
-                <a href="{{ route('audit-logs.index') }}" class="btn btn-g" style="margin-left:8px;">Reset</a>
+                <a href="{{ route('audit-logs.index') }}" class="btn btn-g">Reset</a>
             </div>
         </form>
     </x-panel>
@@ -38,7 +38,7 @@
     <x-panel title="Elenco Globale Attività">
         <x-audit-timeline :logs="$logs" />
         
-        <div style="margin-top:20px;">
+        <div class="u-mt-md">
             {{ $logs->links() }}
         </div>
     </x-panel>

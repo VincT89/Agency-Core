@@ -1,0 +1,245 @@
+/* _calendar.css — Stili modulari per il calendario eventi */
+
+.cal-page {
+    /* Wrapper principale della vista calendario */
+}
+
+.cal-header {
+    /* Header del calendario */
+}
+
+.cal-toolbar {
+    /* Barra degli strumenti / filtri */
+}
+
+.cal-detail-card {
+    /* Pannello dettagli evento (usato in show.blade.php) */
+}
+
+.cal-detail-grid {
+    /* Griglia per le informazioni dell'evento */
+}
+
+.cal-detail-item {
+    /* Singolo elemento informativo (label + valore) */
+}
+
+.cal-time-badge {
+    /* Badge per gli orari e "Tutto il giorno" */
+    font-size: 10px;
+    background: var(--line);
+    padding: 2px 4px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-family: var(--sans);
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.cal-form-grid {
+    /* Griglia per i form di creazione/modifica */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cal-form-row {
+    /* Riga del form (sostituisce flex inline e vecchie classi) */
+    display: flex;
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .cal-form-row {
+        flex-direction: column;
+    }
+}
+
+.cal-form-actions {
+    /* Footer del form con bottoni */
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-end; /* Di default a destra, o come richiesto */
+}
+
+.cal-provider-panel {
+    /* Pannello per la selezione del provider videochiamata */
+    flex: 1;
+}
+
+/* Stili helper per la vista show (migrati dagli inline styles) */
+.cal-detail-label {
+    font-size: 12px;
+    color: var(--text3);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.cal-detail-value {
+    color: var(--text);
+    font-family: var(--sans);
+}
+
+.cal-detail-value-mono {
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.cal-detail-desc {
+    color: var(--text3);
+    font-size: 13px;
+    white-space: pre-wrap;
+    margin-top: 4px;
+}
+
+.cal-link-accent {
+    color: var(--accent);
+    text-decoration: none;
+}
+.cal-link-accent:hover {
+    text-decoration: underline;
+}
+
+.cal-btn-danger {
+    color: var(--red) !important;
+    border-color: rgba(245,75,75,.3) !important;
+}
+
+.cal-upload-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.cal-file-input {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    height: auto !important;
+}
+
+.cal-err-sm {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.cal-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+
+/* --- Restyling Calendario Operativo --- */
+.cal-toolbar-wrapper {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.cal-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.cal-toolbar-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cal-toolbar-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: var(--bg2);
+    padding: 6px;
+    border-radius: 30px;
+    border: 1px solid var(--line);
+}
+
+.cal-pill {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    background: transparent;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.cal-pill:hover {
+    color: var(--text);
+    background: transparent;
+}
+
+.cal-pill.is-active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    font-weight: 600;
+}
+
+.cal-intro-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text2);
+}
+
+.cal-intro-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.cal-wrapper-modern {
+    background: var(--bg1);
+    border: 1px solid var(--line);
+    border-radius: calc(var(--r) * 1.5);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+    padding: 24px;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .cal-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .cal-wrapper-modern {
+        padding: 16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+}

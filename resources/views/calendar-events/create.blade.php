@@ -24,11 +24,11 @@
             <div class="form-row">
                 <x-form-group label="Inizio" name="start_at" required>
                     <input type="datetime-local" name="start_at" class="form-in @error('start_at') is-invalid @enderror"
-                           value="{{ old('start_at', request('start_at', now()->format('Y-m-d\TH:i'))) }}">
+                           value="{{ old('start_at', request()->has('start_at') ? \Carbon\Carbon::parse(request('start_at'))->format('Y-m-d\TH:i') : now()->format('Y-m-d\TH:i')) }}">
                 </x-form-group>
                 <x-form-group label="Fine" name="end_at">
                     <input type="datetime-local" name="end_at" class="form-in @error('end_at') is-invalid @enderror"
-                           value="{{ old('end_at') }}">
+                           value="{{ old('end_at', request()->has('end_at') ? \Carbon\Carbon::parse(request('end_at'))->format('Y-m-d\TH:i') : '') }}">
                     <div class="u-text-mono u-mt-xs">Opzionale. Se non specificata, l'evento sarà considerato "istantaneo" con chiusura immediata all'inizio.</div>
                 </x-form-group>
             </div>

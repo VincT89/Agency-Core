@@ -77,8 +77,8 @@
                 <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
                 <select class="form-sel" wire:model="form.status" required>
                   <option value="draft">Bozza</option>
-                  <option value="pending_n8n">In Coda AI</option>
-                  <option value="submitted_to_n8n">In Elaborazione AI</option>
+                  <option value="pending_n8n">In Coda Sody</option>
+                  <option value="submitted_to_n8n">In Elaborazione Sody</option>
                   <option value="generated">Generato</option>
                   <option value="approved">Approvato</option>
                   <option value="published">Pubblicato</option>
@@ -214,12 +214,12 @@
             </div>
         </div>
 
-        {{-- Blocco 5: Identità Cliente per AI --}}
+        {{-- Blocco 5: Identità Cliente per Sody --}}
         <div class="panel cmp-panel-pad cmp-identity-panel">
           <label class="cmp-ai-check-wrap">
             <input type="checkbox" wire:model.live="form.ai_analysis_enabled" class="cmp-ai-check-input">
             <div class="cmp-ai-check-content">
-              <div class="cmp-ai-check-title">Richiedi Analisi AI Sody</div>
+              <div class="cmp-ai-check-title">Richiedi Analisi Sody</div>
               <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà un copy se assente.</div>
             </div>
           </label>
@@ -359,7 +359,7 @@
                         }
                     @endphp
 
-                    <div class="cmp-ig-preview-media" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ count($previewMedia) }} }" @endif>
+                    <div class="cmp-ig-preview-media" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ min(count($previewMedia), 10) }} }" @endif>
                         @if(count($previewMedia) > 0)
                             @if(count($previewMedia) == 1)
                                 @if($previewMedia[0]['type'] === 'video')
@@ -368,7 +368,7 @@
                                     <img src="{{ $previewMedia[0]['url'] }}" alt="Preview Media">
                                 @endif
                             @else
-                                <div class="cmp-carousel-inner" x-effect="$el.style.setProperty('--slide-offset', currentSlide)">
+                                <div class="cmp-carousel-inner" :data-slide="currentSlide">
                                     @foreach($previewMedia as $index => $item)
                                         <div class="cmp-carousel-item">
                                             @if($item['type'] === 'video')

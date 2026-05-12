@@ -6,10 +6,10 @@
                 <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     @foreach($overdueTasks as $task)
-                    <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
-                        <td class="name-col" style="color:var(--red);font-weight:600">{{ $task->title }}</td>
+                    <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
+                        <td class="name-col u-text-danger u-text-strong">{{ $task->title }}</td>
                         <td>{{ $task->project?->name ?? '—' }}</td>
-                        <td class="mono-col" style="color:var(--red)">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
+                        <td class="mono-col u-text-danger">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
                         <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
                     </tr>
                     @endforeach
@@ -25,10 +25,10 @@
                 <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     @foreach($dueSoonTasks as $task)
-                    <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
+                    <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
                         <td class="name-col">{{ $task->title }}</td>
                         <td>{{ $task->project?->name ?? '—' }}</td>
-                        <td class="mono-col" style="color:var(--orange)">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
+                        <td class="mono-col u-text-warning">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
                         <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
                     </tr>
                     @endforeach
@@ -43,14 +43,14 @@
                 <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
                 <tbody>
                     @forelse($otherTasks as $task)
-                    <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
+                    <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
                         <td class="name-col">{{ $task->title }}</td>
                         <td>{{ $task->project?->name ?? '—' }}</td>
                         <td class="mono-col">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
                         <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
                     </tr>
                     @empty
-                    <tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px">Nessun task attivo. Ottimo lavoro.</td></tr>
+                    <tr><td colspan="4" class="u-text-center u-text-muted u-p-md">Nessun task attivo. Ottimo lavoro.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -63,13 +63,13 @@
                     <thead><tr><th>Ticket</th><th>Commessa</th><th>Stato</th></tr></thead>
                     <tbody>
                         @forelse($openTickets as $ticket)
-                        <tr onclick="window.location='{{ route('tickets.show', $ticket) }}'" style="cursor:pointer">
+                        <tr x-data @click="window.Livewire.navigate('{{ route('tickets.show', $ticket) }}')" class="u-cursor-pointer hover-bg">
                             <td class="name-col">{{ $ticket->title }}</td>
                             <td>{{ $ticket->project?->name ?? '—' }}</td>
                             <td><x-badge :status="$ticket->status" :label="$ticket->status_label" /></td>
                         </tr>
                         @empty
-                        <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Nessun ticket in corso nel tuo perimetro</td></tr>
+                        <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessun ticket in corso nel tuo perimetro</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -81,24 +81,24 @@
     <div>
         <x-panel title="Prossimi Eventi" dot="var(--orange)" padded>
             @forelse($upcomingEvents as $event)
-                <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line)">
-                    <div style="font-weight:500;color:var(--text)">{{ $event->title }}</div>
-                    <div style="font-size:12px;color:var(--text3);margin-top:4px">{{ $event->start_at->format('d M Y H:i') }} - {{ $event->end_at->format('H:i') }}</div>
+                <div class="u-mb-sm u-pb-sm u-border-b">
+                    <div class="u-text-strong u-text-base">{{ $event->title }}</div>
+                    <div class="u-text-sm u-text-muted u-mt-xs">{{ $event->start_at->format('d M Y H:i') }} - {{ $event->end_at->format('H:i') }}</div>
                 </div>
             @empty
-                <div style="color:var(--text3);text-align:center;padding:16px">Nessun evento a calendario.</div>
+                <div class="u-text-center u-text-muted u-p-md">Nessun evento a calendario.</div>
             @endforelse
         </x-panel>
 
         <div class="mt-panel">
             <x-panel title="I Miei Allegati Recenti" dot="var(--green)" padded>
                 @forelse($recentAttachments as $att)
-                    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
-                        <i data-lucide="paperclip" style="width:14px;color:var(--text3)"></i>
-                        <a href="{{ route('attachments.download', $att) }}" style="font-size:13px;color:var(--text2);text-decoration:none">{{ $att->original_name }}</a>
+                    <div class="u-mb-sm u-flex u-items-center u-gap-xs">
+                        <i data-lucide="paperclip" class="u-icon-xs u-text-muted"></i>
+                        <a href="{{ route('attachments.download', $att) }}" class="u-text-sm u-text-secondary u-no-underline">{{ $att->original_name }}</a>
                     </div>
                 @empty
-                    <div style="color:var(--text3);text-align:center;padding:16px">Nessun file caricato di recente.</div>
+                    <div class="u-text-center u-text-muted u-p-md">Nessun file caricato di recente.</div>
                 @endforelse
             </x-panel>
         </div>
@@ -110,13 +110,13 @@
                     <thead><tr><th>Titolo</th><th>Commessa</th><th>Stato</th></tr></thead>
                     <tbody>
                         @forelse($recentShoots as $shoot)
-                        <tr onclick="window.location='{{ route('social.shooting.index') }}'" style="cursor:pointer">
+                        <tr x-data @click="window.Livewire.navigate('{{ route('social.shooting.index') }}')" class="u-cursor-pointer hover-bg">
                             <td class="name-col">{{ $shoot->title }}</td>
                             <td>{{ $shoot->project?->name ?? '—' }}</td>
                             <td><x-badge :status="$shoot->status->value" :label="$shoot->status->labelForContext('social')" /></td>
                         </tr>
                         @empty
-                        <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Nessuna richiesta shooting effettuata</td></tr>
+                        <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessuna richiesta shooting effettuata</td></tr>
                         @endforelse
                     </tbody>
                 </table>

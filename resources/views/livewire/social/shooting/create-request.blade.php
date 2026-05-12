@@ -1,6 +1,6 @@
 <div>
-    <div style="margin-bottom:15px">
-        <a href="{{ route('social.shooting.index') }}" wire:navigate style="color:var(--text3);font-size:12px;text-decoration:none">← Torna alle richieste</a>
+    <div class="shooting-back-link">
+        <a href="{{ route('social.shooting.index') }}" wire:navigate>← Torna alle richieste</a>
     </div>
 
     <div class="mb-4">
@@ -9,91 +9,91 @@
         </x-page-header>
     </div>
 
-    <div class="g-2col-main" style="align-items:start;">
+    <div class="g-2col-main shooting-2col-main-start">
         {{-- DETTAGLI --}}
         <x-panel title="Dettagli Shooting" dot="var(--purple)" padded>
-            <div style="display:flex; flex-direction:column; gap:24px;">
+            <div class="shooting-main-col">
                 
-                <div class="form-row full" style="margin-bottom:0; gap:16px;">
+                <div class="form-row full shooting-form-row">
                     <div>
-                        <label class="form-lbl">Titolo Shooting <span style="color:var(--red);">*</span></label>
-                        <input type="text" wire:model="title" class="form-in" placeholder="es. Shooting Esterno Campagna Estiva" style="width:100%; box-sizing:border-box;">
-                        @error('title') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                        <label class="form-lbl">Titolo Shooting <span class="shooting-text-red">*</span></label>
+                        <input type="text" wire:model="title" class="form-in shooting-input-full" placeholder="es. Shooting Esterno Campagna Estiva">
+                        @error('title') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
-                <div class="form-row" style="margin-bottom:0; gap:16px;">
+                <div class="form-row shooting-form-row">
                     <div>
-                        <label class="form-lbl">Progetto <span style="color:var(--red);">*</span></label>
-                        <select wire:model="project_id" class="form-in" style="width:100%; box-sizing:border-box;">
+                        <label class="form-lbl">Progetto <span class="shooting-text-red">*</span></label>
+                        <select wire:model="project_id" class="form-in shooting-input-full">
                             <option value="">Seleziona...</option>
                             @foreach($projects as $p)
                                 <option value="{{ $p->id }}">{{ $p->name }}</option>
                             @endforeach
                         </select>
-                        @error('project_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                        @error('project_id') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                     </div>
                     <div>
-                        <label class="form-lbl">Fotografo Assegnato <span style="color:var(--red);">*</span></label>
-                        <select wire:model="photographer_id" class="form-in" style="width:100%; box-sizing:border-box;">
+                        <label class="form-lbl">Fotografo Assegnato <span class="shooting-text-red">*</span></label>
+                        <select wire:model="photographer_id" class="form-in shooting-input-full">
                             <option value="">Da definire</option>
                             @foreach($photographers as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }}</option>
                             @endforeach
                         </select>
-                        @error('photographer_id') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                        @error('photographer_id') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
-                <div class="form-row full" style="margin-bottom:0; gap:16px;">
+                <div class="form-row full shooting-form-row">
                     <div>
                         <label class="form-lbl">Location</label>
-                        <input type="text" wire:model="location" class="form-in" placeholder="Indirizzo o link Maps" style="width:100%; box-sizing:border-box;">
-                        @error('location') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                        <input type="text" wire:model="location" class="form-in shooting-input-full" placeholder="Indirizzo o link Maps">
+                        @error('location') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
                 <div>
                     <label class="form-lbl">Note per il Cliente</label>
-                    <textarea wire:model="client_notes" class="form-in" rows="2" placeholder="Visibili al cliente in fase di approvazione" style="width:100%; box-sizing:border-box;"></textarea>
-                    @error('client_notes') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                    <textarea wire:model="client_notes" class="form-in shooting-input-full" rows="2" placeholder="Visibili al cliente in fase di approvazione"></textarea>
+                    @error('client_notes') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                 </div>
                 
                 <div>
                     <label class="form-lbl">Note Interne</label>
-                    <textarea wire:model="internal_notes" class="form-in" rows="2" placeholder="Solo uso interno (es. lenti consigliate)" style="width:100%; box-sizing:border-box;"></textarea>
-                    @error('internal_notes') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                    <textarea wire:model="internal_notes" class="form-in shooting-input-full" rows="2" placeholder="Solo uso interno (es. lenti consigliate)"></textarea>
+                    @error('internal_notes') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                 </div>
 
             </div>
         </x-panel>
 
         {{-- SLOT PROPOSTI --}}
-        <div style="display:flex; flex-direction:column; gap:24px;">
+        <div class="shooting-main-col">
             <x-panel title="Slot Proposti" dot="var(--blue)" padded>
-                <p style="font-size:13px; color:var(--text2); margin-bottom:16px;">
+                <p class="shooting-desc-text">
                     Indica le date disponibili. Il fotografo potrà accettarne solo una.
                 </p>
 
-                <div style="display:flex; flex-direction:column; gap:12px;">
+                <div class="shooting-col-gap12">
                     @foreach($proposedSlots as $index => $slot)
-                        <div style="background:var(--bg3); border-radius:8px; padding:16px; position:relative; display:flex; flex-direction:column; gap:12px;">
+                        <div class="shooting-slot-card">
                             
                             @if(count($proposedSlots) > 1)
-                            <button wire:click="removeSlot({{ $index }})" style="position:absolute; top:12px; right:12px; background:none; border:none; cursor:pointer;" class="hover-danger">
-                                <i data-lucide="x" style="width:16px; height:16px;"></i>
+                            <button wire:click="removeSlot({{ $index }})" class="shooting-slot-del hover-danger">
+                                <i data-lucide="x" class="shooting-icon-sm"></i>
                             </button>
                             @endif
                             
                             <div>
-                                <label class="form-lbl" style="font-size:11px; margin-bottom:4px;">Data Proposta</label>
-                                <input type="date" wire:model="proposedSlots.{{ $index }}.date" class="form-in" style="width:100%; box-sizing:border-box; background:var(--bg);">
-                                @error('proposedSlots.'.$index.'.date') <span style="color:var(--red); font-size:12px; margin-top:4px; display:block;">{{ $message }}</span> @enderror
+                                <label class="form-lbl shooting-slot-lbl">Data Proposta</label>
+                                <input type="date" wire:model="proposedSlots.{{ $index }}.date" class="form-in shooting-input-full shooting-input-bg">
+                                @error('proposedSlots.'.$index.'.date') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                             </div>
                             
                             <div>
-                                <label class="form-lbl" style="font-size:11px; margin-bottom:4px;">Fascia Oraria</label>
-                                <select wire:model="proposedSlots.{{ $index }}.period" class="form-in" style="width:100%; box-sizing:border-box; background:var(--bg);" required>
+                                <label class="form-lbl shooting-slot-lbl">Fascia Oraria</label>
+                                <select wire:model="proposedSlots.{{ $index }}.period" class="form-in shooting-input-full shooting-input-bg" required>
                                     <option value="morning">Mattina (09:00 - 13:00)</option>
                                     <option value="intermediate">Intermedio (11:00 - 16:00)</option>
                                     <option value="afternoon">Pomeriggio (15:00 - 20:00)</option>
@@ -105,18 +105,18 @@
                 </div>
                 
                 @error('slots')
-                    <div style="color:var(--red); font-size:13px; margin-top:16px;">
-                        <i data-lucide="alert-circle" style="width:14px; height:14px; margin-right:4px; vertical-align:middle;"></i> {{ $message }}
+                    <div class="shooting-err-summary">
+                        <i data-lucide="alert-circle" class="shooting-err-icon"></i> {{ $message }}
                     </div>
                 @enderror
 
-                <button wire:click="addSlot" class="btn btn-g" style="width:100%; margin-top:16px; display:flex; justify-content:center; align-items:center; gap:8px;">
-                    <i data-lucide="plus" style="width:16px; height:16px;"></i> Aggiungi Slot
+                <button wire:click="addSlot" class="btn btn-g shooting-btn-full">
+                    <i data-lucide="plus" class="shooting-icon-sm"></i> Aggiungi Slot
                 </button>
             </x-panel>
             
-            <button wire:click="save" class="btn btn-p" style="width:100%; display:flex; justify-content:center; align-items:center; gap:8px;">
-                <i data-lucide="send" style="width:16px; height:16px;"></i> Invia Richiesta
+            <button wire:click="save" class="btn btn-p shooting-btn-full-primary">
+                <i data-lucide="send" class="shooting-icon-sm"></i> Invia Richiesta
             </button>
         </div>
     </div>

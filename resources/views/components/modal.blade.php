@@ -3,7 +3,7 @@
     <div class="modal">
         <div class="modal-hd">
             <div class="modal-title">{{ $title }}</div>
-            <button class="modal-close" onclick="cm('{{ $id }}')">✕</button>
+            <button type="button" class="modal-close" @click="document.getElementById('{{ $id }}').classList.remove('open')">✕</button>
         </div>
         {{ $slot }}
         @if(isset($footer))

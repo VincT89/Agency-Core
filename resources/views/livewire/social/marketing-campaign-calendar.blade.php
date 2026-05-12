@@ -105,7 +105,7 @@
             <div class="cal-wrapper-modern">
                 <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
                 <div wire:ignore class="cal-full-height">
-                    <div id="calendar" class="cal-full-height"></div>
+                    <div id="marketing-global-calendar" class="cal-full-height"></div>
                 </div>
             </div>
         </main>
@@ -117,95 +117,111 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/it.global.min.js"></script>
 <script>
-    document.addEventListener('livewire:initialized', function() {
-        try {
-            const jsErr = document.getElementById('js-error');
-            if (typeof FullCalendar === 'undefined') {
-                jsErr.innerText = "ERRORE: FullCalendar non è stato caricato.";
-                return;
-            }
-
-            if (window.marketingGlobalCalendar) {
-                window.marketingGlobalCalendar.destroy();
-            }
-
-            var calendarEl = document.getElementById('calendar');
-            window.marketingGlobalCalendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                initialDate: '{{ $calendarDate }}',
-                locale: 'it',
-                firstDay: 1,
-                headerToolbar: {
-                    left: 'today prev,next',
-                    center: 'title',
-                    right: 'timeGridWeek,timeGridDay'
-                },
-                buttonText: {
-                    today: 'Oggi',
-                    week: 'Settimana',
-                    day: 'Giorno'
-                },
-                themeSystem: 'standard',
-                height: '100%',
-                expandRows: true,
-                slotDuration: '01:00:00',
-                slotMinTime: '08:00:00',
-                slotMaxTime: '20:00:00',
-                allDaySlot: false,
-                defaultTimedEventDuration: '01:00:00',
-                dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    omitZeroMinute: false,
-                    meridiem: false
-                },
-                events: function(fetchInfo, successCallback, failureCallback) {
-                    @this.fetchEvents().then(events => {
-                        successCallback(events);
-                    }).catch(err => {
-                        console.error("Errore caricamento eventi:", err);
-                        failureCallback(err);
-                    });
-                },
-                eventClick: function(info) {
-                    info.jsEvent.preventDefault();
-                    if (info.event.url) {
-                        window.location.href = info.event.url;
-                    }
-                },
-
-                eventContent: function(arg) {
-                    let wrapper = document.createElement('div');
-                    wrapper.classList.add('cal-mkt-event');
-                    
-                    let titleEl = document.createElement('div');
-                    titleEl.classList.add('cal-mkt-event-title');
-                    titleEl.textContent = arg.event.title;
-                    
-                    let subEl = document.createElement('div');
-                    subEl.classList.add('cal-mkt-event-sub');
-                    subEl.textContent = arg.event.extendedProps.client;
-                    
-                    wrapper.appendChild(titleEl);
-                    wrapper.appendChild(subEl);
-                    
-                    return { domNodes: [ wrapper ] };
-                }
+    function cleanupMarketingGlobalCalendar() {
+        if (window.marketingGlobalCalendar) {
+            window.marketingGlobalCalendar.destroy();
+            window.marketingGlobalCalendar = null;
+        }
+        if (window.marketingGlobalUnsubscribers) {
+            window.marketingGlobalUnsubscribers.forEach(unsub => {
+                if (typeof unsub === 'function') unsub();
             });
+        }
+        window.marketingGlobalUnsubscribers = [];
+    }
 
-            window.marketingGlobalCalendar.render();
+    function initMarketingGlobalCalendar(component) {
+        cleanupMarketingGlobalCalendar();
 
+        const jsErr = document.getElementById('js-error');
+        if (typeof FullCalendar === 'undefined') {
+            if(jsErr) jsErr.innerText = "ERRORE: FullCalendar non è stato caricato.";
+            return;
+        }
+
+        var calendarEl = document.getElementById('marketing-global-calendar');
+        if (!calendarEl) return;
+
+        window.marketingGlobalCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            initialDate: '{{ $calendarDate }}',
+            locale: 'it',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'today prev,next',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Oggi',
+                month: 'Mese',
+                week: 'Settimana',
+                day: 'Giorno'
+            },
+            themeSystem: 'standard',
+            height: '100%',
+            expandRows: true,
+            slotDuration: '01:00:00',
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            allDaySlot: false,
+            defaultTimedEventDuration: '01:00:00',
+            dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+            slotLabelFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                omitZeroMinute: false,
+            },
+            dayMaxEvents: 3,
+            moreLinkClick: 'popover',
+            eventDisplay: 'block',
+            events: function(fetchInfo, successCallback, failureCallback) {
+                component.fetchEvents().then(events => {
+                    successCallback(events);
+                }).catch(err => {
+                    console.error("Errore caricamento eventi:", err);
+                    failureCallback(err);
+                });
+            },
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                if (info.event.url) {
+                    window.Livewire.navigate(info.event.url);
+                }
+            },
+            eventContent: function(arg) {
+                let wrapper = document.createElement('div');
+                wrapper.classList.add('cal-mkt-event');
+                
+                let titleEl = document.createElement('div');
+                titleEl.classList.add('cal-mkt-event-title');
+                titleEl.textContent = arg.event.title;
+                
+                let subEl = document.createElement('div');
+                subEl.classList.add('cal-mkt-event-sub');
+                subEl.textContent = arg.event.extendedProps.client;
+                
+                wrapper.appendChild(titleEl);
+                wrapper.appendChild(subEl);
+                
+                return { domNodes: [ wrapper ] };
+            }
+        });
+
+        window.marketingGlobalCalendar.render();
+
+        window.marketingGlobalUnsubscribers.push(
             Livewire.on('marketing-global-calendar-filters-updated', () => {
                 if (window.marketingGlobalCalendar) {
                     window.marketingGlobalCalendar.refetchEvents();
                 }
-            });
+            })
+        );
 
+        window.marketingGlobalUnsubscribers.push(
             Livewire.on('marketing-global-calendar-date-changed', (payload) => {
                 if (!window.marketingGlobalCalendar) return;
 
-                // Livewire 3 event payload can be an array [ { date: '...' } ] or object
                 let date = Array.isArray(payload) ? payload[0].date : payload.date;
 
                 const dayEl = document.querySelector(`.cal-mini-day[data-date="${date}"]`);
@@ -215,7 +231,17 @@
                 } else {
                     window.marketingGlobalCalendar.gotoDate(date);
                 }
-            });
+            })
+        );
+    }
+
+    document.addEventListener('livewire:navigating', cleanupMarketingGlobalCalendar);
+
+    document.addEventListener('livewire:navigated', function() {
+        const calendarEl = document.getElementById('marketing-global-calendar');
+        if (!calendarEl) return;
+        try {
+            initMarketingGlobalCalendar(@this);
         } catch(err) {
             document.getElementById('js-error').innerText = "JS Exception: " + err.message + "\n" + err.stack;
         }

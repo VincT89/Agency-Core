@@ -3,7 +3,7 @@
     <x-slot:title><strong>Profilo</strong></x-slot:title>
 </x-page-header>
 
-  <div class="g-2col" style="gap:16px;">
+  <div class="g-2col u-gap-md">
 
     {{-- Aggiorna informazioni --}}
     <x-panel title="Informazioni personali" :padded="true">
@@ -18,7 +18,7 @@
   </div>
 
   {{-- Elimina account — solo se non sei l'unico admin --}}
-  <div style="margin-top:16px">
+  <div class="u-mt-md">
     <x-panel title="Zona pericolosa" :padded="true">
       @include('profile.partials.delete-user-form')
     </x-panel>

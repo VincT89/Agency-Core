@@ -29,9 +29,31 @@ class StoreMarketingCampaignPostVersionRequest extends FormRequest
             'title' => ['nullable', 'string'],
             'caption' => ['required_if:regeneration_type,full,caption', 'string', 'nullable'],
             'hashtags' => ['nullable', 'array'],
-            'image_url' => ['required_if:regeneration_type,full,image', 'url', 'nullable'],
+            'image_url' => ['nullable', 'url'],
+            'image_urls' => ['nullable', 'array'],
+            'image_urls.*' => ['required', 'url'],
             'prompt_used' => ['nullable', 'string'],
             'raw_payload' => ['nullable', 'array'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $type = $this->input('regeneration_type');
+
+            if (in_array($type, ['full', 'image'], true)) {
+                $hasImageUrl = filled($this->input('image_url'));
+                $hasImageUrls = is_array($this->input('image_urls'))
+                    && count($this->input('image_urls')) > 0;
+
+                if (! $hasImageUrl && ! $hasImageUrls) {
+                    $validator->errors()->add(
+                        'image_url',
+                        'Per regeneration_type full o image è richiesta image_url oppure image_urls.'
+                    );
+                }
+            }
+        });
     }
 }

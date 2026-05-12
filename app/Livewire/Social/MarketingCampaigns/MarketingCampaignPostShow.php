@@ -99,8 +99,8 @@ class MarketingCampaignPostShow extends Component
         $this->loadExistingMedia();
 
         $this->form = [
-            'title' => $post->title,
-            'description' => $post->description,
+            'title' => $post->currentVersion ? ($post->currentVersion->title ?? $post->title) : $post->title,
+            'description' => $post->currentVersion ? ($post->currentVersion->caption ?? $post->description) : $post->description,
             'content_type' => $post->content_type->value,
             'scheduled_date' => $post->scheduled_date ? $post->scheduled_date->format('Y-m-d') : null,
             'scheduled_time' => $post->scheduled_time ? date('H:i', strtotime($post->scheduled_time)) : null,
@@ -124,6 +124,11 @@ class MarketingCampaignPostShow extends Component
         $this->post->load(['currentVersion', 'comments.user']);
         $this->loadExistingMedia();
         $this->form['status'] = $this->post->status->value;
+
+        if ($this->post->currentVersion) {
+            $this->form['title'] = $this->post->currentVersion->title ?? $this->post->title;
+            $this->form['description'] = $this->post->currentVersion->caption ?? $this->post->description;
+        }
     }
 
     public function checkRegenerationStatus()
@@ -133,6 +138,11 @@ class MarketingCampaignPostShow extends Component
         $this->loadExistingMedia();
         
         $this->form['status'] = $this->post->status->value;
+
+        if ($this->post->currentVersion) {
+            $this->form['title'] = $this->post->currentVersion->title ?? $this->post->title;
+            $this->form['description'] = $this->post->currentVersion->caption ?? $this->post->description;
+        }
 
         if (in_array($this->post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'])) {
             $this->regeneration_checks++;
@@ -514,6 +524,13 @@ class MarketingCampaignPostShow extends Component
 
         $this->authorize('update', $this->post);
         $this->post->update($data); // first save normal data
+
+        if ($this->post->currentVersion) {
+            $this->post->currentVersion->update([
+                'title' => $data['title'],
+                'caption' => $data['description'],
+            ]);
+        }
 
         if (!$this->buildPostDataAndStoredMedia($data)) {
             return;

@@ -4,10 +4,20 @@
  */
 import { createIcons, icons } from 'lucide';
 
-document.addEventListener('DOMContentLoaded', () => {
+function initHostingServices() {
+
+    function setIcon(btn, iconName, extraClass = '') {
+        while(btn.firstChild) btn.removeChild(btn.firstChild);
+        const i = document.createElement('i');
+        i.setAttribute('data-lucide', iconName);
+        i.className = 'u-icon-sm' + (extraClass ? ' ' + extraClass : '');
+        btn.appendChild(i);
+        createIcons({ icons, elements: [i] });
+    }
     
     // Toggle Password
-    document.querySelectorAll('.hosting-password-toggle').forEach(btn => {
+    document.querySelectorAll('.hosting-password-toggle:not(.js-bound)').forEach(btn => {
+        btn.classList.add('js-bound');
         btn.addEventListener('click', async (e) => {
             const container = e.target.closest('.hosting-password-container');
             const valSpan = container.querySelector('.hosting-password-value');
@@ -17,8 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Fai fetch dell'endpoint sicuro
                 const hostingId = container.dataset.id;
                 try {
-                    btn.innerHTML = '<i data-lucide="loader" class="u-icon-sm"></i>';
-                    createIcons({ icons });
+                    setIcon(btn, 'loader');
                     btn.disabled = true;
 
                     const res = await fetch(`/hosting-services/${hostingId}/password`, {
@@ -34,13 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     valSpan.textContent = data.password;
                     valSpan.dataset.hidden = 'false';
-                    btn.innerHTML = '<i data-lucide="eye-off" class="u-icon-sm"></i>';
-                    createIcons({ icons });
+                    setIcon(btn, 'eye-off');
                 } catch (error) {
                     console.error('Errore nel fetch password:', error);
                     if (window.toast) toast('Errore caricamento password', 'error');
-                    btn.innerHTML = '<i data-lucide="eye" class="u-icon-sm"></i>';
-                    createIcons({ icons });
+                    setIcon(btn, 'eye');
                 } finally {
                     btn.disabled = false;
                 }
@@ -48,14 +55,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Nascondi
                 valSpan.textContent = '••••••••';
                 valSpan.dataset.hidden = 'true';
-                btn.innerHTML = '<i data-lucide="eye" class="u-icon-sm"></i>';
-                createIcons({ icons });
+                setIcon(btn, 'eye');
             }
         });
     });
 
     // Copia Password
-    document.querySelectorAll('.hosting-password-copy').forEach(btn => {
+    document.querySelectorAll('.hosting-password-copy:not(.js-bound)').forEach(btn => {
+        btn.classList.add('js-bound');
         btn.addEventListener('click', async (e) => {
             const container = e.target.closest('.hosting-password-container');
             const valSpan = container.querySelector('.hosting-password-value');
@@ -67,8 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isHidden) {
                 const hostingId = container.dataset.id;
                 try {
-                    btn.innerHTML = '<i data-lucide="loader" class="u-icon-sm"></i>';
-                    createIcons({ icons });
+                    setIcon(btn, 'loader');
                     const res = await fetch(`/hosting-services/${hostingId}/password`, {
                         headers: {
                             'Accept': 'application/json',
@@ -81,25 +87,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     console.error('Errore nel fetch password per copia:', error);
                     if (window.toast) toast('Errore copia password', 'error');
-                    btn.innerHTML = '<i data-lucide="copy" class="u-icon-sm"></i>';
-                    createIcons({ icons });
+                    setIcon(btn, 'copy');
                     return;
                 }
             }
 
             navigator.clipboard.writeText(passwordToCopy).then(() => {
-                btn.innerHTML = '<i data-lucide="check" class="u-icon-sm u-text-teal"></i>';
-                createIcons({ icons });
+                setIcon(btn, 'check', 'u-text-teal');
                 setTimeout(() => {
-                    btn.innerHTML = '<i data-lucide="copy" class="u-icon-sm"></i>';
-                    createIcons({ icons });
+                    setIcon(btn, 'copy');
                 }, 2000);
             });
         });
     });
 
     // Row Click per la tabella
-    document.querySelectorAll('.js-row-link').forEach(row => {
+    document.querySelectorAll('.js-row-link:not(.js-bound)').forEach(row => {
+        row.classList.add('js-bound');
         row.addEventListener('click', (e) => {
             // Ignora se si clicca su link, bottoni, input, select o elementi con js-stop-propagation
             if (e.target.closest('a, button, input, select, .js-stop-propagation')) {
@@ -107,17 +111,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const href = row.dataset.href;
             if (href) {
-                window.location = href;
+                if (window.Livewire && window.Livewire.navigate) {
+                    window.Livewire.navigate(href);
+                } else {
+                    window.location.href = href;
+                }
             }
         });
     });
 
     // Conferma eliminazione
-    document.querySelectorAll('.js-confirm-delete').forEach(form => {
+    document.querySelectorAll('.js-confirm-delete:not(.js-bound)').forEach(form => {
+        form.classList.add('js-bound');
         form.addEventListener('submit', (e) => {
             if (!confirm('Eliminare definitivamente questo elemento?')) {
                 e.preventDefault();
             }
         });
     });
-});
+}
+
+document.addEventListener('livewire:navigated', initHostingServices);
+document.addEventListener('DOMContentLoaded', initHostingServices);

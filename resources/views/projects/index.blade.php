@@ -13,10 +13,10 @@
     </x-page-header>
 
     <div class="filter-bar justify-end">
-        <form method="GET" action="{{ route('projects.index') }}" style="display:flex;gap:8px">
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca progetto o cliente..." class="form-in" style="padding:5px 10px;font-size:11px;width:250px">
+        <form method="GET" action="{{ route('projects.index') }}" class="u-flex u-gap-sm">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca progetto o cliente..." class="form-in form-in-sm u-w-250">
             @if(request('search'))
-                <a href="{{ route('projects.index') }}" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</a>
+                <a href="{{ route('projects.index') }}" class="btn btn-g btn-sm">Reset</a>
             @endif
         </form>
     </div>
@@ -35,7 +35,7 @@
             </thead>
             <tbody>
                 @forelse($projects as $project)
-                <tr onclick="window.location='{{ route('projects.show', $project) }}'" style="cursor:pointer">
+                <tr x-data @click="window.Livewire.navigate('{{ route('projects.show', $project) }}')" class="u-cursor-pointer hover-bg">
                     <td class="name-col">{{ $project->name }}</td>
                     <td>{{ $project->client?->name ?? '—' }}</td>
                     <td class="mono-col">{{ $project->tasks_count }}</td>
@@ -43,12 +43,12 @@
                     <td><x-badge :status="$project->status" :label="$project->status_label" /></td>
                     <td>
                         @can('update', $project)
-                            <a href="{{ route('projects.edit', $project) }}" class="btn-icon" onclick="event.stopPropagation()">✎</a>
+                            <a href="{{ route('projects.edit', $project) }}" class="btn-icon" @click.stop>✎</a>
                         @endcan
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px">Nessun progetto trovato</td></tr>
+                <tr><td colspan="6" class="u-empty-state">Nessun progetto trovato</td></tr>
                 @endforelse
             </tbody>
         </table>

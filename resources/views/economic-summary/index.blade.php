@@ -69,16 +69,16 @@
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt0 = {
-                        chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
+                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, background: 'transparent' },
                         series: [{ name: 'Fatturato', data: data.invoiced }],
-                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--purple)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                         markers: { size: 4, colors: ['var(--purple)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 15, right: 80 } },
                         tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
                     new window.ApexCharts(this.$refs.fatturato, opt0).render();
@@ -98,16 +98,16 @@
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt1 = {
-                        chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
+                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, background: 'transparent' },
                         series: [{ name: 'Incassato', data: data.collected }],
-                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--teal)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                         markers: { size: 4, colors: ['var(--teal)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 15, right: 80 } },
                         tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
                     new window.ApexCharts(this.$refs.spark1, opt1).render();
@@ -127,16 +127,16 @@
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt2 = {
-                        chart: { type: 'area', height: 250, toolbar: { show: false }, background: 'transparent' },
+                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, background: 'transparent' },
                         series: [{ name: 'Da Incassare', data: data.pending }],
-                        xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--orange)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                         markers: { size: 4, colors: ['var(--orange)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 15, right: 80 } },
                         tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
                     new window.ApexCharts(this.$refs.spark2, opt2).render();
@@ -148,7 +148,7 @@
     </div>
 
     {{-- Client Table --}}
-    <div style="margin-bottom: 32px">
+    <div class="u-mb-lg">
         <x-panel title="Riepilogo per Cliente" dot="var(--blue)">
             <table class="t-table">
                 <thead>
@@ -165,15 +165,15 @@
                     <tr>
                         <td class="name-col">{{ $cRow->client_name }}</td>
                         <td class="text-right mono-col">€ {{ number_format($cRow->total_invoiced, 2, ',', '.') }}</td>
-                        <td class="text-right mono-col" style="color:var(--green)">€ {{ number_format($cRow->total_collected, 2, ',', '.') }}</td>
-                        <td class="text-right mono-col" style="{{ $cRow->total_outstanding > 0 ? 'color:var(--red)' : '' }}">
+                        <td class="text-right mono-col u-text-green">€ {{ number_format($cRow->total_collected, 2, ',', '.') }}</td>
+                        <td class="text-right mono-col {{ $cRow->total_outstanding > 0 ? 'u-text-red' : '' }}">
                             € {{ number_format($cRow->total_outstanding, 2, ',', '.') }}
                         </td>
-                        <td class="text-center"><span class="badge" style="background:var(--bg2)">{{ $cRow->invoices_count }}</span></td>
+                        <td class="text-center"><span class="badge u-bg-2">{{ $cRow->invoices_count }}</span></td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" style="text-align:center;color:var(--text3);padding:16px">Nessun dato economico nel perimetro.</td>
+                        <td colspan="5" class="u-empty-state-sm">Nessun dato economico nel perimetro.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -198,17 +198,17 @@
                 @forelse($summaryByProject as $pRow)
                 <tr>
                     <td class="name-col">{{ $pRow->project_name }}</td>
-                    <td style="color:var(--text2)">{{ $pRow->client_name }}</td>
+                    <td class="u-text-muted">{{ $pRow->client_name }}</td>
                     <td class="text-right mono-col">€ {{ number_format($pRow->total_invoiced, 2, ',', '.') }}</td>
-                    <td class="text-right mono-col" style="color:var(--green)">€ {{ number_format($pRow->total_collected, 2, ',', '.') }}</td>
-                    <td class="text-right mono-col" style="{{ $pRow->total_outstanding > 0 ? 'color:var(--red)' : '' }}">
+                    <td class="text-right mono-col u-text-green">€ {{ number_format($pRow->total_collected, 2, ',', '.') }}</td>
+                    <td class="text-right mono-col {{ $pRow->total_outstanding > 0 ? 'u-text-red' : '' }}">
                         € {{ number_format($pRow->total_outstanding, 2, ',', '.') }}
                     </td>
-                    <td class="text-center"><span class="badge" style="background:var(--bg2)">{{ $pRow->invoices_count }}</span></td>
+                    <td class="text-center"><span class="badge u-bg-2">{{ $pRow->invoices_count }}</span></td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" style="text-align:center;color:var(--text3);padding:16px">Nessun progetto con record economici.</td>
+                    <td colspan="6" class="u-empty-state-sm">Nessun progetto con record economici.</td>
                 </tr>
                 @endforelse
             </tbody>

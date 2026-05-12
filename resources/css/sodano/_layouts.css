@@ -41,3 +41,8 @@
 /* Spaziatore verticale tra panel */
 .mt-panel { margin-top: 20px; }
 .inv-panel-gap { margin-top: 20px; }
+.g-2col > * { min-width: 0; }
+.g-2col-main > * { min-width: 0; }
+.g-3col > * { min-width: 0; }
+.g-4col > * { min-width: 0; }
+.dash-grid > * { min-width: 0; }

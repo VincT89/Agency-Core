@@ -31,3 +31,15 @@
     transition-duration: .01ms !important;
   }
 }
+
+/* SPA Transitions */
+.page-transition-root {
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-root.is-navigating {
+  opacity: 0.5;
+  transform: translateY(4px);
+}

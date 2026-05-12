@@ -31,6 +31,17 @@ class N8nClient
         return $this->sendRequest($url, 'submit_marketing_campaign_post', $payload);
     }
 
+    public function sendChatbotOutgoingMessage(array $payload): array
+    {
+        $payload['event'] = 'chatbot_outgoing_message';
+        
+        return $this->sendRequest(
+            config('services.n8n.generate_social_post_webhook_url'),
+            'chatbot_outgoing_message',
+            $payload
+        );
+    }
+
     private function sendRequest(?string $url, string $event, array $payload): array
     {
         if (! $url) {

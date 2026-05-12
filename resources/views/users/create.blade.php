@@ -54,7 +54,7 @@
                 </x-form-group>
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('users.index') }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Utente</button>
             </div>

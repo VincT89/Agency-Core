@@ -21,8 +21,8 @@ enum MarketingCampaignPostStatus: string
     {
         return match($this) {
             self::Draft => 'Bozza',
-            self::PendingN8n => 'In Coda AI',
-            self::SubmittedToN8n => 'In Elaborazione AI',
+            self::PendingN8n => 'In Coda Sody',
+            self::SubmittedToN8n => 'In Elaborazione Sody',
             self::Generated => 'Generato',
             self::Regenerating => 'In Rigenerazione',
             self::ReadyForClient => 'Pronto per Cliente',

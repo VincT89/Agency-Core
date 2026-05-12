@@ -1,5 +1,5 @@
 <div>
-    <div class="kpi-strip" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="kpi-strip g-3col">
         <div class="kpi-cell {{ $data->kpi_da_rispondere > 0 ? 'accent-line' : '' }}">
             <div class="kpi-label-t">Da Rispondere</div>
             <div class="kpi-val-t {{ $data->kpi_da_rispondere > 0 ? 'orange' : '' }}">{{ $data->kpi_da_rispondere }}</div>
@@ -27,10 +27,10 @@
                 @endphp
 
                 @if(!$hasWork)
-                    <div style="text-align:center;color:var(--text3);padding:32px">
-                        <i data-lucide="check-circle" style="width:32px; height:32px; margin-bottom:12px; opacity:0.5;"></i>
-                        <div style="font-weight:500; font-size:14px; color:var(--text2);">Tutto in regola</div>
-                        <div style="font-size:12px;">Non ci sono shooting che richiedono la tua attenzione al momento.</div>
+                    <div class="u-text-center u-text-muted u-p-xl">
+                        <i data-lucide="check-circle" class="u-icon-lg u-mb-sm u-opacity-50"></i>
+                        <div class="u-text-strong u-text-md u-text-secondary">Tutto in regola</div>
+                        <div class="u-text-sm">Non ci sono shooting che richiedono la tua attenzione al momento.</div>
                     </div>
                 @else
                     <table class="t-table">
@@ -38,24 +38,24 @@
                             <tr>
                                 <th>Shooting / Progetto</th>
                                 <th>Stato</th>
-                                <th style="text-align: right">Azione</th>
+                                <th class="u-text-right">Azione</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach(array_merge($data->queue_da_rispondere, $data->queue_oggi, $data->queue_in_attesa_cliente) as $item)
-                                <tr onclick="window.location='{{ $item->action_url }}'" style="cursor:pointer">
+                                <tr x-data @click="window.Livewire.navigate('{{ $item->action_url }}')" class="u-cursor-pointer hover-bg">
                                     <td class="name-col">
                                         {{ $item->shoot_name }}
-                                        <div style="font-size:12px;color:var(--text3);font-weight:normal;margin-top:4px">{{ $item->project_name }} • {{ $item->shoot_code }}</div>
+                                        <div class="u-text-sm u-text-muted u-font-normal u-mt-xs">{{ $item->project_name }} • {{ $item->shoot_code }}</div>
                                     </td>
                                     <td>
                                         @php
-                                            $color = $item->priority === 1 ? 'var(--orange)' : ($item->priority === 2 ? 'var(--text2)' : 'var(--blue)');
+                                            $colorClass = $item->priority === 1 ? 'u-text-warning' : ($item->priority === 2 ? 'u-text-secondary' : 'u-text-blue');
                                         @endphp
-                                        <span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:4px; background:var(--bg3); color:{{ $color }};">{{ $item->status_label }}</span>
+                                        <span class="u-badge-custom {{ $colorClass }}">{{ $item->status_label }}</span>
                                     </td>
-                                    <td style="text-align: right">
-                                        <a href="{{ $item->action_url }}" class="btn btn-sm" style="background:var(--bg); border:1px solid var(--line); color:var(--text2); text-decoration:none;">{{ $item->action_label }}</a>
+                                    <td class="u-text-right">
+                                        <a href="{{ $item->action_url }}" class="btn btn-sm btn-outline-secondary">{{ $item->action_label }}</a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -66,21 +66,21 @@
         </div>
 
         <div>
-            <x-panel title="Task in scadenza" dot="var(--blue)" padded style="margin-bottom: 20px;">
+            <x-panel title="Task in scadenza" dot="var(--blue)" padded class="u-mb-lg">
                 @if(count($data->upcoming_tasks) > 0)
                     @foreach($data->upcoming_tasks as $task)
-                        <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line);">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div style="width:4px; height:4px; border-radius:50%; background:var(--text3);"></div>
-                                <a href="{{ route('tasks.show', $task->id) }}" style="font-weight:500;color:var(--text); text-decoration:none;">{{ $task->title }}</a>
-                                <span style="color:var(--text3);">—</span>
-                                <span style="font-size:13px; color:var(--text2);">
+                        <div class="u-mb-sm u-pb-sm u-border-b">
+                            <div class="u-flex u-items-center u-gap-xs">
+                                <div class="u-dot-small"></div>
+                                <a href="{{ route('tasks.show', $task->id) }}" class="u-text-strong u-text-base u-no-underline">{{ $task->title }}</a>
+                                <span class="u-text-muted">—</span>
+                                <span class="u-text-sm u-text-secondary">
                                     @if($task->due_date->isToday())
-                                        <span style="color:var(--orange); font-weight:600;">oggi</span>
+                                        <span class="u-text-warning u-text-strong">oggi</span>
                                     @elseif($task->due_date->isTomorrow())
                                         domani
                                     @elseif($task->due_date->isPast())
-                                        <span style="color:var(--red); font-weight:600;">scaduto</span>
+                                        <span class="u-text-danger u-text-strong">scaduto</span>
                                     @else
                                         {{ $task->due_date->format('d M') }}
                                     @endif
@@ -89,7 +89,7 @@
                         </div>
                     @endforeach
                 @else
-                    <div style="color:var(--text3);text-align:center;padding:16px">Nessun task in scadenza.</div>
+                    <div class="u-text-center u-text-muted u-p-md">Nessun task in scadenza.</div>
                 @endif
             </x-panel>
         </div>

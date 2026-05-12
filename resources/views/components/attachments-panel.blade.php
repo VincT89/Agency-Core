@@ -7,10 +7,10 @@
 @endphp
 
 @if($type)
-<div style="margin-top:20px;margin-bottom:20px;">
+<div class="att-panel-container">
     <x-panel title="Allegati" dot="var(--accent)" padded>
         @if(count($model->attachments ?? []))
-            <table class="t-table" style="margin-bottom:16px">
+            <table class="t-table att-table">
                 <thead>
                     <tr>
                         <th>Nome File</th>
@@ -31,7 +31,7 @@
                         <td>{{ $att->uploader?->name ?? 'Sistema' }}</td>
                         <td class="mono-col">{{ $att->created_at->format('d/m/Y H:i') }}</td>
                         <td>
-                            <div style="display:flex;gap:8px">
+                            <div class="att-actions">
                                 @can('download', $att)
                                 <a href="{{ route('attachments.download', $att) }}" target="_blank" class="btn-icon" title="Scarica">↓</a>
                                 @endcan
@@ -41,7 +41,7 @@
                                         action="{{ route('attachments.destroy', $att) }}" 
                                         title="Elimina Allegato" 
                                         message="Sei sicuro di voler eliminare il file '{{ $att->original_name }}'?">
-                                        <button type="button" class="btn-icon" style="color:var(--red)" title="Elimina">×</button>
+                                        <button type="button" class="btn-icon att-btn-delete" title="Elimina">×</button>
                                     </x-delete-modal>
                                 @endcan
                             </div>
@@ -51,36 +51,36 @@
                 </tbody>
             </table>
         @else
-            <div style="text-align:center;color:var(--text3);padding:16px;margin-bottom:16px;">Nessun allegato presente.</div>
+            <div class="att-empty">Nessun allegato presente.</div>
         @endif
 
         @can('update', $model)
         @can('create', App\Models\Attachment::class)
-        <div style="border-top:1px solid var(--line);padding-top:16px;">
-            <form action="{{ route('attachments.store') }}" method="POST" enctype="multipart/form-data" style="display:flex;gap:16px;align-items:flex-end">
+        <div class="att-form-wrap">
+            <form action="{{ route('attachments.store') }}" method="POST" enctype="multipart/form-data" class="att-form">
                 @csrf
                 <input type="hidden" name="attachable_type" value="{{ $type }}">
                 <input type="hidden" name="attachable_id" value="{{ $model->id }}">
-                <div style="flex:1">
+                <div class="att-form-col">
                     <div class="form-lbl">Tipo File</div>
-                    <select name="type" class="form-in" required style="padding:4px 8px;font-size:12px;height:28px">
+                    <select name="type" class="form-in att-input-sm" required>
                         <option value="document">Documento</option>
                         <option value="image">Immagine</option>
                         <option value="media">Media (Audio/Video)</option>
                         <option value="other">Altro</option>
                     </select>
                 </div>
-                <div style="flex:1">
+                <div class="att-form-col">
                     <div class="form-lbl">Nuovo Allegato</div>
-                    <input type="file" name="file" class="form-in" required style="padding:4px 8px;font-size:12px;height:28px">
+                    <input type="file" name="file" class="form-in att-input-sm" required>
                 </div>
-                <button type="submit" class="btn btn-p" style="padding:6px 12px; height:28px">Carica →</button>
+                <button type="submit" class="btn btn-p att-btn-submit">Carica →</button>
             </form>
             @error('file')
-                <div style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</div>
+                <div class="att-error">{{ $message }}</div>
             @enderror
             @error('attachable_type')
-                <div style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</div>
+                <div class="att-error">{{ $message }}</div>
             @enderror
         </div>
         @endcan

@@ -27,11 +27,11 @@
             </thead>
             <tbody>
                 @forelse($payments as $payment)
-                <tr onclick="window.location='{{ route('payments.show', $payment) }}'" style="cursor:pointer">
+                <tr x-data @click="window.Livewire.navigate('{{ route('payments.show', $payment) }}')" class="u-cursor-pointer hover-bg">
                     <td class="mono-col">{{ $payment->payment_date?->format('d/m/Y') }}</td>
                     <td>
                         @if($payment->invoice)
-                            <a href="{{ route('invoices.show', $payment->invoice) }}" style="color:var(--accent);text-decoration:none">{{ $payment->invoice->number }}</a>
+                            <a href="{{ route('invoices.show', $payment->invoice) }}" class="u-text-accent-link">{{ $payment->invoice->number }}</a>
                         @else
                             —
                         @endif
@@ -42,12 +42,12 @@
                     <td>{{ $payment->creator?->name ?? 'Sistema' }}</td>
                     <td>
                         @can('update', $payment)
-                            <a href="{{ route('payments.edit', $payment) }}" class="btn-icon" onclick="event.stopPropagation()">✎</a>
+                            <a href="{{ route('payments.edit', $payment) }}" class="btn-icon" @click.stop>✎</a>
                         @endcan
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px">Nessun pagamento trovato</td></tr>
+                <tr><td colspan="7" class="u-empty-state">Nessun pagamento trovato</td></tr>
                 @endforelse
             </tbody>
         </table>

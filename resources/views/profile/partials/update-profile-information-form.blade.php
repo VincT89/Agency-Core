@@ -23,10 +23,10 @@
         </x-form-group>
     </div>
 
-    <div class="modal-ft" style="margin-top:16px">
+    <div class="modal-ft u-mt-md">
         <button type="submit" class="btn btn-p">Salva</button>
         @if (session('status') === 'profile-updated')
-            <span style="font-size:12px;color:var(--green);font-family:var(--sans);margin-left:10px">Salvato.</span>
+            <span class="u-text-sm u-text-green u-ml-sm">Salvato.</span>
         @endif
     </div>
 </form>

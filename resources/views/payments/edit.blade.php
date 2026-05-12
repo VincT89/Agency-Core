@@ -41,14 +41,14 @@
 
             <div class="form-row">
                 <x-form-group label="Fattura di Riferimento" name="invoice_id" required>
-                    <div style="padding: 8px 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; font-family: var(--sans); color: var(--text3); display: flex; align-items: center; min-height: 40px; cursor: not-allowed;">
+                    <div class="u-fake-input-disabled">
                         {{ $payment->invoice->number }} — {{ $payment->invoice->client?->name }}
-                        <span style="margin-left:auto;font-size:12px">(Fissa)</span>
+                        <span class="u-ml-auto u-text-sm">(Fissa)</span>
                     </div>
                 </x-form-group>
-                <div style="padding-top:28px">
-                    <div style="font-size:12px;color:var(--text3);background:var(--bg2);padding:8px;border-radius:4px;">
-                        <span style="font-weight:600">Info:</span> Il Cliente e il Progetto sono già saldamente legati e la fattura non può essere alterata.
+                <div class="u-pt-28">
+                    <div class="u-info-box">
+                        <span class="u-text-strong">Info:</span> Il Cliente e il Progetto sono già saldamente legati e la fattura non può essere alterata.
                     </div>
                 </div>
             </div>
@@ -59,12 +59,12 @@
                 </x-form-group>
             </div>
 
-            <div style="background:var(--bg3);padding:10px 14px;border-radius:6px;font-size:12px;color:var(--text2);margin-bottom:16px;">
-                <i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i>
+            <div class="u-alert-box u-mb-md">
+                <i data-lucide="info" class="u-icon-sm"></i>
                 Questo pagamento aggiornerà in modo automatico il saldo della fattura associata.
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('payments.show', $payment) }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Aggiorna Pagamento</button>
             </div>

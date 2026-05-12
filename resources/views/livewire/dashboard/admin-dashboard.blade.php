@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <div style="font-size: 14px; font-weight: 600; color: var(--text1); margin: 24px 0 12px 0;">Social Media (Pubblicazioni)</div>
+    <div class="u-text-md u-text-strong u-text-primary u-mt-xl u-mb-sm">Social Media (Pubblicazioni)</div>
     <div class="kpi-strip">
         <div class="kpi-cell {{ $data->kpi_social_approved_not_scheduled > 0 ? 'accent-line' : '' }}">
             <div class="kpi-label-t">Da Pianificare</div>
@@ -52,10 +52,10 @@
         <div>
             <x-panel title="Workflow (Attention List)" dot="var(--accent)">
                 @if(count($data->attention_list) === 0)
-                    <div style="text-align:center;color:var(--text3);padding:32px">
-                        <i data-lucide="check-circle" style="width:32px; height:32px; margin-bottom:12px; opacity:0.5;"></i>
-                        <div style="font-weight:500; font-size:14px; color:var(--text2);">Nessun blocco rilevato</div>
-                        <div style="font-size:12px;">Nessuno shooting richiede l'intervento dell'admin.</div>
+                    <div class="u-text-center u-text-muted u-p-xl">
+                        <i data-lucide="check-circle" class="u-icon-lg u-mb-sm u-opacity-50"></i>
+                        <div class="u-text-strong u-text-md u-text-secondary">Nessun blocco rilevato</div>
+                        <div class="u-text-sm">Nessuno shooting richiede l'intervento dell'admin.</div>
                     </div>
                 @else
                     <table class="t-table">
@@ -63,29 +63,31 @@
                             <tr>
                                 <th>Shooting / Progetto</th>
                                 <th>Stato Attuale</th>
-                                <th style="text-align: right">Azione</th>
+                                <th class="u-text-right">Azione</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($data->attention_list as $item)
-                                <tr onclick="window.location='{{ $item->action_url }}'" style="cursor:pointer">
+                                <tr x-data @click="window.Livewire.navigate('{{ $item->action_url }}')" class="u-cursor-pointer hover-bg">
                                     <td class="name-col">
                                         {{ $item->shoot_name }}
-                                        <div style="font-size:12px;color:var(--text3);font-weight:normal;margin-top:4px">{{ $item->project_name }} • {{ $item->shoot_code }}</div>
+                                        <div class="u-text-sm u-text-muted u-font-normal u-mt-xs">{{ $item->project_name }} • {{ $item->shoot_code }}</div>
                                     </td>
                                     <td>
                                         @php
-                                            $color = $item->priority === 1 ? 'var(--orange)' : ($item->priority === 2 ? 'var(--red)' : 'var(--blue)');
+                                            $colorClass = $item->priority === 1 ? 'u-text-warning' : ($item->priority === 2 ? 'u-text-danger' : 'u-text-blue');
                                         @endphp
-                                        <span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:4px; background:var(--bg3); color:{{ $color }};">{{ $item->status_label }}</span>
+                                        <span class="u-badge-custom {{ $colorClass }}">{{ $item->status_label }}</span>
                                     </td>
-                                    <td style="text-align: right">
-                                        <a href="{{ $item->action_url }}" class="btn btn-sm" style="background:var(--bg); border:1px solid var(--line); color:var(--text2); text-decoration:none;">{{ $item->action_label }}</a>
+                                    <td class="u-text-right">
+                                        <a href="{{ $item->action_url }}" class="btn btn-sm btn-outline-secondary">{{ $item->action_label }}</a>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 @endif
+            </x-panel>
+        </div>
     </div>
 </div>

@@ -207,40 +207,7 @@
     </div>
 
     {{-- Commenti --}}
-    <div class="u-mt-lg">
-        <x-panel title="Commenti / Storico operativo" dot="var(--blue)" padded>
-            @can('update', $task)
-                <form action="{{ route('tasks.comments.store', $task) }}" method="POST" class="u-mb-md">
-                    @csrf
-                    <textarea name="body"
-                              class="form-ta @error('body') is-invalid @enderror"
-                              rows="3"
-                              placeholder="Scrivi un aggiornamento, una nota o un avanzamento..."
-                              required>{{ old('body') }}</textarea>
-
-                    @error('body')
-                        <div class="u-text-red u-mt-sm">{{ $message }}</div>
-                    @enderror
-
-                    <div class="u-mt-sm u-text-right">
-                        <button type="submit" class="btn btn-p">Aggiungi commento</button>
-                    </div>
-                </form>
-            @endcan
-
-            @forelse($task->comments as $comment)
-                <div class="task-comment-item">
-                    <div class="u-flex-between u-mb-sm">
-                        <strong class="u-text-strong">{{ $comment->user?->name ?? 'Sistema' }}</strong>
-                        <span class="u-text-meta">{{ $comment->created_at->format('d/m/Y H:i') }}</span>
-                    </div>
-                    <div class="u-text-muted task-comment-body">{{ $comment->body }}</div>
-                </div>
-            @empty
-                <div class="u-empty-state-sm">Nessun commento ancora presente.</div>
-            @endforelse
-        </x-panel>
-    </div>
+    <livewire:tasks.task-comments :task="$task" />
 
     {{-- Allegati --}}
     <livewire:shared.attachment-manager :model="$task" />

@@ -20,13 +20,13 @@
                 <thead><tr><th>Data</th><th>Fattura</th><th>Importo</th></tr></thead>
                 <tbody>
                     @forelse($upcomingDeadlines as $invoice)
-                    <tr onclick="window.location='{{ route('invoices.show', $invoice) }}'" style="cursor:pointer">
-                        <td class="mono-col" style="{{ $invoice->due_date < now() ? 'color:var(--red)' : '' }}">{{ $invoice->due_date->format('d/m/Y') }}</td>
+                    <tr x-data @click="window.Livewire.navigate('{{ route('invoices.show', $invoice) }}')" class="u-cursor-pointer hover-bg">
+                        <td class="mono-col {{ $invoice->due_date < now() ? 'u-text-danger' : '' }}">{{ $invoice->due_date->format('d/m/Y') }}</td>
                         <td>{{ $invoice->number }}</td>
                         <td class="mono-col">€ {{ number_format($invoice->total, 2, ',', '.') }}</td>
                     </tr>
                     @empty
-                    <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Nessuna scadenza a breve</td></tr>
+                    <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessuna scadenza a breve</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -42,10 +42,10 @@
                     <tr>
                         <td class="mono-col">{{ $payment->payment_date->format('d/m/Y') }}</td>
                         <td class="mono-col">€ {{ number_format($payment->amount, 2, ',', '.') }}</td>
-                        <td><a href="{{ route('invoices.show', $payment->invoice_id) }}" style="color:inherit;text-decoration:none">{{ $payment->invoice?->number }}</a></td>
+                        <td><a href="{{ route('invoices.show', $payment->invoice_id) }}" class="u-text-inherit u-no-underline">{{ $payment->invoice?->number }}</a></td>
                     </tr>
                     @empty
-                    <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Nessun pagamento recente</td></tr>
+                    <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessun pagamento recente</td></tr>
                     @endforelse
                 </tbody>
             </table>

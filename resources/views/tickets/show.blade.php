@@ -76,50 +76,123 @@
                 </x-panel>
             </div>
             @endif
+
+            {{-- Cambio rapido status --}}
+            <div class="u-mt-md">
+                <x-panel title="Aggiornamento rapido" dot="var(--teal)" padded>
+                    <div class="u-flex u-gap-sm task-status-grid">
+                        @foreach(\App\Models\Ticket::STATUSES as $s)
+                            <form action="{{ route('tickets.update-status', $ticket) }}" method="POST">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="status" value="{{ $s }}">
+                                <button type="submit" class="btn {{ $ticket->status === $s ? 'btn-p' : 'btn-g' }} btn-sm">
+                                    {{ (new \App\Models\Ticket(['status' => $s]))->status_label }}
+                                </button>
+                            </form>
+                        @endforeach
+                    </div>
+                </x-panel>
+            </div>
+
+            {{-- Checklist --}}
+            <div class="u-mt-md">
+                <x-panel title="Checklist" dot="var(--green)" padded>
+                    @php
+                        $totalChecklist = $ticket->checklistItems->count();
+                        $doneChecklist = $ticket->checklistItems->where('is_completed', true)->count();
+                    @endphp
+
+                    <div class="u-text-meta u-mb-md">
+                        {{ $doneChecklist }}/{{ $totalChecklist }} completati
+                    </div>
+
+                    @forelse($ticket->checklistItems as $item)
+                        <div class="u-flex-center u-gap-sm task-checklist-item">
+                            <form action="{{ route('ticket-checklist-items.toggle', $item) }}" method="POST">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="btn btn-g btn-sm">
+                                    {{ $item->is_completed ? '✓' : '○' }}
+                                </button>
+                            </form>
+
+                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}">
+                                {{ $item->title }}
+                            </div>
+
+                            @if($item->is_completed)
+                                <div class="u-text-meta">
+                                    {{ $item->completedBy?->name }}
+                                </div>
+                            @endif
+
+                            <form action="{{ route('ticket-checklist-items.destroy', $item) }}" method="POST"
+                                  class="js-confirm-form" data-confirm-message="Eliminare questa voce checklist?">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-icon u-text-red">✕</button>
+                            </form>
+                        </div>
+                    @empty
+                        <div class="u-empty-state-sm">Nessuna voce checklist.</div>
+                    @endforelse
+
+                    @can('update', $ticket)
+                        <form action="{{ route('tickets.checklist-items.store', $ticket) }}" method="POST" class="u-flex u-gap-sm u-mt-md">
+                            @csrf
+                            <input name="title" class="form-in" placeholder="Nuova voce checklist..." required>
+                            <button type="submit" class="btn btn-g">Aggiungi</button>
+                        </form>
+                        @error('title')
+                            <div class="u-text-red u-mt-sm">{{ $message }}</div>
+                        @enderror
+                    @endcan
+                </x-panel>
+            </div>
         </div>
 
         <div>
             <x-panel title="Info Base" dot="var(--yellow)" padded>
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Codice Ticket</div>
-                    <div class="ticket-info-mono">{{ $ticket->code ?? '—' }}</div>
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Codice Ticket</div>
+                    <div class="u-text-mono u-color-text">{{ $ticket->code ?? '—' }}</div>
                 </div>
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Cliente</div>
-                    <div class="ticket-info-value">
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Cliente</div>
+                    <div class="u-text-strong">
                         @if($ticket->client)
-                            <a href="{{ route('clients.show', $ticket->client) }}" class="ticket-info-link">{{ $ticket->client->name }}</a>
+                            <a href="{{ route('clients.show', $ticket->client) }}" class="u-text-accent-link">{{ $ticket->client->name }}</a>
                         @else
                             —
                         @endif
                     </div>
                 </div>
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Progetto</div>
-                    <div class="ticket-info-value">
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Progetto</div>
+                    <div class="u-text-strong">
                         @if($ticket->project)
-                            <a href="{{ route('projects.show', $ticket->project) }}" class="ticket-info-link">{{ $ticket->project->name }}</a>
+                            <a href="{{ route('projects.show', $ticket->project) }}" class="u-text-accent-link">{{ $ticket->project->name }}</a>
                         @else
                             —
                         @endif
                     </div>
                 </div>
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Assegnato a</div>
-                    <div class="ticket-info-value">{{ $ticket->assignee?->name ?? 'Non assegnato' }}</div>
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Assegnato a</div>
+                    <div class="u-text-strong">{{ $ticket->assignee?->name ?? 'Non assegnato' }}</div>
                 </div>
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Creato da</div>
-                    <div class="ticket-info-value">{{ $ticket->creator?->name ?? 'Sistema' }}</div>
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Creato da</div>
+                    <div class="u-text-strong">{{ $ticket->creator?->name ?? 'Sistema' }}</div>
                 </div>
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Aperto il</div>
-                    <div class="ticket-info-mono">{{ $ticket->opened_at?->isoFormat('D MMMM YYYY') ?? $ticket->created_at->isoFormat('D MMMM YYYY') }}</div>
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Aperto il</div>
+                    <div class="u-text-mono u-color-text">{{ $ticket->opened_at?->isoFormat('D MMMM YYYY') ?? $ticket->created_at->isoFormat('D MMMM YYYY') }}</div>
                 </div>
                 @if($ticket->due_date)
-                <div class="form-g mb-2">
-                    <div class="form-lbl">Scadenza</div>
-                    <div class="ticket-info-mono">{{ $ticket->due_date->isoFormat('D MMMM YYYY') }}</div>
+                <div class="form-g mb-3">
+                    <div class="u-text-label">Scadenza</div>
+                    <div class="u-text-mono u-color-text">{{ $ticket->due_date->isoFormat('D MMMM YYYY') }}</div>
                 </div>
                 @endif
             </x-panel>
@@ -127,49 +200,7 @@
     </div>
 
     {{-- Commenti --}}
-    <div class="u-mt-lg">
-        <x-panel title="Commenti / Note operative" dot="var(--blue)" padded>
-            @can('update', $ticket)
-                <form action="{{ route('tickets.comments.store', $ticket) }}" method="POST" class="u-mb-md">
-                    @csrf
-                    <textarea name="body"
-                              class="form-ta @error('body') is-invalid @enderror"
-                              rows="3"
-                              placeholder="Aggiungi un aggiornamento, una nota o un'azione intrapresa..."
-                              required>{{ old('body') }}</textarea>
-                    @error('body')
-                        <div class="u-text-red u-mt-sm">{{ $message }}</div>
-                    @enderror
-                    <div class="u-mt-sm u-text-right">
-                        <button type="submit" class="btn btn-p">Aggiungi commento</button>
-                    </div>
-                </form>
-            @endcan
-
-            @forelse($ticket->comments as $comment)
-                <div class="ticket-comment-item">
-                    <div class="u-flex-between u-mb-sm">
-                        <span class="u-flex u-items-center u-gap-xs">
-                            <strong class="u-text-strong">
-                                @if($comment->source === \App\Enums\Social\CommentSource::Client)
-                                    [Cliente]
-                                @else
-                                    {{ $comment->user?->name ?? 'Sistema' }}
-                                @endif
-                            </strong>
-                            @if($comment->source === \App\Enums\Social\CommentSource::Client)
-                                <span class="cmp-client-badge">Risposta cliente</span>
-                            @endif
-                        </span>
-                        <span class="u-text-meta">{{ $comment->created_at->format('d/m/Y H:i') }}</span>
-                    </div>
-                    <div class="ticket-comment-body">{{ $comment->body }}</div>
-                </div>
-            @empty
-                <div class="u-empty-state-sm">Nessun commento ancora presente.</div>
-            @endforelse
-        </x-panel>
-    </div>
+    <livewire:tickets.ticket-comments :ticket="$ticket" />
     <x-audit-timeline :logs="$ticket->auditLogs" />
 
     {{-- Allegati --}}

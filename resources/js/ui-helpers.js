@@ -35,7 +35,11 @@ function initUIHelpers() {
 
             const href = clickableRow.dataset.href;
             if (href) {
-                window.location.href = href;
+                if (window.Livewire && window.Livewire.navigate) {
+                    window.Livewire.navigate(href);
+                } else {
+                    window.location.href = href;
+                }
             }
         }
     });

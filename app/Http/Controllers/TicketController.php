@@ -71,6 +71,7 @@ class TicketController extends Controller
             'tasks.project',
             'tasks.assignee',
             'comments.user',
+            'checklistItems.completedBy',
         ]);
 
         return view('tickets.show', compact('ticket'));
@@ -130,6 +131,25 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('success', 'Ticket aggiornato correttamente.');
+    }
+
+    public function updateStatus(\Illuminate\Http\Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('update', $ticket);
+
+        $validated = $request->validate([
+            'status' => ['required', 'string', \Illuminate\Validation\Rule::in(Ticket::STATUSES)],
+        ]);
+
+        if ($validated['status'] === 'closed') {
+            $validated['closed_at'] = $ticket->closed_at ?? now();
+        } else {
+            $validated['closed_at'] = null;
+        }
+
+        $ticket->update($validated);
+
+        return redirect()->back()->with('success', 'Stato aggiornato.');
     }
 
     public function destroy(Ticket $ticket): RedirectResponse

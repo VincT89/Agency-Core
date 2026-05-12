@@ -50,3 +50,79 @@
   font-size: 13px;
   color: var(--text2);
 }
+/* Invoices additions */
+.inv-tfoot-tr { background: var(--bg2); border-top: 1px dashed var(--line); }
+.inv-tfoot-td { padding: 12px 16px; }
+.inv-tfoot-td-100 { padding: 12px 16px; width: 100px; }
+.inv-tfoot-td-140 { padding: 12px 16px; width: 140px; }
+.inv-tfoot-td-120 { padding: 12px 16px; width: 120px; text-align: right; }
+.u-w-full { width: 100%; box-sizing: border-box; }
+/* Utility boxes */
+.u-info-box { font-size: 12px; color: var(--text3); background: var(--bg2); padding: 8px; border-radius: var(--r); }
+.u-alert-box { background: var(--bg3); padding: 10px 14px; border-radius: var(--r); font-size: 12px; color: var(--text2); }
+.u-pt-28 { padding-top: 28px; }
+.u-fake-input-disabled { padding: 8px 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r); font-family: var(--sans); color: var(--text3); display: flex; align-items: center; min-height: 40px; cursor: not-allowed; }
+.project-progress-card { padding: 20px; background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--r); }
+.project-progress-head { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: flex-end; }
+.project-progress-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.project-progress-value { font-size: 24px; font-weight: 600; font-family: var(--sans); line-height: 1; }
+.project-progress-meta { font-size: 12px; color: var(--text); }
+.project-progress-due { font-size: 11px; margin-top: 4px; }
+.project-progress-bar-wrap { width: 100%; background: var(--bg3); height: 8px; border-radius: 4px; overflow: hidden; }
+.project-progress-bar-inner { height: 100%; transition: width 0.6s ease; }
+.client-logo-wrap { width: 80px; height: 80px; border-radius: 50%; border: 1px solid var(--line); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; flex-shrink: 0; }
+.client-logo-img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.client-logo-preview { max-height: 70px; max-width: 180px; object-fit: contain; }
+.progress-width-0 { width: 0%; }
+.progress-width-5 { width: 5%; }
+.progress-width-10 { width: 10%; }
+.progress-width-15 { width: 15%; }
+.progress-width-20 { width: 20%; }
+.progress-width-25 { width: 25%; }
+.progress-width-30 { width: 30%; }
+.progress-width-35 { width: 35%; }
+.progress-width-40 { width: 40%; }
+.progress-width-45 { width: 45%; }
+.progress-width-50 { width: 50%; }
+.progress-width-55 { width: 55%; }
+.progress-width-60 { width: 60%; }
+.progress-width-65 { width: 65%; }
+.progress-width-70 { width: 70%; }
+.progress-width-75 { width: 75%; }
+.progress-width-80 { width: 80%; }
+.progress-width-85 { width: 85%; }
+.progress-width-90 { width: 90%; }
+.progress-width-95 { width: 95%; }
+.progress-width-100 { width: 100%; }
+.team-members-list { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 16px; }
+.team-member-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .12s; }
+.team-member-row:last-child { border-bottom: none; }
+.team-member-checkbox { accent-color: var(--accent); }
+.team-member-role-sel { width: 120px; font-size: 11px; padding: 4px 8px; }
+
+
+/* Dashboard Charts fixes for SPA/Navigate */
+.dashboard-chart-card {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.dashboard-chart-body {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.dashboard-chart-body .apexcharts-canvas {
+    max-width: 100%;
+}
+
+.dashboard-chart-body .apexcharts-svg,
+.dashboard-chart-body svg {
+    overflow: visible;
+}

@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketController;
-use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\CalendarEventController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceItemController;
@@ -11,8 +10,8 @@ use App\Http\Controllers\EconomicSummaryController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskChecklistItemController;
+use App\Http\Controllers\TicketChecklistItemController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -89,16 +88,21 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('clients', ClientController::class);
     Route::resource('projects', ProjectController::class);
     Route::resource('tickets', TicketController::class);
-    Route::post('tickets/{ticket}/comments', [TicketCommentController::class, 'store'])
-        ->name('tickets.comments.store');
+    Route::patch('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])
+        ->name('tickets.update-status');
+    Route::post('tickets/{ticket}/checklist-items', [TicketChecklistItemController::class, 'store'])
+        ->name('tickets.checklist-items.store');
+    Route::patch('ticket-checklist-items/{item}', [TicketChecklistItemController::class, 'update'])
+        ->name('ticket-checklist-items.update');
+    Route::patch('ticket-checklist-items/{item}/toggle', [TicketChecklistItemController::class, 'toggle'])
+        ->name('ticket-checklist-items.toggle');
+    Route::delete('ticket-checklist-items/{item}', [TicketChecklistItemController::class, 'destroy'])
+        ->name('ticket-checklist-items.destroy');
     
     // Task
     Route::resource('tasks', \App\Http\Controllers\TaskController::class);
     Route::patch('tasks/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])
         ->name('tasks.update-status');
-
-    Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store'])
-        ->name('tasks.comments.store');
 
     Route::post('tasks/{task}/checklist-items', [TaskChecklistItemController::class, 'store'])
         ->name('tasks.checklist-items.store');

@@ -15,13 +15,15 @@
 <body>
 
   {{-- Background Canvas --}}
-  <canvas id="bg-canvas" aria-hidden="true"
-    style="position:fixed;inset:0;z-index:0;pointer-events:none;display:block"></canvas>
+  <canvas id="bg-canvas" class="app-bg-canvas" aria-hidden="true"></canvas>
 
   {{-- TOAST (flash messages) --}}
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <div class="shell expanded" id="shell">
+  <div class="shell" id="shell" 
+       x-data="{ sidebarOpen: window.innerWidth >= 1024 }" 
+       @resize.window="sidebarOpen = window.innerWidth >= 1024"
+       :class="sidebarOpen ? 'expanded' : ''">
 
     {{-- TOPBAR --}}
     <div class="topbar">
@@ -55,7 +57,7 @@
           <div class="avatar-btn" title="{{ auth()->user()->name }}" @click="open = !open">
             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(strstr(auth()->user()->name, ' '), 1, 1)) }}
           </div>
-          <div class="dropdown-menu" x-show="open" x-transition style="display:none;">
+          <div class="dropdown-menu" x-show="open" x-transition x-cloak>
             <div class="dropdown-header stacked">
               <div class="dropdown-header-title">{{ auth()->user()->name }}</div>
               <div class="u-text-meta">{{ auth()->user()->role->value }}</div>
@@ -73,10 +75,16 @@
 
     {{-- SIDEBAR --}}
     <div class="sidebar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <svg id="sidebar-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
+        <svg x-show="sidebarOpen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-cloak>
           <path d="m15 18-6-6 6-6" />
+        </svg>
+        <svg x-show="!sidebarOpen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-cloak>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
       </button>
 
@@ -229,17 +237,17 @@
 
       <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
         @csrf
-        <a href="#" onclick="event.preventDefault(); this.closest('form').submit();" class="nav-item logout">
+        <button type="submit" class="nav-item logout sidebar-logout-btn">
           <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
           <span class="nav-label">Logout</span>
           <div class="nav-tooltip">Logout</div>
-        </a>
+        </button>
       </form>
     </div>
 
     {{-- MAIN --}}
     <div class="main">
-      <div class="content" id="content-area">
+      <div class="content page-transition-root" id="content-area">
         {{-- Flash messages --}}
         @if(session('success'))
           <div class="flash flash-success">{{ session('success') }}</div>

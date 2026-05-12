@@ -33,61 +33,20 @@
 
 <div class="g-2col u-mb-lg">
     <div>
-        <div class="mt-panel" x-data="{
-            initChart() {
-                const data = {{ $financialChartData }};
-                const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-                const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
-                const options = {
-                    chart: { type: 'bar', height: 300, toolbar: { show: false }, background: 'transparent' },
-                    series: data.series,
-                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
-                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' } },
-                    colors: ['var(--purple)', '#14b8a6', 'var(--orange)'],
-                    plotOptions: { bar: { columnWidth: '55%', borderRadius: 6, borderRadiusApplication: 'end' } },
-                    dataLabels: { enabled: false },
-                    stroke: { show: true, width: 2, colors: ['transparent'] },
-                    tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } },
-                    legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '13px', fontFamily: 'var(--sans)', labels: { colors: 'var(--text2)' }, markers: { radius: 12 } },
-                    grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 }
-                };
-                if (window.ApexCharts) {
-                    const chart = new window.ApexCharts(this.$refs.chart, options);
-                    chart.render();
-                } else { setTimeout(() => this.initChart(), 200); }
-            }
-        }" x-init="initChart()">
+        <div class="mt-panel">
             <x-panel title="Andamento Finanziario" dot="var(--green)" padded>
-                <div x-ref="chart" class="u-min-h-300"></div>
+                <div class="dashboard-chart-card">
+                    <div id="financial-chart" class="dashboard-chart-body"></div>
+                </div>
             </x-panel>
         </div>
     </div>
     <div>
-        <div class="mt-panel" x-data="{
-            initChart() {
-                const data = {{ $operationalChartData }};
-                const options = {
-                    chart: { type: 'area', height: 300, toolbar: { show: false }, background: 'transparent' },
-                    series: data.series,
-                    xaxis: { categories: data.labels, labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
-                    yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k' : value }, min: 0, forceNiceScale: true },
-                    colors: ['var(--purple)', '#ec4899'],
-                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
-                    stroke: { curve: 'smooth', width: 3, dashArray: [0, 5] },
-                    markers: { size: 4, colors: ['var(--purple)', '#ec4899'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
-                    dataLabels: { enabled: false },
-                    tooltip: { theme: 'dark' },
-                    legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '13px', fontFamily: 'var(--sans)', labels: { colors: 'var(--text2)' }, markers: { radius: 12 } },
-                    grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5 }
-                };
-                if (window.ApexCharts) {
-                    const chart = new window.ApexCharts(this.$refs.opchart, options);
-                    chart.render();
-                } else { setTimeout(() => this.initChart(), 200); }
-            }
-        }" x-init="initChart()">
+        <div class="mt-panel">
             <x-panel title="Andamento Operativo" dot="var(--accent)" padded>
-                <div x-ref="opchart" class="u-min-h-300"></div>
+                <div class="dashboard-chart-card">
+                    <div id="operational-chart" class="dashboard-chart-body"></div>
+                </div>
             </x-panel>
         </div>
     </div>
@@ -108,7 +67,7 @@
             </x-slot:headerActions>
 
             <div x-show="tab === 'tasks'" x-cloak>
-                <table class="t-table" style="border-top:1px solid var(--line); margin-top:-1px;">
+                <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
                             <th>Task</th>
@@ -119,17 +78,16 @@
                     </thead>
                     <tbody>
                         @forelse($expiringTasks as $task)
-                            <tr onclick="window.location='{{ route('tasks.show', $task) }}'" style="cursor:pointer">
+                            <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
                                 <td class="name-col">{{ $task->title }}</td>
                                 <td>{{ $task->assignee?->name ?? '—' }}</td>
-                                <td class="mono-col"
-                                    style="{{ $task->due_date && $task->due_date < now() ? 'color:var(--red)' : '' }}">
+                                <td class="mono-col {{ $task->due_date && $task->due_date < now() ? 'u-text-danger' : '' }}">
                                     {{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
                                 <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" style="text-align:center;color:var(--text3);padding:32px">Nessun task in
+                                <td colspan="4" class="u-text-center u-text-muted u-p-xl">Nessun task in
                                     scadenza nei prossimi 7 giorni.</td>
                             </tr>
                         @endforelse
@@ -137,8 +95,8 @@
                 </table>
             </div>
 
-            <div x-show="tab === 'tickets'" x-cloak style="display: none;">
-                <table class="t-table" style="border-top:1px solid var(--line); margin-top:-1px;">
+            <div x-show="tab === 'tickets'" x-cloak>
+                <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
                             <th>Ticket</th>
@@ -148,14 +106,14 @@
                     </thead>
                     <tbody>
                         @forelse($recentTickets as $ticket)
-                            <tr onclick="window.location='{{ route('tickets.show', $ticket) }}'" style="cursor:pointer">
+                            <tr x-data @click="window.Livewire.navigate('{{ route('tickets.show', $ticket) }}')" class="u-cursor-pointer hover-bg">
                                 <td class="name-col">{{ $ticket->title }}</td>
                                 <td>{{ $ticket->project?->name ?? '—' }}</td>
                                 <td><x-badge :status="$ticket->status" :label="$ticket->status_label" /></td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" style="text-align:center;color:var(--text3);padding:32px">Nessun ticket
+                                <td colspan="3" class="u-text-center u-text-muted u-p-xl">Nessun ticket
                                     recente</td>
                             </tr>
                         @endforelse
@@ -163,8 +121,8 @@
                 </table>
             </div>
 
-            <div x-show="tab === 'events'" x-cloak style="display: none;">
-                <table class="t-table" style="border-top:1px solid var(--line); margin-top:-1px;">
+            <div x-show="tab === 'events'" x-cloak>
+                <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
                             <th>Evento</th>
@@ -174,15 +132,14 @@
                     </thead>
                     <tbody>
                         @forelse($upcomingEvents as $event)
-                            <tr onclick="window.location='{{ route('calendar-events.show', $event) }}'"
-                                style="cursor:pointer">
+                            <tr x-data @click="window.Livewire.navigate('{{ route('calendar-events.show', $event) }}')" class="u-cursor-pointer hover-bg">
                                 <td class="name-col">{{ $event->title }}</td>
                                 <td class="mono-col">{{ $event->start_at->format('d/m/Y H:i') }}</td>
                                 <td>{{ $event->location ?? '—' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" style="text-align:center;color:var(--text3);padding:32px">Nessun evento in
+                                <td colspan="3" class="u-text-center u-text-muted u-p-xl">Nessun evento in
                                     programma.</td>
                             </tr>
                         @endforelse
@@ -192,10 +149,10 @@
         </x-panel>
 
         {{-- Appuntamenti della Settimana --}}
-        <div class="mt-panel" style="margin-bottom:20px;">
+        <div class="mt-panel u-mb-lg">
             <x-panel title="Appuntamenti della Settimana" dot="var(--blue)">
                 @if($weeklyEvents->isEmpty())
-                    <div style="text-align:center;color:var(--text3);padding:24px 16px;">Nessun appuntamento nei prossimi 7
+                    <div class="u-text-center u-text-muted u-p-lg">Nessun appuntamento nei prossimi 7
                         giorni.</div>
                 @else
                     <table class="t-table">
@@ -207,12 +164,11 @@
                         </thead>
                         <tbody>
                             @foreach($weeklyEvents as $event)
-                                <tr onclick="window.location='{{ route('calendar-events.show', $event) }}'"
-                                    style="cursor:pointer">
+                                <tr x-data @click="window.Livewire.navigate('{{ route('calendar-events.show', $event) }}')" class="u-cursor-pointer hover-bg">
                                     <td class="name-col">
                                         {{ $event->title }}
                                         @if($event->meeting_url)
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:6px; color:var(--accent); vertical-align:middle"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="u-ml-xs u-text-accent u-align-middle"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
                                         @endif
                                     </td>
                                     <td class="mono-col">{{ $event->start_at->format('d/m/Y H:i') }}</td>
@@ -236,8 +192,123 @@
             @forelse($recentActivity as $log)
                 <x-audit-item :log="$log" />
             @empty
-                <div style="color:var(--text3);text-align:center;padding:16px">Nessuna attività registrata.</div>
+                <div class="u-text-center u-text-muted u-p-md">Nessuna attività registrata.</div>
             @endforelse
         </x-panel>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    function initDashboardCharts() {
+        if (typeof ApexCharts === 'undefined') return;
+
+        // --- Finanziario ---
+        const financialEl = document.getElementById('financial-chart');
+        if (financialEl) {
+            const rect = financialEl.getBoundingClientRect();
+            if (rect.width < 100) {
+                requestAnimationFrame(() => initDashboardCharts());
+                return;
+            }
+            if (window.financialChartInstance) {
+                window.financialChartInstance.destroy();
+                window.financialChartInstance = null;
+            }
+            const data = {!! $financialChartData !!};
+            const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+            const options = {
+                chart: { 
+                    type: 'bar', 
+                    height: 300, 
+                    width: '100%',
+                    toolbar: { show: false }, 
+                    background: 'transparent',
+                    redrawOnParentResize: true,
+                    redrawOnWindowResize: true,
+                    parentHeightOffset: 0
+                },
+                series: data.series,
+                xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' } },
+                colors: ['var(--purple)', '#14b8a6', 'var(--orange)'],
+                plotOptions: { bar: { columnWidth: '55%', borderRadius: 6, borderRadiusApplication: 'end' } },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } },
+                grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 8, right: 100 } }
+            };
+            window.financialChartInstance = new ApexCharts(financialEl, options);
+            window.financialChartInstance.render();
+            requestAnimationFrame(() => {
+                window.financialChartInstance?.resize();
+            });
+        }
+
+        // --- Operativo ---
+        const operationalEl = document.getElementById('operational-chart');
+        if (operationalEl) {
+            const rect = operationalEl.getBoundingClientRect();
+            if (rect.width < 100) {
+                requestAnimationFrame(() => initDashboardCharts());
+                return;
+            }
+            if (window.operationalChartInstance) {
+                window.operationalChartInstance.destroy();
+                window.operationalChartInstance = null;
+            }
+            const data = {!! $operationalChartData !!};
+            const options = {
+                chart: { 
+                    type: 'area', 
+                    height: 300, 
+                    width: '100%',
+                    toolbar: { show: false }, 
+                    background: 'transparent',
+                    redrawOnParentResize: true,
+                    redrawOnWindowResize: true,
+                    parentHeightOffset: 0
+                },
+                series: data.series,
+                xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k' : value }, min: 0, forceNiceScale: true },
+                colors: ['var(--purple)', '#ec4899'],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+                stroke: { curve: 'smooth', width: 3, dashArray: [0, 5] },
+                markers: { size: 4, colors: ['var(--purple)', '#ec4899'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
+                dataLabels: { enabled: false },
+                tooltip: { theme: 'dark' },
+                grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 8, right: 120 } }
+            };
+            window.operationalChartInstance = new ApexCharts(operationalEl, options);
+            window.operationalChartInstance.render();
+            requestAnimationFrame(() => {
+                window.operationalChartInstance?.resize();
+            });
+        }
+    }
+
+    if (!window.dashboardChartsEventHandlersAdded) {
+        window.dashboardChartsEventHandlersAdded = true;
+
+        document.addEventListener('livewire:navigating', () => {
+            if (window.financialChartInstance) {
+                window.financialChartInstance.destroy();
+                window.financialChartInstance = null;
+            }
+            if (window.operationalChartInstance) {
+                window.operationalChartInstance.destroy();
+                window.operationalChartInstance = null;
+            }
+        });
+
+        document.addEventListener('livewire:navigated', () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    initDashboardCharts();
+                });
+            });
+        });
+    }
+</script>
+@endpush

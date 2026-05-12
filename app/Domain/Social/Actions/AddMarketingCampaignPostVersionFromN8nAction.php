@@ -50,6 +50,7 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 $versionData['hashtags'] = $data['hashtags'] ?? null;
                 
                 $versionData['image_url'] = $currentVersion?->image_url;
+                $versionData['image_urls'] = $currentVersion?->image_urls;
                 $versionData['image_path'] = $currentVersion?->image_path;
             } elseif ($regenerationType === MarketingCampaignPostRegenerationType::Image) {
                 // Eredita testo dalla versione corrente
@@ -57,7 +58,9 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 $versionData['caption'] = $currentVersion?->caption;
                 $versionData['hashtags'] = $currentVersion?->hashtags;
                 
-                $versionData['image_url'] = $data['image_url'] ?? null;
+                $images = $this->normalizeGeneratedImages($data);
+                $versionData['image_url'] = $images['image_url'];
+                $versionData['image_urls'] = $images['image_urls'];
                 $versionData['image_path'] = null; // Gestire download dell'immagine se necessario
             } else {
                 // Full
@@ -65,7 +68,9 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 $versionData['caption'] = $data['caption'] ?? null;
                 $versionData['hashtags'] = $data['hashtags'] ?? null;
                 
-                $versionData['image_url'] = $data['image_url'] ?? null;
+                $images = $this->normalizeGeneratedImages($data);
+                $versionData['image_url'] = $images['image_url'];
+                $versionData['image_urls'] = $images['image_urls'];
                 $versionData['image_path'] = null;
             }
 
@@ -98,5 +103,40 @@ class AddMarketingCampaignPostVersionFromN8nAction
 
             return $version;
         });
+    }
+
+    private function normalizeGeneratedImages(array $data): array
+    {
+        $imageUrls = $data['image_urls'] ?? null;
+
+        if (is_array($imageUrls)) {
+            $imageUrls = array_values(array_filter($imageUrls));
+        }
+
+        if (is_array($imageUrls) && count($imageUrls) > 1) {
+            return [
+                'image_url' => null,
+                'image_urls' => $imageUrls,
+            ];
+        }
+
+        if (is_array($imageUrls) && count($imageUrls) === 1) {
+            return [
+                'image_url' => $imageUrls[0],
+                'image_urls' => $imageUrls,
+            ];
+        }
+
+        if (! empty($data['image_url'])) {
+            return [
+                'image_url' => $data['image_url'],
+                'image_urls' => [$data['image_url']],
+            ];
+        }
+
+        return [
+            'image_url' => null,
+            'image_urls' => null,
+        ];
     }
 }

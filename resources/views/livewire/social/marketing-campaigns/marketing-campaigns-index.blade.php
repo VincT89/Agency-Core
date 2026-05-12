@@ -7,21 +7,21 @@
     </x-page-header>
 
     <div class="filter-bar justify-end">
-        <input type="text" class="form-in" placeholder="Cerca progetto..." wire:model.live.debounce.300ms="search" style="padding:5px 10px;font-size:11px;width:250px">
-        <select class="form-sel" wire:model.live="clientId" style="padding:5px 10px;font-size:11px;width:160px">
+        <input type="text" class="form-in mkt-search-in" placeholder="Cerca progetto..." wire:model.live.debounce.300ms="search">
+        <select class="form-sel mkt-filter-sel" wire:model.live="clientId">
           <option value="">Tutti i Clienti</option>
           @foreach($clients as $client)
             <option value="{{ $client->id }}">{{ $client->name }}</option>
           @endforeach
         </select>
-        <select class="form-sel" wire:model.live="status" style="padding:5px 10px;font-size:11px;width:160px">
+        <select class="form-sel mkt-filter-sel" wire:model.live="status">
           <option value="">Tutti gli Stati</option>
           @foreach($statuses as $st)
             <option value="{{ $st->value }}">{{ $st->label() }}</option>
           @endforeach
         </select>
         @if($search || $clientId || $status)
-            <button wire:click="$set('search', ''); $set('clientId', ''); $set('status', '')" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</button>
+            <button wire:click="$set('search', ''); $set('clientId', ''); $set('status', '')" class="btn btn-g mkt-reset-btn">Reset</button>
         @endif
     </div>
 
@@ -39,17 +39,17 @@
         </thead>
         <tbody>
           @forelse($campaigns as $camp)
-            <tr onclick="window.location='{{ route('marketing-campaigns.show', $camp->id) }}'" style="cursor:pointer">
+            <tr x-data @click="window.Livewire.navigate('{{ route('marketing-campaigns.show', $camp->id) }}')" class="mkt-table-row u-cursor-pointer hover-bg">
               <td class="name-col">
                 {{ $camp->name }}
                 @if($camp->description)
-                  <div style="font-size:11px;color:var(--text3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;">{{ $camp->description }}</div>
+                  <div class="mkt-table-desc">{{ $camp->description }}</div>
                 @endif
               </td>
               <td>
-                <div style="display:flex;align-items:center;gap:8px">
+                <div class="mkt-flex-center-gap8">
                   @if($camp->client->logo_url)
-                    <img src="{{ $camp->client->logo_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--line);">
+                    <img src="{{ $camp->client->logo_url }}" class="mkt-table-avatar">
                   @endif
                   <span class="mono-col">{{ $camp->client->name }}</span>
                 </div>
@@ -68,12 +68,12 @@
                 @endif
               </td>
               <td>
-                <a href="{{ route('marketing-campaigns.show', $camp->id) }}" wire:navigate class="btn-icon" onclick="event.stopPropagation()">→</a>
+                <a href="{{ route('marketing-campaigns.show', $camp->id) }}" wire:navigate class="btn-icon" @click.stop>→</a>
               </td>
             </tr>
           @empty
             <tr>
-              <td colspan="5" style="text-align:center;color:var(--text3);padding:32px">
+              <td colspan="5" class="mkt-table-empty">
                 Nessun progetto trovato.
               </td>
             </tr>

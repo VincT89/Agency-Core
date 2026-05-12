@@ -11,6 +11,20 @@ class TaskComment extends Model
         'task_id',
         'user_id',
         'body',
+        'source',
+        'delivery_channel', 
+        'delivery_status', 
+        'delivery_requested_at',
+        'delivered_at', 
+        'delivery_error', 
+        'external_message_id', 
+        'idempotency_key'
+    ];
+
+    protected $casts = [
+        'source' => \App\Enums\Social\CommentSource::class,
+        'delivery_requested_at' => 'datetime',
+        'delivered_at' => 'datetime',
     ];
 
     public function task(): BelongsTo

@@ -78,6 +78,7 @@ class RequestMarketingCampaignPostRegenerationAction
                 'caption' => $currentVersion->caption,
                 'hashtags' => $currentVersion->hashtags,
                 'image_url' => $currentVersion->image_url,
+                'image_urls' => $currentVersion->image_urls,
             ] : null,
 
             'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),

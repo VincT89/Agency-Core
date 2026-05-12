@@ -21,7 +21,7 @@
                     title="Elimina Cliente" 
                     message="Eliminare definitivamente il cliente '{{ $client->name }}'? L'operazione rimuoverà anche i dati collegati e non è reversibile."
                     confirmText="{{ $client->name }}">
-                    <button type="button" class="btn btn-g" style="color:var(--red);border-color:rgba(245,75,75,.3)">
+                    <button type="button" class="btn btn-g btn-danger-outline">
                         Elimina
                     </button>
                 </x-delete-modal>
@@ -29,17 +29,17 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="g-2col" style="margin-bottom:20px;">
+    <div class="g-2col u-mb-lg">
         <x-panel title="Info Base" dot="var(--teal)" padded>
             <div class="u-flex u-flex-col u-gap-md">
                 
                 {{-- Header with Logo and Name --}}
-                <div class="u-flex u-items-center u-gap-md u-pb-md" style="border-bottom: 1px solid var(--line);">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 1px solid var(--line); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; flex-shrink: 0;">
+                <div class="u-flex-center u-gap-md u-pb-md u-border-b">
+                    <div class="client-logo-wrap">
                         @if($client->logo_url)
-                            <img src="{{ $client->logo_url }}" alt="Logo {{ $client->name }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+                            <img src="{{ $client->logo_url }}" alt="Logo {{ $client->name }}" class="client-logo-img">
                         @else
-                            <i data-lucide="building" class="u-icon-lg" style="color: var(--text3)"></i>
+                            <i data-lucide="building" class="u-icon-lg u-text-muted"></i>
                         @endif
                     </div>
                     <div>
@@ -51,7 +51,7 @@
                 {{-- Activity Description --}}
                 <div class="form-g mb-0">
                     <div class="form-lbl">Descrizione attività cliente</div>
-                    <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">
+                    <div class="u-text-strong">
                         {{ $client->activity_description ?: '—' }}
                     </div>
                 </div>
@@ -60,22 +60,22 @@
                 <div class="g-2col">
                     <div class="form-g mb-0">
                         <div class="form-lbl">Partita IVA / C.F.</div>
-                        <div style="color: var(--text); font-family: var(--mono); font-size: 14px;">{{ $client->vat_number ?? '—' }}</div>
+                        <div class="u-text-strong u-font-mono">{{ $client->vat_number ?? '—' }}</div>
                     </div>
                     <div class="form-g mb-0">
                         <div class="form-lbl">Referente</div>
-                        <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">{{ $client->reference_person ?? '—' }}</div>
+                        <div class="u-text-strong">{{ $client->reference_person ?? '—' }}</div>
                     </div>
                     <div class="form-g mb-0">
                         <div class="form-lbl">Email / Telefono</div>
-                        <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">
+                        <div class="u-text-strong">
                             {{ $client->email ?? '—' }} <br> 
                             {{ $client->phone ?? '—' }}
                         </div>
                     </div>
                     <div class="form-g mb-0">
                         <div class="form-lbl">Fatturazione (PEC / SDI)</div>
-                        <div style="color: var(--text); font-family: var(--mono); font-size: 14px;">
+                        <div class="u-text-strong u-font-mono">
                             PEC: {{ $client->pec ?? '—' }} <br>
                             SDI: {{ $client->sdi_code ?? '—' }} <br>
                             Email: {{ $client->billing_email ?? '—' }}
@@ -86,7 +86,7 @@
                 {{-- Full width details --}}
                 <div class="form-g mb-0">
                     <div class="form-lbl">Sede</div>
-                    <div style="color: var(--text); font-family: var(--sans); font-size: 14px;">
+                    <div class="u-text-strong">
                         {{ $client->address ?? '—' }}<br>
                         {{ trim(implode(' ', array_filter([$client->postal_code, $client->city, $client->province ? "({$client->province})" : null, $client->country]))) }}
                     </div>
@@ -94,7 +94,7 @@
                 
                 <div class="form-g mb-0">
                     <div class="form-lbl">Registrato il</div>
-                    <div style="color: var(--text); font-family: var(--mono); font-size: 14px;">{{ $client->created_at->isoFormat('D MMMM YYYY') }}</div>
+                    <div class="u-text-strong u-font-mono">{{ $client->created_at->isoFormat('D MMMM YYYY') }}</div>
                 </div>
 
             </div>
@@ -104,12 +104,12 @@
 
             <x-panel title="Ticket Recenti" dot="var(--accent)" padded>
                 @forelse($client->tickets as $t)
-                    <div style="padding:8px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
-                        <a href="{{ route('tickets.show', $t) }}" style="color:var(--text);text-decoration:none">{{ $t->title }}</a>
+                    <div class="u-flex-between u-border-b u-py-sm">
+                        <a href="{{ route('tickets.show', $t) }}" class="u-text-strong hover-text">{{ $t->title }}</a>
                         <x-badge :status="$t->status" :label="$t->status_label" />
                     </div>
                 @empty
-                    <div style="padding:16px;">
+                    <div class="u-p-md">
                         <x-empty-state message="Nessun ticket recente per questo cliente." icon="ticket" />
                     </div>
                 @endforelse
@@ -117,13 +117,13 @@
         </div>
     </div>
 
-    <div style="margin-bottom:20px;">
+    <div class="u-mb-lg">
         <livewire:client.client-social-account-form :client="$client" />
     </div>
 
     <x-panel title="Commesse Attive ({{ $client->projects->count() }})">
         @if($client->projects->isEmpty())
-            <div style="padding:16px;">
+            <div class="u-p-md">
                 <x-empty-state message="Nessuna commessa registrata per questo cliente." icon="folder-open" />
             </div>
         @else
@@ -137,7 +137,7 @@
                 </thead>
                 <tbody>
                     @foreach($client->projects as $p)
-                    <tr onclick="window.location='{{ route('projects.show', $p) }}'" style="cursor:pointer">
+                    <tr x-data @click="window.Livewire.navigate('{{ route('projects.show', $p) }}')" class="u-cursor-pointer hover-bg">
                         <td class="name-col">{{ $p->name }}</td>
                         <td><x-badge :status="$p->status" :label="$p->status_label" /></td>
                         <td class="mono-col">{{ $p->created_at->format('d/m/Y') }}</td>

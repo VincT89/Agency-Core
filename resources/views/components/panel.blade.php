@@ -4,7 +4,7 @@
         <div class="panel-header">
             <div class="panel-title">
                 @if($dot)
-                    <div class="dot" style="background:{{ $dot }}"></div>
+                    <div class="dot {{ $dot ? 'color-' . str_replace('var(--', '', str_replace(')', '', $dot)) : '' }}"></div>
                 @endif
                 {{ $title }}
             </div>

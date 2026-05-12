@@ -13,7 +13,7 @@ $cfg = $icons[$log->action] ?? ['icon' => '·', 'color' => 'var(--bg3)'];
 @endphp
 <div class="audit-item">
     <span class="audit-time">{{ $log->created_at->format('H:i:s') }}</span>
-    <div class="audit-icon" style="background:{{ $cfg['color'] }}">{{ $cfg['icon'] }}</div>
+    <div class="audit-icon bg-{{ str_replace('_', '-', $log->action) }}">{{ $cfg['icon'] }}</div>
     <div class="audit-body">
         <b>{{ $log->user?->name ?? 'Sistema' }}</b>
         — azione: <span class="ent">{{ $log->action }}</span>

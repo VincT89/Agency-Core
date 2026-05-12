@@ -1,6 +1,6 @@
-<div class="social-accounts-container" style="width:100%; margin-top:30px;">
+<div class="social-accounts-container u-w-full u-mt-lg">
     <x-panel title="Accessi Social" dot="var(--accent)" padded>
-        <div class="social-tabs-nav" style="display:flex; gap:10px; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:20px;">
+        <div class="social-tabs-nav u-flex u-gap-sm u-pb-md u-border-b u-mb-md">
             @foreach($platforms as $platform)
                 @php
                     $isMeta = $platform->value === 'facebook' || $platform->value === 'instagram';
@@ -10,8 +10,7 @@
                 <button 
                     type="button" 
                     wire:click="$set('activeTab', '{{ $platform->value }}')"
-                    class="social-tab-btn"
-                    style="padding:8px 16px; border-radius:6px; font-family:var(--sans); font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; border:1px solid {{ $isActive ? 'var(--accent)' : 'transparent' }}; background:{{ $isActive ? 'var(--accent)15' : 'transparent' }}; color:{{ $isActive ? 'var(--accent)' : 'var(--text2)' }}; transition:all 0.2s;"
+                    class="social-tab-btn {{ $isActive ? 'is-active' : '' }}"
                 >
                     @if($platform->value === 'facebook')
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="social-icon-sm">
@@ -41,14 +40,14 @@
                         $titleSuffix = $isMeta ? ' (Obbligatorio)' : ' (Opzionale)';
                     @endphp
                     <div class="social-account-panel">
-                        <div style="margin-bottom:15px; padding-bottom:10px; border-bottom:1px dashed var(--line);">
-                            <h4 style="font-family:var(--sans); font-size:16px; color:var(--text); margin:0;">
-                                Configurazione {{ $platform->label() }} <span style="font-size:12px; font-weight:normal; color:var(--text3);">{{ $titleSuffix }}</span>
+                        <div class="u-pb-md u-mb-md u-border-b-dashed">
+                            <h4 class="u-text-strong u-m-0 u-text-h4">
+                                Configurazione {{ $platform->label() }} <span class="u-text-sm u-text-normal u-text-muted">{{ $titleSuffix }}</span>
                             </h4>
                         </div>
                         @if($isMeta)
-                            <div class="social-account-req-notice" style="padding:10px; border-radius:6px; background:var(--orange)15; color:var(--orange); font-size:13px; margin-bottom:20px; border:1px solid var(--orange)30;">
-                                <i data-lucide="alert-circle" style="width:14px; height:14px; display:inline-block; vertical-align:-2px;"></i> Richiede Meta Business Manager collegato.
+                            <div class="social-account-req-notice u-alert-warning u-mb-md">
+                                <i data-lucide="alert-circle" class="u-icon-sm"></i> Richiede Meta Business Manager collegato.
                             </div>
                         @endif
                         <form wire:submit="save('{{ $platform->value }}')">
@@ -86,7 +85,7 @@
                             <label class="form-lbl">URL Pubblico</label>
                             <input type="url" wire:model="forms.{{ $platform->value }}.account_url" class="form-in w-100" placeholder="https://...">
                             @error('forms.'.$platform->value.'.account_url')
-                                <div style="color:var(--red); font-size:11px; margin-top:4px;">{{ $message }}</div>
+                                <div class="u-text-xs u-text-red u-mt-xs">{{ $message }}</div>
                             @enderror
                         </div>
 

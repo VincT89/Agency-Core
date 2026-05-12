@@ -108,7 +108,7 @@
                         </thead>
                         <tbody>
                             @foreach($hostingService->expenses()->orderBy('expense_date', 'desc')->get() as $expense)
-                            <tr onclick="window.location='{{ route('expenses.show', $expense) }}'" class="hosting-row-link hover-bg">
+                            <tr x-data @click="window.Livewire.navigate('{{ route('expenses.show', $expense) }}')" class="hosting-row-link hover-bg u-cursor-pointer">
                                 <td class="mono-col">{{ $expense->expense_date->format('d/m/Y') }}</td>
                                 <td>{{ $expense->title }}</td>
                                 <td class="mono-col">&euro; {{ number_format($expense->amount, 2, ',', '.') }}</td>

@@ -1,6 +1,6 @@
 <div>
-    <div style="margin-bottom:15px">
-        <a href="{{ route('photography.shooting.index') }}" wire:navigate style="color:var(--text3);font-size:12px;text-decoration:none">← Torna ai miei shooting</a>
+    <div class="u-mb-sm">
+        <a href="{{ route('photography.shooting.index') }}" wire:navigate class="u-text-muted u-text-sm u-no-underline">← Torna ai miei shooting</a>
     </div>
 
     <x-page-header eyebrow="Fotografia">
@@ -15,20 +15,20 @@
     <div class="g-shoot-detail">
         
         {{-- Main Column --}}
-        <div style="display:flex; flex-direction:column; gap:24px;">
+        <div class="u-flex-col u-gap-md">
             <x-panel title="Dettagli Shooting" dot="var(--purple)">
-                <div style="padding:24px;">
+                <div class="u-p-lg">
                     <div class="g-shoot-2col">
                         <div>
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Progetto</div>
-                            <div style="font-weight:500; color:var(--text1);">{{ $shoot->project->name }}</div>
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Progetto</div>
+                            <div class="u-text-strong u-text-primary">{{ $shoot->project->name }}</div>
                         </div>
                     </div>
                     
                     @if($shoot->location)
-                        <div style="margin-bottom:24px;">
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Location</div>
-                            <div style="font-size:14px; color:var(--text1);">{{ $shoot->location }}</div>
+                        <div class="u-mb-lg">
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Location</div>
+                            <div class="u-text-md u-text-primary">{{ $shoot->location }}</div>
                         </div>
                     @endif
                 </div>
@@ -36,13 +36,13 @@
             
             {{-- Slots --}}
             <x-panel title="Disponibilità" dot="var(--blue)">
-                <div style="padding:24px;">
+                <div class="u-p-lg">
                     @php
                         $canRespond = $shoot->status->value === 'waiting_photographer';
                     @endphp
                     
                     @if($canRespond)
-                        <p style="font-size:13px; color:var(--text2); margin-bottom:16px;">
+                        <p class="u-text-sm u-text-secondary u-mb-md">
                             Il team ha proposto i seguenti slot temporali. Scegline uno per confermare la tua disponibilità, oppure rifiutali tutti se non puoi partecipare in nessuna delle date proposte.
                         </p>
                     @endif

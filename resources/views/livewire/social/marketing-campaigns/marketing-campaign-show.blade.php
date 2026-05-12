@@ -64,8 +64,18 @@
                 </td>
                 <td><span class="cmp-post-type-badge">{{ $post->content_type->label() }}</span></td>
                 <td>
-                  @if($post->currentVersion && $post->currentVersion->image_url)
-                        <img src="{{ $post->currentVersion->image_url }}" class="cmp-post-thumb" loading="lazy" alt="Anteprima media post">
+                  @php
+                      $vImg = null;
+                      if ($post->currentVersion) {
+                          if (!empty($post->currentVersion->image_urls) && is_array($post->currentVersion->image_urls)) {
+                              $vImg = $post->currentVersion->image_urls[0];
+                          } else {
+                              $vImg = $post->currentVersion->image_url;
+                          }
+                      }
+                  @endphp
+                  @if($vImg)
+                        <img src="{{ $vImg }}" class="cmp-post-thumb" loading="lazy" alt="Anteprima media post">
                   @elseif($post->preview_url)
                     @if($post->media_mime && \Illuminate\Support\Str::startsWith($post->media_mime, 'video/'))
                         <video src="{{ $post->preview_url }}" class="cmp-post-thumb" muted playsinline></video>
@@ -76,7 +86,7 @@
                     <div class="cmp-post-thumb-empty"><i data-lucide="image" class="w-5 h-5"></i></div>
                   @endif
                 </td>
-                <td class="font-semibold">{{ $post->title ?: 'Senza Titolo' }}</td>
+                <td class="font-semibold">{{ $post->currentVersion?->title ?: ($post->title ?: 'Senza Titolo') }}</td>
                 <td><x-badge :status="$post->status->value" :label="$post->status->label()" /></td>
               </tr>
             @empty
@@ -152,7 +162,7 @@
         <!-- CALENDARIO PRINCIPALE -->
         <main class="cal-gmain">
             <div class="cal-wrapper-modern cal-full-height" wire:ignore>
-                <div id="calendar" class="cal-full-height"></div>
+                <div id="marketing-campaign-detail-calendar" class="cal-full-height"></div>
             </div>
         </main>
     </div>
@@ -473,7 +483,7 @@
             @foreach($pendingPeriodsForInvoice as $period)
             <label class="cmp-check-label muted">
               <input type="checkbox" wire:model="invoiceForm.period_ids" value="{{ $period['id'] }}" class="u-accent-blue">
-              <span>{{ $period['description'] }} - <strong style="color:var(--text);">€ {{ number_format($period['amount'], 2, ',', '.') }}</strong></span>
+              <span>{{ $period['description'] }} - <strong class="mkt-text-primary">€ {{ number_format($period['amount'], 2, ',', '.') }}</strong></span>
             </label>
             @endforeach
           </div>
@@ -485,7 +495,7 @@
             @foreach($pendingExtrasForInvoice as $extra)
             <label class="cmp-check-label muted">
               <input type="checkbox" wire:model="invoiceForm.extra_ids" value="{{ $extra['id'] }}" class="u-accent-blue">
-              <span>{{ $extra['description'] }} - <strong style="color:var(--text);">€ {{ number_format($extra['amount'], 2, ',', '.') }}</strong></span>
+              <span>{{ $extra['description'] }} - <strong class="mkt-text-primary">€ {{ number_format($extra['amount'], 2, ',', '.') }}</strong></span>
             </label>
             @endforeach
           </div>
@@ -522,7 +532,7 @@
               @endforeach
           </div>
 
-          @error('invoiceForm') <div class="form-err" style="margin-bottom:16px; font-weight:bold;">{{ $message }}</div> @enderror
+          @error('invoiceForm') <div class="form-err mkt-form-err-bold">{{ $message }}</div> @enderror
           
           <div class="u-flex u-gap-lg">
               <div class="form-g u-flex-1">
@@ -567,79 +577,90 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/it.global.min.js"></script>
 <script>
-    document.addEventListener('livewire:initialized', function() {
-        try {
-            if (window.marketingCampaignDetailCalendar) {
-                window.marketingCampaignDetailCalendar.destroy();
-            }
-
-            var calendarEl = document.getElementById('calendar');
-            if (!calendarEl || typeof FullCalendar === 'undefined') return;
-
-            window.marketingCampaignDetailCalendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                initialDate: '{{ $calendarDate }}',
-                locale: 'it',
-                firstDay: 1,
-                headerToolbar: {
-                    left: 'today prev,next',
-                    center: 'title',
-                    right: 'timeGridWeek,timeGridDay'
-                },
-                buttonText: {
-                    today: 'Oggi',
-                    month: 'Mese',
-                    week: 'Settimana',
-                    day: 'Giorno'
-                },
-                themeSystem: 'standard',
-                height: '100%',
-                expandRows: true,
-                dayMaxEvents: 3,
-                moreLinkClick: 'popover',
-                slotDuration: '01:00:00',
-                slotMinTime: '08:00:00',
-                slotMaxTime: '20:00:00',
-                allDaySlot: false,
-                defaultTimedEventDuration: '01:00:00',
-                dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
-                slotLabelFormat: { hour: '2-digit', minute: '2-digit', omitZeroMinute: false, meridiem: false },
-                
-                selectable: true,
-                selectMirror: true,
-                select: function(info) {
-                    const start = encodeURIComponent(info.startStr);
-                    window.location.href = "{{ route('marketing-campaigns.posts.create', $campaign->id) }}" + "?date=" + start;
-                },
-
-                events: function(fetchInfo, successCallback, failureCallback) {
-                    @this.fetchEvents().then(events => successCallback(events)).catch(err => failureCallback(err));
-                },
-                eventClick: function(info) {
-                    info.jsEvent.preventDefault();
-                    if (info.event.url) window.location.href = info.event.url;
-                },
-                eventContent: function(arg) {
-                    let wrapper = document.createElement('div');
-                    wrapper.classList.add('cal-mkt-event');
-                    
-                    let titleEl = document.createElement('div');
-                    titleEl.classList.add('cal-mkt-event-title');
-                    titleEl.textContent = arg.event.title;
-                    
-                    let subEl = document.createElement('div');
-                    subEl.classList.add('cal-mkt-event-sub');
-                    subEl.textContent = arg.event.extendedProps.platform + ' - ' + arg.event.extendedProps.status;
-                    
-                    wrapper.appendChild(titleEl);
-                    wrapper.appendChild(subEl);
-                    
-                    return { domNodes: [ wrapper ] };
-                }
+    function cleanupMarketingCampaignDetailCalendar() {
+        if (window.marketingCampaignDetailCalendar) {
+            window.marketingCampaignDetailCalendar.destroy();
+            window.marketingCampaignDetailCalendar = null;
+        }
+        if (window.marketingCampaignDetailUnsubscribers) {
+            window.marketingCampaignDetailUnsubscribers.forEach(unsub => {
+                if (typeof unsub === 'function') unsub();
             });
+        }
+        window.marketingCampaignDetailUnsubscribers = [];
+    }
 
-            window.marketingCampaignDetailCalendar.render();
+    function initMarketingCampaignDetailCalendar(component) {
+        cleanupMarketingCampaignDetailCalendar();
 
+        var calendarEl = document.getElementById('marketing-campaign-detail-calendar');
+        if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
+        window.marketingCampaignDetailCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            initialDate: '{{ $calendarDate }}',
+            locale: 'it',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'today prev,next',
+                center: 'title',
+                right: 'timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Oggi',
+                month: 'Mese',
+                week: 'Settimana',
+                day: 'Giorno'
+            },
+            themeSystem: 'standard',
+            height: '100%',
+            expandRows: true,
+            dayMaxEvents: 3,
+            moreLinkClick: 'popover',
+            slotDuration: '01:00:00',
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            allDaySlot: false,
+            defaultTimedEventDuration: '01:00:00',
+            dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+            slotLabelFormat: { hour: '2-digit', minute: '2-digit', omitZeroMinute: false, meridiem: false },
+            
+            selectable: true,
+            selectMirror: true,
+            select: function(info) {
+                const start = encodeURIComponent(info.startStr);
+                window.Livewire.navigate("{{ route('marketing-campaigns.posts.create', $campaign->id) }}" + "?date=" + start);
+            },
+
+            events: function(fetchInfo, successCallback, failureCallback) {
+                component.fetchEvents().then(events => successCallback(events)).catch(err => failureCallback(err));
+            },
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                if (info.event.url) window.Livewire.navigate(info.event.url);
+            },
+            eventContent: function(arg) {
+                let wrapper = document.createElement('div');
+                wrapper.classList.add('cal-mkt-event');
+                
+                let titleEl = document.createElement('div');
+                titleEl.classList.add('cal-mkt-event-title');
+                titleEl.textContent = arg.event.title;
+                
+                let subEl = document.createElement('div');
+                subEl.classList.add('cal-mkt-event-sub');
+                subEl.textContent = arg.event.extendedProps.platform + ' - ' + arg.event.extendedProps.status;
+                
+                wrapper.appendChild(titleEl);
+                wrapper.appendChild(subEl);
+                
+                return { domNodes: [ wrapper ] };
+            }
+        });
+
+        window.marketingCampaignDetailCalendar.render();
+
+        window.marketingCampaignDetailUnsubscribers.push(
             Livewire.on('marketing-campaign-detail-calendar-date-changed', (payload) => {
                 if (!window.marketingCampaignDetailCalendar) return;
 
@@ -652,14 +673,26 @@
                 } else {
                     window.marketingCampaignDetailCalendar.gotoDate(date);
                 }
-            });
+            })
+        );
 
-            Livewire.on('campaign-updated', () => calendar.refetchEvents());
-            Livewire.on('campaign-extended', () => calendar.refetchEvents());
-            Livewire.on('campaign-renewed', () => calendar.refetchEvents());
-            Livewire.on('campaign-extra-added', () => calendar.refetchEvents());
-            Livewire.on('campaign-extra-deleted', () => calendar.refetchEvents());
-            Livewire.on('campaign-invoice-generated', () => calendar.refetchEvents());
+        const refetchDetailEvents = () => window.marketingCampaignDetailCalendar?.refetchEvents();
+        
+        window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-updated', refetchDetailEvents));
+        window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-extended', refetchDetailEvents));
+        window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-renewed', refetchDetailEvents));
+        window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-extra-added', refetchDetailEvents));
+        window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-extra-deleted', refetchDetailEvents));
+        window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-invoice-generated', refetchDetailEvents));
+    }
+
+    document.addEventListener('livewire:navigating', cleanupMarketingCampaignDetailCalendar);
+
+    document.addEventListener('livewire:navigated', function() {
+        const calendarEl = document.getElementById('marketing-campaign-detail-calendar');
+        if (!calendarEl) return;
+        try {
+            initMarketingCampaignDetailCalendar(@this);
         } catch(e) { console.error(e); }
     });
 </script>

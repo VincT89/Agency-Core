@@ -11,16 +11,16 @@
     </x-page-header>
 
     @if(session('temp_password'))
-        <div style="background: rgba(200,16,46,.08); border: 1px solid rgba(200,16,46,.25); border-radius: var(--r); padding: 20px; margin-bottom: 24px;">
-            <div style="color: var(--accent); font-weight: 700; margin-bottom: 8px;">
+        <div class="u-alert-danger u-mb-xl">
+            <div class="u-text-accent u-text-strong u-mb-sm">
                 Password Rigenerata con Successo
             </div>
-            <div style="margin-bottom: 12px; color: var(--text);">
+            <div class="u-mb-sm u-text-strong">
                 Ecco la nuova password per <strong>{{ session('temp_password')['user'] }}</strong>.
-                <br>
-                <span style="font-size: 13px; color: var(--text3);">Mostra questa password all'utente. Non verrà mostrata di nuovo.</span>
             </div>
-            <div style="font-family: var(--mono); background: var(--bg); padding: 12px 16px; border: 1px solid rgba(200,16,46,.15); border-radius: 4px; font-size: 16px; font-weight: 500; color: var(--text); display: inline-block;">
+            <span class="u-text-sm u-text-muted">Mostra questa password all'utente. Non verrà mostrata di nuovo.</span>
+            <br>
+            <div class="new-password-display">
                 {{ session('temp_password')['password'] }}
             </div>
         </div>
@@ -43,23 +43,23 @@
                     <td class="name-col">{{ $user->name }}</td>
                     <td class="mono-col">{{ $user->email }}</td>
                     <td>
-                        <div style="font-size:12px;text-transform:uppercase;font-family:var(--mono)">
+                        <div class="u-text-sm u-uppercase u-font-mono">
                             {{ $user->role->value }}
                         </div>
                     </td>
                     <td><x-badge :status="$user->status" :label="$user->status_label" /></td>
-                    <td style="display:flex;gap:6px">
+                    <td class="u-flex u-gap-xs">
                         <a href="{{ route('users.edit', $user) }}" class="btn-icon">✎</a>
                         
                         @if($user->id !== auth()->id())
                             <form action="{{ route('users.reset-password', $user) }}" method="POST" onsubmit="return confirm('Forzare il reset di password e generarne una nuova temporanea per questo utente?')">
                                 @csrf
-                                <button type="submit" class="btn-icon" title="Reset Password" style="color:var(--orange)">⟲</button>
+                                <button type="submit" class="btn-icon u-text-warning" title="Reset Password">⟲</button>
                             </form>
 
                             <form action="{{ route('users.toggle-status', $user) }}" method="POST">
                                 @csrf
-                                <button type="submit" class="btn-icon" title="Toggle Status" style="color:var(--text3)">
+                                <button type="submit" class="btn-icon u-text-muted" title="Toggle Status">
                                     {{ $user->status === 'active' ? '⊘' : '◎' }}
                                 </button>
                             </form>
@@ -67,7 +67,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px">Nessun utente trovato</td></tr>
+                <tr><td colspan="5" class="u-text-center u-text-muted u-p-xl">Nessun utente trovato</td></tr>
                 @endforelse
             </tbody>
         </table>

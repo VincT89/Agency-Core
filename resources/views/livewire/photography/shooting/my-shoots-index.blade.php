@@ -2,9 +2,9 @@
     <x-page-header eyebrow="Fotografia" title="I Miei Shooting"></x-page-header>
 
     <x-panel padded>
-        <div style="display:flex; gap:16px; margin-bottom:24px;">
-            <input type="text" wire:model.live.debounce.300ms="search" class="form-in" placeholder="Cerca per titolo o codice..." style="max-width:300px;">
-            <select wire:model.live="status" class="form-in" style="max-width:200px;">
+        <div class="u-flex u-gap-md u-mb-lg">
+            <input type="text" wire:model.live.debounce.300ms="search" class="form-in u-max-w-300" placeholder="Cerca per titolo o codice...">
+            <select wire:model.live="status" class="form-in u-max-w-200">
                 <option value="">Tutti gli stati</option>
                 @foreach($statuses as $st)
                     <option value="{{ $st->value }}">{{ $st->labelForContext('photography') }}</option>
@@ -12,7 +12,7 @@
             </select>
         </div>
 
-        <table class="t-table" style="width:100%;">
+        <table class="t-table u-w-full">
             <thead>
                 <tr>
                     <th>Codice</th>
@@ -24,27 +24,27 @@
             <tbody>
                 @forelse($shoots as $shoot)
                     <tr>
-                        <td style="font-weight:600; color:var(--purple);">{{ $shoot->code }}</td>
+                        <td class="u-text-strong u-text-purple">{{ $shoot->code }}</td>
                         <td>
-                            <div style="font-weight:500; color:var(--text1);">{{ $shoot->title }}</div>
-                            <div style="font-size:12px; color:var(--text3);">{{ $shoot->project->name }}</div>
+                            <div class="u-text-strong u-text-primary">{{ $shoot->title }}</div>
+                            <div class="u-text-sm u-text-muted">{{ $shoot->project->name }}</div>
                         </td>
                         <td>
                             <x-shooting.status-badge :status="$shoot->status" context="photography" />
                         </td>
                         <td>
-                            <a href="{{ route('photography.shooting.show', $shoot) }}" class="btn btn-outline" style="padding:4px 8px; font-size:12px;">Dettaglio</a>
+                            <a href="{{ route('photography.shooting.show', $shoot) }}" class="btn btn-outline btn-sm">Dettaglio</a>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" style="text-align:center; padding:32px; color:var(--text3);">Nessuno shooting trovato.</td>
+                        <td colspan="4" class="u-text-center u-p-xl u-text-muted">Nessuno shooting trovato.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
         
-        <div style="margin-top:24px;">
+        <div class="u-mt-lg">
             {{ $shoots->links() }}
         </div>
     </x-panel>

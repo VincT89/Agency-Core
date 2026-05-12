@@ -12,8 +12,8 @@
     <x-panel padded>
         <form action="{{ route('projects.store') }}" method="POST">
             @csrf
-            <div style="margin-bottom:16px;font-size:12px;color:var(--text3);">
-                <i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i>
+            <div class="u-text-sm u-text-muted u-mb-md">
+                <i data-lucide="info" class="u-icon-sm"></i>
                 I campi non contrassegnati da <b>*</b> sono opzionali.
             </div>
 
@@ -55,7 +55,7 @@
                     </select>
                 </x-form-group>
             </div>
-            <div class="sec-lbl" style="margin-top:16px;">Tempi e Note</div>
+            <div class="sec-lbl u-mt-md">Tempi e Note</div>
             <div class="form-row">
                 <x-form-group label="Data di Avvio" name="start_date">
                     <input type="date" name="start_date" class="form-in @error('start_date') is-invalid @enderror"
@@ -73,7 +73,7 @@
                 </x-form-group>
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('projects.index') }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Progetto</button>
             </div>

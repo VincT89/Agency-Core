@@ -87,7 +87,7 @@
                         </thead>
                         <tbody>
                             @forelse($invoice->payments ?? [] as $payment)
-                            <tr onclick="window.location='{{ route('payments.show', $payment) }}'" class="cursor-pointer">
+                            <tr x-data @click="window.Livewire.navigate('{{ route('payments.show', $payment) }}')" class="u-cursor-pointer hover-bg">
                                 <td>{{ $payment->payment_date?->format('d/m/Y') }}</td>
                                 <td><x-badge :status="$payment->method" :label="$payment->method_label" /></td>
                                 <td class="mono-col">€ {{ number_format($payment->amount, 2, ',', '.') }}</td>
@@ -197,24 +197,24 @@
                     </tbody>
                     <tfoot>
                         @can('update', $invoice)
-                        <tr style="background: var(--bg2); border-top: 1px dashed var(--line);">
-                            <td style="padding: 12px 16px;">
-                                <input type="text" form="add-item-form" name="description" class="form-in w-full"
+                        <tr class="inv-tfoot-tr">
+                            <td class="inv-tfoot-td">
+                                <input type="text" form="add-item-form" name="description" class="form-in u-w-full"
                                        placeholder="Descrizione voce (es. Lavori extra)"
                                        value="{{ old('description') }}" required>
                             </td>
-                            <td style="padding: 12px 16px; width: 100px;">
+                            <td class="inv-tfoot-td-100">
                                 <input type="number" form="add-item-form" name="quantity" class="form-in text-right"
                                        placeholder="Qtà" min="0.01" step="0.01" value="{{ old('quantity', 1) }}" required>
                             </td>
-                            <td style="padding: 12px 16px; width: 140px;">
+                            <td class="inv-tfoot-td-140">
                                 <input type="number" form="add-item-form" name="unit_price" class="form-in text-right"
                                        placeholder="€ Prezzo" min="0" step="0.01"
                                        value="{{ old('unit_price') }}" required>
                             </td>
-                            <td style="padding: 12px 16px;"></td>
-                            <td style="padding: 12px 16px; text-align: right; width: 120px;">
-                                <button type="submit" form="add-item-form" class="btn btn-s" style="width: 100%;">
+                            <td class="inv-tfoot-td"></td>
+                            <td class="inv-tfoot-td-120">
+                                <button type="submit" form="add-item-form" class="btn btn-s u-w-full">
                                     <i data-lucide="plus" class="u-icon-sm"></i> Aggiungi
                                 </button>
                             </td>

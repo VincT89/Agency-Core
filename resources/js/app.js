@@ -40,7 +40,16 @@ document.addEventListener('alpine:init', () => {
 });
 
 import { initBgCanvas } from './bg-canvas.js';
+
+document.addEventListener('livewire:navigating', () => {
+    const root = document.querySelector('.page-transition-root');
+    if (root) root.classList.add('is-navigating');
+});
+
 document.addEventListener('livewire:navigated', () => {
+    const root = document.querySelector('.page-transition-root');
+    if (root) root.classList.remove('is-navigating');
+    
     initBgCanvas('bg-canvas');
     initShell();
     createIcons({ icons });

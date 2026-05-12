@@ -1,3 +1,13 @@
+@php
+    $versionImages = [];
+    if ($post->currentVersion) {
+        if (is_array($post->currentVersion->image_urls) && count($post->currentVersion->image_urls) > 0) {
+            $versionImages = $post->currentVersion->image_urls;
+        } elseif (! empty($post->currentVersion->image_url)) {
+            $versionImages = [$post->currentVersion->image_url];
+        }
+    }
+@endphp
 <div>
     <div class="u-mb-lg">
         <a href="{{ route('marketing-campaigns.show', $campaign->id) }}"
@@ -126,16 +136,9 @@
                             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
                         </div>
 
-                        {{-- Box 1: Dati Principali --}}
+                        {{-- Box 1: Dati Editoriali --}}
                         <div class="panel cmp-panel-pad u-mb-md">
-                            {{-- Blocco 2: Titolo --}}
-                            <div class="form-g">
-                                <label class="form-lbl">Titolo Post</label>
-                                <input type="text" class="form-in" wire:model="form.title"
-                                    placeholder="Es: Lancio prodotto X">
-                                @error('form.title') <span class="form-err">{{ $message }}</span> @enderror
-                            </div>
-
+                            <div class="cmp-section-label mb-2">Dati Editoriali</div>
                             {{-- Blocco 3: Tipo + Stato + Data/Ora --}}
                             <div class="u-flex u-gap-lg">
                                 <div class="form-g mb-0 u-flex-1">
@@ -150,10 +153,10 @@
 
                                 <div class="form-g mb-0 u-flex-1">
                                     <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
-                                    <select class="form-sel" wire:model="form.status" required>
+                                    <select class="form-sel" wire:model="form.status" required {{ $post->currentVersion ? 'disabled' : '' }}>
                                         <option value="draft">Bozza</option>
-                                        <option value="pending_n8n">In Coda AI</option>
-                                        <option value="submitted_to_n8n">In Elaborazione AI</option>
+                                        <option value="pending_n8n">In Coda Sody</option>
+                                        <option value="submitted_to_n8n">In Elaborazione Sody</option>
                                         <option value="generated">Generato</option>
                                         <option value="approved">Approvato</option>
                                         <option value="published">Pubblicato</option>
@@ -177,14 +180,48 @@
                             </div>
                         </div>
 
-                        {{-- Box 2: Media e Copy --}}
+                        {{-- Box 2: Contenuto Sody --}}
                         <div class="panel cmp-panel-pad u-mb-md">
+                            <div class="cmp-section-label mb-2">{{ $post->currentVersion ? 'Versione Sody Attiva' : 'Contenuto Sody' }}</div>
+                            
+                            {{-- Blocco 2: Titolo --}}
+                            <div class="form-g u-border-b u-border-line u-pb-md">
+                                <label class="form-lbl">Titolo Post</label>
+                                <input type="text" class="form-in" wire:model="form.title"
+                                    placeholder="Es: Lancio prodotto X">
+                                @error('form.title') <span class="form-err">{{ $message }}</span> @enderror
+                            </div>
+
+                            @if($post->currentVersion && count($versionImages) > 0)
+                                <div class="cmp-section-label mb-2 u-mt-md">Media Sody (Attivo)</div>
+                                <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md">
+                                    @foreach($versionImages as $idx => $vImg)
+                                        <div class="cmp-media-preview-item">
+                                            <img src="{{ $vImg }}" class="cmp-media-preview-img cmp-local-preview-img">
+                                            <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="Immagine Sody">Sody (v{{ $post->currentVersion->version_number }}) - {{ $idx + 1 }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            {{-- Wrapper Media Sorgente --}}
+                            @if($post->currentVersion && count($versionImages) > 0)
+                                <div x-data="{ showOriginals: false }" class="u-mt-md u-border-t u-border-line u-pt-md">
+                                    <div class="u-flex u-align-center u-gap-md u-mb-sm u-cursor-pointer" @click="showOriginals = !showOriginals">
+                                        <div class="cmp-section-label mb-0">Media Originali (Sorgente)</div>
+                                        <button type="button" class="btn btn-p btn-sm mkt-btn-s-pad u-ml-auto">
+                                            <span x-text="showOriginals ? 'Nascondi' : 'Mostra'"></span>
+                                        </button>
+                                    </div>
+                                    <div x-show="showOriginals" x-collapse x-cloak>
+                            @endif
+
                             {{-- Blocco 4: Preview Media Esistenti --}}
                             @if(count($existing_media) > 0)
-                                <div class="cmp-section-label mb-2">Media Attuali (Salvati)</div>
+                                <div class="cmp-section-label mb-2 u-mt-md">Media Attuali (Salvati)</div>
                                 <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap">
                                     @foreach($existing_media as $item)
-                                        <div class="cmp-media-preview-item">
+                                        <div class="cmp-media-preview-item {{ $post->currentVersion ? 'u-opacity-70 hover:u-opacity-100 transition-opacity' : '' }}">
                                             @if(\Illuminate\Support\Str::startsWith($item['mime_type'], 'video/'))
                                                 <video src="{{ $item['preview_url'] }}"
                                                     class="cmp-media-preview-video cmp-local-preview-img" controls></video>
@@ -194,8 +231,10 @@
                                             @endif
                                             <div class="u-text-truncate u-w-full u-text-meta u-mt-xs"
                                                 title="{{ $item['original_name'] }}">{{ $item['original_name'] }}</div>
-                                            <button type="button" wire:click="removeExistingMedia({{ $item['id'] }})"
-                                                class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
+                                            @if(!$post->currentVersion)
+                                                <button type="button" wire:click="removeExistingMedia({{ $item['id'] }})"
+                                                    class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -259,13 +298,17 @@
                                      }">
                                             @foreach($selected_nextcloud_files as $index => $ncFile)
                                                 <div class="cmp-nc-preview-item" wire:key="nc-{{ $index }}" draggable="true"
+                                                    x-data="{ imageFailed: false }"
                                                     @dragstart="dragStart({{ $index }})" @dragover="dragOver($event, {{ $index }})"
                                                     @drop="drop({{ $index }})" @dragend="draggingIndex = null; dropIndex = null"
                                                     :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
                                                     <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i>
                                                     </div>
                                                     <img src="{{ route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 150, 'h' => 150]) }}"
-                                                        class="cmp-nc-preview-img" onerror="this.classList.add('u-hidden')">
+                                                        class="cmp-nc-preview-img" :class="imageFailed ? 'u-hidden' : ''" x-on:error="imageFailed = true">
+                                                    <div x-show="imageFailed" class="marketing-media-placeholder" x-cloak>
+                                                        <i data-lucide="image-off" class="u-icon-md"></i>
+                                                    </div>
                                                     <div class="u-text-truncate u-w-full u-text-meta u-mt-xs"
                                                         title="{{ $ncFile['name'] }}">{{ $index + 1 }}. {{ $ncFile['name'] }}</div>
                                                     <button type="button"
@@ -278,47 +321,54 @@
                             @endif
 
                             {{-- Blocco 4.6: Sorgente Nuovi Media --}}
-                            <div class="cmp-media-source-hd u-mt-md">
-                                <label class="form-lbl mb-0">Aggiungi Media</label>
-                                <div class="cmp-media-source-options">
-                                    <label class="cmp-radio-label">
-                                        <input type="radio" wire:model.live="form.media_source" value="local">
-                                        Upload Locale
-                                    </label>
-                                    <label class="cmp-radio-label">
-                                        <input type="radio" wire:model.live="form.media_source" value="nextcloud">
-                                        Da Nextcloud
-                                    </label>
-                                </div>
-                            </div>
-
-                            @if($form['media_source'] === 'local')
-                                <input type="file" wire:model="media" multiple class="form-in p-2 text-sm"
-                                    accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
-                                <div wire:loading wire:target="media" class="text-xs text-blue-500 mt-1">Caricamento
-                                    anteprima...</div>
-                                <div class="text-xs text-gray-500 mt-1 u-mb-md">Puoi selezionare più file (max 10 in
-                                    totale).</div>
-                                @error('media') <span class="form-err">{{ $message }}</span> @enderror
-                                @error('media.*') <span class="form-err">{{ $message }}</span> @enderror
-                            @else
-                                {{-- Nextcloud Section --}}
-                                <div class="form-g u-mb-md">
-                                    <label class="form-lbl cmp-lbl-sm">Sfoglia Cartelle Nextcloud</label>
-                                    <div class="cmp-nc-browse-group">
-                                        <input type="text" wire:model="nextcloud_browse_path" class="form-in"
-                                            placeholder="/" disabled>
-                                        <div class="u-flex u-gap-xs">
-                                            <button type="button" wire:click="openNextcloudPicker('photo')"
-                                                class="btn btn-sec">Esplora Foto</button>
-                                        </div>
+                            <div class="u-mt-md u-border-t u-border-line u-pt-md">
+                                <div class="cmp-media-source-hd u-mt-md">
+                                    <label class="form-lbl mb-0">Aggiungi Media</label>
+                                    <div class="cmp-media-source-options">
+                                        <label class="cmp-radio-label">
+                                            <input type="radio" wire:model.live="form.media_source" value="local">
+                                            Upload Locale
+                                        </label>
+                                        <label class="cmp-radio-label">
+                                            <input type="radio" wire:model.live="form.media_source" value="nextcloud">
+                                            Da Nextcloud
+                                        </label>
                                     </div>
-                                    @error('form.nextcloud_path') <div class="form-err">{{ $message }}</span> @enderror
+                                </div>
+
+                                @if($form['media_source'] === 'local')
+                                    <input type="file" wire:model="media" multiple class="form-in p-2 text-sm"
+                                        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
+                                    <div wire:loading wire:target="media" class="text-xs text-blue-500 mt-1">Caricamento
+                                        anteprima...</div>
+                                    <div class="text-xs text-gray-500 mt-1 u-mb-md">Puoi selezionare più file (max 10 in
+                                        totale).</div>
+                                    @error('media') <span class="form-err">{{ $message }}</span> @enderror
+                                    @error('media.*') <span class="form-err">{{ $message }}</span> @enderror
+                                @else
+                                    {{-- Nextcloud Section --}}
+                                    <div class="form-g u-mb-md">
+                                        <label class="form-lbl cmp-lbl-sm">Sfoglia Cartelle Nextcloud</label>
+                                        <div class="cmp-nc-browse-group">
+                                            <input type="text" wire:model="nextcloud_browse_path" class="form-in"
+                                                placeholder="/" disabled>
+                                            <div class="u-flex u-gap-xs">
+                                                <button type="button" wire:click="openNextcloudPicker('photo')"
+                                                    class="btn btn-sec">Esplora Foto</button>
+                                            </div>
+                                        </div>
+                                        @error('form.nextcloud_path') <div class="form-err">{{ $message }}</div> @enderror
 
                                         @if($nextcloud_error)
                                             <div class="form-err">{{ $nextcloud_error }}</div>
                                         @endif
                                     </div>
+                                @endif
+                            </div>
+
+                            @if($post->currentVersion && count($versionImages) > 0)
+                                    </div> {{-- chiusura x-show="showOriginals" --}}
+                                </div> {{-- chiusura wrapper x-data --}}
                             @endif
 
                                 {{-- Blocco 4.7: Copy / Descrizione --}}
@@ -330,122 +380,231 @@
                                 </div>
                             </div>
 
-                            {{-- Blocco 5: Identità Cliente per AI --}}
-                            <div class="panel cmp-panel-pad cmp-identity-panel u-mt-md">
-                                <label class="cmp-ai-check-wrap">
-                                    <input type="checkbox" wire:model.live="form.ai_analysis_enabled"
-                                        class="cmp-ai-check-input">
-                                    <div class="cmp-ai-check-content">
-                                        <div class="cmp-ai-check-title">Richiedi Analisi AI Sody</div>
-                                        <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà
-                                            un copy se assente.</div>
-                                    </div>
-                                </label>
-
-                                @if($form['ai_analysis_enabled'])
-                                    <div class="cmp-identity-body">
-                                        {{-- Riga logo --}}
-                                        <div class="cmp-identity-row">
-                                            <div class="cmp-identity-col-check">
-                                                <label class="cmp-check-label u-mb-sm">
-                                                    <input type="checkbox" wire:model.live="include_client_logo"
-                                                        class="u-cursor-pointer">
-                                                    Includi logo cliente nel briefing
-                                                </label>
-                                                @if($campaign->client->logo_path)
-                                                    <div x-show="$wire.include_client_logo" class="cmp-identity-logo-preview">
-                                                        <span class="u-text-meta muted">Logo attuale:</span>
-                                                        @if($runtime_logo && method_exists($runtime_logo, 'temporaryUrl'))
-                                                            <img src="{{ $runtime_logo->temporaryUrl() }}" alt="Logo Caricato"
-                                                                class="cmp-identity-logo-img">
-                                                        @else
-                                                            <img src="{{ $campaign->client->logo_url }}" alt="Logo Cliente"
-                                                                class="cmp-identity-logo-img">
-                                                        @endif
-                                                    </div>
-                                                @else
-                                                    <div x-show="$wire.include_client_logo">
-                                                        <div class="u-text-meta u-text-orange u-mb-sm">Nessun logo presente.
-                                                            Caricane uno.</div>
-                                                        <input type="file" wire:model="runtime_logo" class="form-in cmp-file-sm"
-                                                            accept="image/jpeg,image/png,image/webp">
-                                                        @error('runtime_logo') <div class="form-err form-err-sm">{{ $message }}
-                                                        </div> @enderror
-                                                        <label class="cmp-save-label u-mt-sm">
-                                                            <input type="checkbox" wire:model="save_runtime_logo_to_client"
-                                                                class="u-cursor-pointer">
-                                                            Salva e imposta come logo ufficiale
-                                                        </label>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-
-                                        {{-- Riga attività --}}
-                                        <div class="cmp-identity-row">
-                                            <div class="cmp-identity-col-check">
-                                                <label class="cmp-check-label u-mb-sm">
-                                                    <input type="checkbox" wire:model.live="include_client_header"
-                                                        class="u-cursor-pointer">
-                                                    Includi descrizione attività nel briefing
-                                                </label>
-                                                @if($campaign->client->activity_description)
-                                                    <div x-show="$wire.include_client_header" x-data="{ expActivity: false }">
-                                                        <div class="u-text-meta muted u-mb-xs">Testo attuale:</div>
-                                                        <div class="cmp-identity-activity-full custom-scrollbar"
-                                                            :class="expActivity ? 'is-expanded' : ''">
-                                                            {{ $campaign->client->activity_description }}
-                                                        </div>
-                                                        @if(strlen($campaign->client->activity_description) > 150)
-                                                            <button type="button" @click="expActivity = !expActivity"
-                                                                class="btn-ghost-primary btn-xs u-mt-xs">Espandi/Comprimi</button>
-                                                        @endif
-                                                    </div>
-                                                @else
-                                                    <div x-show="$wire.include_client_header">
-                                                        <div class="u-text-meta u-text-orange u-mb-sm">Nessuna descrizione
-                                                            presente. Scrivine una.</div>
-                                                        <textarea wire:model="runtime_activity_description"
-                                                            class="form-ta cmp-ta-sm"
-                                                            placeholder="Descrivi l'attività del cliente..."></textarea>
-                                                        @error('runtime_activity_description') <div
-                                                        class="form-err form-err-sm">{{ $message }}</div> @enderror
-                                                        <label class="cmp-save-label u-mt-sm">
-                                                            <input type="checkbox" wire:model="save_runtime_activity_to_client"
-                                                                class="u-cursor-pointer">
-                                                            Salva e imposta come descrizione ufficiale
-                                                        </label>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
+                            {{-- Blocco 5: Identità Cliente per Sody --}}
+                            <div class="panel cmp-panel-pad cmp-identity-panel u-mt-md" @if($post->currentVersion) x-data="{ showAiSettings: false }" @endif>
+                                @if($post->currentVersion)
+                                    <div class="u-flex u-align-center u-gap-md u-cursor-pointer" @click="showAiSettings = !showAiSettings">
+                                        <div class="cmp-section-label mb-0">Briefing sorgente usato da Sody</div>
+                                        <button type="button" class="btn btn-p btn-sm mkt-btn-s-pad u-ml-auto">
+                                            <span x-text="showAiSettings ? 'Nascondi' : 'Mostra'"></span>
+                                        </button>
                                     </div>
                                 @endif
+                                <div @if($post->currentVersion) x-show="showAiSettings" x-collapse x-cloak class="u-mt-md u-border-t u-border-line u-pt-md" @endif>
+                                    <label class="cmp-ai-check-wrap">
+                                        <input type="checkbox" wire:model.live="form.ai_analysis_enabled"
+                                            class="cmp-ai-check-input">
+                                        <div class="cmp-ai-check-content">
+                                            <div class="cmp-ai-check-title">Richiedi Analisi Sody</div>
+                                            <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà
+                                                un copy se assente.</div>
+                                        </div>
+                                    </label>
+
+                                    @if($form['ai_analysis_enabled'])
+                                        <div class="cmp-identity-body">
+                                            {{-- Riga logo --}}
+                                            <div class="cmp-identity-row">
+                                                <div class="cmp-identity-col-check">
+                                                    <label class="cmp-check-label u-mb-sm">
+                                                        <input type="checkbox" wire:model.live="include_client_logo"
+                                                            class="u-cursor-pointer">
+                                                        Includi logo cliente nel briefing
+                                                    </label>
+                                                    @if($campaign->client->logo_path)
+                                                        <div x-show="$wire.include_client_logo" class="cmp-identity-logo-preview">
+                                                            <span class="u-text-meta muted">Logo attuale:</span>
+                                                            @if($runtime_logo && method_exists($runtime_logo, 'temporaryUrl'))
+                                                                <img src="{{ $runtime_logo->temporaryUrl() }}" alt="Logo Caricato"
+                                                                    class="cmp-identity-logo-img">
+                                                            @else
+                                                                <img src="{{ $campaign->client->logo_url }}" alt="Logo Cliente"
+                                                                    class="cmp-identity-logo-img">
+                                                            @endif
+                                                        </div>
+                                                    @else
+                                                        <div x-show="$wire.include_client_logo">
+                                                            <div class="u-text-meta u-text-orange u-mb-sm">Nessun logo presente.
+                                                                Caricane uno.</div>
+                                                            <input type="file" wire:model="runtime_logo" class="form-in cmp-file-sm"
+                                                                accept="image/jpeg,image/png,image/webp">
+                                                            @error('runtime_logo') <div class="form-err form-err-sm">{{ $message }}
+                                                            </div> @enderror
+                                                            <label class="cmp-save-label u-mt-sm">
+                                                                <input type="checkbox" wire:model="save_runtime_logo_to_client"
+                                                                    class="u-cursor-pointer">
+                                                                Salva e imposta come logo ufficiale
+                                                            </label>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                            {{-- Riga attività --}}
+                                            <div class="cmp-identity-row">
+                                                <div class="cmp-identity-col-check">
+                                                    <label class="cmp-check-label u-mb-sm">
+                                                        <input type="checkbox" wire:model.live="include_client_header"
+                                                            class="u-cursor-pointer">
+                                                        Includi descrizione attività nel briefing
+                                                    </label>
+                                                    @if($campaign->client->activity_description)
+                                                        <div x-show="$wire.include_client_header" x-data="{ expActivity: false }">
+                                                            <div class="u-text-meta muted u-mb-xs">Testo attuale:</div>
+                                                            <div class="cmp-identity-activity-full custom-scrollbar"
+                                                                :class="expActivity ? 'is-expanded' : ''">
+                                                                {{ $campaign->client->activity_description }}
+                                                            </div>
+                                                            @if(strlen($campaign->client->activity_description) > 150)
+                                                                <button type="button" @click="expActivity = !expActivity"
+                                                                    class="btn-ghost-primary btn-xs u-mt-xs">Espandi/Comprimi</button>
+                                                            @endif
+                                                        </div>
+                                                    @else
+                                                        <div x-show="$wire.include_client_header">
+                                                            <div class="u-text-meta u-text-orange u-mb-sm">Nessuna descrizione
+                                                                presente. Scrivine una.</div>
+                                                            <textarea wire:model="runtime_activity_description"
+                                                                class="form-ta cmp-ta-sm"
+                                                                placeholder="Descrivi l'attività del cliente..."></textarea>
+                                                            @error('runtime_activity_description') <div
+                                                            class="form-err form-err-sm">{{ $message }}</div> @enderror
+                                                            <label class="cmp-save-label u-mt-sm">
+                                                                <input type="checkbox" wire:model="save_runtime_activity_to_client"
+                                                                    class="u-cursor-pointer">
+                                                                Salva e imposta come descrizione ufficiale
+                                                            </label>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
+
+                            {{-- Versioni e Feedback --}}
+                            @if($post->currentVersion)
+                                <div class="panel cmp-version-box u-mt-md">
+                                    <div class="cmp-version-hd">
+                                        <h4 class="mkt-fw600-fs15-m0-flex-gap8">
+                                            <i data-lucide="sparkles" class="mkt-icon-16-blue"></i>
+                                            Azioni Sody & Feedback (v{{ $post->currentVersion->version_number }})
+                                        </h4>
+
+                                    </div>
+
+                                    @if($post->comments->count() > 0)
+                                        <div class="mkt-mb-24">
+                                            <div class="mkt-feedback-title">Feedback Ricevuti</div>
+                                            <div class="cmp-feedback-list custom-scrollbar">
+                                                @foreach($post->comments as $comment)
+                                                    <div class="cmp-feedback-item">
+                                                        <div class="cmp-feedback-hd">
+                                                            <span>
+                                                                @if($comment->source === \App\Enums\Social\CommentSource::Client)
+                                                                    <strong class="mkt-text-orange">[Cliente]</strong>
+                                                                    <span class="cmp-client-badge">Risposta cliente</span>
+                                                                @else
+                                                                    <strong class="mkt-text-purple">[Team]
+                                                                        {{ $comment->user->name ?? 'Sistema' }}</strong>
+                                                                @endif
+                                                            </span>
+                                                            <span class="mkt-text-text3">{{ $comment->created_at->format('d/m H:i') }}</span>
+                                                        </div>
+                                                        <div class="cmp-feedback-body">{{ $comment->body }}</div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div class="cmp-comment-form">
+                                        <input type="text" wire:model="newInternalComment" class="form-in u-flex-1"
+                                            placeholder="Aggiungi una nota o istruzioni per Sody...">
+                                        <button type="button" wire:click="addInternalComment" class="btn btn-p btn-sm mkt-btn-s-pad">
+                                            <i data-lucide="message-square" class="u-icon-sm"></i> Inserisci Nota
+                                        </button>
+                                    </div>
+
+                                    <div class="mkt-flex-gap10-wrap-pt20-bt">
+
+                                        @if($generatedReviewLink)
+                                            <div class="cmp-review-link-box">
+                                                <div class="mkt-green-fw600-fs14-mb8-flex-gap6">
+                                                    <i data-lucide="check-circle" class="u-icon-md"></i> Inviato al Cliente
+                                                </div>
+                                                <div class="u-flex u-gap-sm" x-data="{ copied: false }">
+                                                    <input type="text" value="{{ $generatedReviewLink }}" readonly
+                                                        class="form-in mkt-review-input" id="review-link-{{ $post->id }}">
+                                                    <button type="button"
+                                                        @click="navigator.clipboard.writeText(document.getElementById('review-link-{{ $post->id }}').value); copied = true; setTimeout(() => copied = false, 2000)"
+                                                        class="btn btn-s mkt-review-btn" :class="copied ? 'btn-green' : ''">
+                                                        <span x-show="!copied">Copia Link</span>
+                                                        <span x-show="copied" x-cloak><i data-lucide="check" class="u-icon-sm"></i>
+                                                            Copiato!</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        @else
+                                            @if(!in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
+                                                @if($post->canRegenerate())
+                                                    <button type="button" wire:click="regeneratePost('full')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                        <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera Tutto
+                                                    </button>
+                                                    <button type="button" wire:click="regeneratePost('caption')"
+                                                        class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                        <i data-lucide="type" class="u-icon-sm"></i> Rigenera Testo
+                                                    </button>
+                                                    <button type="button" wire:click="regeneratePost('image')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                        <i data-lucide="image" class="u-icon-sm"></i> Rigenera Immagine
+                                                    </button>
+                                                @endif
+
+                                                <div class="u-flex-1"></div>
+
+                                                @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested']))
+                                                    <button type="button" wire:click="sendToClient" class="btn btn-s btn-purple u-flex-center u-gap-xs">
+                                                        <i data-lucide="send" class="u-icon-sm"></i> Invia al Cliente
+                                                    </button>
+                                                @endif
+
+                                                @if(!in_array($post->status->value, ['approved', 'published', 'cancelled']))
+                                                    <button type="button" wire:click="approvePost" class="btn btn-s btn-green u-flex-center u-gap-xs">
+                                                        <i data-lucide="check" class="u-icon-sm"></i> Approva Definitivamente
+                                                    </button>
+                                                @endif
+                                            @endif
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
 
                             <div class="u-mt-lg u-flex u-gap-sm">
                                 @if($form['ai_analysis_enabled'])
-                                    <button type="button" wire:click="savePost" class="btn btn-s"
+                                    <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
                                         wire:loading.attr="disabled">
                                         <span wire:loading.remove wire:target="savePost">
-                                            {{ $post->status->value !== 'draft' ? 'Aggiorna Dati' : 'Salva Bozza' }}
+                                            {{ $post->status->value !== 'draft' ? ($post->currentVersion ? 'Salva Versione Sody' : 'Salva Modifiche') : 'Salva Bozza' }}
                                         </span>
                                         <span wire:loading wire:target="savePost">Salvataggio...</span>
                                     </button>
-                                    <button type="button" wire:click="saveAndSubmitToN8n"
-                                        class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
-                                        <i data-lucide="sparkles" class="u-icon-md"></i>
-                                        <span wire:loading.remove wire:target="saveAndSubmitToN8n">
-                                            {{ $post->status->value !== 'draft' ? 'Rigenera con Sody' : 'Salva e Invia a Sody' }}
-                                        </span>
-                                        <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
-                                    </button>
+                                    @if(!$post->currentVersion)
+                                        <button type="button" wire:click="saveAndSubmitToN8n"
+                                            class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
+                                            <i data-lucide="sparkles" class="u-icon-md"></i>
+                                            <span wire:loading.remove wire:target="saveAndSubmitToN8n">
+                                                {{ $post->status->value !== 'draft' ? 'Rigenera con Sody' : 'Salva e Invia a Sody' }}
+                                            </span>
+                                            <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
+                                        </button>
+                                    @endif
                                 @else
                                     <button type="button" wire:click="savePost" class="btn btn-p u-flex-center u-gap-xs"
                                         wire:loading.attr="disabled">
                                         <i data-lucide="save" class="u-icon-md"></i>
                                         <span wire:loading.remove wire:target="savePost">
-                                            {{ $post->status->value !== 'draft' ? 'Aggiorna Post' : 'Salva Post' }}
+                                            {{ $post->status->value !== 'draft' ? 'Salva Modifiche' : 'Salva Post' }}
                                         </span>
                                         <span wire:loading wire:target="savePost">Salvataggio...</span>
                                     </button>
@@ -456,116 +615,7 @@
                 </div>
             </div>
 
-            {{-- Versioni e Feedback --}}
-            @if($post->currentVersion)
-                <div class="panel cmp-version-box">
-                    <div class="cmp-version-hd">
-                        <h4 class="mkt-fw600-fs15-m0-flex-gap8">
-                            <i data-lucide="sparkles" class="mkt-icon-16-blue"></i>
-                            Versione Generata (v{{ $post->currentVersion->version_number }})
-                        </h4>
-                        <span class="cmp-version-status-badge">
-                            {{ $post->status->label() }}
-                        </span>
-                    </div>
 
-                    <div class="cmp-version-content">
-                        @if($post->currentVersion->image_url)
-                            <div class="mkt-shrink-0">
-                                <img src="{{ $post->currentVersion->image_url }}" class="cmp-version-img">
-                            </div>
-                        @endif
-                        <div class="mkt-flex1-fs13-text2">
-                            <strong class="mkt-text1-fs14">{{ $post->currentVersion->title }}</strong>
-                            <div class="cmp-version-caption">{{ $post->currentVersion->caption }}</div>
-                        </div>
-                    </div>
-
-                    @if($post->comments->count() > 0)
-                        <div class="mkt-mb-24">
-                            <div class="mkt-feedback-title">Feedback Ricevuti</div>
-                            <div class="cmp-feedback-list custom-scrollbar">
-                                @foreach($post->comments as $comment)
-                                    <div class="cmp-feedback-item">
-                                        <div class="cmp-feedback-hd">
-                                            <span>
-                                                @if($comment->source === \App\Enums\Social\CommentSource::Client)
-                                                    <strong class="mkt-text-orange">[Cliente]</strong>
-                                                    <span class="cmp-client-badge">Risposta cliente</span>
-                                                @else
-                                                    <strong class="mkt-text-purple">[Team]
-                                                        {{ $comment->user->name ?? 'Sistema' }}</strong>
-                                                @endif
-                                            </span>
-                                            <span class="mkt-text-text3">{{ $comment->created_at->format('d/m H:i') }}</span>
-                                        </div>
-                                        <div class="cmp-feedback-body">{{ $comment->body }}</div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    <div class="cmp-comment-form">
-                        <input type="text" wire:model="newInternalComment" class="form-in u-flex-1"
-                            placeholder="Aggiungi una nota o istruzioni per l'AI...">
-                        <button type="button" wire:click="addInternalComment" class="btn btn-s mkt-btn-s-pad">
-                            <i data-lucide="message-square" class="u-icon-sm"></i> Inserisci Nota
-                        </button>
-                    </div>
-
-                    <div class="mkt-flex-gap10-wrap-pt20-bt">
-
-                        @if($generatedReviewLink)
-                            <div class="cmp-review-link-box">
-                                <div class="mkt-green-fw600-fs14-mb8-flex-gap6">
-                                    <i data-lucide="check-circle" class="u-icon-md"></i> Inviato al Cliente
-                                </div>
-                                <div class="u-flex u-gap-sm" x-data="{ copied: false }">
-                                    <input type="text" value="{{ $generatedReviewLink }}" readonly
-                                        class="form-in mkt-review-input" id="review-link-{{ $post->id }}">
-                                    <button type="button"
-                                        @click="navigator.clipboard.writeText(document.getElementById('review-link-{{ $post->id }}').value); copied = true; setTimeout(() => copied = false, 2000)"
-                                        class="btn btn-s mkt-review-btn" :class="copied ? 'btn-green' : ''">
-                                        <span x-show="!copied">Copia Link</span>
-                                        <span x-show="copied" x-cloak><i data-lucide="check" class="u-icon-sm"></i>
-                                            Copiato!</span>
-                                    </button>
-                                </div>
-                            </div>
-                        @else
-                            @if(!in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
-                                @if($post->canRegenerate())
-                                    <button type="button" wire:click="regeneratePost('full')" class="btn btn-s u-flex-center u-gap-xs">
-                                        <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera Tutto
-                                    </button>
-                                    <button type="button" wire:click="regeneratePost('caption')"
-                                        class="btn btn-s u-flex-center u-gap-xs">
-                                        <i data-lucide="type" class="u-icon-sm"></i> Rigenera Testo
-                                    </button>
-                                    <button type="button" wire:click="regeneratePost('image')" class="btn btn-s u-flex-center u-gap-xs">
-                                        <i data-lucide="image" class="u-icon-sm"></i> Rigenera Immagine
-                                    </button>
-                                @endif
-
-                                <div class="u-flex-1"></div>
-
-                                @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested']))
-                                    <button type="button" wire:click="sendToClient" class="btn btn-s btn-purple u-flex-center u-gap-xs">
-                                        <i data-lucide="send" class="u-icon-sm"></i> Invia al Cliente
-                                    </button>
-                                @endif
-
-                                @if(!in_array($post->status->value, ['approved', 'published', 'cancelled']))
-                                    <button type="button" wire:click="approvePost" class="btn btn-s btn-green u-flex-center u-gap-xs">
-                                        <i data-lucide="check" class="u-icon-sm"></i> Approva Definitivamente
-                                    </button>
-                                @endif
-                            @endif
-                        @endif
-                    </div>
-                </div>
-            @endif
 
         </div>
 
@@ -679,10 +729,34 @@
                             <div class="cmp-ig-preview-author">{{ $campaign->client->name }}</div>
                         </div>
 
-                        <div class="cmp-ig-preview-media" @if(!$post->currentVersion && count($existing_media) > 1)
-                        x-data="{ currentSlide: 0, slides: {{ count($existing_media) }} }" @endif>
-                            @if($post->currentVersion && $post->currentVersion->image_url)
-                                <img src="{{ $post->currentVersion->image_url }}" alt="Preview Media">
+                        <div class="cmp-ig-preview-media" @if((!$post->currentVersion && count($existing_media) > 1) || count($versionImages) > 1)
+                        x-data="{ currentSlide: 0, slides: {{ $post->currentVersion ? count($versionImages) : min(count($existing_media), 10) }} }" @endif>
+                            @if(count($versionImages) > 0)
+                                @if(count($versionImages) == 1)
+                                    <img src="{{ $versionImages[0] }}" alt="Preview Media">
+                                @else
+                                    <div class="cmp-carousel-inner" :data-slide="currentSlide">
+                                        @foreach($versionImages as $index => $vImg)
+                                            <div class="cmp-carousel-item">
+                                                <img src="{{ $vImg }}" alt="Preview Media {{ $index + 1 }}">
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <button type="button" class="cmp-carousel-prev" x-show="currentSlide > 0"
+                                        @click="currentSlide--">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left u-icon-sm"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                    </button>
+                                    <button type="button" class="cmp-carousel-next" x-show="currentSlide < slides - 1"
+                                        @click="currentSlide++">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right u-icon-sm"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                    </button>
+                                    <div class="cmp-carousel-dots">
+                                        <template x-for="i in slides">
+                                            <span class="cmp-carousel-dot" :class="currentSlide === i - 1 ? 'active' : ''"
+                                                @click="currentSlide = i - 1"></span>
+                                        </template>
+                                    </div>
+                                @endif
                             @elseif(count($existing_media) > 0)
                                 @if(count($existing_media) == 1)
                                     @php $firstMedia = $existing_media[0]; @endphp
@@ -692,7 +766,7 @@
                                         <img src="{{ $firstMedia['preview_url'] }}" alt="Preview Media">
                                     @endif
                                 @else
-                                    <div class="cmp-carousel-inner" x-effect="$el.style.setProperty('--slide-offset', currentSlide)">
+                                    <div class="cmp-carousel-inner" :data-slide="currentSlide">
                                         @foreach($existing_media as $index => $mediaItem)
                                             <div class="cmp-carousel-item">
                                                 @if(\Illuminate\Support\Str::startsWith($mediaItem['mime_type'], 'video/'))
@@ -735,7 +809,7 @@
                         <div class="cmp-ig-preview-body">
                             <strong>{{ $campaign->client->name }}</strong>
                             <span
-                                class="cmp-ig-preview-caption">{{ $post->currentVersion->caption ?? ($form['description'] ?: 'Nessuna caption fornita...') }}</span>
+                                class="cmp-ig-preview-caption">{{ $form['description'] ?: 'Nessuna caption fornita...' }}</span>
                         </div>
                     </div>
                 </div>

@@ -10,6 +10,7 @@ class MarketingCampaignPostVersion extends Model
 
     protected $casts = [
         'hashtags' => 'array',
+        'image_urls' => 'array',
         'raw_payload' => 'array',
         'regeneration_type' => \App\Enums\Social\MarketingCampaignPostRegenerationType::class,
         'source' => \App\Enums\Social\MarketingCampaignPostVersionSource::class,

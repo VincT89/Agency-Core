@@ -15,12 +15,13 @@
                 <a href="{{ route('teams.edit', $team) }}" class="btn btn-g">Modifica</a>
             @endcan
             @can('system.admin')
-                <form action="{{ route('teams.destroy', $team) }}" method="POST"
-                      onsubmit="return confirm('Eliminare questo team? Questa azione non può essere annullata.')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-g"
-                            style="color:var(--red);border-color:rgba(245,75,75,.3)">Elimina</button>
-                </form>
+                <x-delete-modal 
+                    action="{{ route('teams.destroy', $team) }}" 
+                    title="Elimina Team" 
+                    message="Eliminare definitivamente il team '{{ $team->name }}'?"
+                    confirmText="{{ $team->name }}">
+                    <button type="button" class="btn btn-g btn-danger-outline">Elimina</button>
+                </x-delete-modal>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -42,11 +43,11 @@
                     <tr>
                         <td class="name-col">
                             {{ $member->name }}
-                            <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">
+                            <div class="u-font-mono u-text-tiny u-text-muted">
                                 {{ $member->role->value }}
                             </div>
                         </td>
-                        <td style="color:var(--text2);font-size:12px">
+                        <td class="u-text-sm u-text-muted">
                             {{ $member->primary_specialization ?? '—' }}
                         </td>
                         <td>
@@ -59,7 +60,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" style="text-align:center;color:var(--text3);padding:24px">
+                        <td colspan="5" class="u-text-center u-text-muted u-p-lg">
                             Nessun membro nel team.
                         </td>
                     </tr>
@@ -73,7 +74,7 @@
                 @if($team->description)
                 <div class="form-g mb-2">
                     <div class="form-lbl">Descrizione</div>
-                    <div style="color:var(--text2);font-size:13px;line-height:1.6">{{ $team->description }}</div>
+                    <div class="u-text-sm u-text-muted u-leading-relaxed">{{ $team->description }}</div>
                 </div>
                 @endif
                 <div class="form-g mb-2">
@@ -82,13 +83,13 @@
                 </div>
                 <div class="form-g mb-2">
                     <div class="form-lbl">Membri totali</div>
-                    <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text)">
+                    <div class="u-font-mono u-text-h4 u-text-strong">
                         {{ $team->users->count() }}
                     </div>
                 </div>
                 <div class="form-g">
                     <div class="form-lbl">Creato il</div>
-                    <div style="font-family:var(--mono);color:var(--text2)">
+                    <div class="u-font-mono u-text-muted">
                         {{ $team->created_at->isoFormat('D MMMM YYYY') }}
                     </div>
                 </div>

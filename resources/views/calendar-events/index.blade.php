@@ -106,19 +106,27 @@
             const CREATE_URL = '{{ route('calendar-events.create') }}';
             const EVENTS_URL = '{{ route('calendar-events.index') }}';
             const CURRENT_DEPT = '{{ request('department') }}';
-            let calendarInstance = null;
 
-            document.addEventListener('DOMContentLoaded', function () {
+            function cleanupCalendarEvents() {
+                if (window.calendarEventsInstance) {
+                    window.calendarEventsInstance.destroy();
+                    window.calendarEventsInstance = null;
+                }
+            }
+
+            function initCalendarEvents() {
+                cleanupCalendarEvents();
                 try {
                     const jsErr = document.getElementById('js-error');
                     if (typeof FullCalendar === 'undefined') {
-                        jsErr.innerText = "ERRORE CRITICO: FullCalendar undefined.";
+                        if (jsErr) jsErr.innerText = "ERRORE CRITICO: FullCalendar undefined.";
                         return;
                     }
 
-                    // Inizializza FullCalendar
                     const calEl = document.getElementById('fullcalendar');
-                    calendarInstance = new FullCalendar.Calendar(calEl, {
+                    if (!calEl) return;
+                    
+                    window.calendarEventsInstance = new FullCalendar.Calendar(calEl, {
                         locale: 'it',
                         firstDay: 1, // Start on Monday
                         initialView: 'timeGridWeek',
@@ -165,7 +173,7 @@
                         eventClick: function (info) {
                             info.jsEvent.preventDefault();
                             if (info.event.url) {
-                                window.location.href = info.event.url;
+                                window.Livewire.navigate(info.event.url);
                             }
                         },
 
@@ -187,9 +195,9 @@
 
                         // Selezione tramite trascinamento (drag)
                         select: function(info) {
-                            window.location.href = CREATE_URL
+                            window.Livewire.navigate(CREATE_URL
                                 + '?start_at=' + encodeURIComponent(info.startStr)
-                                + '&end_at=' + encodeURIComponent(info.endStr);
+                                + '&end_at=' + encodeURIComponent(info.endStr));
                         },
 
                         // Click rapido singolo su uno slot
@@ -199,8 +207,8 @@
                             if (targetDate.length <= 10) {
                                 targetDate += 'T09:00'; // Fallback per vista mese
                             }
-                            window.location.href = CREATE_URL
-                                + '?start_at=' + encodeURIComponent(targetDate);
+                            window.Livewire.navigate(CREATE_URL
+                                + '?start_at=' + encodeURIComponent(targetDate));
                         },
 
                         // Tooltip al hover
@@ -218,34 +226,38 @@
                         themeSystem: 'standard',
                     });
 
-                    calendarInstance.render();
+                    window.calendarEventsInstance.render();
 
-            // Sincronizza Mini-Mese con FullCalendar (evita refresh pagina)
-            document.querySelectorAll('.cal-mini-day').forEach(function(dayEl) {
-                dayEl.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Aggiorna stato visivo mini-mese
-                    document.querySelectorAll('.cal-mini-day.is-selected').forEach(function(el) {
-                        el.classList.remove('is-selected');
+                    // Sincronizza Mini-Mese con FullCalendar (evita refresh pagina)
+                    document.querySelectorAll('.cal-mini-day:not(.js-bound)').forEach(function(dayEl) {
+                        dayEl.classList.add('js-bound');
+                        dayEl.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            
+                            // Aggiorna stato visivo mini-mese
+                            document.querySelectorAll('.cal-mini-day.is-selected').forEach(function(el) {
+                                el.classList.remove('is-selected');
+                            });
+                            this.classList.add('is-selected');
+                            
+                            // Sposta calendario principale
+                            const selectedDate = this.getAttribute('data-date');
+                            if (selectedDate && window.calendarEventsInstance) {
+                                window.calendarEventsInstance.gotoDate(selectedDate);
+                            }
+                        });
                     });
-                    this.classList.add('is-selected');
-                    
-                    // Sposta calendario principale
-                    const selectedDate = this.getAttribute('data-date');
-                    if (selectedDate) {
-                        calendarInstance.gotoDate(selectedDate);
-                    }
-                    
-                    // Aggiorna URL per preservare lo stato (senza ricaricare)
-                    const newUrl = this.getAttribute('href');
-                    window.history.pushState({path: newUrl}, '', newUrl);
-                });
-            });
 
-        } catch (err) {
-                    document.getElementById('js-error').innerText = "JS Exception: " + err.message + "\nStack:\n" + err.stack;
+                } catch (err) {
+                    const jsErr = document.getElementById('js-error');
+                    if (jsErr) jsErr.innerText = "JS Exception: " + err.message + "\nStack:\n" + err.stack;
                 }
+            }
+
+            document.addEventListener('livewire:navigating', cleanupCalendarEvents);
+
+            document.addEventListener('livewire:navigated', function () {
+                initCalendarEvents();
             });
         </script>
 

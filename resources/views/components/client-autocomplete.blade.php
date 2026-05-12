@@ -30,9 +30,9 @@
         <input type="hidden" name="{{ $name }}" x-model="value">
         
         <div x-show="loading" class="ca-spinner-container">
-            <svg style="animation: spin 1s linear infinite; height: 16px; width: 16px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <svg class="ca-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="ca-spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="ca-spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
         </div>
     </div>
@@ -41,7 +41,7 @@
     <div x-show="isOpen" 
          x-transition
          class="ca-dropdown"
-         style="display: none;">
+         x-cloak>
          
          <ul class="ca-results-list">
              <template x-for="result in results" :key="result.id">
@@ -67,14 +67,14 @@
          <div x-show="canCreate && search.length >= 1" class="ca-create-box">
              <button type="button" 
                      @click="openQuickCreate()" 
-                     class="btn btn-p" style="width: 100%;">
+                     class="btn btn-p ca-btn-full">
                  Crea nuovo cliente
              </button>
          </div>
     </div>
 
     {{-- Form Creazione Inline (fuori dal dropdown, spinge il layout) --}}
-    <div x-show="showQuickCreate" style="display: none; margin-top: 12px; padding: 16px; background: var(--bg2); border: 1px dashed var(--line); border-radius: var(--r);">
+    <div x-show="showQuickCreate" class="ca-quick-create-wrap" x-cloak>
          <div class="ca-create-form">
              <div class="ca-create-title">Nuovo Cliente</div>
              

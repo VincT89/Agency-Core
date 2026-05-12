@@ -14,25 +14,24 @@
 
     <div class="g-cards">
         @forelse($teams as $team)
-            <div class="panel" style="cursor:pointer" onclick="window.location='{{ route('teams.show', $team) }}'">
+            <div x-data @click="window.Livewire.navigate('{{ route('teams.show', $team) }}')" class="panel u-cursor-pointer hover-bg">
                 <div class="panel-header">
                     <div class="panel-title">
-                        <div class="dot" style="background:{{ $team->is_active ? 'var(--teal)' : 'var(--text3)' }}"></div>
+                        <div class="dot {{ $team->is_active ? 'u-bg-teal' : 'u-bg-muted' }}"></div>
                         {{ $team->name }}
                     </div>
                     @can('system.admin')
-                        <a href="{{ route('teams.edit', $team) }}" class="btn-icon"
-                           style="font-size:12px" onclick="event.stopPropagation()">✎</a>
+                        <a href="{{ route('teams.edit', $team) }}" class="btn-icon u-text-sm" @click.stop>✎</a>
                     @endcan
                 </div>
                 <div class="panel-body pad">
                     @if($team->description)
-                        <div style="color:var(--text3);font-size:12px;margin-bottom:12px;line-height:1.5">
+                        <div class="u-text-sm u-text-muted u-mb-sm u-leading-relaxed">
                             {{ Str::limit($team->description, 80) }}
                         </div>
                     @endif
-                    <div style="display:flex;align-items:center;justify-content:space-between">
-                        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">
+                    <div class="u-flex-between">
+                        <span class="u-font-mono u-text-10 u-text-muted">
                             {{ $team->users_count }} {{ $team->users_count === 1 ? 'membro' : 'membri' }}
                         </span>
                         <x-badge :status="$team->is_active ? 'active' : 'inactive'" :label="$team->is_active ? 'Attivo' : 'Inattivo'" />
@@ -40,7 +39,7 @@
                 </div>
             </div>
         @empty
-            <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px">
+            <div class="g-col-full u-text-center u-text-muted u-p-xl">
                 Nessun team creato.
             </div>
         @endforelse

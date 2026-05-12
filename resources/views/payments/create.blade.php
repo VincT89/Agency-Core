@@ -52,9 +52,9 @@
                         @endforeach
                     </select>
                 </x-form-group>
-                <div style="padding-top:28px">
-                    <div style="font-size:12px;color:var(--text3);background:var(--bg2);padding:8px;border-radius:4px;">
-                        <span style="font-weight:600">Info:</span> Il Cliente e il Progetto verranno automaticamente derivati dalla fattura selezionata.
+                <div class="u-pt-28">
+                    <div class="u-info-box">
+                        <span class="u-text-strong">Info:</span> Il Cliente e il Progetto verranno automaticamente derivati dalla fattura selezionata.
                     </div>
                 </div>
             </div>
@@ -65,12 +65,12 @@
                 </x-form-group>
             </div>
 
-            <div style="background:var(--bg3);padding:10px 14px;border-radius:6px;font-size:12px;color:var(--text2);margin-bottom:16px;">
-                <i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i>
+            <div class="u-alert-box u-mb-md">
+                <i data-lucide="info" class="u-icon-sm"></i>
                 Questo pagamento aggiornerà in modo automatico il saldo ("Da Incassare" e "Incassato") della fattura selezionata.
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('payments.index') }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Pagamento</button>
             </div>

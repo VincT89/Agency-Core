@@ -30,25 +30,23 @@
                 </x-form-group>
             </div>
 
-            <div class="sec-lbl" style="margin-top:16px">Membri</div>
-            <div style="border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
+            <div class="sec-lbl u-mt-md">Membri</div>
+            <div class="team-members-list">
                 @foreach($users as $user)
-                <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;
-                               border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s"
-                       class="hover-bg">
+                <label class="team-member-row hover-bg">
                     <input type="checkbox" name="members[]" value="{{ $user->id }}"
                            id="member_{{ $user->id }}"
                            {{ in_array($user->id, old('members', [])) ? 'checked' : '' }}
-                           style="accent-color:var(--accent)">
-                    <div style="flex:1">
-                        <div style="font-size:12px;font-weight:600;color:var(--text)">{{ $user->name }}</div>
-                        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">
+                           class="team-member-checkbox">
+                    <div class="u-flex-1">
+                        <div class="u-text-sm u-text-strong">{{ $user->name }}</div>
+                        <div class="u-font-mono u-text-tiny u-text-muted">
                             {{ $user->role->value }}
                             @if($user->primary_specialization) · {{ $user->primary_specialization }}@endif
                         </div>
                     </div>
                     <select name="roles[{{ $user->id }}]"
-                            class="form-sel" style="width:120px;font-size:11px;padding:4px 8px">
+                            class="form-sel team-member-role-sel">
                         <option value="member"  {{ old("roles.{$user->id}") === 'member'  ? 'selected' : '' }}>Membro</option>
                         <option value="lead"    {{ old("roles.{$user->id}") === 'lead'    ? 'selected' : '' }}>Lead</option>
                         <option value="support" {{ old("roles.{$user->id}") === 'support' ? 'selected' : '' }}>Support</option>
@@ -57,7 +55,7 @@
                 @endforeach
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('teams.index') }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Team</button>
             </div>

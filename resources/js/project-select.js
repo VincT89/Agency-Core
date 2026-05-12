@@ -7,13 +7,21 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
 
     async function loadProjects(clientId) {
         if (!clientId) {
-            projectEl.innerHTML = '<option value="">Nessun progetto...</option>';
+            while(projectEl.firstChild) projectEl.removeChild(projectEl.firstChild);
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Nessun progetto...';
+            projectEl.appendChild(defaultOpt);
             return;
         }
         try {
             const res  = await fetch(`/api/clients/${clientId}/projects`);
             const data = await res.json();
-            projectEl.innerHTML = '<option value="">Nessun progetto...</option>';
+            while(projectEl.firstChild) projectEl.removeChild(projectEl.firstChild);
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Nessun progetto...';
+            projectEl.appendChild(defaultOpt);
             data.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
@@ -38,15 +46,18 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
     }
 }
 
-// Auto-inizializzazione
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-client-select]').forEach(clientSelect => {
+function autoInitProjectSelects() {
+    document.querySelectorAll('[data-client-select]:not(.js-bound)').forEach(clientSelect => {
+        clientSelect.classList.add('js-bound');
         const projectSelectId = clientSelect.dataset.projectSelect;
         const currentProject = clientSelect.dataset.currentProject || null;
         if (projectSelectId) {
             initProjectSelect(clientSelect.id, projectSelectId, currentProject);
         }
     });
-});
+}
+
+document.addEventListener('livewire:navigated', autoInitProjectSelects);
+document.addEventListener('DOMContentLoaded', autoInitProjectSelects);
 
 window.initProjectSelect = initProjectSelect;

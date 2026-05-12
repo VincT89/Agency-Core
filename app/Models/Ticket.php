@@ -153,6 +153,11 @@ class Ticket extends Model
         return $this->hasMany(TicketComment::class)->latest();
     }
 
+    public function checklistItems()
+    {
+        return $this->hasMany(TicketChecklistItem::class)->orderBy('sort_order');
+    }
+
     public function scopeAssignedTo($query, $userOrId)
     {
         $id = $userOrId instanceof User ? $userOrId->id : $userOrId;

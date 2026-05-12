@@ -1,11 +1,11 @@
 <div>
-    <div style="margin-bottom:15px">
-        <a href="{{ route('admin.shooting.index') }}" wire:navigate style="color:var(--text3);font-size:12px;text-decoration:none">← Torna agli shooting</a>
+    <div class="u-mb-sm">
+        <a href="{{ route('admin.shooting.index') }}" wire:navigate class="u-text-muted u-text-sm u-no-underline">← Torna agli shooting</a>
     </div>
 
     <x-page-header eyebrow="Amministrazione">
         <x-slot:title>
-            <strong>{{ $shoot->title }}</strong> <span style="font-size:16px; color:var(--text3); font-weight:400; margin-left:8px;">{{ $shoot->code }}</span>
+            <strong>{{ $shoot->title }}</strong> <span class="u-text-base u-text-muted u-font-normal u-ml-sm">{{ $shoot->code }}</span>
         </x-slot:title>
         <x-slot name="actions">
             <x-shooting.status-badge :status="$shoot->status" context="admin" />
@@ -15,43 +15,43 @@
     <div class="g-shoot-detail">
         
         {{-- Main Column --}}
-        <div style="display:flex; flex-direction:column; gap:24px;">
+        <div class="u-flex-col u-gap-md">
             <x-panel title="Dettagli Shooting" dot="var(--purple)">
-                <div style="padding:24px;">
+                <div class="u-p-lg">
                     <div class="g-shoot-2col">
                         <div>
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Progetto</div>
-                            <div style="font-weight:500; color:var(--text1);">{{ $shoot->project->name }}</div>
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Progetto</div>
+                            <div class="u-text-strong u-text-primary">{{ $shoot->project->name }}</div>
                         </div>
                         <div>
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Fotografo</div>
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Fotografo</div>
                             @if($shoot->photographer)
-                                <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="u-flex u-items-center u-gap-xs">
                                     <div class="avatar-sm">{{ substr($shoot->photographer->name, 0, 1) }}</div>
-                                    <span style="font-size:14px; font-weight:500; color:var(--text1);">{{ $shoot->photographer->name }}</span>
+                                    <span class="u-text-md u-text-strong u-text-primary">{{ $shoot->photographer->name }}</span>
                                 </div>
                             @else
-                                <span style="color:var(--text3); font-size:14px;">Da definire</span>
+                                <span class="u-text-muted u-text-md">Da definire</span>
                             @endif
                         </div>
                     </div>
                     
                     @if($shoot->location)
-                        <div style="margin-bottom:24px;">
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Location</div>
-                            <div style="font-size:14px; color:var(--text1);">{{ $shoot->location }}</div>
+                        <div class="u-mb-lg">
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Location</div>
+                            <div class="u-text-md u-text-primary">{{ $shoot->location }}</div>
                         </div>
                     @endif
                     
-                    <div class="g-shoot-2col" style="margin-bottom:0;">
+                    <div class="g-shoot-2col u-mb-0">
                         <div>
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Note Cliente</div>
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Note Cliente</div>
                             <div class="shoot-note-box">
                                 {{ $shoot->client_notes ?: 'Nessuna nota per il cliente.' }}
                             </div>
                         </div>
                         <div>
-                            <div style="font-size:12px; color:var(--text3); text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">Note Interne</div>
+                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Note Interne</div>
                             <div class="shoot-note-box purple">
                                 {{ $shoot->internal_notes ?: 'Nessuna nota interna.' }}
                             </div>
@@ -63,13 +63,13 @@
             {{-- Azione Cliente --}}
             @if($shoot->status->value === 'waiting_client')
                 <x-panel title="Conferma Cliente" dot="var(--yellow)">
-                    <div style="padding:24px;">
-                        <p style="font-size:13px; color:var(--text2); margin-bottom:16px;">
+                    <div class="u-p-lg">
+                        <p class="u-text-sm u-text-secondary u-mb-md">
                             Il fotografo ha accettato uno slot temporale. Attendi conferma dal cliente e seleziona l'esito.
                         </p>
-                        <div style="display:flex; gap:12px;">
-                            <button wire:click="confirmForClient" wire:confirm="Questa azione creerà evento e task." wire:loading.attr="disabled" class="btn btn-p" style="background:var(--green); border-color:var(--green);">Cliente ha Accettato</button>
-                            <button wire:click="rejectForClient" wire:confirm="Questa azione riporterà gli slot in revisione." wire:loading.attr="disabled" class="btn btn-outline" style="color:var(--red); border-color:var(--line);">Cliente ha Rifiutato</button>
+                        <div class="u-flex u-gap-sm">
+                            <button wire:click="confirmForClient" wire:confirm="Questa azione creerà evento e task." wire:loading.attr="disabled" class="btn btn-success">Cliente ha Accettato</button>
+                            <button wire:click="rejectForClient" wire:confirm="Questa azione riporterà gli slot in revisione." wire:loading.attr="disabled" class="btn btn-outline btn-outline-danger">Cliente ha Rifiutato</button>
                         </div>
                     </div>
                 </x-panel>
@@ -77,7 +77,7 @@
             
             {{-- Slots --}}
             <x-panel title="Slot Temporali" dot="var(--blue)">
-                <div style="padding:24px;">
+                <div class="u-p-lg">
                     <x-shooting.slot-list 
                         :shoot="$shoot" 
                         :interactive="$shoot->status->value === 'waiting_photographer'" 
@@ -88,18 +88,18 @@
             
             @if($shoot->calendarEvent || $shoot->task)
                 <x-panel title="Entità Collegate" dot="var(--gray)">
-                    <div style="padding:24px;">
+                    <div class="u-p-lg">
                         @if($shoot->calendarEvent)
-                            <div style="margin-bottom:12px;">
-                                <a href="{{ route('calendar-events.show', $shoot->calendarEvent) }}" class="btn btn-outline" style="font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                                    <i data-lucide="calendar" style="width:14px; height:14px;"></i> Vedi Evento Calendario
+                            <div class="u-mb-sm">
+                                <a href="{{ route('calendar-events.show', $shoot->calendarEvent) }}" class="btn btn-outline u-text-sm u-flex u-items-center u-gap-xs">
+                                    <i data-lucide="calendar" class="u-icon-xs"></i> Vedi Evento Calendario
                                 </a>
                             </div>
                         @endif
                         @if($shoot->task)
                             <div>
-                                <a href="{{ route('tasks.show', $shoot->task) }}" class="btn btn-outline" style="font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                                    <i data-lucide="check-square" style="width:14px; height:14px;"></i> Vedi Task
+                                <a href="{{ route('tasks.show', $shoot->task) }}" class="btn btn-outline u-text-sm u-flex u-items-center u-gap-xs">
+                                    <i data-lucide="check-square" class="u-icon-xs"></i> Vedi Task
                                 </a>
                             </div>
                         @endif
@@ -111,18 +111,18 @@
         {{-- Sidebar --}}
         <div>
             <x-panel title="Avanzamento" dot="var(--green)">
-                <div style="padding:24px;">
+                <div class="u-p-lg">
                     <x-shooting.workflow-timeline :shoot="$shoot" />
                 </div>
             </x-panel>
             
             <div class="mt-panel">
                 <x-panel title="Storico Attività" dot="var(--gray)">
-                    <div style="padding:16px;">
+                    <div class="u-p-md">
                         @forelse($shoot->auditLogs()->latest()->get() as $log)
                             <x-audit-item :log="$log" />
                         @empty
-                            <div style="color:var(--text3);font-size:13px;">Nessuna attività registrata.</div>
+                            <div class="u-text-muted u-text-sm">Nessuna attività registrata.</div>
                         @endforelse
                     </div>
                 </x-panel>

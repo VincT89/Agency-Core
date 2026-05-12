@@ -11,8 +11,8 @@
             @csrf
 
             {{-- Sezione: Anagrafica principale --}}
-            <div style="margin-bottom:16px;font-size:12px;color:var(--text3);">
-                <i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i>
+            <div class="u-text-sm u-text-muted u-mb-md">
+                <i data-lucide="info" class="u-icon-sm"></i>
                 I campi non contrassegnati da <b>*</b> sono opzionali.
             </div>
 
@@ -45,7 +45,7 @@
             </div>
 
             {{-- Sezione: Dati fiscali --}}
-            <div class="sec-lbl" style="margin-top:16px">Dati fiscali</div>
+            <div class="sec-lbl u-mt-md">Dati fiscali</div>
             <div class="form-row">
                 <x-form-group label="Partita IVA" name="vat_number">
                     <input name="vat_number" class="form-in @error('vat_number') is-invalid @enderror"
@@ -80,7 +80,7 @@
             </div>
 
             {{-- Sezione: Indirizzo --}}
-            <div class="sec-lbl" style="margin-top:16px">Indirizzo</div>
+            <div class="sec-lbl u-mt-md">Indirizzo</div>
             <div class="form-row full">
                 <x-form-group label="Via / Indirizzo" name="address">
                     <input name="address" class="form-in @error('address') is-invalid @enderror"
@@ -109,7 +109,7 @@
             </div>
 
             {{-- Note --}}
-            <div class="form-row full" style="margin-top:4px">
+            <div class="form-row full u-mt-xs">
                 <x-form-group label="Note interne" name="notes">
                     <textarea name="notes" class="form-ta @error('notes') is-invalid @enderror"
                               rows="3" placeholder="Note riservate...">{{ old('notes') }}</textarea>
@@ -117,14 +117,14 @@
             </div>
 
             {{-- Sezione: Identità marketing --}}
-            <div class="sec-lbl" style="margin-top:16px">Identità marketing</div>
+            <div class="sec-lbl u-mt-md">Identità marketing</div>
             <div class="form-row">
                 <x-form-group label="Logo cliente" name="logo">
                     <input type="file"
                            name="logo"
                            accept="image/jpeg,image/png,image/webp"
                            class="form-in @error('logo') is-invalid @enderror">
-                    <div style="font-size:11px;color:var(--text3);margin-top:4px;">Formati ammessi: JPG, PNG, WEBP. Max 4MB.</div>
+                    <div class="u-text-xs u-text-muted u-mt-xs">Formati ammessi: JPG, PNG, WEBP. Max 4MB.</div>
                 </x-form-group>
 
                 <x-form-group label="Descrizione attività cliente" name="activity_description">
@@ -135,16 +135,16 @@
                 </x-form-group>
             </div>
             
-            <div class="sec-lbl" style="margin-top:16px">Integrazione Nextcloud</div>
+            <div class="sec-lbl u-mt-md">Integrazione Nextcloud</div>
             <div class="form-row full">
                 <x-form-group label="Nome Cartella Nextcloud *" name="nextcloud_folder_name" required>
                     <input name="nextcloud_folder_name" class="form-in @error('nextcloud_folder_name') is-invalid @enderror"
                            value="{{ old('nextcloud_folder_name') }}" placeholder="Es. acme-srl">
-                    <div style="font-size:11px;color:var(--text3);margin-top:4px;">La cartella verrà creata in <code>/Photos/{nome_cartella}</code>. Usare solo lettere, numeri, trattini e underscore. Non inserire spazi o slash.</div>
+                    <div class="u-text-xs u-text-muted u-mt-xs">La cartella verrà creata in <code>/Photos/{nome_cartella}</code>. Usare solo lettere, numeri, trattini e underscore. Non inserire spazi o slash.</div>
                 </x-form-group>
             </div>
 
-            <div class="modal-ft" style="border-top:1px solid var(--line);padding-top:16px;margin-top:16px">
+            <div class="modal-ft u-section-sep">
                 <a href="{{ route('clients.index') }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Cliente</button>
             </div>

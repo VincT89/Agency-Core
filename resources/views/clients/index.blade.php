@@ -13,10 +13,10 @@
     </x-page-header>
 
     <div class="filter-bar justify-end">
-        <form method="GET" action="{{ route('clients.index') }}" style="display:flex;gap:8px">
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca cliente (nome, email, p.iva)..." class="form-in" style="padding:5px 10px;font-size:11px;width:250px">
+        <form method="GET" action="{{ route('clients.index') }}" class="u-flex u-gap-sm">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca cliente (nome, email, p.iva)..." class="form-in form-in-sm u-w-250">
             @if(request('search'))
-                <a href="{{ route('clients.index') }}" class="btn btn-g" style="padding:5px 10px;font-size:11px">Reset</a>
+                <a href="{{ route('clients.index') }}" class="btn btn-g btn-sm">Reset</a>
             @endif
         </form>
     </div>
@@ -35,7 +35,7 @@
             </thead>
             <tbody>
                 @forelse($clients as $client)
-                <tr onclick="window.location='{{ route('clients.show', $client) }}'" style="cursor:pointer">
+                <tr x-data @click="window.Livewire.navigate('{{ route('clients.show', $client) }}')" class="u-cursor-pointer hover-bg">
                     <td class="name-col">{{ $client->name }}</td>
                     <td class="mono-col">{{ $client->projects_count }}</td>
                     <td class="mono-col">{{ $client->tickets_count }}</td>
@@ -43,12 +43,12 @@
                     <td><x-badge :status="$client->status" :label="$client->status_label" /></td>
                     <td>
                         @can('update', $client)
-                            <a href="{{ route('clients.edit', $client) }}" class="btn-icon" onclick="event.stopPropagation()">✎</a>
+                            <a href="{{ route('clients.edit', $client) }}" class="btn-icon" @click.stop>✎</a>
                         @endcan
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px">Nessun cliente trovato</td></tr>
+                <tr><td colspan="6" class="u-empty-state">Nessun cliente trovato</td></tr>
                 @endforelse
             </tbody>
         </table>

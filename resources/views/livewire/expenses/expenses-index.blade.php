@@ -48,7 +48,7 @@
                 </thead>
                 <tbody>
                     @forelse($expenses as $expense)
-                    <tr onclick="window.Livewire.navigate('{{ route('expenses.show', $expense) }}')" class="js-clickable-row u-cursor-pointer hover-bg">
+                    <tr x-data @click="window.Livewire.navigate('{{ route('expenses.show', $expense) }}')" class="u-cursor-pointer hover-bg">
                         <td class="name-col">
                             {{ $expense->title }}
                             @if($expense->category)
@@ -92,7 +92,7 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('expenses.edit', $expense) }}" wire:navigate class="btn-icon" onclick="event.stopPropagation()">✎</a>
+                            <a href="{{ route('expenses.edit', $expense) }}" wire:navigate class="btn-icon" @click.stop>✎</a>
                         </td>
                     </tr>
                     @empty

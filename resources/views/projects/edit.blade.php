@@ -30,6 +30,30 @@
                 </x-form-group>
             </div>
 
+            <div class="form-row full u-mb-md">
+                <x-form-group label="Team di Commessa" name="members" required>
+                    <div class="u-flex u-flex-wrap u-gap-md" style="row-gap: 8px;">
+                        @php
+                            $projectMembers = $project->users->pluck('pivot.role', 'id')->toArray();
+                        @endphp
+                        @foreach($users as $user)
+                            @php
+                                $isMember = array_key_exists($user->id, $projectMembers);
+                            @endphp
+                            <label class="team-member-pill">
+                                <input
+                                    type="checkbox"
+                                    name="members[]"
+                                    value="{{ $user->id }}"
+                                    {{ in_array($user->id, old('members', $isMember ? [$user->id] : [])) ? 'checked' : '' }}
+                                >
+                                <span>{{ $user->name }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </x-form-group>
+            </div>
+
             <div class="form-row">
                 @php
                     $currentClientId = old('client_id', $project->client_id);

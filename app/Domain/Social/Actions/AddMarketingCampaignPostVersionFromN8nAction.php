@@ -14,11 +14,15 @@ use Exception;
 
 class AddMarketingCampaignPostVersionFromN8nAction
 {
-    public function execute(MarketingCampaignPost $post, array $data): MarketingCampaignPostVersion
+    public function execute(MarketingCampaignPost $post, array $data)
     {
         return DB::transaction(function () use ($post, $data) {
             // Lock the post
             $post = MarketingCampaignPost::where('id', $post->id)->lockForUpdate()->firstOrFail();
+
+            if ($post->n8n_error === 'Operazione annullata dall\'utente') {
+                return $post;
+            }
 
             // Check if external generation id already exists for idempotency
             if (!empty($data['external_generation_id'])) {

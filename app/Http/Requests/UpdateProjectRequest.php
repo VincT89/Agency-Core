@@ -22,6 +22,10 @@ class UpdateProjectRequest extends FormRequest
             'start_date'  => ['nullable', 'date'],
             'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
             'notes'       => ['nullable', 'string'],
+            'members'     => ['required', 'array', 'min:1'],
+            'members.*'   => ['integer', 'exists:users,id'],
+            'roles'       => ['nullable', 'array'],
+            'roles.*'     => ['nullable', 'string', 'in:member,lead,sponsor'],
         ];
     }
 }

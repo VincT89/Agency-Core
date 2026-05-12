@@ -24,7 +24,17 @@ class MarketingCampaignPostVersionController extends Controller
             abort(409, 'Conflict: request_id mismatch.');
         }
 
-        $version = $action->execute($post, $request->validated());
+        $result = $action->execute($post, $request->validated());
+
+        if ($result instanceof MarketingCampaignPost) {
+            return response()->json([
+                'status' => 'ignored',
+                'message' => 'Operazione annullata dall\'utente',
+                'post_id' => $post->id,
+            ], 200);
+        }
+
+        $version = $result;
 
         return response()->json([
             'status' => 'success',

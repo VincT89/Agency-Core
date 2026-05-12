@@ -9,6 +9,101 @@
     }
 @endphp
 <div>
+    @if(in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
+        <div wire:poll.2s="checkRegenerationStatus" style="display: none;"></div>
+    @endif
+    
+    <template x-teleport="body">
+        <div
+            wire:ignore
+            class="cmp-regeneration-loader"
+            :class="{ 'is-visible': sodyLoaderVisible }"
+            x-data="{
+                sodyLoaderVisible: {{ in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']) ? 'true' : 'false' }},
+                showCancel: false,
+                messages: [
+                    'Sody sta ragionando...',
+                    'Analisi del contesto in corso...',
+                    'Generazione dei contenuti...',
+                    'Ottimizzazione per i social...',
+                    'Quasi pronto...'
+                ],
+                currentMsg: 0,
+
+                showLoader() {
+                    window.scrollTo({ top: 0, behavior: 'instant' });
+                    this.sodyLoaderVisible = true;
+                    this.showCancel = false;
+                    document.documentElement.classList.add('sody-loader-active');
+                    document.body.classList.add('sody-loader-active');
+                },
+
+                hideLoader() {
+                    this.sodyLoaderVisible = false;
+                    this.showCancel = false;
+                    document.documentElement.classList.remove('sody-loader-active');
+                    document.body.classList.remove('sody-loader-active');
+                },
+
+                init() {
+                    const showHandler = () => this.showLoader();
+                    const completeHandler = () => this.hideLoader();
+                    const cancelBtnHandler = () => { this.showCancel = true; };
+
+                    window.addEventListener('show-sody-loader', showHandler);
+                    window.addEventListener('marketing-post-regeneration-completed', completeHandler);
+                    window.addEventListener('show-sody-cancel-button', cancelBtnHandler);
+
+                    if (this.sodyLoaderVisible) {
+                        this.showLoader();
+                    }
+
+                    let interval = setInterval(() => {
+                        this.currentMsg = (this.currentMsg + 1) % this.messages.length;
+                    }, 3500);
+
+                    this.$cleanup(() => {
+                        clearInterval(interval);
+                        window.removeEventListener('show-sody-loader', showHandler);
+                        window.removeEventListener('marketing-post-regeneration-completed', completeHandler);
+                        window.removeEventListener('show-sody-cancel-button', cancelBtnHandler);
+                        this.hideLoader();
+                    });
+                }
+            }"
+        >
+            <div class="cmp-regeneration-loader-card">
+                <div class="cmp-loader-logo-wrap">
+                    <img src="{{ asset('images/logo.png') }}" alt="Sodano Logo" class="cmp-loader-logo">
+                </div>
+
+                <div class="mkt-loader-shimmer">
+                    <div class="mkt-loader-shimmer-bar"></div>
+                </div>
+
+                <div class="u-mt-md u-text-center">
+                    <strong class="mkt-loader-text" x-text="messages[currentMsg]">Sody sta ragionando...</strong>
+                </div>
+
+                <template x-if="showCancel">
+                    <div>
+                        <div class="u-mt-md u-text-orange u-text-center mkt-info-box">
+                            L'operazione sta richiedendo più tempo del previsto. Puoi annullare la richiesta e riprovare.
+                        </div>
+                        <div class="u-flex u-justify-center u-w-full">
+                            <button
+                                type="button"
+                                class="btn btn-sec cmp-loader-cancel-btn"
+                                @click="$wire.cancelRegeneration(); hideLoader();"
+                            >
+                                Interrompi
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
     <div class="u-mb-lg">
         <a href="{{ route('marketing-campaigns.show', $campaign->id) }}"
             class="btn btn-g u-inline-flex-center u-gap-xs">
@@ -33,54 +128,7 @@
 
     <div class="cmp-post-detail-layout relative">
 
-        @if(in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
-            <div class="cmp-regeneration-loader" wire:poll.2s="checkRegenerationStatus" x-data="{
-                      messages: [
-                          'Sody sta ragionando...',
-                          'Analisi del contesto in corso...',
-                          'Generazione dei contenuti...',
-                          'Ottimizzazione per i social...',
-                          'Quasi pronto...'
-                      ],
-                      currentMsg: 0,
 
-                      init() {
-                          document.body.classList.add('overflow-hidden');
-                          
-                          let interval = setInterval(() => {
-                              this.currentMsg = (this.currentMsg + 1) % this.messages.length;
-                          }, 3500);
-                          
-                          this.$cleanup(() => {
-                              clearInterval(interval);
-                              document.body.classList.remove('overflow-hidden');
-                          });
-                      }
-                 }">
-
-                <div class="cmp-regeneration-box">
-                    <div class="mkt-loader-shimmer">
-                        <div class="mkt-loader-shimmer-bar"></div>
-                    </div>
-
-                    <div class="u-mt-md u-text-center">
-                        <strong class="mkt-loader-text" x-text="messages[currentMsg]">Sody sta ragionando...</strong>
-                    </div>
-
-                    @if($regeneration_timeout)
-                        <div class="u-mt-md u-text-orange u-text-center mkt-info-box">
-                            L'operazione sta richiedendo più tempo del previsto o N8n non risponde.
-                        </div>
-                        <div class="u-flex u-justify-center u-gap-sm u-mt-md u-w-full">
-                            <button type="button" wire:click="checkRegenerationStatus" class="btn btn-p btn-sm">Riprova
-                                connessione</button>
-                            <button type="button" wire:click="abortRegeneration" class="btn btn-p btn-sm">Annulla
-                                operazione</button>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        @endif
 
         {{-- Colonna Sinistra (2fr): Modulo di modifica e Versioni --}}
         <div
@@ -93,7 +141,7 @@
                 </div>
                 <div class="u-p-lg relative">
 
-                    <form class="form-stack">
+                    <form wire:submit.prevent class="form-stack">
 
                         {{-- Blocco 1: Piattaforme --}}
                         <div class="panel cmp-panel-pad">
@@ -549,14 +597,14 @@
                                         @else
                                             @if(!in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
                                                 @if($post->canRegenerate())
-                                                    <button type="button" wire:click="regeneratePost('full')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                    <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('full')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
                                                         <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera Tutto
                                                     </button>
-                                                    <button type="button" wire:click="regeneratePost('caption')"
+                                                    <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('caption')"
                                                         class="btn btn-p btn-sm u-flex-center u-gap-xs">
                                                         <i data-lucide="type" class="u-icon-sm"></i> Rigenera Testo
                                                     </button>
-                                                    <button type="button" wire:click="regeneratePost('image')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                    <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('image')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
                                                         <i data-lucide="image" class="u-icon-sm"></i> Rigenera Immagine
                                                     </button>
                                                 @endif
@@ -590,7 +638,7 @@
                                         <span wire:loading wire:target="savePost">Salvataggio...</span>
                                     </button>
                                     @if(!$post->currentVersion)
-                                        <button type="button" wire:click="saveAndSubmitToN8n"
+                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n"
                                             class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
                                             <i data-lucide="sparkles" class="u-icon-md"></i>
                                             <span wire:loading.remove wire:target="saveAndSubmitToN8n">
@@ -990,4 +1038,6 @@
                 </div>
             @endif
         @endif
+
+
     </div>

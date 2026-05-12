@@ -69,9 +69,9 @@
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt0 = {
-                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, background: 'transparent' },
+                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent' },
                         series: [{ name: 'Fatturato', data: data.invoiced }],
-                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--purple)'],
                         stroke: { curve: 'smooth', width: 3 },
@@ -98,9 +98,9 @@
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt1 = {
-                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, background: 'transparent' },
+                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent' },
                         series: [{ name: 'Incassato', data: data.collected }],
-                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--teal)'],
                         stroke: { curve: 'smooth', width: 3 },
@@ -127,9 +127,9 @@
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt2 = {
-                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, background: 'transparent' },
+                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent' },
                         series: [{ name: 'Da Incassare', data: data.pending }],
-                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => { if (!val) return val; let p = val.split(' '); return p.length === 2 ? p[0] + ' ' + p[1].substring(2) : val; } } },
+                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--orange)'],
                         stroke: { curve: 'smooth', width: 3 },

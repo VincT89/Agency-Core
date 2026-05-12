@@ -41,6 +41,7 @@ return [
         'generate_social_post_webhook_url' => env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL'),
         'submit_marketing_campaign_post_webhook_url' => env('N8N_SUBMIT_MARKETING_CAMPAIGN_POST_WEBHOOK_URL', env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL')),
         'send_whatsapp_review_webhook_url' => env('N8N_SEND_WHATSAPP_REVIEW_WEBHOOK_URL'),
+        'chatbot_outgoing_message_webhook_url' => env('N8N_CHATBOT_OUTGOING_MESSAGE_WEBHOOK_URL'),
     ],
 
     'meta' => [

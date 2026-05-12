@@ -13,7 +13,8 @@ class OperationalAnalyticsService
      */
     public function getMonthlyData(int $months = 12): array
     {
-        $startDate = now()->startOfMonth()->subMonths($months - 1);
+        $startDate = now()->startOfYear();
+        $months = 12;
         
         $monthsArray = [];
         $labels = [];

@@ -61,6 +61,7 @@ class MarketingCampaignPostShow extends Component
     // Regeneration state
     public bool $regeneration_timeout = false;
     public int $regeneration_checks = 0;
+    public bool $showCancelRegenerationButton = false;
 
     protected function rules()
     {
@@ -144,9 +145,17 @@ class MarketingCampaignPostShow extends Component
             $this->form['description'] = $this->post->currentVersion->caption ?? $this->post->description;
         }
 
+        if (! in_array($this->post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true)) {
+            $this->dispatch('marketing-post-regeneration-completed');
+            $this->regeneration_timeout = false;
+            $this->regeneration_checks = 0;
+            return;
+        }
+
         if (in_array($this->post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'])) {
             $this->regeneration_checks++;
             if ($this->regeneration_checks >= 10) {
+                $this->dispatch('show-sody-cancel-button');
                 $this->regeneration_timeout = true;
             }
         } else {
@@ -155,21 +164,20 @@ class MarketingCampaignPostShow extends Component
         }
     }
 
-    public function abortRegeneration()
+    public function cancelRegeneration(): void
     {
-        $newStatus = $this->post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
-        
-        if (in_array($newStatus, ['pending_n8n', 'submitted_to_n8n', 'regenerating'])) {
-            $newStatus = \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
-        }
+        $this->post->forceFill([
+            'status' => 'draft',
+            'n8n_error' => 'Operazione annullata dall\'utente',
+            'n8n_completed_at' => now(),
+        ])->save();
 
-        $this->post->update([
-            'status' => $newStatus,
-            'n8n_error' => 'Operazione annullata dall\'utente (timeout n8n).',
-        ]);
+        $this->post->refresh();
+
         $this->regeneration_timeout = false;
         $this->regeneration_checks = 0;
-        $this->refreshPost();
+
+        $this->dispatch('marketing-post-regeneration-completed');
     }
 
     private function loadExistingMedia()
@@ -562,6 +570,10 @@ class MarketingCampaignPostShow extends Component
             return;
         }
 
+        $this->showCancelRegenerationButton = false;
+        $this->regeneration_timeout = false;
+        $this->regeneration_checks = 0;
+
         $runtimeClientData = [
             'include_client_logo' => $this->include_client_logo,
             'include_client_header' => $this->include_client_header,
@@ -591,6 +603,10 @@ class MarketingCampaignPostShow extends Component
         }
 
         try {
+            $this->showCancelRegenerationButton = false;
+            $this->regeneration_timeout = false;
+            $this->regeneration_checks = 0;
+            
             $action->execute($this->post, auth()->user(), $type);
             $this->refreshPost();
             $this->dispatch('post-regenerating');

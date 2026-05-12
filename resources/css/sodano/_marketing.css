@@ -1433,29 +1433,65 @@
     margin-left: 8px;
 }
 
-.cmp-regeneration-loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.90);
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px);
-    overflow: hidden;
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
-.cmp-regeneration-box {
-    position: relative;
-    z-index: 101;
+html.sody-loader-active,
+body.sody-loader-active {
+    overflow: hidden;
+    height: 100%;
+}
+
+body.sody-loader-active {
+    touch-action: none;
+}
+
+.cmp-regeneration-loader {
+    position: fixed;
+    isolation: isolate;
+    inset: 0;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 650px;
-    min-height: 250px;
-    padding: 64px 40px;
+    height: 100dvh;
+    z-index: 2147483647;
+    background: rgba(0, 0, 0, 0.72);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: none;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity .2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cmp-regeneration-loader.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.cmp-loader-logo-wrap {
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.cmp-loader-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
+.cmp-regeneration-loader-card {
+    width: min(560px, calc(100vw - 32px));
+    min-height: 220px;
+    padding: 40px;
     background: #0a0a0a;
     border: 1px solid #ffffff;
     border-radius: 12px;
@@ -1898,3 +1934,21 @@
 .shooting-timeline-desc { font-size: 13px; color: var(--text3); }
 .shooting-timeline-red-text { color: var(--red); font-weight: 600; }
 .shooting-timeline-sm-icon { width: 12px; height: 12px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+/* Loader Cancel */
+.cmp-loader-cancel-btn {
+    margin-top: 24px;
+    min-width: 160px;
+}
+
+/* Sody Carousel Slide Classes */
+.slide-0 { transform: translateX(0); }
+.slide-1 { transform: translateX(-100%); }
+.slide-2 { transform: translateX(-200%); }
+.slide-3 { transform: translateX(-300%); }
+.slide-4 { transform: translateX(-400%); }
+.slide-5 { transform: translateX(-500%); }
+.slide-6 { transform: translateX(-600%); }
+.slide-7 { transform: translateX(-700%); }
+.slide-8 { transform: translateX(-800%); }
+.slide-9 { transform: translateX(-900%); }

@@ -36,7 +36,7 @@
                             <img src="{{ $versionImages[0] }}" alt="Anteprima Post" class="cr-media">
                         @else
                             <div class="sody-media-grid">
-                                <div class="sody-media-grid-inner" :style="`transform: translateX(-${currentSlide * 100}%);`">
+                                <div class="sody-media-grid-inner" :class="'slide-' + currentSlide">
                                     @foreach($versionImages as $index => $vImg)
                                         <div class="sody-media-grid-item">
                                             <img src="{{ $vImg }}" alt="Anteprima Post {{ $index + 1 }}" class="cr-media">

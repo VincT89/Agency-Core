@@ -36,7 +36,7 @@ class N8nClient
         $payload['event'] = 'chatbot_outgoing_message';
         
         return $this->sendRequest(
-            config('services.n8n.generate_social_post_webhook_url'),
+            config('services.n8n.chatbot_outgoing_message_webhook_url'),
             'chatbot_outgoing_message',
             $payload
         );

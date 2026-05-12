@@ -3,6 +3,7 @@ import clientAutocomplete from './client-autocomplete.js';
 import './hosting-services.js';
 import './confirm-forms.js';
 import './ui-helpers.js';
+import './projects/project-members.js';
 import { initShell } from './app-shell.js';
 import { createIcons, icons } from 'lucide';
 import ApexCharts from 'apexcharts';

@@ -30,7 +30,7 @@ class EconomicSummaryController extends Controller
             'summaryByProject' => $summaryByProject,
             'lineChartData'    => json_encode($financialService->getIncassatoVsDaIncassareMonthlyData(12)),
             'donutChartData'   => json_encode($financialService->getYearlyDonutData()),
-            'sparklineData'    => json_encode($financialService->getSparklineData(6)),
+            'sparklineData'    => json_encode($financialService->getSparklineData(12)),
         ]);
     }
 }

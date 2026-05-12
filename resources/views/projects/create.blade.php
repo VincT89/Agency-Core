@@ -29,6 +29,24 @@
                 </x-form-group>
             </div>
 
+            <div class="form-row full u-mb-md">
+                <x-form-group label="Team di Commessa" name="members" required>
+                    <div class="u-flex u-flex-wrap u-gap-md" style="row-gap: 8px;">
+                        @foreach($users as $user)
+                            <label class="team-member-pill">
+                                <input
+                                    type="checkbox"
+                                    name="members[]"
+                                    value="{{ $user->id }}"
+                                    {{ in_array($user->id, old('members', [])) ? 'checked' : '' }}
+                                >
+                                <span>{{ $user->name }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </x-form-group>
+            </div>
+
             <div class="form-row">
                 @php
                     $oldClientId = old('client_id');

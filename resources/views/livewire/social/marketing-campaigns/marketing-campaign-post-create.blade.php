@@ -19,7 +19,7 @@
           <div class="cmp-panel-title">Dati Principali</div>
         </div>
         <div class="u-p-lg relative">
-          <form class="form-stack">
+          <form wire:submit.prevent class="form-stack">
         
         {{-- Blocco 1: Piattaforme --}}
         <div class="panel cmp-panel-pad">

@@ -127,7 +127,7 @@
                                  alt="Logo {{ $client->name }}"
                                  class="client-logo-preview"
                                  x-data="{ failed: false }"
-                                 @error="failed = true"
+                                 x-on:error="failed = true"
                                  x-show="!failed">
                         </div>
                     @endif

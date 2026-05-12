@@ -9,8 +9,8 @@
     }
 @endphp
 <div>
-    @if(in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
-        <div wire:poll.2s="checkRegenerationStatus" style="display: none;"></div>
+    @if(in_array($form['status'] ?? ($post->status->value ?? null), ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true))
+        <div wire:poll.3500ms="checkRegenerationStatus" style="display: none;"></div>
     @endif
     
     <template x-teleport="body">

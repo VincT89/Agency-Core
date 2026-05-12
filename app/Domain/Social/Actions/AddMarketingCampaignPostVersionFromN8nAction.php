@@ -20,7 +20,7 @@ class AddMarketingCampaignPostVersionFromN8nAction
             // Lock the post
             $post = MarketingCampaignPost::where('id', $post->id)->lockForUpdate()->firstOrFail();
 
-            if ($post->n8n_error === 'Operazione annullata dall\'utente') {
+            if ($post->n8n_error === 'N8N_ERROR_FORCE_CANCELLED') {
                 return $post;
             }
 

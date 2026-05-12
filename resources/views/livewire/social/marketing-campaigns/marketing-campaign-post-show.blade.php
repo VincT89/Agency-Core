@@ -52,6 +52,7 @@
 
                     window.addEventListener('show-sody-loader', showHandler);
                     window.addEventListener('marketing-post-regeneration-completed', completeHandler);
+                    window.addEventListener('marketing-post-regeneration-cancelled', completeHandler);
                     window.addEventListener('show-sody-cancel-button', cancelBtnHandler);
 
                     if (this.sodyLoaderVisible) {
@@ -66,6 +67,7 @@
                         clearInterval(interval);
                         window.removeEventListener('show-sody-loader', showHandler);
                         window.removeEventListener('marketing-post-regeneration-completed', completeHandler);
+                        window.removeEventListener('marketing-post-regeneration-cancelled', completeHandler);
                         window.removeEventListener('show-sody-cancel-button', cancelBtnHandler);
                         this.hideLoader();
                     });
@@ -88,7 +90,7 @@
                 <template x-if="showCancel">
                     <div>
                         <div class="u-mt-md u-text-orange u-text-center mkt-info-box">
-                            L'operazione sta richiedendo più tempo del previsto. Puoi annullare la richiesta e riprovare.
+                            L'operazione sta richiedendo più tempo del previsto. Puoi chiudere questa schermata, la generazione continuerà in background. Se Sody risponde, il post verrà aggiornato.
                         </div>
                         <div class="u-flex u-justify-center u-w-full">
                             <button

@@ -167,9 +167,8 @@ class MarketingCampaignPostShow extends Component
     public function cancelRegeneration(): void
     {
         $this->post->forceFill([
-            'status' => 'draft',
-            'n8n_error' => 'Operazione annullata dall\'utente',
-            'n8n_completed_at' => now(),
+            'n8n_error' => null,
+            'n8n_completed_at' => null,
         ])->save();
 
         $this->post->refresh();
@@ -177,7 +176,7 @@ class MarketingCampaignPostShow extends Component
         $this->regeneration_timeout = false;
         $this->regeneration_checks = 0;
 
-        $this->dispatch('marketing-post-regeneration-completed');
+        $this->dispatch('marketing-post-regeneration-cancelled');
     }
 
     private function loadExistingMedia()

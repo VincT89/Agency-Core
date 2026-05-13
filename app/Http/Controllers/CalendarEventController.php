@@ -27,6 +27,14 @@ class CalendarEventController extends Controller
             });
         }
 
+        if ($request->query('scope') === 'personal') {
+            $query->where('type', 'personal')
+                ->where(function ($q) use ($request) {
+                    $q->where('created_by', $request->user()->id)
+                      ->orWhere('assigned_to', $request->user()->id);
+                });
+        }
+
         // Restituisci la risposta JSON formattata per FullCalendar
         if ($request->wantsJson() || $request->query('format') === 'json') {
             $events = $query
@@ -34,30 +42,57 @@ class CalendarEventController extends Controller
                 ->when($request->end,   fn($q) => $q->where('start_at', '<=', $request->end))
                 ->get();
 
-            return response()->json($events->map(fn($e) => [
-                'id'              => $e->id,
-                'title'           => $e->title,
-                'start'           => $e->start_at?->toIso8601String(),
-                'end'             => $e->end_at?->toIso8601String(),
-                'allDay'          => $e->is_all_day,
-                'url'             => route('calendar-events.show', $e),
-                'backgroundColor' => match($e->type) {
-                    'client_meeting'   => '#c8102e',
-                    'internal_meeting' => '#5b8ef5',
-                    'deadline'         => '#f54b4b',
-                    'review'           => '#f5c842',
-                    'delivery'         => '#3ecf8e',
-                    default            => '#4e4d52',
-                },
-                'borderColor'     => 'transparent',
-                'extendedProps'   => [
-                    'type'    => $e->type,
-                    'status'  => $e->status,
-                    'client'  => $e->client?->name,
-                    'assignee'=> $e->assignee?->name,
-                    'has_call'=> (bool) $e->meeting_url,
-                ],
-            ]));
+            return response()->json($events->map(function($e) use ($request) {
+                $isPersonal = $e->type === 'personal';
+                $isOwner = $isPersonal && ($e->created_by === $request->user()->id || $e->assigned_to === $request->user()->id);
+
+                if ($isPersonal && !$isOwner) {
+                    return [
+                        'id'              => $e->id,
+                        'title'           => 'Occupato',
+                        'start'           => $e->start_at?->toIso8601String(),
+                        'end'             => $e->end_at?->toIso8601String(),
+                        'allDay'          => $e->is_all_day,
+                        'url'             => null,
+                        'backgroundColor' => '#4e4d52',
+                        'borderColor'     => 'transparent',
+                        'classNames'      => ['is-locked-event'],
+                        'extendedProps'   => [
+                            'type'    => 'personal',
+                            'status'  => 'scheduled',
+                            'client'  => null,
+                            'assignee'=> $e->assignee?->name,
+                            'has_call'=> false,
+                        ],
+                    ];
+                }
+
+                return [
+                    'id'              => $e->id,
+                    'title'           => $e->title,
+                    'start'           => $e->start_at?->toIso8601String(),
+                    'end'             => $e->end_at?->toIso8601String(),
+                    'allDay'          => $e->is_all_day,
+                    'url'             => route('calendar-events.show', $e),
+                    'backgroundColor' => match($e->type) {
+                        'client_meeting'   => '#c8102e',
+                        'internal_meeting' => '#5b8ef5',
+                        'deadline'         => '#f54b4b',
+                        'review'           => '#f5c842',
+                        'delivery'         => '#3ecf8e',
+                        'personal'         => '#6b7280', // grigio (bd in badge)
+                        default            => '#4e4d52',
+                    },
+                    'borderColor'     => 'transparent',
+                    'extendedProps'   => [
+                        'type'    => $e->type,
+                        'status'  => $e->status,
+                        'client'  => $e->client?->name,
+                        'assignee'=> $e->assignee?->name,
+                        'has_call'=> (bool) $e->meeting_url,
+                    ],
+                ];
+            }));
         }
 
         // Restituisci la vista a tabella paginata
@@ -103,6 +138,12 @@ class CalendarEventController extends Controller
 
         $data['created_by'] = auth()->id();
         $data['is_all_day'] = $data['is_all_day'] ?? false;
+
+        if (($data['type'] ?? '') === 'personal') {
+            $data['client_id'] = null;
+            $data['project_id'] = null;
+            $data['assigned_to'] = auth()->id();
+        }
 
         $calendarEvent = CalendarEvent::create($data);
 
@@ -153,6 +194,12 @@ class CalendarEventController extends Controller
         $data = $request->validated();
 
         $data['is_all_day'] = $data['is_all_day'] ?? false;
+
+        if (($data['type'] ?? $calendarEvent->type) === 'personal') {
+            $data['client_id'] = null;
+            $data['project_id'] = null;
+            $data['assigned_to'] = auth()->id();
+        }
 
         $calendarEvent->update($data);
 

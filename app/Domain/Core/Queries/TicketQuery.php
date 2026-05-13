@@ -12,6 +12,12 @@ class TicketQuery
     {
         $query = Ticket::query()
             ->with(['client', 'project', 'creator', 'assignee', 'attachments'])
+            ->orderByRaw("
+                CASE
+                    WHEN status IN ('resolved', 'closed') THEN 1
+                    ELSE 0
+                END
+            ")
             ->latest();
 
         if (!empty($filters['status'])) {

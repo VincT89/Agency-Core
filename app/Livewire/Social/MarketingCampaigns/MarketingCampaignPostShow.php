@@ -166,8 +166,12 @@ class MarketingCampaignPostShow extends Component
 
     public function cancelRegeneration(): void
     {
+        $previous = $this->post->n8n_previous_status?->value
+            ?? \App\Enums\Social\MarketingCampaignPostStatus::Generated->value;
+
         $this->post->forceFill([
-            'n8n_error' => null,
+            'status' => $previous,
+            'n8n_error' => 'N8N_ERROR_FORCE_CANCELLED',
             'n8n_completed_at' => null,
         ])->save();
 
@@ -610,7 +614,13 @@ class MarketingCampaignPostShow extends Component
             $this->refreshPost();
             $this->dispatch('post-regenerating');
         } catch (\Exception $e) {
-            $this->addError('post', $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Marketing post regeneration failed', [
+                'post_id' => $this->post->id,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->addError('post', 'Errore rigenerazione: ' . $e->getMessage());
         }
     }
 

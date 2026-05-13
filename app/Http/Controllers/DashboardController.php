@@ -49,13 +49,25 @@ class DashboardController extends Controller
             'recentActivity'   => AuditLog::with('user')->latest()->limit(8)->get(),
             'recentTickets'    => Ticket::with(['project', 'assignee'])->latest()->limit(5)->get(),
             'upcomingEvents'   => \App\Models\CalendarEvent::where('start_at', '>=', now())
+                                    ->where(function($q) use ($user) {
+                                        $q->where('type', '!=', 'personal')
+                                          ->orWhere('assigned_to', $user->id)
+                                          ->orWhere('created_by', $user->id);
+                                    })
                                     ->orderBy('start_at', 'asc')
                                     ->limit(5)->get(),
             'weeklyEvents'     => \App\Models\CalendarEvent::whereBetween('start_at', [now(), now()->addDays(7)])
+                                    ->where(function($q) use ($user) {
+                                        $q->where('type', '!=', 'personal')
+                                          ->orWhere('assigned_to', $user->id)
+                                          ->orWhere('created_by', $user->id);
+                                    })
                                     ->orderBy('start_at', 'asc')
                                     ->get(),
             'expiringHosting'  => $renewalService->getExpiringCount(30),
             'expiredHosting'   => $renewalService->getExpiredCount(),
+            'expiringHostingList' => $renewalService->getExpiring(30),
+            'expiredHostingList'  => $renewalService->getExpired(),
             'financialChartData' => json_encode($financialChartData),
             'operationalChartData' => json_encode($operationalChartData),
         ];
@@ -121,6 +133,11 @@ class DashboardController extends Controller
                                 
             'upcomingEvents' => \App\Models\CalendarEvent::query()
                                 ->where('start_at', '>=', now())
+                                ->where(function($q) use ($user) {
+                                    $q->where('type', '!=', 'personal')
+                                      ->orWhere('assigned_to', $user->id)
+                                      ->orWhere('created_by', $user->id);
+                                })
                                 ->orderBy('start_at')
                                 ->limit(5)
                                 ->get(),

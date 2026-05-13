@@ -37,7 +37,7 @@ class TicketChecklistItemController extends Controller
         return back();
     }
 
-    public function toggle(TicketChecklistItem $item): RedirectResponse
+    public function toggle(Request $request, TicketChecklistItem $item): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorize('update', $item->ticket);
 
@@ -48,6 +48,22 @@ class TicketChecklistItemController extends Controller
             'completed_at' => $newState ? now() : null,
             'completed_by' => $newState ? auth()->id() : null,
         ]);
+
+        $item->load('completedBy');
+
+        if ($request->expectsJson()) {
+            $total = $item->ticket->checklistItems()->count();
+            $done = $item->ticket->checklistItems()->where('is_completed', true)->count();
+
+            return response()->json([
+                'ok' => true,
+                'item_id' => $item->id,
+                'is_completed' => $item->is_completed,
+                'completed_by' => $item->completedBy?->name,
+                'done' => $done,
+                'total' => $total,
+            ]);
+        }
 
         return back();
     }

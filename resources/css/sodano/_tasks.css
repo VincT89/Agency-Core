@@ -70,3 +70,28 @@
 .u-color-text { color: var(--text); }
 .u-color-red { color: var(--red); }
 .u-color-green { color: var(--green); }
+
+.task-row-done {
+    opacity: .55;
+    background: rgba(255,255,255,.03);
+}
+
+.task-row-done .task-title {
+    text-decoration: line-through;
+}
+
+.task-progress-todo {
+    background: #64748b;
+}
+
+.task-progress-in_progress {
+    background: #f59e0b;
+}
+
+.task-progress-waiting {
+    background: #8b5cf6;
+}
+
+.task-progress-done {
+    background: #22c55e;
+}

@@ -87,9 +87,14 @@ class MarketingCampaignPost extends Model
 
     public function canRegenerate(): bool
     {
-        return ! in_array($this->status, [
-            MarketingCampaignPostStatus::Published,
-            MarketingCampaignPostStatus::Cancelled,
+        return in_array($this->status, [
+            MarketingCampaignPostStatus::Generated,
+            MarketingCampaignPostStatus::ReadyForClient,
+            MarketingCampaignPostStatus::SentToClient,
+            MarketingCampaignPostStatus::ClientChangesRequested,
+            MarketingCampaignPostStatus::ClientApproved,
+            MarketingCampaignPostStatus::Approved,
+            MarketingCampaignPostStatus::Draft,
         ], true);
     }
 

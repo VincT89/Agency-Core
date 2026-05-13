@@ -14,6 +14,12 @@ class MarketingCampaignPostVersionController extends Controller
 {
     public function store(StoreMarketingCampaignPostVersionRequest $request, MarketingCampaignPost $post, AddMarketingCampaignPostVersionFromN8nAction $action): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::info('Ricevuto callback N8N', [
+            'post_id' => $post->id,
+            'ip' => $request->ip(),
+            'payload' => $request->all()
+        ]);
+
         if ($post->n8n_request_id !== $request->validated('request_id')) {
             \Illuminate\Support\Facades\Log::warning('N8n Callback Security Mismatch', [
                 'post_id' => $post->id,

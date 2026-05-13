@@ -28,6 +28,11 @@ class RequestMarketingCampaignPostRegenerationJob implements ShouldQueue
 
     public function handle(N8nClient $client): void
     {
+        \Illuminate\Support\Facades\Log::info('Dispatching marketing regeneration', [
+            'post_id' => $this->post->id,
+            'type' => $this->payload['regeneration_type'] ?? null,
+        ]);
+
         $client->requestMarketingCampaignPostRegeneration($this->payload);
 
         $this->post->forceFill([
@@ -37,6 +42,10 @@ class RequestMarketingCampaignPostRegenerationJob implements ShouldQueue
 
     public function failed(Throwable $e): void
     {
+        \Illuminate\Support\Facades\Log::error('Marketing regeneration failed', [
+            'error' => $e->getMessage(),
+        ]);
+
         $this->post->refresh();
 
         $updates = [

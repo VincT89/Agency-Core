@@ -38,6 +38,7 @@ $map = [
     'deadline'        => 'br',
     'review'          => 'ba',
     'delivery'        => 'bg',
+    'personal'        => 'bd',
     'other'           => 'bd',
     // payment method
     'bank_transfer'   => 'bb',
@@ -65,6 +66,9 @@ $map = [
     'member'          => 'bg',
     'lead'            => 'ba',
     'support'         => 'bb',
+    // hosting status
+    'expired'         => 'br',
+    'expiring'        => 'ba',
 ];
 $class = $map[$status] ?? 'bd';
 @endphp

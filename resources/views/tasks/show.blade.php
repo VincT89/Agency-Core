@@ -1,14 +1,15 @@
 <x-app-layout title="{{ $task->title }}">
-    <div class="u-mb-lg u-flex-end">
-        <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
-            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
-        </a>
-    </div>
-    <x-page-header
-        eyebrow="Task · {{ $task->project?->name ?? '—' }}"
-        
-    >
-    <x-slot:title><strong>{{ $task->title }}</strong></x-slot:title>
+    <div class="{{ $task->status === 'done' ? 'task-row-done' : '' }}" style="margin: -var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);">
+        <div class="u-mb-lg u-flex-end">
+            <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+                <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+            </a>
+        </div>
+        <x-page-header
+            eyebrow="Task · {{ $task->project?->name ?? '—' }}"
+            
+        >
+        <x-slot:title><strong class="task-title">{{ $task->title }}</strong></x-slot:title>
         <x-slot:actions>
             <x-badge :status="$task->status" :label="$task->status_label" />
             <x-badge :status="$task->priority" :label="$task->priority_label" />
@@ -28,21 +29,21 @@
     </x-page-header>
 
     <div class="u-mb-lg">
-        <div class="step-bar">
-            @php
-                $statuses = \App\Http\Controllers\TaskController::STATUSES;
-                $currentIndex = array_search($task->status, $statuses);
-            @endphp
-            @foreach($statuses as $index => $s)
-                <div class="step-seg {{ $index < $currentIndex ? 'completed' : ($index === $currentIndex ? 'active' : '') }}" title="{{ (new \App\Models\Task(['status' => $s]))->status_label }}"></div>
-            @endforeach
+        @php
+            $progressMap = [
+                'todo' => 15,
+                'in_progress' => 50,
+                'waiting' => 80,
+                'done' => 100,
+            ];
+            $progress = $progressMap[$task->status] ?? 0;
+        @endphp
+        <div class="u-flex-between u-mb-xs u-align-center">
+            <div class="u-text-strong u-text-sm" style="text-transform: uppercase; letter-spacing: 0.5px;">Avanzamento: {{ $task->status_label }}</div>
+            <div class="u-text-strong u-text-muted u-font-mono">{{ $progress }}%</div>
         </div>
-        <div class="u-flex-between u-mt-sm task-step-labels">
-            @foreach($statuses as $index => $s)
-                <div class="task-step-label {{ $index === 0 ? 'task-step-label-left' : ($index === count($statuses) - 1 ? 'task-step-label-right' : 'task-step-label-center') }}">
-                    {{ (new \App\Models\Task(['status' => $s]))->status_label }}
-                </div>
-            @endforeach
+        <div class="project-progress-bar-wrap" style="height: 8px; border-radius: 4px; background: var(--line); overflow: hidden;">
+            <div class="project-progress-bar-inner task-progress-{{ $task->status }}" style="width: {{ $progress }}%; height: 100%; transition: width 0.4s ease, background-color 0.4s ease;"></div>
         </div>
     </div>
 
@@ -87,29 +88,27 @@
                         $doneChecklist = $task->checklistItems->where('is_completed', true)->count();
                     @endphp
 
-                    <div class="u-text-meta u-mb-md">
+                    <div class="u-text-meta u-mb-md" data-checklist-counter>
                         {{ $doneChecklist }}/{{ $totalChecklist }} completati
                     </div>
 
                     @forelse($task->checklistItems as $item)
-                        <div class="u-flex-center u-gap-sm task-checklist-item">
-                            <form action="{{ route('task-checklist-items.toggle', $item) }}" method="POST">
+                        <div class="u-flex-center u-gap-sm task-checklist-item" data-checklist-item="{{ $item->id }}">
+                            <form action="{{ route('task-checklist-items.toggle', $item) }}" method="POST" class="js-checklist-toggle">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="btn btn-g btn-sm">
+                                <button type="submit" class="btn btn-g btn-sm" data-checklist-toggle-button>
                                     {{ $item->is_completed ? '✓' : '○' }}
                                 </button>
                             </form>
 
-                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}">
+                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}" data-checklist-title>
                                 {{ $item->title }}
                             </div>
 
-                            @if($item->is_completed)
-                                <div class="u-text-meta">
-                                    {{ $item->completedBy?->name }}
-                                </div>
-                            @endif
+                            <div class="u-text-meta" data-checklist-completed-by>
+                                {{ $item->is_completed ? $item->completedBy?->name : '' }}
+                            </div>
 
                             <form action="{{ route('task-checklist-items.destroy', $item) }}" method="POST"
                                   class="js-confirm-form" data-confirm-message="Eliminare questa voce checklist?">
@@ -218,5 +217,5 @@
         <x-audit-timeline :logs="$task->auditLogs" />
     </div>
     @endif
-
+    </div>
 </x-app-layout>

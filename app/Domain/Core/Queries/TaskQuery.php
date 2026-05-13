@@ -12,6 +12,12 @@ class TaskQuery
     {
         $query = Task::query()
             ->with(['project.client', 'assignee', 'creator'])
+            ->orderByRaw("
+                CASE
+                    WHEN status = 'done' THEN 1
+                    ELSE 0
+                END
+            ")
             ->latest();
 
         if (!empty($filters['status'])) {

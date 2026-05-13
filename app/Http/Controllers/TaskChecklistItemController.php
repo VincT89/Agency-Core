@@ -38,7 +38,7 @@ class TaskChecklistItemController extends Controller
         return back();
     }
 
-    public function toggle(TaskChecklistItem $item): RedirectResponse
+    public function toggle(Request $request, TaskChecklistItem $item): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorize('update', $item->task);
 
@@ -49,6 +49,22 @@ class TaskChecklistItemController extends Controller
             'completed_at' => $newState ? now() : null,
             'completed_by' => $newState ? auth()->id() : null,
         ]);
+
+        $item->load('completedBy');
+
+        if ($request->expectsJson()) {
+            $total = $item->task->checklistItems()->count();
+            $done = $item->task->checklistItems()->where('is_completed', true)->count();
+
+            return response()->json([
+                'ok' => true,
+                'item_id' => $item->id,
+                'is_completed' => $item->is_completed,
+                'completed_by' => $item->completedBy?->name,
+                'done' => $done,
+                'total' => $total,
+            ]);
+        }
 
         return back();
     }

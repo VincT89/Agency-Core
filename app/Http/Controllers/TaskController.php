@@ -110,7 +110,7 @@ class TaskController extends Controller
             'creator', 
             'assignee', 
             'attachments', 
-            'auditLogs.user',
+            'auditLogs' => fn ($q) => $q->with('user')->latest()->limit(8),
             'comments.user',
             'checklistItems.completedBy'
         ]);

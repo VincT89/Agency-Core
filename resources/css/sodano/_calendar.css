@@ -429,3 +429,16 @@
     color: var(--accent);
     font-weight: 600;
 }
+
+/* --- Stile per eventi personali mascherati (Occupato privato) --- */
+.fc-event.is-locked-event {
+    opacity: 0.65 !important;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 8px,
+        rgba(0,0,0,0.15) 8px,
+        rgba(0,0,0,0.15) 16px
+    ) !important;
+    cursor: not-allowed !important;
+}

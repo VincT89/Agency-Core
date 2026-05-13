@@ -61,8 +61,8 @@
                         Scadenza</button>
                     <button @click="tab = 'tickets'" :class="tab === 'tickets' ? 'active' : ''" class="tab-btn">Ticket
                         Recenti</button>
-                    <button @click="tab = 'events'" :class="tab === 'events' ? 'active' : ''" class="tab-btn">Prossimi
-                        Eventi</button>
+                    <button @click="tab = 'domains'" :class="tab === 'domains' ? 'active' : ''" class="tab-btn">Domini in
+                        Scadenza</button>
                 </div>
             </x-slot:headerActions>
 
@@ -121,31 +121,42 @@
                 </table>
             </div>
 
-            <div x-show="tab === 'events'" x-cloak>
+            <div x-show="tab === 'domains'" x-cloak>
                 <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
-                            <th>Evento</th>
-                            <th>Data</th>
-                            <th>Luogo</th>
+                            <th>Dominio</th>
+                            <th>Cliente</th>
+                            <th>Scadenza</th>
+                            <th>Stato</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($upcomingEvents as $event)
-                            <tr x-data @click="window.Livewire.navigate('{{ route('calendar-events.show', $event) }}')" class="u-cursor-pointer hover-bg">
-                                <td class="name-col">{{ $event->title }}</td>
-                                <td class="mono-col">{{ $event->start_at->format('d/m/Y H:i') }}</td>
-                                <td>{{ $event->location ?? '—' }}</td>
+                        @foreach($expiredHostingList as $hosting)
+                            <tr x-data @click="window.Livewire.navigate('{{ route('hosting-services.show', $hosting) }}')" class="u-cursor-pointer hover-bg">
+                                <td class="name-col">{{ $hosting->domain_name ?? $hosting->name }}</td>
+                                <td>{{ $hosting->client?->name ?? '—' }}</td>
+                                <td class="mono-col u-text-red">{{ $hosting->renewal_date?->format('d/m/Y') ?? '—' }}</td>
+                                <td><x-badge status="expired" label="SCADUTO" /></td>
                             </tr>
-                        @empty
+                        @endforeach
+                        @foreach($expiringHostingList as $hosting)
+                            <tr x-data @click="window.Livewire.navigate('{{ route('hosting-services.show', $hosting) }}')" class="u-cursor-pointer hover-bg">
+                                <td class="name-col">{{ $hosting->domain_name ?? $hosting->name }}</td>
+                                <td>{{ $hosting->client?->name ?? '—' }}</td>
+                                <td class="mono-col">{{ $hosting->renewal_date?->format('d/m/Y') ?? '—' }}</td>
+                                <td><x-badge status="expiring" label="IN SCADENZA" /></td>
+                            </tr>
+                        @endforeach
+                        @if($expiredHostingList->isEmpty() && $expiringHostingList->isEmpty())
                             <tr>
-                                <td colspan="3" class="u-text-center u-text-muted u-p-xl">Nessun evento in
-                                    programma.</td>
+                                <td colspan="4" class="u-text-center u-text-muted u-p-xl">Nessun dominio in scadenza nei prossimi 30 giorni.</td>
                             </tr>
-                        @endforelse
+                        @endif
                     </tbody>
                 </table>
             </div>
+
         </x-panel>
 
         {{-- Appuntamenti della Settimana --}}
@@ -166,9 +177,14 @@
                             @foreach($weeklyEvents as $event)
                                 <tr x-data @click="window.Livewire.navigate('{{ route('calendar-events.show', $event) }}')" class="u-cursor-pointer hover-bg">
                                     <td class="name-col">
-                                        {{ $event->title }}
+                                        <div>{{ $event->title }}</div>
                                         @if($event->meeting_url)
                                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="u-ml-xs u-text-accent u-align-middle"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+                                        @endif
+                                        @if($event->location)
+                                            <div class="u-text-xs u-text-muted u-mt-xs">
+                                                <i data-lucide="map-pin" class="u-icon-xs u-align-middle"></i> {{ $event->location }}
+                                            </div>
                                         @endif
                                     </td>
                                     <td class="mono-col">{{ $event->start_at->format('d/m/Y H:i') }}</td>
@@ -188,6 +204,7 @@
     </div>
 
     <div>
+
         <x-panel title="Attività Recenti" dot="var(--purple)" padded>
             @forelse($recentActivity as $log)
                 <x-audit-item :log="$log" />

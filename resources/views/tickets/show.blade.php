@@ -102,29 +102,27 @@
                         $doneChecklist = $ticket->checklistItems->where('is_completed', true)->count();
                     @endphp
 
-                    <div class="u-text-meta u-mb-md">
+                    <div class="u-text-meta u-mb-md" data-checklist-counter>
                         {{ $doneChecklist }}/{{ $totalChecklist }} completati
                     </div>
 
                     @forelse($ticket->checklistItems as $item)
-                        <div class="u-flex-center u-gap-sm task-checklist-item">
-                            <form action="{{ route('ticket-checklist-items.toggle', $item) }}" method="POST">
+                        <div class="u-flex-center u-gap-sm task-checklist-item" data-checklist-item="{{ $item->id }}">
+                            <form action="{{ route('ticket-checklist-items.toggle', $item) }}" method="POST" class="js-checklist-toggle">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="btn btn-g btn-sm">
+                                <button type="submit" class="btn btn-g btn-sm" data-checklist-toggle-button>
                                     {{ $item->is_completed ? '✓' : '○' }}
                                 </button>
                             </form>
 
-                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}">
+                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}" data-checklist-title>
                                 {{ $item->title }}
                             </div>
 
-                            @if($item->is_completed)
-                                <div class="u-text-meta">
-                                    {{ $item->completedBy?->name }}
-                                </div>
-                            @endif
+                            <div class="u-text-meta" data-checklist-completed-by>
+                                {{ $item->is_completed ? $item->completedBy?->name : '' }}
+                            </div>
 
                             <form action="{{ route('ticket-checklist-items.destroy', $item) }}" method="POST"
                                   class="js-confirm-form" data-confirm-message="Eliminare questa voce checklist?">

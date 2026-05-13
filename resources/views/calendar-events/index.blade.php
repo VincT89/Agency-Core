@@ -68,24 +68,28 @@
                 </div>
             </div>
 
-            @if(auth()->user()->role === \App\Enums\UserRole::Admin)
-                <div class="cal-sidebar-filters">
-                    <span class="cal-sidebar-label">Filtra Reparto</span>
-                    @php $currentDept = request('department'); @endphp
-                    <a href="{{ request()->fullUrlWithQuery(['department' => null]) }}"
-                        class="cal-sidebar-filter {{ !$currentDept ? 'is-active' : '' }}">Tutti</a>
-                    <a href="{{ request()->fullUrlWithQuery(['department' => 'developer']) }}"
+            <div class="cal-sidebar-filters">
+                <span class="cal-sidebar-label">Filtra Vista</span>
+                @php $currentDept = request('department'); @endphp
+                <a href="{{ request()->fullUrlWithQuery(['department' => null, 'scope' => null]) }}"
+                    class="cal-sidebar-filter {{ !$currentDept && !request('scope') ? 'is-active' : '' }}">Tutti gli Eventi</a>
+                <a href="{{ request()->fullUrlWithQuery(['scope' => 'personal', 'department' => null]) }}"
+                    class="cal-sidebar-filter {{ request('scope') === 'personal' ? 'is-active' : '' }}">I miei Personali</a>
+                
+                @if(auth()->user()->role === \App\Enums\UserRole::Admin)
+                    <div class="u-mt-sm u-mb-xs" style="height: 1px; background: var(--border);"></div>
+                    <a href="{{ request()->fullUrlWithQuery(['department' => 'developer', 'scope' => null]) }}"
                         class="cal-sidebar-filter {{ $currentDept === 'developer' ? 'is-active' : '' }}">Developer</a>
-                    <a href="{{ request()->fullUrlWithQuery(['department' => 'marketing']) }}"
+                    <a href="{{ request()->fullUrlWithQuery(['department' => 'marketing', 'scope' => null]) }}"
                         class="cal-sidebar-filter {{ $currentDept === 'marketing' ? 'is-active' : '' }}">Marketing</a>
-                    <a href="{{ request()->fullUrlWithQuery(['department' => 'photographer']) }}"
+                    <a href="{{ request()->fullUrlWithQuery(['department' => 'photographer', 'scope' => null]) }}"
                         class="cal-sidebar-filter {{ $currentDept === 'photographer' ? 'is-active' : '' }}">Fotografo</a>
-                    <a href="{{ request()->fullUrlWithQuery(['department' => 'graphic_designer']) }}"
+                    <a href="{{ request()->fullUrlWithQuery(['department' => 'graphic_designer', 'scope' => null]) }}"
                         class="cal-sidebar-filter {{ $currentDept === 'graphic_designer' ? 'is-active' : '' }}">Grafica</a>
-                    <a href="{{ request()->fullUrlWithQuery(['department' => 'administration']) }}"
+                    <a href="{{ request()->fullUrlWithQuery(['department' => 'administration', 'scope' => null]) }}"
                         class="cal-sidebar-filter {{ $currentDept === 'administration' ? 'is-active' : '' }}">Amministrazione</a>
-                </div>
-            @endif
+                @endif
+            </div>
         </aside>
 
         <main class="cal-gmain">
@@ -106,6 +110,7 @@
             const CREATE_URL = '{{ route('calendar-events.create') }}';
             const EVENTS_URL = '{{ route('calendar-events.index') }}';
             const CURRENT_DEPT = '{{ request('department') }}';
+            const CURRENT_SCOPE = '{{ request('scope') }}';
 
             function cleanupCalendarEvents() {
                 if (window.calendarEventsInstance) {
@@ -151,7 +156,7 @@
                             meridiem: false
                         },
                         slotLabelInterval: '00:30:00',
-                        allDaySlot: false,
+                        allDaySlot: true,
                         dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
                         nowIndicator: true,
                         selectable: true,
@@ -162,7 +167,7 @@
                         // Fetch eventi dal server
                         events: {
                             url: EVENTS_URL,
-                            extraParams: { format: 'json', department: CURRENT_DEPT },
+                            extraParams: { format: 'json', department: CURRENT_DEPT, scope: CURRENT_SCOPE },
                             failure: function (err) {
                                 console.error('Errore caricamento eventi calendario:', err);
                                 alert("Impossibile scaricare gli eventi dal database.");

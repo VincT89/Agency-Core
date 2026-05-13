@@ -82,8 +82,8 @@
                 </div>
                 <div class="k-cards">
                     @foreach($kanbanTasks->where('status', $status) as $task)
-                    <div class="k-card enhanced js-clickable-row u-cursor-pointer" data-href="{{ route('tasks.show', $task) }}">
-                        <div class="k-card-title {{ $task->status === 'done' ? 'u-text-strike' : '' }}">
+                    <div class="k-card enhanced js-clickable-row u-cursor-pointer {{ $task->status === 'done' ? 'task-row-done' : '' }}" data-href="{{ route('tasks.show', $task) }}">
+                        <div class="k-card-title task-title">
                             {{ $task->title }}
                         </div>
                         <div class="k-card-meta u-mb-xs">
@@ -119,8 +119,8 @@
                 </thead>
                 <tbody>
                     @forelse($taskList as $task)
-                    <tr data-href="{{ route('tasks.show', $task) }}" class="js-clickable-row u-cursor-pointer hover-bg">
-                        <td class="name-col {{ $task->status === 'done' ? 'u-text-strike' : '' }}">
+                    <tr data-href="{{ route('tasks.show', $task) }}" class="js-clickable-row u-cursor-pointer hover-bg {{ $task->status === 'done' ? 'task-row-done' : '' }}">
+                        <td class="name-col task-title">
                             {{ $task->title }}
                         </td>
                         <td>

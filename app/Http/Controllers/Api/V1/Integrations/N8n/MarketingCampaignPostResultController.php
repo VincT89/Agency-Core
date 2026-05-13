@@ -16,8 +16,14 @@ class MarketingCampaignPostResultController extends Controller
     {
         $post = MarketingCampaignPost::findOrFail($request->validated('post_id'));
 
+        \Illuminate\Support\Facades\Log::info('Ricevuto callback N8N [Prima generazione]', [
+            'post_id' => $post->id,
+            'ip' => $request->ip(),
+            'payload' => $request->all()
+        ]);
+
         if ($post->n8n_request_id !== $request->validated('request_id')) {
-            \Illuminate\Support\Facades\Log::warning('N8n Callback Security Mismatch', [
+            \Illuminate\Support\Facades\Log::warning('N8n Callback Security Mismatch [Result]', [
                 'post_id' => $post->id,
                 'expected_request_id' => $post->n8n_request_id,
                 'received_request_id' => $request->validated('request_id'),

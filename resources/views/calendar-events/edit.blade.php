@@ -11,14 +11,14 @@
 
     <x-panel padded>
 
-        <form action="{{ route('calendar-events.update', $calendarEvent) }}" method="POST">
+        <form action="{{ route('calendar-events.update', $calendarEvent) }}" method="POST" x-data="{ eventType: '{{ old('type', $calendarEvent->type ?? 'other') }}' }">
             @csrf
-            @method('PATCH')
+            @method('PUT')
             
             <div class="form-row full">
                 <x-form-group label="Titolo Evento" name="title" required>
                     <input name="title" class="form-in @error('title') is-invalid @enderror"
-                           value="{{ old('title', $calendarEvent->title) }}">
+                           value="{{ old('title', $calendarEvent->title) }}" placeholder="Es. Riunione Kick-off">
                 </x-form-group>
             </div>
 
@@ -30,13 +30,13 @@
                 <x-form-group label="Fine" name="end_at">
                     <input type="datetime-local" name="end_at" class="form-in @error('end_at') is-invalid @enderror"
                            value="{{ old('end_at', $calendarEvent->end_at?->format('Y-m-d\TH:i')) }}">
-                    <div class="u-text-mono u-mt-xs">Opzionale. Se non specificata, l'evento sarà considerato "istantaneo" con chiusura immediata all'inizio.</div>
+                    <div class="u-text-mono u-mt-xs">Opzionale. Se non specificata, l'evento sarà considerato "istantaneo".</div>
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Tipo Evento" name="type" required>
-                    <select name="type" class="form-sel @error('type') is-invalid @enderror">
+                    <select name="type" x-model="eventType" class="form-sel @error('type') is-invalid @enderror">
                         @foreach($types as $t)
                             <option value="{{ $t }}" {{ old('type', $calendarEvent->type) == $t ? 'selected' : '' }}>{{ (new \App\Models\CalendarEvent(['type' => $t]))->type_label }}</option>
                         @endforeach
@@ -51,7 +51,7 @@
                 </x-form-group>
             </div>
 
-            <div class="form-row">
+            <div class="form-row" x-show="eventType !== 'personal'">
                 <x-form-group label="Cliente (opzionale)" name="client_id">
                     <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror">
                         <option value="">-- Evento Interno / Nessun Cliente --</option>
@@ -73,7 +73,7 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Assegnato a" name="assigned_to">
+                <x-form-group label="Assegnato a" name="assigned_to" x-show="eventType !== 'personal'">
                     <select name="assigned_to" class="form-sel @error('assigned_to') is-invalid @enderror">
                         <option value="">Nessuno</option>
                         @foreach($users as $user)
@@ -83,6 +83,10 @@
                         @endforeach
                     </select>
                 </x-form-group>
+                <div x-show="eventType === 'personal'" class="u-flex-1">
+                    <div class="form-lbl">Assegnato a</div>
+                    <div class="form-in u-bg-muted u-text-muted">A me stesso (Personale)</div>
+                </div>
                 <x-form-group label="Luogo fisico (opzionale)" name="location">
                     <input name="location" class="form-in @error('location') is-invalid @enderror"
                            value="{{ old('location', $calendarEvent->location) }}" placeholder="Es. Sala Meeting, Sede o Cliente">

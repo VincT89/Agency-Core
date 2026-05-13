@@ -19,6 +19,7 @@ class CalendarEvent extends Model
         'deadline',
         'review',
         'delivery',
+        'personal',
         'other',
     ];
 
@@ -70,6 +71,7 @@ class CalendarEvent extends Model
             'deadline' => 'Scadenza',
             'review' => 'Revisione',
             'delivery' => 'Consegna',
+            'personal' => 'Personale',
             'other' => 'Altro',
             default => ucfirst((string) $this->type),
         };

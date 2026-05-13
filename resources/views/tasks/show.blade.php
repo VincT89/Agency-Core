@@ -1,5 +1,5 @@
 <x-app-layout title="{{ $task->title }}">
-    <div class="{{ $task->status === 'done' ? 'task-row-done' : '' }}" style="margin: -var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);">
+    <div style="margin: -var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);">
         <div class="u-mb-lg u-flex-end">
             <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
                 <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista

@@ -17,7 +17,7 @@ $map = [
     // ticket priority
     'low'             => 'bd',
     'medium'          => 'bd',
-    'high'            => 'ba',
+    'high'            => 'br',
     'urgent'          => 'br',
     // invoice status
     'draft'           => 'bd',

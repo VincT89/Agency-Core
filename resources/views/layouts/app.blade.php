@@ -227,6 +227,7 @@
           <div class="nav-group-label">Admin</div>
           <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
             :active="request()->routeIs('users.*')" />
+          <x-nav-item href="http://drive.sodanoconsulting.it/" target="_blank" icon="hard-drive" label="Sodano Drive" />
         </div>
       @endcan
 

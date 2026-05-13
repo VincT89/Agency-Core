@@ -85,13 +85,13 @@
 }
 
 .task-progress-in_progress {
-    background: #f59e0b;
+    background: #ef4444; /* Rosso */
 }
 
 .task-progress-waiting {
-    background: #8b5cf6;
+    background: #f59e0b; /* Arancione */
 }
 
 .task-progress-done {
-    background: #22c55e;
+    background: #22c55e; /* Verde */
 }

@@ -73,7 +73,6 @@ class TicketController extends Controller
             'comments.user',
             'checklistItems.completedBy',
         ]);
-
         return view('tickets.show', compact('ticket'));
     }
 

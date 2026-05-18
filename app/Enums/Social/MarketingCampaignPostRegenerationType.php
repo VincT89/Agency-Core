@@ -7,6 +7,7 @@ enum MarketingCampaignPostRegenerationType: string
     case Full = 'full';
     case Caption = 'caption';
     case Image = 'image';
+    case Manual = 'manual';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum MarketingCampaignPostRegenerationType: string
             self::Full => 'Testo e Immagine',
             self::Caption => 'Solo Testo (Caption)',
             self::Image => 'Solo Immagine',
+            self::Manual => 'Manuale',
         };
     }
 }

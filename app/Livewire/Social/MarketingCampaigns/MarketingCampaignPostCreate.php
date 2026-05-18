@@ -110,10 +110,6 @@ class MarketingCampaignPostCreate extends Component
         if (!$value) {
             $this->include_client_logo = true;
             $this->include_client_header = true;
-            $this->runtime_logo = null;
-            $this->runtime_activity_description = null;
-            $this->save_runtime_logo_to_client = false;
-            $this->save_runtime_activity_to_client = false;
         }
     }
 
@@ -305,7 +301,6 @@ class MarketingCampaignPostCreate extends Component
     {
         $this->validate();
 
-        $this->processClientIdentity();
 
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
@@ -317,10 +312,21 @@ class MarketingCampaignPostCreate extends Component
             return;
         }
 
-        $post = MarketingCampaignPost::create($data);
+        $this->processClientIdentity();
 
-        if (!empty($storedMedia)) {
-            $post->mediaItems()->createMany($storedMedia);
+        $post = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $storedMedia) {
+            $post = MarketingCampaignPost::create($data);
+
+            if (!empty($storedMedia)) {
+                $post->mediaItems()->createMany($storedMedia);
+            }
+
+            return $post;
+        });
+
+        if (! $this->form['ai_analysis_enabled']) {
+            app(\App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction::class)
+                ->execute($post, auth()->user());
         }
 
         return redirect()->route('marketing-campaigns.posts.show', [
@@ -333,7 +339,6 @@ class MarketingCampaignPostCreate extends Component
     {
         $this->validate();
         
-        $this->processClientIdentity();
 
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
@@ -346,11 +351,17 @@ class MarketingCampaignPostCreate extends Component
             return;
         }
 
-        $post = MarketingCampaignPost::create($data);
+        $this->processClientIdentity();
 
-        if (!empty($storedMedia)) {
-            $post->mediaItems()->createMany($storedMedia);
-        }
+        $post = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $storedMedia) {
+            $post = MarketingCampaignPost::create($data);
+
+            if (!empty($storedMedia)) {
+                $post->mediaItems()->createMany($storedMedia);
+            }
+
+            return $post;
+        });
 
         $runtimeClientData = [
             'include_client_logo' => $this->include_client_logo,
@@ -465,7 +476,7 @@ class MarketingCampaignPostCreate extends Component
         $client = $this->campaign->client;
         $updated = false;
 
-        if ($this->include_client_logo && $this->runtime_logo && $this->save_runtime_logo_to_client) {
+        if ($this->include_client_logo && $this->runtime_logo && ($this->save_runtime_logo_to_client || !$this->form['ai_analysis_enabled'])) {
             if ($this->runtime_logo instanceof \Illuminate\Http\UploadedFile) {
                 $filename = 'logo_' . time() . '.' . $this->runtime_logo->getClientOriginalExtension();
                 $path = $this->runtime_logo->storeAs('clients/logos', $filename, 'public');
@@ -476,7 +487,7 @@ class MarketingCampaignPostCreate extends Component
             }
         }
 
-        if ($this->include_client_header && $this->runtime_activity_description && $this->save_runtime_activity_to_client) {
+        if ($this->include_client_header && $this->runtime_activity_description && ($this->save_runtime_activity_to_client || !$this->form['ai_analysis_enabled'])) {
             $client->activity_description = $this->runtime_activity_description;
             $this->runtime_activity_description = null;
             $this->save_runtime_activity_to_client = false;

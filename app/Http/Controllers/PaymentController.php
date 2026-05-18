@@ -33,7 +33,7 @@ class PaymentController extends Controller
     {
         $this->authorize('create', Payment::class);
 
-        $invoices = Invoice::query()
+        $invoices = Invoice::visibleTo(auth()->user())
             ->with(['client', 'project'])
             ->orderByDesc('issue_date')
             ->get();

@@ -12,7 +12,7 @@ class ClientPolicy
 
     public function viewAny(User $user): bool  
     { 
-        return $user->canManageSystem() || $user->role === UserRole::Administration; 
+        return $user->role === UserRole::Administration; 
     }
     
     public function view(User $user, Client $client): bool

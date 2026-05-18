@@ -1,6 +1,7 @@
 <div>
     <div class="u-mt-lg">
         <x-panel title="Commenti / Storico operativo" dot="var(--blue)" padded>
+            <div class="u-text-meta u-text-muted u-mb-md">Usa questo spazio per aggiornamenti operativi, interventi e passaggi di consegna.</div>
             
             {{-- Lista Commenti --}}
             <div class="comments-scroll-container" 

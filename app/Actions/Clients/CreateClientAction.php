@@ -34,9 +34,15 @@ class CreateClientAction
         }
 
         if (!empty($data['nextcloud_folder_name'])) {
-            $data['nextcloud_photos_path'] = '/Photos/' . $data['nextcloud_folder_name'];
             $nextcloudService = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+            $root = rtrim($nextcloudService->mediaRoot('photo'), '/');
+            $data['nextcloud_photos_path'] = $root . '/' . $data['nextcloud_folder_name'];
+
             if (!$nextcloudService->ensureDirectoryExists($data['nextcloud_photos_path'])) {
+                \Illuminate\Support\Facades\Log::warning('Unable to create client Nextcloud folder', [
+                    'folder' => $data['nextcloud_folder_name'],
+                    'path' => $data['nextcloud_photos_path'],
+                ]);
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'nextcloud_folder_name' => 'Impossibile creare la cartella su Nextcloud. Verifica la connessione o prova con un altro nome.',
                 ]);

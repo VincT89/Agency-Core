@@ -23,6 +23,16 @@
     white-space: pre-wrap;
 }
 
+.task-project-checklist-preview {
+    margin-top: 6px;
+    border-top: 1px solid var(--line);
+    padding-top: 6px;
+}
+
+.task-project-checklist-item {
+    margin-bottom: 2px;
+}
+
 .task-status-grid {
     flex-wrap: wrap;
 }
@@ -31,6 +41,37 @@
 .task-checklist-item {
     padding: 8px 0;
     border-bottom: 1px solid var(--line);
+    align-items: flex-start;
+}
+
+.task-checklist-assignee {
+    min-width: 160px;
+}
+
+.task-checklist-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.task-checklist-hidden {
+    display: none !important;
+}
+
+.task-checklist-create-assignee {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .task-checklist-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .task-checklist-assignee {
+        width: 100%;
+        margin-top: 8px;
+    }
 }
 
 .task-checklist-text {
@@ -94,4 +135,33 @@
 
 .task-progress-done {
     background: #22c55e; /* Verde */
+}
+/* Filtri Progetto (Alpine) */
+.task-project-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+/* Tabella Progetto */
+.task-project-table-title {
+    max-width: 200px;
+}
+
+.task-project-table tr.is-current {
+    font-weight: 600;
+    background: rgba(var(--accent-rgb), 0.05);
+}
+
+@media (max-width: 768px) {
+    .task-project-table {
+        font-size: .85rem;
+    }
+
+    .task-project-table th:nth-child(3),
+    .task-project-table td:nth-child(3),
+    .task-project-table th:nth-child(4),
+    .task-project-table td:nth-child(4) {
+        display: none;
+    }
 }

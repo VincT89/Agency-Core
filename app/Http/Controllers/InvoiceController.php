@@ -34,7 +34,7 @@ class InvoiceController extends Controller
     public function create(): View
     {
         $this->authorize('create', Invoice::class);
-        $clients = Client::query()
+        $clients = Client::visibleTo(auth()->user())
             ->with('projects')
             ->orderBy('name')
             ->get();
@@ -66,7 +66,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
         $invoice->load(['client', 'project', 'items']);
-        $clients = Client::query()
+        $clients = Client::visibleTo(auth()->user())
             ->with('projects')
             ->orderBy('name')
             ->get();

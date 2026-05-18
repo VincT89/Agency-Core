@@ -75,12 +75,12 @@
                       }
                   @endphp
                   @if($vImg)
-                        <img src="{{ $vImg }}" class="cmp-post-thumb" loading="lazy" alt="Anteprima media post">
+                        <img src="{{ $vImg }}" class="cmp-post-thumb" loading="eager" decoding="async" alt="Anteprima media post">
                   @elseif($post->preview_url)
                     @if($post->media_mime && \Illuminate\Support\Str::startsWith($post->media_mime, 'video/'))
                         <video src="{{ $post->preview_url }}" class="cmp-post-thumb" muted playsinline></video>
                     @else
-                        <img src="{{ $post->preview_url }}" class="cmp-post-thumb" loading="lazy" alt="Anteprima media post">
+                        <img src="{{ $post->preview_url }}" class="cmp-post-thumb" loading="eager" decoding="async" alt="Anteprima media post">
                     @endif
                   @else
                     <div class="cmp-post-thumb-empty"><i data-lucide="image" class="w-5 h-5"></i></div>
@@ -688,12 +688,31 @@
 
     document.addEventListener('livewire:navigating', cleanupMarketingCampaignDetailCalendar);
 
-    document.addEventListener('livewire:navigated', function() {
+    function bootMarketingCampaignDetailCalendar(retries = 20) {
         const calendarEl = document.getElementById('marketing-campaign-detail-calendar');
-        if (!calendarEl) return;
-        try {
-            initMarketingCampaignDetailCalendar(@this);
-        } catch(e) { console.error(e); }
-    });
+
+        if (!calendarEl || typeof FullCalendar === 'undefined' || typeof Livewire === 'undefined') {
+            if (retries > 0) {
+                setTimeout(() => bootMarketingCampaignDetailCalendar(retries - 1), 100);
+            }
+            return;
+        }
+
+        const wireRoot = calendarEl.closest('[wire\\:id]');
+        const component = wireRoot ? Livewire.find(wireRoot.getAttribute('wire:id')) : null;
+
+        if (!component) {
+            if (retries > 0) {
+                setTimeout(() => bootMarketingCampaignDetailCalendar(retries - 1), 100);
+            }
+            return;
+        }
+
+        initMarketingCampaignDetailCalendar(component);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => bootMarketingCampaignDetailCalendar());
+    document.addEventListener('livewire:navigated', () => bootMarketingCampaignDetailCalendar());
+    queueMicrotask(() => bootMarketingCampaignDetailCalendar());
 </script>
 @endpush

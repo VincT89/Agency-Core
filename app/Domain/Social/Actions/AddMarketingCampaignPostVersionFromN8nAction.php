@@ -20,6 +20,23 @@ class AddMarketingCampaignPostVersionFromN8nAction
             // Lock the post
             $post = MarketingCampaignPost::where('id', $post->id)->lockForUpdate()->firstOrFail();
 
+            if (in_array($post->status, [
+                MarketingCampaignPostStatus::ClientApproved,
+                MarketingCampaignPostStatus::Approved,
+                MarketingCampaignPostStatus::Published,
+                MarketingCampaignPostStatus::Cancelled,
+            ], true)) {
+                return $post;
+            }
+
+            if (! in_array($post->status, [
+                MarketingCampaignPostStatus::PendingN8n,
+                MarketingCampaignPostStatus::SubmittedToN8n,
+                MarketingCampaignPostStatus::Regenerating,
+            ], true)) {
+                return $post;
+            }
+
             if ($post->n8n_error === 'N8N_ERROR_FORCE_CANCELLED') {
                 return $post;
             }
@@ -27,6 +44,15 @@ class AddMarketingCampaignPostVersionFromN8nAction
             // Check if external generation id already exists for idempotency
             if (!empty($data['external_generation_id'])) {
                 $existingVersion = MarketingCampaignPostVersion::where('external_generation_id', $data['external_generation_id'])->first();
+                if ($existingVersion) {
+                    return $existingVersion;
+                }
+            }
+
+            if (!empty($data['request_id'])) {
+                $existingVersion = MarketingCampaignPostVersion::where('marketing_campaign_post_id', $post->id)
+                    ->whereJsonContains('raw_payload->request_id', $data['request_id'])
+                    ->first();
                 if ($existingVersion) {
                     return $existingVersion;
                 }

@@ -35,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Project::class,       ProjectPolicy::class);
         Gate::policy(Task::class,          TaskPolicy::class);
         Gate::policy(Attachment::class,    AttachmentPolicy::class);
+        Gate::policy(\App\Models\HostingService::class, \App\Policies\HostingServicePolicy::class);
+        Gate::policy(\App\Models\Expense::class, \App\Policies\ExpensePolicy::class);
+        Gate::policy(\App\Models\Team::class, \App\Policies\TeamPolicy::class);
+        Gate::policy(\App\Models\ClientSocialAccount::class, \App\Policies\ClientSocialAccountPolicy::class);
 
         // Shooting Policies
         Gate::policy(\App\Models\Shooting\Shoot::class, \App\Policies\ShootPolicy::class);
@@ -51,14 +55,14 @@ class AppServiceProvider extends ServiceProvider
             if (auth()->check()) {
                 $user = auth()->user();
 
-                $counts = \Illuminate\Support\Facades\Cache::remember('sidebar_counts_' . $user->id, 60, function () {
+                $counts = \Illuminate\Support\Facades\Cache::remember('sidebar_counts_' . $user->id, 60, function () use ($user) {
                     return [
-                        'clientsCount'    => \App\Models\Client::where('status', 'active')->count(),
-                        'projectsCount'   => \App\Models\Project::where('status', 'active')->count(),
-                        'openTickets'     => \App\Models\Ticket::whereIn('status', ['open', 'in_progress'])->count(),
-                        'overdueInvoices' => \App\Models\Invoice::where('status', 'overdue')->count(),
-                        'openTasks'       => \App\Models\Task::open()->count(),
-                        'marketingProjectsCount' => \App\Models\MarketingCampaign::whereIn('status', ['draft', 'active'])->count(),
+                        'clientsCount'    => \App\Models\Client::visibleTo($user)->where('status', 'active')->count(),
+                        'projectsCount'   => \App\Models\Project::visibleTo($user)->where('status', 'active')->count(),
+                        'openTickets'     => \App\Models\Ticket::visibleTo($user)->whereIn('status', ['open', 'in_progress'])->count(),
+                        'overdueInvoices' => \App\Models\Invoice::visibleTo($user)->where('status', 'overdue')->count(),
+                        'openTasks'       => \App\Models\Task::visibleTo($user)->open()->count(),
+                        'marketingProjectsCount' => \App\Models\MarketingCampaign::visibleTo($user)->whereIn('status', ['draft', 'active'])->count(),
                     ];
                 });
 

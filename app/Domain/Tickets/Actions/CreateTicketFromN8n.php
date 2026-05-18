@@ -25,6 +25,8 @@ class CreateTicketFromN8n
             ->first();
 
         if ($existing) {
+            $this->ensureChatbotIntegration($existing);
+
             return [
                 'ticket' => $existing,
                 'created' => false,
@@ -63,6 +65,8 @@ class CreateTicketFromN8n
                 'opened_at' => now(),
             ]);
 
+            $this->ensureChatbotIntegration($ticket);
+
             foreach ($this->resolver->admins() as $admin) {
                 $admin->notify(new TicketUnassignedNotification($ticket));
             }
@@ -80,6 +84,8 @@ class CreateTicketFromN8n
                     ->first();
 
                 if ($existing) {
+                    $this->ensureChatbotIntegration($existing);
+                    
                     return [
                         'ticket' => $existing,
                         'created' => false,
@@ -88,5 +94,16 @@ class CreateTicketFromN8n
             }
             throw $e;
         }
+    }
+    
+    private function ensureChatbotIntegration(Ticket $ticket): void
+    {
+        \App\Models\ChatbotClientSession::updateOrCreate([
+            'client_id' => $ticket->client_id,
+            'session_type' => 'ticket',
+            'session_id' => $ticket->id,
+        ]);
+
+        app(\App\Domain\Chatbot\Actions\SyncChatbotTicketsAction::class)->syncOne($ticket);
     }
 }

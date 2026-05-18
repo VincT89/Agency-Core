@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\User;
 
 #[Fillable([
     'client_id',
@@ -109,5 +111,14 @@ class Project extends Model
         return $this->morphMany(AuditLog::class, 'auditable');
     }
 
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->canManageSystem() || $user->isMarketing()) {
+            return $query;
+        }
 
+        return $query->whereHas('users', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        });
+    }
 }

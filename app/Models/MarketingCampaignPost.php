@@ -18,7 +18,7 @@ class MarketingCampaignPost extends Model
         'scheduled_date' => 'date',
         'ai_analysis_enabled' => 'boolean',
         'submitted_to_n8n_at' => 'datetime',
-        'n8n_payload' => 'array',
+        'approved_payload_snapshot' => 'array',
         'n8n_internal_context' => 'array',
         'status' => MarketingCampaignPostStatus::class,
         'n8n_previous_status' => MarketingCampaignPostStatus::class,
@@ -92,8 +92,6 @@ class MarketingCampaignPost extends Model
             MarketingCampaignPostStatus::ReadyForClient,
             MarketingCampaignPostStatus::SentToClient,
             MarketingCampaignPostStatus::ClientChangesRequested,
-            MarketingCampaignPostStatus::ClientApproved,
-            MarketingCampaignPostStatus::Approved,
             MarketingCampaignPostStatus::Draft,
         ], true);
     }

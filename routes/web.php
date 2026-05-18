@@ -61,6 +61,11 @@ Route::get('/nextcloud/download', function (\Illuminate\Http\Request $request, \
     $path = $request->query('path');
     abort_unless($path, 404);
     $path = $nextcloud->normalizePath($path);
+
+    $allowedPrefixes = ['/Marketing/', '/Progetti/'];
+    $isAllowed = collect($allowedPrefixes)->contains(fn ($prefix) => str_starts_with($path, $prefix));
+    abort_unless($isAllowed, 403, 'Percorso non autorizzato.');
+
     $content = $nextcloud->downloadFile($path);
     abort_unless($content, 404);
     $mime = str_ends_with(strtolower($path), 'mp4') ? 'video/mp4' : 'application/octet-stream';

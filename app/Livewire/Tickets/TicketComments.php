@@ -57,44 +57,7 @@ class TicketComments extends Component
         if ($sendToSody) {
             $comment->update(['idempotency_key' => "ticket_{$this->ticket->id}_comment_{$comment->id}"]);
 
-            $session = ChatbotClientSession::where('client_id', $this->ticket->client_id)
-                ->where('session_type', 'ticket')
-                ->where('session_id', $this->ticket->id)
-                ->first();
-
-            if (!$session) {
-                $comment->update([
-                    'delivery_status' => 'failed',
-                    'delivery_error' => 'Chatbot session not found'
-                ]);
-            } else {
-                try {
-                    $payload = [
-                        'message_id' => "ticket_comment_{$comment->id}",
-                        'client_id' => $this->ticket->client_id,
-                        'session_type' => 'ticket',
-                        'session_id' => $this->ticket->id,
-                        'message' => $comment->body,
-                        'source' => 'operator',
-                        'idempotency_key' => $comment->idempotency_key,
-                        'callback_url' => route('api.v1.integrations.n8n.chatbot.outgoing-messages.status', ['messageId' => "ticket_comment_{$comment->id}"]),
-                    ];
-
-                    $client = $this->ticket->client;
-                    if ($client && $client->phone) {
-                         $payload['phone'] = $client->phone;
-                    }
-
-                    app(N8nClient::class)->sendChatbotOutgoingMessage($payload);
-
-                    $comment->update(['delivery_status' => 'processing']);
-                } catch (\Exception $e) {
-                    $comment->update([
-                        'delivery_status' => 'failed',
-                        'delivery_error' => $e->getMessage()
-                    ]);
-                }
-            }
+            $this->sendCommentToSody($comment);
         }
 
         $this->body = '';
@@ -102,6 +65,70 @@ class TicketComments extends Component
         
         // Refresh the ticket to reload comments
         $this->ticket->load('comments.user');
+    }
+
+    public function retrySendToSody(int $commentId)
+    {
+        $this->authorize('update', $this->ticket);
+
+        $comment = $this->ticket->comments()->findOrFail($commentId);
+
+        if ($comment->delivery_channel !== 'sody' || $comment->delivery_status !== 'failed') {
+            return;
+        }
+
+        $comment->update([
+            'delivery_status' => 'pending',
+            'delivery_error' => null,
+            'delivery_requested_at' => now(),
+        ]);
+
+        $this->sendCommentToSody($comment);
+        
+        $this->ticket->load('comments.user');
+    }
+
+    private function sendCommentToSody($comment): void
+    {
+        $session = ChatbotClientSession::where('client_id', $this->ticket->client_id)
+            ->where('session_type', 'ticket')
+            ->where('session_id', $this->ticket->id)
+            ->first();
+
+        if (!$session) {
+            $comment->update([
+                'delivery_status' => 'failed',
+                'delivery_error' => 'Chatbot session not found'
+            ]);
+            return;
+        }
+
+        try {
+            $payload = [
+                'message_id' => "ticket_comment_{$comment->id}",
+                'client_id' => $this->ticket->client_id,
+                'session_type' => 'ticket',
+                'session_id' => $this->ticket->id,
+                'message' => $comment->body,
+                'source' => 'operator',
+                'idempotency_key' => $comment->idempotency_key,
+                'callback_url' => route('api.v1.integrations.n8n.chatbot.outgoing-messages.status', ['messageId' => "ticket_comment_{$comment->id}"]),
+            ];
+
+            $client = $this->ticket->client;
+            if ($client && $client->phone) {
+                 $payload['phone'] = $client->phone;
+            }
+
+            app(N8nClient::class)->sendChatbotOutgoingMessage($payload);
+
+            $comment->update(['delivery_status' => 'processing']);
+        } catch (\Exception $e) {
+            $comment->update([
+                'delivery_status' => 'failed',
+                'delivery_error' => $e->getMessage()
+            ]);
+        }
     }
 
     public function render()

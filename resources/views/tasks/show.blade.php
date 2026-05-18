@@ -92,39 +92,19 @@
                         {{ $doneChecklist }}/{{ $totalChecklist }} completati
                     </div>
 
+                    <div class="js-checklist-container">
                     @forelse($task->checklistItems as $item)
-                        <div class="u-flex-center u-gap-sm task-checklist-item" data-checklist-item="{{ $item->id }}">
-                            <form action="{{ route('task-checklist-items.toggle', $item) }}" method="POST" class="js-checklist-toggle">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-g btn-sm" data-checklist-toggle-button>
-                                    {{ $item->is_completed ? '✓' : '○' }}
-                                </button>
-                            </form>
-
-                            <div class="u-flex-1 {{ $item->is_completed ? 'u-text-muted task-checklist-completed' : 'u-text-strong' }}" data-checklist-title>
-                                {{ $item->title }}
-                            </div>
-
-                            <div class="u-text-meta" data-checklist-completed-by>
-                                {{ $item->is_completed ? $item->completedBy?->name : '' }}
-                            </div>
-
-                            <form action="{{ route('task-checklist-items.destroy', $item) }}" method="POST"
-                                  class="js-confirm-form" data-confirm-message="Eliminare questa voce checklist?">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn-icon u-text-red">✕</button>
-                            </form>
-                        </div>
+                        @include('shared.checklist-item', ['item' => $item, 'type' => 'task'])
                     @empty
-                        <div class="u-empty-state-sm">Nessuna voce checklist.</div>
+                        <div class="u-empty-state-sm js-checklist-empty">Nessuna voce checklist.</div>
                     @endforelse
+                    </div>
 
                     @can('update', $task)
-                        <form action="{{ route('tasks.checklist-items.store', $task) }}" method="POST" class="u-flex u-gap-sm u-mt-md">
+                        <form action="{{ route('tasks.checklist-items.store', $task) }}" method="POST" class="u-flex u-gap-sm u-mt-md js-checklist-store">
                             @csrf
                             <input name="title" class="form-in" placeholder="Nuova voce checklist..." required>
+
                             <button type="submit" class="btn btn-g">Aggiungi</button>
                         </form>
                         @error('title')
@@ -202,6 +182,40 @@
                 </a>
             </div>
             @endcan
+
+            @if($projectTasks->isNotEmpty())
+                <div class="u-mt-md">
+                    <x-panel title="Ultime task del progetto" dot="var(--purple)">
+                        <table class="t-table task-project-table">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Stato</th>
+                                    <th>Assegnata a</th>
+                                    <th>Scadenza</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($projectTasks as $projectTask)
+                                    <tr
+                                        class="{{ $projectTask->id === $task->id ? 'is-current' : '' }}"
+                                        onclick="window.location='{{ route('tasks.show', $projectTask) }}'"
+                                    >
+                                            <td class="task-project-table-title">
+                                                <div class="u-text-truncate" title="{{ $projectTask->title }}">
+                                                    {{ $projectTask->title }}
+                                                </div>
+                                            </td>
+                                            <td><x-badge :status="$projectTask->status" :label="$projectTask->status_label" /></td>
+                                            <td>{{ $projectTask->assignee?->name ?? '—' }}</td>
+                                            <td>{{ $projectTask->due_date?->format('d/m/Y') ?? '—' }}</td>
+                                        </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </x-panel>
+                </div>
+            @endif
         </div>
     </div>
 

@@ -232,7 +232,17 @@
 
                         {{-- Box 2: Contenuto Sody --}}
                         <div class="panel cmp-panel-pad u-mb-md">
-                            <div class="cmp-section-label mb-2">{{ $post->currentVersion ? 'Versione Sody Attiva' : 'Contenuto Sody' }}</div>
+                            <div class="cmp-section-label mb-2">
+                                @if($post->currentVersion)
+                                    @if($post->currentVersion->source === \App\Enums\Social\MarketingCampaignPostVersionSource::Manual)
+                                        Versione Manuale Attiva
+                                    @else
+                                        Versione Sody Attiva
+                                    @endif
+                                @else
+                                    Contenuto del Post
+                                @endif
+                            </div>
                             
                             {{-- Blocco 2: Titolo --}}
                             <div class="form-g u-border-b u-border-line u-pb-md">
@@ -430,11 +440,11 @@
                                 </div>
                             </div>
 
-                            {{-- Blocco 5: Identità Cliente per Sody --}}
+                            {{-- Blocco 5: Identità Cliente --}}
                             <div class="panel cmp-panel-pad cmp-identity-panel u-mt-md" @if($post->currentVersion) x-data="{ showAiSettings: false }" @endif>
                                 @if($post->currentVersion)
                                     <div class="u-flex u-align-center u-gap-md u-cursor-pointer" @click="showAiSettings = !showAiSettings">
-                                        <div class="cmp-section-label mb-0">Briefing sorgente usato da Sody</div>
+                                        <div class="cmp-section-label mb-0">{{ $post->currentVersion->source === \App\Enums\Social\MarketingCampaignPostVersionSource::Manual ? 'Identità Cliente' : 'Briefing sorgente usato da Sody' }}</div>
                                         <button type="button" class="btn btn-p btn-sm mkt-btn-s-pad u-ml-auto">
                                             <span x-text="showAiSettings ? 'Nascondi' : 'Mostra'"></span>
                                         </button>
@@ -451,15 +461,14 @@
                                         </div>
                                     </label>
 
-                                    @if($form['ai_analysis_enabled'])
-                                        <div class="cmp-identity-body">
+                                    <div class="cmp-identity-body u-mt-md">
                                             {{-- Riga logo --}}
                                             <div class="cmp-identity-row">
                                                 <div class="cmp-identity-col-check">
                                                     <label class="cmp-check-label u-mb-sm">
                                                         <input type="checkbox" wire:model.live="include_client_logo"
                                                             class="u-cursor-pointer">
-                                                        Includi logo cliente nel briefing
+                                                        {{ $form['ai_analysis_enabled'] ? 'Includi logo cliente nel briefing' : 'Logo cliente' }}
                                                     </label>
                                                     @if($campaign->client->logo_path)
                                                         <div x-show="$wire.include_client_logo" class="cmp-identity-logo-preview">
@@ -480,11 +489,15 @@
                                                                 accept="image/jpeg,image/png,image/webp">
                                                             @error('runtime_logo') <div class="form-err form-err-sm">{{ $message }}
                                                             </div> @enderror
-                                                            <label class="cmp-save-label u-mt-sm">
-                                                                <input type="checkbox" wire:model="save_runtime_logo_to_client"
-                                                                    class="u-cursor-pointer">
-                                                                Salva e imposta come logo ufficiale
-                                                            </label>
+                                                            @if($form['ai_analysis_enabled'])
+                                                                <label class="cmp-save-label u-mt-sm">
+                                                                    <input type="checkbox" wire:model="save_runtime_logo_to_client"
+                                                                        class="u-cursor-pointer">
+                                                                    Salva e imposta come logo ufficiale
+                                                                </label>
+                                                            @else
+                                                                <div class="u-text-meta u-text-green u-mt-sm">Il file verrà salvato come logo ufficiale.</div>
+                                                            @endif
                                                         </div>
                                                     @endif
                                                 </div>
@@ -496,7 +509,7 @@
                                                     <label class="cmp-check-label u-mb-sm">
                                                         <input type="checkbox" wire:model.live="include_client_header"
                                                             class="u-cursor-pointer">
-                                                        Includi descrizione attività nel briefing
+                                                        {{ $form['ai_analysis_enabled'] ? 'Includi descrizione attività nel briefing' : 'Descrizione attività cliente' }}
                                                     </label>
                                                     @if($campaign->client->activity_description)
                                                         <div x-show="$wire.include_client_header" x-data="{ expActivity: false }">
@@ -519,118 +532,167 @@
                                                                 placeholder="Descrivi l'attività del cliente..."></textarea>
                                                             @error('runtime_activity_description') <div
                                                             class="form-err form-err-sm">{{ $message }}</div> @enderror
-                                                            <label class="cmp-save-label u-mt-sm">
-                                                                <input type="checkbox" wire:model="save_runtime_activity_to_client"
-                                                                    class="u-cursor-pointer">
-                                                                Salva e imposta come descrizione ufficiale
-                                                            </label>
+                                                            @if($form['ai_analysis_enabled'])
+                                                                <label class="cmp-save-label u-mt-sm">
+                                                                    <input type="checkbox" wire:model="save_runtime_activity_to_client"
+                                                                        class="u-cursor-pointer">
+                                                                    Salva e imposta come descrizione ufficiale
+                                                                </label>
+                                                            @else
+                                                                <div class="u-text-meta u-text-green u-mt-sm">Il testo verrà salvato come descrizione ufficiale.</div>
+                                                            @endif
                                                         </div>
                                                     @endif
                                                 </div>
                                             </div>
                                         </div>
-                                    @endif
                                 </div>
                             </div>
 
                             {{-- Versioni e Feedback --}}
                             @if($post->currentVersion)
-                                <div class="panel cmp-version-box u-mt-md">
-                                    <div class="cmp-version-hd">
-                                        <h4 class="mkt-fw600-fs15-m0-flex-gap8">
-                                            <i data-lucide="sparkles" class="mkt-icon-16-blue"></i>
-                                            Azioni Sody & Feedback (v{{ $post->currentVersion->version_number }})
-                                        </h4>
-
-                                    </div>
-
-                                    @if($post->comments->count() > 0)
-                                        <div class="mkt-mb-24">
-                                            <div class="mkt-feedback-title">Feedback Ricevuti</div>
-                                            <div class="cmp-feedback-list custom-scrollbar">
-                                                @foreach($post->comments as $comment)
-                                                    <div class="cmp-feedback-item">
-                                                        <div class="cmp-feedback-hd">
-                                                            <span>
-                                                                @if($comment->source === \App\Enums\Social\CommentSource::Client)
-                                                                    <strong class="mkt-text-orange">[Cliente]</strong>
-                                                                    <span class="cmp-client-badge">Risposta cliente</span>
-                                                                @else
-                                                                    <strong class="mkt-text-purple">[Team]
-                                                                        {{ $comment->user->name ?? 'Sistema' }}</strong>
-                                                                @endif
-                                                            </span>
-                                                            <span class="mkt-text-text3">{{ $comment->created_at->format('d/m H:i') }}</span>
-                                                        </div>
-                                                        <div class="cmp-feedback-body">{{ $comment->body }}</div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
+                                @if($post->currentVersion->source !== \App\Enums\Social\MarketingCampaignPostVersionSource::Manual)
+                                    <div class="panel cmp-version-box u-mt-md">
+                                        <div class="cmp-version-hd">
+                                            <h4 class="mkt-fw600-fs15-m0-flex-gap8">
+                                                <i data-lucide="sparkles" class="mkt-icon-16-blue"></i>
+                                                Azioni Sody & Feedback (v{{ $post->currentVersion->version_number }})
+                                            </h4>
                                         </div>
-                                    @endif
 
-                                    <div class="cmp-comment-form">
-                                        <input type="text" wire:model="newInternalComment" class="form-in u-flex-1"
-                                            placeholder="Aggiungi una nota o istruzioni per Sody...">
-                                        <button type="button" wire:click="addInternalComment" class="btn btn-p btn-sm mkt-btn-s-pad">
-                                            <i data-lucide="message-square" class="u-icon-sm"></i> Inserisci Nota
-                                        </button>
-                                    </div>
-
-                                    <div class="mkt-flex-gap10-wrap-pt20-bt">
-
-                                        @if($generatedReviewLink)
-                                            <div class="cmp-review-link-box">
-                                                <div class="mkt-green-fw600-fs14-mb8-flex-gap6">
-                                                    <i data-lucide="check-circle" class="u-icon-md"></i> Inviato al Cliente
-                                                </div>
-                                                <div class="u-flex u-gap-sm" x-data="{ copied: false }">
-                                                    <input type="text" value="{{ $generatedReviewLink }}" readonly
-                                                        class="form-in mkt-review-input" id="review-link-{{ $post->id }}">
-                                                    <button type="button"
-                                                        @click="navigator.clipboard.writeText(document.getElementById('review-link-{{ $post->id }}').value); copied = true; setTimeout(() => copied = false, 2000)"
-                                                        class="btn btn-s mkt-review-btn" :class="copied ? 'btn-green' : ''">
-                                                        <span x-show="!copied">Copia Link</span>
-                                                        <span x-show="copied" x-cloak><i data-lucide="check" class="u-icon-sm"></i>
-                                                            Copiato!</span>
-                                                    </button>
+                                        @if($post->comments->count() > 0)
+                                            <div class="mkt-mb-24">
+                                                <div class="mkt-feedback-title">Feedback Ricevuti</div>
+                                                <div class="cmp-feedback-list custom-scrollbar">
+                                                    @foreach($post->comments as $comment)
+                                                        <div class="cmp-feedback-item">
+                                                            <div class="cmp-feedback-hd">
+                                                                <span>
+                                                                    @if($comment->source === \App\Enums\Social\CommentSource::Client)
+                                                                        <strong class="mkt-text-orange">[Cliente]</strong>
+                                                                        <span class="cmp-client-badge">Risposta cliente</span>
+                                                                    @else
+                                                                        <strong class="mkt-text-purple">[Team]
+                                                                            {{ $comment->user->name ?? 'Sistema' }}</strong>
+                                                                    @endif
+                                                                </span>
+                                                                <span class="mkt-text-text3">{{ $comment->created_at->format('d/m H:i') }}</span>
+                                                            </div>
+                                                            <div class="cmp-feedback-body">{{ $comment->body }}</div>
+                                                        </div>
+                                                    @endforeach
                                                 </div>
                                             </div>
-                                        @else
-                                            @if(!in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
-                                                @if($post->canRegenerate())
-                                                    <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('full')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                                                        <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera Tutto
-                                                    </button>
-                                                    <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('caption')"
-                                                        class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                                                        <i data-lucide="type" class="u-icon-sm"></i> Rigenera Testo
-                                                    </button>
-                                                    <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('image')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                                                        <i data-lucide="image" class="u-icon-sm"></i> Rigenera Immagine
-                                                    </button>
-                                                @endif
+                                        @endif
 
-                                                <div class="u-flex-1"></div>
+                                        <div class="cmp-comment-form">
+                                            <input type="text" wire:model="newInternalComment" class="form-in u-flex-1"
+                                                placeholder="Aggiungi una nota o istruzioni per Sody...">
+                                            <button type="button" wire:click="addInternalComment" class="btn btn-p btn-sm mkt-btn-s-pad">
+                                                <i data-lucide="message-square" class="u-icon-sm"></i> Inserisci Nota
+                                            </button>
+                                        </div>
 
-                                                @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested']))
-                                                    <button type="button" wire:click="sendToClient" class="btn btn-s btn-purple u-flex-center u-gap-xs">
-                                                        <i data-lucide="send" class="u-icon-sm"></i> Invia al Cliente
-                                                    </button>
-                                                @endif
-
-                                                @if(!in_array($post->status->value, ['approved', 'published', 'cancelled']))
-                                                    <button type="button" wire:click="approvePost" class="btn btn-s btn-green u-flex-center u-gap-xs">
-                                                        <i data-lucide="check" class="u-icon-sm"></i> Approva Definitivamente
-                                                    </button>
+                                        <div class="mkt-flex-gap10-wrap-pt20-bt">
+                                            @if($generatedReviewLink)
+                                                <div class="cmp-review-link-box">
+                                                    <div class="mkt-green-fw600-fs14-mb8-flex-gap6">
+                                                        <i data-lucide="check-circle" class="u-icon-md"></i> Inviato al Cliente
+                                                    </div>
+                                                    <div class="u-flex u-gap-sm" x-data="{ copied: false }">
+                                                        <input type="text" value="{{ $generatedReviewLink }}" readonly
+                                                            class="form-in mkt-review-input" id="review-link-{{ $post->id }}">
+                                                        <button type="button"
+                                                            @click="navigator.clipboard.writeText(document.getElementById('review-link-{{ $post->id }}').value); copied = true; setTimeout(() => copied = false, 2000)"
+                                                            class="btn btn-s mkt-review-btn" :class="copied ? 'btn-green' : ''">
+                                                            <span x-show="!copied">Copia Link</span>
+                                                            <span x-show="copied" x-cloak><i data-lucide="check" class="u-icon-sm"></i>
+                                                                Copiato!</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                @if(!in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
+                                                    @if($post->canRegenerate())
+                                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('full')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                            <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera Tutto
+                                                        </button>
+                                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('caption')"
+                                                            class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                            <i data-lucide="type" class="u-icon-sm"></i> Rigenera Testo
+                                                        </button>
+                                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('image')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                            <i data-lucide="image" class="u-icon-sm"></i> Rigenera Immagine
+                                                        </button>
+                                                    @endif
                                                 @endif
                                             @endif
-                                        @endif
+                                        </div>
                                     </div>
-                                </div>
+                                @endif
+
+                                {{-- Blocco Azioni Workflow (Sempre visibile per versioni create) --}}
+                                @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested']) || ($generatedReviewLink && !in_array($post->status->value, ['approved', 'published', 'cancelled'])))
+                                    <div class="panel cmp-version-box u-mt-md">
+                                        <div class="cmp-version-hd">
+                                            <h4 class="mkt-fw600-fs15-m0-flex-gap8">
+                                                <i data-lucide="check-circle" class="mkt-icon-16-blue"></i>
+                                                Azioni di Approvazione (v{{ $post->currentVersion->version_number }})
+                                            </h4>
+                                        </div>
+                                        <div class="mkt-flex-gap10-wrap-pt20-bt">
+                                            @if($generatedReviewLink && $post->currentVersion->source === \App\Enums\Social\MarketingCampaignPostVersionSource::Manual)
+                                                <div class="cmp-review-link-box">
+                                                    <div class="mkt-green-fw600-fs14-mb8-flex-gap6">
+                                                        <i data-lucide="check-circle" class="u-icon-md"></i> Inviato al Cliente
+                                                    </div>
+                                                    <div class="u-flex u-gap-sm" x-data="{ copied: false }">
+                                                        <input type="text" value="{{ $generatedReviewLink }}" readonly
+                                                            class="form-in mkt-review-input" id="review-link-{{ $post->id }}">
+                                                        <button type="button"
+                                                            @click="navigator.clipboard.writeText(document.getElementById('review-link-{{ $post->id }}').value); copied = true; setTimeout(() => copied = false, 2000)"
+                                                            class="btn btn-s mkt-review-btn" :class="copied ? 'btn-green' : ''">
+                                                            <span x-show="!copied">Copia Link</span>
+                                                            <span x-show="copied" x-cloak><i data-lucide="check" class="u-icon-sm"></i>
+                                                                Copiato!</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                            <div class="u-flex-1"></div>
+                                            @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested']))
+                                                <button type="button" wire:click="sendToClient" class="btn btn-s btn-purple u-flex-center u-gap-xs">
+                                                    <i data-lucide="send" class="u-icon-sm"></i> Invia al Cliente
+                                                </button>
+                                            @endif
+
+                                            @if(!in_array($post->status->value, ['approved', 'published', 'cancelled']))
+                                                <button type="button" wire:click="approvePost" class="btn btn-s btn-green u-flex-center u-gap-xs">
+                                                    <i data-lucide="check" class="u-icon-sm"></i> Approva Definitivamente
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endif
                             @endif
 
                             <div class="u-mt-lg u-flex u-gap-sm">
+                                @if(session()->has('success'))
+                                    <div class="u-text-green u-text-meta u-mr-sm u-flex-center">{{ session('success') }}</div>
+                                @endif
+                                @if(session()->has('error'))
+                                    <div class="u-text-red u-text-meta u-mr-sm u-flex-center">{{ session('error') }}</div>
+                                @endif
+
+                                @if(!$post->currentVersion && in_array($post->status->value, ['draft', 'client_changes_requested', 'generated']))
+                                    <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
+                                        wire:loading.attr="disabled">
+                                        <i data-lucide="check-circle" class="u-icon-sm"></i>
+                                        <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
+                                        <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
+                                    </button>
+                                    <div class="u-flex-1"></div>
+                                @endif
                                 @if($form['ai_analysis_enabled'])
                                     <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
                                         wire:loading.attr="disabled">

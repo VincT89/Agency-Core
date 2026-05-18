@@ -12,7 +12,9 @@ class TicketChecklistItemController extends Controller
 {
     use AuthorizesRequests;
 
-    public function store(Request $request, Ticket $ticket): RedirectResponse
+    //
+
+    public function store(Request $request, Ticket $ticket): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorize('update', $ticket);
 
@@ -22,19 +24,46 @@ class TicketChecklistItemController extends Controller
 
         $nextOrder = (int) $ticket->checklistItems()->max('sort_order') + 1;
 
-        $ticket->checklistItems()->create([
+        $item = $ticket->checklistItems()->create([
             'title' => $data['title'],
             'sort_order' => $nextOrder,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'html' => view('shared.checklist-item', [
+                    'item' => $item, 
+                    'type' => 'ticket',
+                ])->render(),
+                'total' => $ticket->checklistItems()->count(),
+                'done' => $ticket->checklistItems()->where('is_completed', true)->count(),
+            ]);
+        }
+
         return back()->with('success', 'Checklist aggiunta.');
     }
 
-    public function update(Request $request, TicketChecklistItem $item): RedirectResponse
+    public function update(Request $request, TicketChecklistItem $item): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorize('update', $item->ticket);
 
-        return back();
+        $data = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+        ]);
+
+        $item->update($data);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'item' => [
+                    'id' => $item->id,
+                ]
+            ]);
+        }
+
+        return back()->with('success', 'Checklist aggiornata.');
     }
 
     public function toggle(Request $request, TicketChecklistItem $item): RedirectResponse|\Illuminate\Http\JsonResponse
@@ -49,6 +78,16 @@ class TicketChecklistItemController extends Controller
             'completed_by' => $newState ? auth()->id() : null,
         ]);
 
+        app(\App\Services\AuditLogService::class)->log(
+            'updated',
+            $item->ticket,
+            null,
+            null,
+            $newState
+                ? auth()->user()->name . ' ha completato checklist "' . $item->title . '"'
+                : auth()->user()->name . ' ha riaperto checklist "' . $item->title . '"'
+        );
+
         $item->load('completedBy');
 
         if ($request->expectsJson()) {
@@ -62,17 +101,31 @@ class TicketChecklistItemController extends Controller
                 'completed_by' => $item->completedBy?->name,
                 'done' => $done,
                 'total' => $total,
+                'item' => [
+                    'id' => $item->id,
+                    'is_completed' => $item->is_completed,
+                    'completed_by_name' => $item->completedBy?->name,
+                ]
             ]);
         }
 
         return back();
     }
 
-    public function destroy(TicketChecklistItem $item): RedirectResponse
+    public function destroy(TicketChecklistItem $item): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorize('update', $item->ticket);
 
+        $ticket = $item->ticket;
         $item->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'total' => $ticket->checklistItems()->count(),
+                'done' => $ticket->checklistItems()->where('is_completed', true)->count(),
+            ]);
+        }
 
         return back()->with('success', 'Voce rimossa.');
     }

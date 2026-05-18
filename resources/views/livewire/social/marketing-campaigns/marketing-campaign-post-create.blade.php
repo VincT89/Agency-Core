@@ -214,7 +214,7 @@
             </div>
         </div>
 
-        {{-- Blocco 5: Identità Cliente per Sody --}}
+        {{-- Blocco 5: Identità Cliente --}}
         <div class="panel cmp-panel-pad cmp-identity-panel">
           <label class="cmp-ai-check-wrap">
             <input type="checkbox" wire:model.live="form.ai_analysis_enabled" class="cmp-ai-check-input">
@@ -224,14 +224,13 @@
             </div>
           </label>
 
-          @if($form['ai_analysis_enabled'])
-            <div class="cmp-identity-body">
+          <div class="cmp-identity-body u-mt-md">
                 {{-- Riga logo --}}
                 <div class="cmp-identity-row">
                     <div class="cmp-identity-col-check">
                         <label class="cmp-check-label u-mb-sm">
                             <input type="checkbox" wire:model.live="include_client_logo" class="u-cursor-pointer">
-                            Includi logo cliente nel briefing
+                            {{ $form['ai_analysis_enabled'] ? 'Includi logo cliente nel briefing' : 'Logo cliente' }}
                         </label>
                         @if($campaign->client->logo_path)
                             <div x-show="$wire.include_client_logo" class="cmp-identity-logo-preview">
@@ -247,10 +246,14 @@
                                 <div class="u-text-meta u-text-orange u-mb-sm">Nessun logo presente. Caricane uno.</div>
                                 <input type="file" wire:model="runtime_logo" class="form-in cmp-file-sm" accept="image/jpeg,image/png,image/webp">
                                 @error('runtime_logo') <div class="form-err form-err-sm">{{ $message }}</div> @enderror
-                                <label class="cmp-save-label u-mt-sm">
-                                    <input type="checkbox" wire:model="save_runtime_logo_to_client" class="u-cursor-pointer">
-                                    Salva e imposta come logo ufficiale
-                                </label>
+                                @if($form['ai_analysis_enabled'])
+                                    <label class="cmp-save-label u-mt-sm">
+                                        <input type="checkbox" wire:model="save_runtime_logo_to_client" class="u-cursor-pointer">
+                                        Salva e imposta come logo ufficiale
+                                    </label>
+                                @else
+                                    <div class="u-text-meta u-text-green u-mt-sm">Il file verrà salvato come logo ufficiale.</div>
+                                @endif
                             </div>
                         @endif
                     </div>
@@ -261,7 +264,7 @@
                     <div class="cmp-identity-col-check">
                         <label class="cmp-check-label u-mb-sm">
                             <input type="checkbox" wire:model.live="include_client_header" class="u-cursor-pointer">
-                            Includi descrizione attività nel briefing
+                            {{ $form['ai_analysis_enabled'] ? 'Includi descrizione attività nel briefing' : 'Descrizione attività cliente' }}
                         </label>
                         @if($campaign->client->activity_description)
                             <div x-show="$wire.include_client_header" x-data="{ expActivity: false }">
@@ -278,16 +281,19 @@
                                 <div class="u-text-meta u-text-orange u-mb-sm">Nessuna descrizione presente. Scrivine una.</div>
                                 <textarea wire:model="runtime_activity_description" class="form-ta cmp-ta-sm" placeholder="Descrivi l'attività del cliente..."></textarea>
                                 @error('runtime_activity_description') <div class="form-err form-err-sm">{{ $message }}</div> @enderror
-                                <label class="cmp-save-label u-mt-sm">
-                                    <input type="checkbox" wire:model="save_runtime_activity_to_client" class="u-cursor-pointer">
-                                    Salva e imposta come descrizione ufficiale
-                                </label>
+                                @if($form['ai_analysis_enabled'])
+                                    <label class="cmp-save-label u-mt-sm">
+                                        <input type="checkbox" wire:model="save_runtime_activity_to_client" class="u-cursor-pointer">
+                                        Salva e imposta come descrizione ufficiale
+                                    </label>
+                                @else
+                                    <div class="u-text-meta u-text-green u-mt-sm">Il testo verrà salvato come descrizione ufficiale.</div>
+                                @endif
                             </div>
                         @endif
                     </div>
                 </div>
             </div>
-          @endif
         </div>
 
           </form>
@@ -311,7 +317,7 @@
             @else
                 <button type="button" wire:click="save" class="btn btn-p u-flex-center u-gap-xs">
                   <i data-lucide="save" class="u-icon-md"></i>
-                  <span wire:loading.remove wire:target="save">Salva Post</span>
+                  <span wire:loading.remove wire:target="save">Salva e Prepara Post</span>
                   <span wire:loading wire:target="save">Salvataggio...</span>
                 </button>
             @endif

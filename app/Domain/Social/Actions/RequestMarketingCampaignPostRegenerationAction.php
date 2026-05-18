@@ -89,7 +89,8 @@ class RequestMarketingCampaignPostRegenerationAction
             'status' => MarketingCampaignPostStatus::Regenerating->value,
             'n8n_request_id' => $requestId,
             'n8n_error' => null,
-            'n8n_payload' => $payload,
+            'approved_payload_snapshot' => $payload,
+            'n8n_payload_hash' => hash('sha256', json_encode($payload)),
         ]);
 
         RequestMarketingCampaignPostRegenerationJob::dispatch(

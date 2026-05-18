@@ -4,6 +4,8 @@
     'title' => 'Conferma Eliminazione', 
     'message' => 'Sei sicuro di voler eliminare questo elemento? Questa azione non può essere annullata.',
     'confirmText' => null,
+    'formClass' => '',
+    'formIdAttr' => null,
 ])
 
 <div x-data="{ open: false, confirm: '' }" class="confirm-modal-trigger">
@@ -11,7 +13,8 @@
         {{ $slot }}
     </div>
 
-    <div x-show="open" x-cloak class="confirm-modal-overlay" @click.self="open = false" @keydown.escape.window="open = false">
+    <template x-teleport="body">
+        <div x-show="open" x-cloak class="confirm-modal-overlay" @click.self="open = false" @keydown.escape.window="open = false">
         <div class="confirm-modal-box" @click.stop>
             <div class="confirm-modal-header">
                 <div class="confirm-modal-icon danger">
@@ -43,7 +46,7 @@
                         Sì, elimina
                     </button>
                 @else
-                <form action="{{ $action }}" method="POST" class="u-m-0">
+                <form action="{{ $action }}" method="POST" class="u-m-0 {{ $formClass }}" @if($formIdAttr) data-item-id="{{ $formIdAttr }}" @endif>
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-p btn-danger confirm-modal-btn" 
@@ -54,5 +57,6 @@
                 @endif
             </div>
         </div>
-    </div>
+        </div>
+    </template>
 </div>

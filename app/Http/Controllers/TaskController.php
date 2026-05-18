@@ -112,10 +112,34 @@ class TaskController extends Controller
             'attachments', 
             'auditLogs' => fn ($q) => $q->with('user')->latest()->limit(8),
             'comments.user',
-            'checklistItems.completedBy'
+            'checklistItems.completedBy',
         ]);
 
-        return view('tasks.show', compact('task'));
+        $projectTasks = collect();
+
+        if ($task->project_id) {
+            $projectTasks = Task::query()
+                ->where('project_id', $task->project_id)
+                ->visibleTo(request()->user())
+                ->with(['assignee'])
+                ->orderByRaw("
+                    CASE status
+                        WHEN 'in_progress' THEN 1
+                        WHEN 'review' THEN 2
+                        WHEN 'waiting' THEN 3
+                        WHEN 'todo' THEN 4
+                        WHEN 'done' THEN 5
+                        WHEN 'cancelled' THEN 6
+                        ELSE 7
+                    END
+                ")
+                ->orderBy('due_date', 'asc')
+                ->latest('updated_at')
+                ->limit(50)
+                ->get();
+        }
+
+        return view('tasks.show', compact('task', 'projectTasks'));
     }
 
     public function edit(Task $task): View

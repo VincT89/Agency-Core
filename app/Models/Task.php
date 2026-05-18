@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\User;
 
 #[Fillable([
     'project_id',
@@ -131,8 +133,19 @@ class Task extends Model
 
     public function scopeOverdue($query)
     {
-        $today = today();
         return $query->whereNotNull('due_date')
-                     ->whereDate('due_date', '<', $today);
+                     ->whereDate('due_date', '<', today())
+                     ->whereNotIn('status', ['done', 'cancelled']);
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->canManageSystem() || $user->isMarketing()) {
+            return $query;
+        }
+
+        return $query->whereHas('project.users', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        });
     }
 }

@@ -26,6 +26,18 @@ class MarketingCampaignPostFailedController extends Controller
             'error' => $request->input('error'),
         ]);
 
+        if ($post->n8n_request_id !== $request->input('request_id')) {
+            Log::warning('N8N Failed callback ignored due to request_id mismatch', [
+                'post_id' => $post->id,
+                'expected_request_id' => $post->n8n_request_id,
+                'received_request_id' => $request->input('request_id'),
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid request_id for this post.',
+            ], 400);
+        }
+
         $post->update([
             'status' => $post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Generated->value,
             'n8n_error' => $request->input('error'),

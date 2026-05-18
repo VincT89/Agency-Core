@@ -8,9 +8,11 @@ use Illuminate\Support\Facades\Gate;
 
 class MarketingCampaignPostPolicy
 {
+    use \App\Policies\Concerns\HandlesRoleAuthorization;
+
     public function viewAny(User $user): bool
     {
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 
     public function view(User $user, MarketingCampaignPost $post): bool
@@ -20,7 +22,7 @@ class MarketingCampaignPostPolicy
 
     public function create(User $user): bool
     {
-        return $user->canManageSystem() || $user->isMarketing();
+        return $user->isMarketing();
     }
 
     public function update(User $user, MarketingCampaignPost $post): bool

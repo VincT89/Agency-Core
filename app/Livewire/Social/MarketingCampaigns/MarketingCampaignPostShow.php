@@ -275,10 +275,6 @@ class MarketingCampaignPostShow extends Component
         if (!$value) {
             $this->include_client_logo = true;
             $this->include_client_header = true;
-            $this->runtime_logo = null;
-            $this->runtime_activity_description = null;
-            $this->save_runtime_logo_to_client = false;
-            $this->save_runtime_activity_to_client = false;
         }
     }
 
@@ -525,9 +521,15 @@ class MarketingCampaignPostShow extends Component
 
         $this->processClientIdentity();
 
-        if ($this->post->status === MarketingCampaignPostStatus::Published) {
-            $this->addError('post', 'Impossibile modificare un post già pubblicato.');
-            return;
+        if (in_array($this->post->status, [
+            MarketingCampaignPostStatus::ClientApproved,
+            MarketingCampaignPostStatus::Approved,
+            MarketingCampaignPostStatus::SubmittedToN8n,
+            MarketingCampaignPostStatus::Published,
+        ], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'post' => 'Non puoi modificare un post già approvato.',
+            ]);
         }
 
         $data = $this->form;
@@ -536,19 +538,68 @@ class MarketingCampaignPostShow extends Component
         $this->authorize('update', $this->post);
         $this->post->update($data); // first save normal data
 
+        if (!$this->buildPostDataAndStoredMedia($data)) {
+            return;
+        }
+
         if ($this->post->currentVersion) {
+            $mediaPayload = \App\Domain\Social\Builders\MarketingCampaignPostMediaPayloadBuilder::build($this->post);
+            $imageUrls = collect($mediaPayload['media_items'] ?? [])
+                ->pluck('url')
+                ->filter()
+                ->values()
+                ->all();
+
             $this->post->currentVersion->update([
                 'title' => $data['title'],
                 'caption' => $data['description'],
+                'image_url' => $imageUrls[0] ?? null,
+                'image_urls' => $imageUrls,
             ]);
         }
+
+        $this->dispatch('post-saved');
+        $this->refreshPost();
+    }
+
+    public function saveAsManualVersion(): void
+    {
+        $this->authorize('update', $this->post);
+
+        if ($this->post->current_version_id) {
+            session()->flash('error', 'Il post ha già una versione attiva.');
+            return;
+        }
+
+        if (! in_array($this->post->status->value, [
+            MarketingCampaignPostStatus::Draft->value,
+            MarketingCampaignPostStatus::ClientChangesRequested->value,
+            MarketingCampaignPostStatus::Generated->value,
+        ], true)) {
+            session()->flash('error', 'Stato non valido per creare una versione manuale.');
+            return;
+        }
+
+        $this->validate();
+        $this->processClientIdentity();
+
+        $data = $this->form;
+        $data['marketing_campaign_id'] = $this->campaign->id;
+
+        $this->post->update($data);
 
         if (!$this->buildPostDataAndStoredMedia($data)) {
             return;
         }
 
+        app(\App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction::class)
+            ->execute($this->post->fresh(), auth()->user());
+
+        $this->post->refresh();
         $this->dispatch('post-saved');
         $this->refreshPost();
+
+        session()->flash('success', 'Post salvato come versione pronta senza Sody.');
     }
 
     public function saveAndSubmitToN8n(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction)
@@ -698,7 +749,7 @@ class MarketingCampaignPostShow extends Component
         $client = $this->campaign->client;
         $updated = false;
 
-        if ($this->include_client_logo && $this->runtime_logo && $this->save_runtime_logo_to_client) {
+        if ($this->include_client_logo && $this->runtime_logo && ($this->save_runtime_logo_to_client || !$this->form['ai_analysis_enabled'])) {
             if ($this->runtime_logo instanceof \Illuminate\Http\UploadedFile) {
                 $filename = 'logo_' . time() . '.' . $this->runtime_logo->getClientOriginalExtension();
                 $path = $this->runtime_logo->storeAs('clients/logos', $filename, 'public');
@@ -709,7 +760,7 @@ class MarketingCampaignPostShow extends Component
             }
         }
 
-        if ($this->include_client_header && $this->runtime_activity_description && $this->save_runtime_activity_to_client) {
+        if ($this->include_client_header && $this->runtime_activity_description && ($this->save_runtime_activity_to_client || !$this->form['ai_analysis_enabled'])) {
             $client->activity_description = $this->runtime_activity_description;
             $this->runtime_activity_description = null;
             $this->save_runtime_activity_to_client = false;

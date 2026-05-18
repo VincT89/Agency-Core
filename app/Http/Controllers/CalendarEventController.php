@@ -208,6 +208,23 @@ class CalendarEventController extends Controller
             ->with('success', 'Evento aggiornato correttamente.');
     }
 
+    public function updateDate(Request $request, CalendarEvent $calendarEvent): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $calendarEvent);
+        
+        $request->validate([
+            'start_at' => 'required|date',
+            'end_at' => 'nullable|date',
+        ]);
+
+        $calendarEvent->update([
+            'start_at' => $request->start_at,
+            'end_at' => $request->end_at,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
     public function destroy(CalendarEvent $calendarEvent): RedirectResponse
     {
         $this->authorize('delete', $calendarEvent);

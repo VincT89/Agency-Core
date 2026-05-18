@@ -702,13 +702,21 @@
                                         <span wire:loading wire:target="savePost">Salvataggio...</span>
                                     </button>
                                     @if(!$post->currentVersion)
-                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n"
+                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('full')"
                                             class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
                                             <i data-lucide="sparkles" class="u-icon-md"></i>
-                                            <span wire:loading.remove wire:target="saveAndSubmitToN8n">
-                                                {{ $post->status->value !== 'draft' ? 'Rigenera con Sody' : 'Salva e Invia a Sody' }}
+                                            <span wire:loading.remove wire:target="saveAndSubmitToN8n('full')">
+                                                {{ $post->status->value !== 'draft' ? 'Rigenera Tutto' : 'Genera Immagine e Testo' }}
                                             </span>
-                                            <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
+                                            <span wire:loading wire:target="saveAndSubmitToN8n('full')">Invio in corso...</span>
+                                        </button>
+                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('caption')"
+                                            class="btn btn-sec u-flex-center u-gap-xs" wire:loading.attr="disabled">
+                                            <i data-lucide="type" class="u-icon-md"></i>
+                                            <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
+                                                Genera solo Testo
+                                            </span>
+                                            <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Invio in corso...</span>
                                         </button>
                                     @endif
                                 @else

@@ -215,6 +215,10 @@ class TaskController extends Controller
 
         $task->update($data);
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'status' => $task->status]);
+        }
+
         return redirect()->back()->with('success', 'Stato task aggiornato!');
     }
 }

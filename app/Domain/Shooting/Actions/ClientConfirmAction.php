@@ -38,13 +38,16 @@ class ClientConfirmAction
                 $startAt = Carbon::parse($slot->date->format('Y-m-d') . ' ' . $slot->starts_at, $tz);
                 $endAt = Carbon::parse($slot->date->format('Y-m-d') . ' ' . $slot->ends_at, $tz);
 
+                $clientId = $shoot->project ? $shoot->project->client_id : ($shoot->marketingCampaign ? $shoot->marketingCampaign->client_id : null);
+                $shootContextName = $shoot->project ? $shoot->project->name : ($shoot->marketingCampaign ? $shoot->marketingCampaign->name : 'Nuovo');
+
                 // Fissa a calendario l'appuntamento per lo shooting
                 $event = CalendarEvent::create([
-                    'client_id' => $shoot->project->client_id,
+                    'client_id' => $clientId,
                     'project_id' => $shoot->project_id,
                     'created_by' => $adminId,
                     'assigned_to' => $shoot->photographer_id,
-                    'title' => 'Shooting: ' . $shoot->project->name,
+                    'title' => 'Shooting: ' . $shootContextName,
                     'description' => "Shooting programmato.\nNote cliente: {$shoot->client_notes}\nNote interne: {$shoot->internal_notes}",
                     'type' => 'other',
                     'status' => 'scheduled',
@@ -59,7 +62,7 @@ class ClientConfirmAction
                     'project_id' => $shoot->project_id,
                     'created_by' => $adminId,
                     'assigned_to' => $shoot->photographer_id,
-                    'title' => 'Shooting: ' . $shoot->project->name,
+                    'title' => 'Shooting: ' . $shootContextName,
                     'description' => "Effettuare shooting.\nData: {$slot->date->format('d/m/Y')} ({$slot->starts_at} - {$slot->ends_at})\nLocation: {$shoot->location}",
                     'status' => 'todo',
                     'priority' => 'high',

@@ -15,6 +15,7 @@ class CreateRequest extends Component
 
     public $title;
     public $project_id;
+    public $marketing_campaign_id;
     public $photographer_id;
     public $location;
     public $internal_notes;
@@ -46,8 +47,9 @@ class CreateRequest extends Component
     public function rules()
     {
         return [
-            'title' => 'required|string|max:255',
-            'project_id' => 'required|exists:projects,id',
+            'title' => 'nullable|string|max:255',
+            'project_id' => 'required_without:marketing_campaign_id|nullable|exists:projects,id',
+            'marketing_campaign_id' => 'required_without:project_id|nullable|exists:marketing_campaigns,id',
             'photographer_id' => 'nullable|exists:users,id',
             'location' => 'nullable|string',
             'internal_notes' => 'nullable|string',
@@ -63,8 +65,10 @@ class CreateRequest extends Component
         $this->validate();
 
         $user = auth()->user();
-        if (!$user->canManageSystem() && !$user->projects()->where('projects.id', $this->project_id)->exists()) {
-            abort(403, 'Non hai accesso a questo progetto.');
+        if (!$user->canManageSystem()) {
+            if ($this->project_id && !$user->projects()->where('projects.id', $this->project_id)->exists()) {
+                abort(403, 'Non hai accesso a questo progetto.');
+            }
         }
 
         // Mappa e formatta gli slot temporali per il salvataggio
@@ -83,6 +87,7 @@ class CreateRequest extends Component
         $data = [
             'title' => $this->title,
             'project_id' => $this->project_id,
+            'marketing_campaign_id' => $this->marketing_campaign_id,
             'photographer_id' => $this->photographer_id,
             'location' => $this->location,
             'internal_notes' => $this->internal_notes,
@@ -103,11 +108,21 @@ class CreateRequest extends Component
         $projects = $user->canManageSystem() 
             ? Project::all() 
             : $user->projects;
+
+        $campaigns = $user->canManageSystem() || $user->isMarketing()
+            ? \App\Models\MarketingCampaign::with('client')->orderBy('name')->get()
+            : \App\Models\MarketingCampaign::with('client')
+                ->whereHas('client.users', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->orderBy('name')
+                ->get();
             
         $photographers = User::where('role', 'photographer')->get(); 
 
         return view('livewire.social.shooting.create-request', [
             'projects' => $projects,
+            'campaigns' => $campaigns,
             'photographers' => $photographers,
         ])->layout('layouts.app', ['title' => 'Nuova Richiesta Shooting']);
     }

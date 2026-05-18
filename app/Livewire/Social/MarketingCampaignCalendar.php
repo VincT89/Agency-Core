@@ -92,12 +92,12 @@ class MarketingCampaignCalendar extends Component
             ->with(['campaign.client', 'currentVersion'])
             ->get();
 
-        return $posts->map(function ($post) {
+        $events = $posts->map(function ($post) {
             $date = $post->scheduled_date->format('Y-m-d');
             $time = $post->scheduled_time ? date('H:i:s', strtotime($post->scheduled_time)) : '12:00:00';
             
             return [
-                'id' => $post->id,
+                'id' => 'post_' . $post->id,
                 'title' => $post->title ?? 'Post senza titolo',
                 'start' => $date . 'T' . $time,
                 'url' => route('marketing-campaigns.posts.show', [
@@ -107,6 +107,7 @@ class MarketingCampaignCalendar extends Component
                 'backgroundColor' => $post->status->color(),
                 'borderColor' => $post->status->color(),
                 'extendedProps' => [
+                    'type' => 'post',
                     'platform' => 'Social', // Placeholder finché non aggiungiamo la piattaforma
                     'campaign' => $post->campaign->name ?? '',
                     'client' => $post->campaign->client->name ?? '',
@@ -114,6 +115,70 @@ class MarketingCampaignCalendar extends Component
                 ]
             ];
         })->toArray();
+
+        // Fetch Shoots
+        $shootsQuery = \App\Models\Shooting\Shoot::query()
+            ->whereNotNull('marketing_campaign_id')
+            ->where('status', '!=', \App\Enums\Shooting\ShootStatus::Cancelled)
+            ->with(['marketingCampaign.client', 'slots']);
+
+        if ($this->clientFilter) {
+            $shootsQuery->whereHas('marketingCampaign', function($q) {
+                $q->where('client_id', $this->clientFilter);
+            });
+        }
+
+        if ($this->campaignFilter) {
+            $shootsQuery->where('marketing_campaign_id', $this->campaignFilter);
+        }
+
+        if (!auth()->user()->canManageSystem() && !auth()->user()->isMarketing()) {
+            $shootsQuery->whereHas('marketingCampaign.client', function($q) {
+                $q->whereHas('users', function($q2) {
+                    $q2->where('user_id', auth()->id());
+                });
+            });
+        }
+
+        $shoots = $shootsQuery->get();
+
+        foreach ($shoots as $shoot) {
+            // Find a date from slots or calendar event
+            $date = null;
+            $time = '09:00:00';
+            
+            if ($shoot->selected_slot_id && $shoot->selectedSlot) {
+                $date = $shoot->selectedSlot->date->format('Y-m-d');
+                $time = $shoot->selectedSlot->starts_at ? $shoot->selectedSlot->starts_at->format('H:i:s') : '09:00:00';
+            } elseif ($shoot->slots->isNotEmpty()) {
+                $slot = $shoot->slots->first();
+                $date = $slot->date->format('Y-m-d');
+                $time = $slot->starts_at ? $slot->starts_at->format('H:i:s') : '09:00:00';
+            } elseif ($shoot->calendarEvent) {
+                $date = $shoot->calendarEvent->start_at->format('Y-m-d');
+                $time = $shoot->calendarEvent->start_at->format('H:i:s');
+            }
+
+            if ($date) {
+                $events[] = [
+                    'id' => 'shoot_' . $shoot->id,
+                    'title' => '📷 ' . ($shoot->title ?? 'Shooting'),
+                    'start' => $date . 'T' . $time,
+                    'url' => route('social.shooting.show', $shoot->id),
+                    'backgroundColor' => '#ec4899', // Pink-500 for shooting
+                    'borderColor' => '#db2777',
+                    'extendedProps' => [
+                        'type' => 'shoot',
+                        'platform' => 'Shooting',
+                        'campaign' => $shoot->marketingCampaign->name ?? '',
+                        'client' => $shoot->marketingCampaign->client->name ?? '',
+                        'status' => $shoot->status->label(),
+                    ]
+                ];
+            }
+        }
+
+        return $events;
     }
 
     public function render()

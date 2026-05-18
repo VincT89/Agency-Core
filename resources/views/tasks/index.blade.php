@@ -80,9 +80,9 @@
                         {{ $kanbanTasks->where('status', $status)->count() }}
                     </span>
                 </div>
-                <div class="k-cards">
+                <div class="k-cards sortable-task-col" data-status="{{ $status }}">
                     @foreach($kanbanTasks->where('status', $status) as $task)
-                    <div class="k-card enhanced js-clickable-row u-cursor-pointer {{ $task->status === 'done' ? 'task-row-done' : '' }}" data-href="{{ route('tasks.show', $task) }}">
+                    <div class="k-card enhanced js-clickable-row u-cursor-pointer {{ $task->status === 'done' ? 'task-row-done' : '' }}" data-href="{{ route('tasks.show', $task) }}" data-task-id="{{ $task->id }}" style="border-left: 6px solid {{ $task->assignee ? $task->assignee->role->color() : 'var(--border)' }};">
                         <div class="k-card-title task-title">
                             {{ $task->title }}
                         </div>
@@ -90,7 +90,9 @@
                             {{ $task->project?->name ?? 'Nessun progetto' }}
                         </div>
                         <div class="u-flex-between">
-                            <span class="k-card-meta">{{ $task->assignee?->name ?? 'Non assegnato' }}</span>
+                            <div class="u-flex u-items-center u-gap-xs">
+                                <span class="k-card-meta">{{ $task->assignee?->name ?? 'Non assegnato' }}</span>
+                            </div>
                             @if($task->due_date)
                                 <span class="k-card-meta {{ $task->due_date->isPast() && $task->status !== 'done' ? 'u-text-red' : '' }}">
                                     {{ $task->due_date->format('d/m') }}
@@ -120,7 +122,7 @@
                 <tbody>
                     @forelse($taskList as $task)
                     <tr data-href="{{ route('tasks.show', $task) }}" class="js-clickable-row u-cursor-pointer hover-bg {{ $task->status === 'done' ? 'task-row-done' : '' }}">
-                        <td class="name-col task-title">
+                        <td class="name-col task-title" style="border-left: 6px solid {{ $task->assignee ? $task->assignee->role->color() : 'transparent' }};">
                             {{ $task->title }}
                         </td>
                         <td>
@@ -133,7 +135,11 @@
                                 —
                             @endif
                         </td>
-                        <td>{{ $task->assignee?->name ?? '—' }}</td>
+                        <td>
+                            <div class="u-flex u-items-center u-gap-xs">
+                                <span>{{ $task->assignee?->name ?? '—' }}</span>
+                            </div>
+                        </td>
                         <td><x-badge :status="$task->priority" :label="$task->priority_label" /></td>
                         <td class="mono-col {{ $task->due_date && $task->due_date->isPast() && $task->status !== 'done' ? 'u-text-red' : '' }}">
                             {{ $task->due_date?->format('d/m/Y') ?? '—' }}
@@ -156,5 +162,83 @@
             </table>
             {{ $taskList->links() }}
         </x-panel>
+    @endif
+
+    @if($viewMode === 'kanban')
+        @push('scripts')
+            <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+            <script>
+                document.addEventListener('livewire:navigated', function () {
+                    initTaskSortable();
+                });
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    initTaskSortable();
+                });
+
+                function initTaskSortable() {
+                    if (typeof Sortable === 'undefined') return;
+
+                    const columns = document.querySelectorAll('.sortable-task-col');
+                    
+                    columns.forEach(col => {
+                        if (col._sortable) col._sortable.destroy();
+                        
+                        col._sortable = new Sortable(col, {
+                            group: 'tasks-kanban',
+                            animation: 150,
+                            ghostClass: 'k-card-ghost',
+                            onEnd: async function (evt) {
+                                const itemEl = evt.item;
+                                const taskId = itemEl.dataset.taskId;
+                                const newStatus = evt.to.dataset.status;
+                                const oldStatus = evt.from.dataset.status;
+                                
+                                if (newStatus === oldStatus) return;
+                                
+                                try {
+                                    const res = await fetch(`/tasks/${taskId}/status`, {
+                                        method: 'PATCH',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                            'Accept': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            status: newStatus
+                                        })
+                                    });
+                                    
+                                    if (!res.ok) {
+                                        throw new Error('Update failed');
+                                    }
+                                    
+                                    const responseData = await res.json();
+
+                                    // Update styling if task is moved to 'done' or from 'done'
+                                    if (newStatus === 'done') {
+                                        itemEl.classList.add('task-row-done');
+                                    } else {
+                                        itemEl.classList.remove('task-row-done');
+                                    }
+
+                                    // Update counter badges
+                                    const oldBadge = evt.from.previousElementSibling.querySelector('.badge');
+                                    const newBadge = evt.to.previousElementSibling.querySelector('.badge');
+                                    if (oldBadge) oldBadge.textContent = Math.max(0, parseInt(oldBadge.textContent) - 1);
+                                    if (newBadge) newBadge.textContent = parseInt(newBadge.textContent) + 1;
+
+                                } catch (e) {
+                                    console.error('Failed to update task status', e);
+                                    alert('Errore durante l\'aggiornamento dello stato.');
+                                    // Rollback visivo
+                                    evt.from.insertBefore(itemEl, evt.from.children[evt.oldIndex]);
+                                }
+                            }
+                        });
+                    });
+                }
+            </script>
+        @endpush
     @endif
 </x-app-layout>

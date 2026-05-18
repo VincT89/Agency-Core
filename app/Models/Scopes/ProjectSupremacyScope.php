@@ -45,7 +45,14 @@ class ProjectSupremacyScope implements Scope
                 });
             }
             
-            // Task e Ticket restano volutamente bloccati al contesto del progetto
+            // Permette la visibilità dei Task operativi (es. Shooting Marketing) senza progetto
+            // solo se assegnati direttamente all'utente
+            if ($model instanceof \App\Models\Task) {
+                $query->orWhere(function ($q) use ($user) {
+                    $q->whereNull('project_id')
+                      ->where('assigned_to', $user->id);
+                });
+            }
         });
     }
 }

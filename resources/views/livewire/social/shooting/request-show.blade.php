@@ -21,8 +21,20 @@
                 <div class="shooting-panel-inner">
                     <div class="g-shoot-2col">
                         <div>
-                            <div class="shooting-lbl-caps">Progetto</div>
-                            <div class="shooting-text-val-bold">{{ $shoot->project->name }}</div>
+                            @if($shoot->project)
+                                <div class="shooting-lbl-caps">Progetto</div>
+                                <div class="shooting-text-val-bold">{{ $shoot->project->name }}</div>
+                            @endif
+                            
+                            @if($shoot->marketingCampaign)
+                                <div class="shooting-lbl-caps {{ $shoot->project ? 'u-mt-sm' : '' }}">Campagna Marketing</div>
+                                <div class="shooting-text-val-bold u-text-purple">{{ $shoot->marketingCampaign->client->name }} - {{ $shoot->marketingCampaign->name }}</div>
+                            @endif
+                            
+                            @if(!$shoot->project && !$shoot->marketingCampaign)
+                                <div class="shooting-lbl-caps">Riferimento</div>
+                                <div class="shooting-text-val-bold u-text-muted">Nessun riferimento</div>
+                            @endif
                         </div>
                         <div>
                             <div class="shooting-lbl-caps">Fotografo</div>

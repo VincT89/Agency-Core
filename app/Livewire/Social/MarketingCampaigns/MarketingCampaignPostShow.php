@@ -602,7 +602,7 @@ class MarketingCampaignPostShow extends Component
         session()->flash('success', 'Post salvato come versione pronta senza Sody.');
     }
 
-    public function saveAndSubmitToN8n(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction)
+    public function saveAndSubmitToN8n(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction, $generationType = 'full')
     {
         $this->validate();
 
@@ -635,6 +635,7 @@ class MarketingCampaignPostShow extends Component
             'runtime_activity_description' => $this->runtime_activity_description,
             'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
             'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
+            'generation_type' => $generationType,
         ];
 
         try {

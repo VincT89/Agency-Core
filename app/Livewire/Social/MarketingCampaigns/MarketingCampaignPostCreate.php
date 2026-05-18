@@ -335,8 +335,10 @@ class MarketingCampaignPostCreate extends Component
         ]);
     }
 
-    public function saveAndSubmitToN8n(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction)
-    {
+    public function saveAndSubmitToN8n(
+        \App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction,
+        string $generationType = 'full'
+    ) {
         $this->validate();
         
 
@@ -370,6 +372,7 @@ class MarketingCampaignPostCreate extends Component
             'runtime_activity_description' => $this->runtime_activity_description,
             'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
             'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
+            'generation_type' => $generationType,
         ];
 
         $submitAction->execute($post, $runtimeClientData);

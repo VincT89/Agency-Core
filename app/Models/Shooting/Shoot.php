@@ -22,6 +22,7 @@ class Shoot extends Model
 
     protected $fillable = [
         'project_id',
+        'marketing_campaign_id',
         'photographer_id',
         'created_by',
         'title',
@@ -50,6 +51,11 @@ class Shoot extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function marketingCampaign(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MarketingCampaign::class, 'marketing_campaign_id');
     }
 
     public function photographer(): BelongsTo

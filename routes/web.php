@@ -167,6 +167,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::get('/expenses/{expense}/edit', \App\Livewire\Expenses\ExpenseForm::class)->name('expenses.edit');
         
     Route::resource('calendar-events', CalendarEventController::class);
+    Route::patch('calendar-events/{calendar_event}/date', [CalendarEventController::class, 'updateDate'])->name('calendar-events.update-date');
     Route::resource('invoices', InvoiceController::class);
     Route::post('invoices/{invoice}/items', [InvoiceItemController::class, 'store'])->name('invoices.items.store');
     Route::delete('invoices/{invoice}/items/{item}', [InvoiceItemController::class, 'destroy'])->name('invoices.items.destroy');

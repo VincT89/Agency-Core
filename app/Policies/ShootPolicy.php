@@ -54,7 +54,15 @@ class ShootPolicy
             return $shoot->photographer_id === $user->id;
         }
 
-        return $shoot->project_id && $user->projects()->where('projects.id', $shoot->project_id)->exists();
+        if ($shoot->project_id) {
+            return $user->projects()->where('projects.id', $shoot->project_id)->exists();
+        }
+
+        if ($shoot->marketing_campaign_id) {
+            return $user->clients()->where('clients.id', $shoot->marketingCampaign->client_id)->exists();
+        }
+
+        return false;
     }
 
     public function respond(User $user, Shoot $shoot): bool

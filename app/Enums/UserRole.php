@@ -22,4 +22,16 @@ enum UserRole: string
             self::GraphicDesigner   => 'Grafica',
         };
     }
+
+    public function color(): string
+    {
+        return match($this) {
+            self::Admin             => 'var(--gray)',
+            self::Administration    => 'var(--indigo)', // Indigo
+            self::Developer         => 'var(--teal)',   // Teal
+            self::Marketing         => 'var(--amber)',  // Amber soft
+            self::Photographer      => 'var(--cyan)',   // Cyan muted
+            self::GraphicDesigner   => 'var(--magenta)',// Magenta
+        };
+    }
 }

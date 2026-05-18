@@ -157,7 +157,7 @@
                         <th class="text-right">Fatturato</th>
                         <th class="text-right">Incassato</th>
                         <th class="text-right">Da Incassare</th>
-                        <th class="text-center">Vol.</th>
+                        <th class="text-center">Costi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -169,7 +169,7 @@
                         <td class="text-right mono-col {{ $cRow->total_outstanding > 0 ? 'u-text-red' : '' }}">
                             € {{ number_format($cRow->total_outstanding, 2, ',', '.') }}
                         </td>
-                        <td class="text-center"><span class="badge u-bg-2">{{ $cRow->invoices_count }}</span></td>
+                        <td class="text-center mono-col u-text-red">€ {{ number_format($cRow->total_expenses, 2, ',', '.') }}</td>
                     </tr>
                     @empty
                     <tr>
@@ -191,7 +191,7 @@
                     <th class="text-right">Fatturato</th>
                     <th class="text-right">Incassato</th>
                     <th class="text-right">Da Incassare</th>
-                    <th class="text-center">Vol.</th>
+                    <th class="text-center">Costi</th>
                 </tr>
             </thead>
             <tbody>
@@ -204,7 +204,7 @@
                     <td class="text-right mono-col {{ $pRow->total_outstanding > 0 ? 'u-text-red' : '' }}">
                         € {{ number_format($pRow->total_outstanding, 2, ',', '.') }}
                     </td>
-                    <td class="text-center"><span class="badge u-bg-2">{{ $pRow->invoices_count }}</span></td>
+                    <td class="text-center mono-col u-text-red">€ {{ number_format($pRow->total_expenses, 2, ',', '.') }}</td>
                 </tr>
                 @empty
                 <tr>

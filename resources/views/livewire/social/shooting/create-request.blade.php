@@ -16,17 +16,17 @@
                 
                 <div class="form-row full shooting-form-row">
                     <div>
-                        <label class="form-lbl">Titolo Shooting <span class="shooting-text-red">*</span></label>
-                        <input type="text" wire:model="title" class="form-in shooting-input-full" placeholder="es. Shooting Esterno Campagna Estiva">
+                        <label class="form-lbl">Titolo Shooting</label>
+                        <input type="text" wire:model="title" class="form-in shooting-input-full" placeholder="es. Shooting Esterno Campagna Estiva (lascia vuoto per auto-generato)">
                         @error('title') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
                 <div class="form-row shooting-form-row">
                     <div>
-                        <label class="form-lbl">Progetto <span class="shooting-text-red">*</span></label>
+                        <label class="form-lbl">Progetto di Fatturazione <span class="u-text-meta u-text-muted">(Richiesto se nessuna campagna)</span></label>
                         <select wire:model="project_id" class="form-in shooting-input-full">
-                            <option value="">Seleziona...</option>
+                            <option value="">Seleziona progetto (costi/budget)...</option>
                             @foreach($projects as $p)
                                 <option value="{{ $p->id }}">{{ $p->name }}</option>
                             @endforeach
@@ -34,7 +34,20 @@
                         @error('project_id') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                     </div>
                     <div>
-                        <label class="form-lbl">Fotografo Assegnato <span class="shooting-text-red">*</span></label>
+                        <label class="form-lbl">Campagna Marketing <span class="u-text-meta u-text-muted">(Richiesta se nessun progetto)</span></label>
+                        <select wire:model="marketing_campaign_id" class="form-in shooting-input-full">
+                            <option value="">Nessuna campagna (solo gestionale)</option>
+                            @foreach($campaigns as $camp)
+                                <option value="{{ $camp->id }}">{{ $camp->client->name }} - {{ $camp->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('marketing_campaign_id') <span class="shooting-err-msg">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+
+                <div class="form-row full shooting-form-row">
+                    <div>
+                        <label class="form-lbl">Fotografo Assegnato</label>
                         <select wire:model="photographer_id" class="form-in shooting-input-full">
                             <option value="">Da definire</option>
                             @foreach($photographers as $user)

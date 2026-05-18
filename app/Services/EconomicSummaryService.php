@@ -110,18 +110,44 @@ class EconomicSummaryService
             ->get()
             ->keyBy('client_id');
 
-        // 3. MERGE in PHP su aggregati piccolissimi
+        // 3. EXPENSES (Aggregate by client directly + via projects)
+        $expensesQuery = \App\Models\Expense::query();
+        $expensesQuery = $this->applyRolePerimeterSafe($expensesQuery, $user, 'expenses');
+        $expensesQuery = $this->applyPeriod($expensesQuery, 'expense_date', $from, $to);
+
+        $directClientExpenses = (clone $expensesQuery)
+            ->where('expenseable_type', Client::class)
+            ->selectRaw('expenseable_id as client_id, SUM(amount) as total_expenses')
+            ->groupBy('expenseable_id')
+            ->get()
+            ->keyBy('client_id');
+
+        $projectExpensesForClient = (clone $expensesQuery)
+            ->where('expenseable_type', Project::class)
+            ->join('projects', 'expenses.expenseable_id', '=', 'projects.id')
+            ->selectRaw('projects.client_id, SUM(expenses.amount) as total_expenses')
+            ->groupBy('projects.client_id')
+            ->get()
+            ->keyBy('client_id');
+
+        // 4. MERGE in PHP su aggregati piccolissimi
         $clientIds = collect(array_keys($invoicesByClient->toArray()))
             ->merge(array_keys($paymentsByClient->toArray()))
+            ->merge(array_keys($directClientExpenses->toArray()))
+            ->merge(array_keys($projectExpensesForClient->toArray()))
             ->unique();
 
         $clientNames = Client::query()
             ->whereIn('id', $clientIds)
             ->pluck('name', 'id');
 
-        return $clientIds->map(function ($clientId) use ($invoicesByClient, $paymentsByClient, $clientNames) {
+        return $clientIds->map(function ($clientId) use ($invoicesByClient, $paymentsByClient, $directClientExpenses, $projectExpensesForClient, $clientNames) {
             $inv = $invoicesByClient->get($clientId);
             $pay = $paymentsByClient->get($clientId);
+            $dirExp = $directClientExpenses->get($clientId);
+            $projExp = $projectExpensesForClient->get($clientId);
+
+            $totalExpenses = ($dirExp ? (float) $dirExp->total_expenses : 0.0) + ($projExp ? (float) $projExp->total_expenses : 0.0);
 
             return (object) [
                 'client_id' => $clientId,
@@ -130,6 +156,7 @@ class EconomicSummaryService
                 'total_invoiced' => $inv ? (float) $inv->total_invoiced : 0.0,
                 'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,
                 'total_collected' => $pay ? (float) $pay->total_collected : 0.0,
+                'total_expenses' => $totalExpenses,
             ];
         })->sortByDesc('total_invoiced')->values();
     }
@@ -168,9 +195,22 @@ class EconomicSummaryService
             ->get()
             ->keyBy('project_id');
 
-        // 3. MERGE
+        // 3. EXPENSES
+        $expensesQuery = \App\Models\Expense::query();
+        $expensesQuery = $this->applyRolePerimeterSafe($expensesQuery, $user, 'expenses');
+        $expensesQuery = $this->applyPeriod($expensesQuery, 'expense_date', $from, $to);
+
+        $expensesByProject = (clone $expensesQuery)
+            ->where('expenseable_type', Project::class)
+            ->selectRaw('expenseable_id as project_id, SUM(amount) as total_expenses')
+            ->groupBy('expenseable_id')
+            ->get()
+            ->keyBy('project_id');
+
+        // 4. MERGE
         $projectIds = collect(array_keys($invoicesByProject->toArray()))
             ->merge(array_keys($paymentsByProject->toArray()))
+            ->merge(array_keys($expensesByProject->toArray()))
             ->unique();
 
         $projectsInfo = Project::query()
@@ -179,9 +219,10 @@ class EconomicSummaryService
             ->get()
             ->keyBy('id');
 
-        return $projectIds->map(function ($projectId) use ($invoicesByProject, $paymentsByProject, $projectsInfo) {
+        return $projectIds->map(function ($projectId) use ($invoicesByProject, $paymentsByProject, $expensesByProject, $projectsInfo) {
             $inv = $invoicesByProject->get($projectId);
             $pay = $paymentsByProject->get($projectId);
+            $exp = $expensesByProject->get($projectId);
             $proj = $projectsInfo->get($projectId);
 
             return (object) [
@@ -192,6 +233,7 @@ class EconomicSummaryService
                 'total_invoiced' => $inv ? (float) $inv->total_invoiced : 0.0,
                 'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,
                 'total_collected' => $pay ? (float) $pay->total_collected : 0.0,
+                'total_expenses' => $exp ? (float) $exp->total_expenses : 0.0,
             ];
         })->sortByDesc('total_invoiced')->values();
     }

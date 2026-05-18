@@ -35,7 +35,15 @@
                         <td class="shooting-code">{{ $shoot->code }}</td>
                         <td>
                             <div class="shooting-title">{{ $shoot->title }}</div>
-                            <div class="shooting-project">{{ $shoot->project->name }}</div>
+                            <div class="shooting-project">
+                                @if($shoot->project)
+                                    {{ $shoot->project->name }}
+                                @elseif($shoot->marketingCampaign)
+                                    <span class="u-text-purple">{{ $shoot->marketingCampaign->client->name }} - {{ $shoot->marketingCampaign->name }}</span>
+                                @else
+                                    <span class="u-text-muted">Nessun riferimento</span>
+                                @endif
+                            </div>
                         </td>
                         <td>
                             @if($shoot->photographer)

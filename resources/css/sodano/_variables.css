@@ -32,6 +32,10 @@
   --green: #3ecf8e;
   --purple: #a78bfa;
   --gray: #9ca3af;
+  --indigo: #6366f1;
+  --amber: #f59e0b;
+  --cyan: #06b6d4;
+  --magenta: #d946ef;
 
   /* Typography */
   --serif: 'Ubuntu', sans-serif;

@@ -19,6 +19,18 @@ class NotificationDropdown extends Component
         }
     }
 
+    public function markAsReadAndRedirect($id)
+    {
+        $notification = auth()->user()->notifications()->where('id', $id)->first();
+        if ($notification) {
+            $notification->markAsRead();
+            $url = $notification->data['url'] ?? null;
+            if ($url) {
+                return $this->redirect($url, navigate: true);
+            }
+        }
+    }
+
     public function deleteNotification($id)
     {
         $notification = auth()->user()->notifications()->where('id', $id)->first();

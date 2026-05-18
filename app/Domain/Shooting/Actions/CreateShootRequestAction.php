@@ -16,13 +16,17 @@ class CreateShootRequestAction
     public function execute(array $data, int $creatorId): Shoot
     {
         return DB::transaction(function () use ($data, $creatorId) {
-            $project = Project::findOrFail($data['project_id']);
+            $project = !empty($data['project_id']) ? Project::find($data['project_id']) : null;
+            $campaign = !empty($data['marketing_campaign_id']) ? \App\Models\MarketingCampaign::find($data['marketing_campaign_id']) : null;
             
+            $defaultTitle = 'Shooting: ' . ($project ? $project->name : ($campaign ? $campaign->name : 'Nuovo'));
+
             $shoot = Shoot::create([
-                'project_id' => $data['project_id'],
+                'project_id' => $data['project_id'] ?? null,
+                'marketing_campaign_id' => $data['marketing_campaign_id'] ?? null,
                 'photographer_id' => $data['photographer_id'] ?? null,
                 'created_by' => $creatorId,
-                'title' => $data['title'] ?? 'Shooting: ' . $project->name,
+                'title' => $data['title'] ?? $defaultTitle,
                 'code' => 'SHT-' . strtoupper(Str::random(8)),
                 'location' => $data['location'] ?? null,
                 'internal_notes' => $data['internal_notes'] ?? null,
@@ -50,7 +54,7 @@ class CreateShootRequestAction
                 $shoot->photographer->notify(new ShootingWorkflowNotification(
                     ShootingWorkflowEvent::RequestCreated,
                     'Nuova Richiesta Shooting',
-                    "Sei stato assegnato a un nuovo shooting per il progetto {$project->name}. Verifica gli slot.",
+                    "Sei stato assegnato a un nuovo shooting: {$defaultTitle}. Verifica gli slot.",
                     $url,
                     $shoot->id
                 ));

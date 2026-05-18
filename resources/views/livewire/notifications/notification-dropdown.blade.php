@@ -22,7 +22,7 @@
       @forelse($latestNotifications ?? [] as $notification)
         @php /** @var \Illuminate\Notifications\DatabaseNotification $notification */ @endphp
         <div class="notif-item {{ $notification->read_at ? '' : 'unread' }}">
-          <button type="button" wire:click="markAsRead('{{ $notification->id }}')" class="notif-item-btn" @click.stop>
+          <button type="button" wire:click="markAsReadAndRedirect('{{ $notification->id }}')" class="notif-item-btn" @click.stop>
             @php
               $iconName = 'bell';
               $nType = $notification->data['type'] ?? '';

@@ -315,10 +315,21 @@
                   <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
                 </button>
             @else
-                <button type="button" wire:click="save" class="btn btn-p u-flex-center u-gap-xs">
-                  <i data-lucide="save" class="u-icon-md"></i>
-                  <span wire:loading.remove wire:target="save">Salva e Prepara Post</span>
-                  <span wire:loading wire:target="save">Salvataggio...</span>
+                <button type="button" wire:click="save" class="btn btn-s u-flex-center u-gap-xs">
+                    <i data-lucide="save" class="u-icon-md"></i>
+                    <span wire:loading.remove wire:target="save">Salva Post</span>
+                    <span wire:loading wire:target="save">Salvataggio...</span>
+                </button>
+
+                <button type="button"
+                    x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))"
+                    wire:click="saveAndSubmitToN8n('caption')"
+                    class="btn btn-p u-flex-center u-gap-xs">
+                    <i data-lucide="type" class="u-icon-md"></i>
+                    <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
+                        Salva e genera solo testo
+                    </span>
+                    <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Invio in corso...</span>
                 </button>
             @endif
           </div>

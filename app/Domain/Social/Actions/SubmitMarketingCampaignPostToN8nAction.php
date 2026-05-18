@@ -129,6 +129,10 @@ class SubmitMarketingCampaignPostToN8nAction
                     ], $mediaPayload),
                     'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
                 ];
+
+                if (!empty($runtimeClientData['generation_type'])) {
+                    $payload['generation_type'] = $runtimeClientData['generation_type'];
+                }
             }
 
             $n8nInternalContext = [

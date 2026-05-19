@@ -15,6 +15,8 @@ enum MarketingCampaignPostStatus: string
     case ClientApproved = 'client_approved';
     case Approved = 'approved';
     case Published = 'published';
+    case PartialSuccess = 'partial_success';
+    case Failed = 'failed';
     case Cancelled = 'cancelled';
 
     public function label(): string
@@ -31,6 +33,8 @@ enum MarketingCampaignPostStatus: string
             self::ClientApproved => 'Approvato dal Cliente',
             self::Approved => 'Approvato (Finale)',
             self::Published => 'Pubblicato',
+            self::PartialSuccess => 'Pubblicazione Parziale',
+            self::Failed => 'Fallito',
             self::Cancelled => 'Annullato',
         };
     }
@@ -45,7 +49,8 @@ enum MarketingCampaignPostStatus: string
             self::ClientChangesRequested => 'var(--red)',
             self::ClientApproved, self::Approved => 'var(--teal)',
             self::Published => 'var(--green)',
-            self::Cancelled => 'var(--red)',
+            self::PartialSuccess => 'var(--yellow)',
+            self::Failed, self::Cancelled => 'var(--red)',
         };
     }
 }

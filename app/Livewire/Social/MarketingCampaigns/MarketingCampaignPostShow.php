@@ -731,6 +731,52 @@ class MarketingCampaignPostShow extends Component
         $this->refreshPost();
     }
 
+    public function publishToSocial(string $platform)
+    {
+        $this->authorize('update', $this->post);
+
+        if ($this->post->status !== MarketingCampaignPostStatus::Approved && $this->post->status !== MarketingCampaignPostStatus::ClientApproved) {
+            $this->addError('post', 'Solo i post approvati possono essere pubblicati.');
+            return;
+        }
+
+        try {
+            // Dispatch async job
+            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $platform);
+            
+            session()->flash("success_publish_{$platform}", "Pubblicazione in corso su {$platform}... Il job è stato accodato.");
+            $this->refreshPost();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Errore durante dispatch pubblicazione social', ['error' => $e->getMessage()]);
+            $this->addError('post', 'Errore di sistema: ' . $e->getMessage());
+        }
+    }
+
+    public function retryManualReview(string $platform)
+    {
+        $this->authorize('update', $this->post);
+        $publication = $this->post->publications()->where('platform', $platform)->latest()->first();
+
+        if ($publication && $publication->status === 'needs_manual_review') {
+            $publication->update(['status' => 'pending']);
+            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $platform);
+            session()->flash("success_publish_{$platform}", "Riavvio forzato pubblicazione su {$platform}.");
+            $this->refreshPost();
+        }
+    }
+
+    public function markFailedManualReview(string $platform)
+    {
+        $this->authorize('update', $this->post);
+        $publication = $this->post->publications()->where('platform', $platform)->latest()->first();
+
+        if ($publication && $publication->status === 'needs_manual_review') {
+            $publication->update(['status' => 'failed']);
+            session()->flash("error_publish_{$platform}", "Post marcato come definitivamente fallito su {$platform}.");
+            $this->refreshPost();
+        }
+    }
+
     public function deletePost()
     {
         $this->authorize('delete', $this->post);

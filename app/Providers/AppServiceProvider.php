@@ -51,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
             return $user->canManageSystem();
         });
 
+        Gate::define('manage_social_connections', function (\App\Models\User $user) {
+            return $user->canManageSystem();
+        });
+
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             if (auth()->check()) {
                 $user = auth()->user();

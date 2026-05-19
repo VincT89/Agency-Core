@@ -163,4 +163,9 @@ class MarketingCampaignPost extends Model
 
         return $this->media_url;
     }
+
+    public function publications()
+    {
+        return $this->hasMany(MarketingCampaignPostPublication::class, 'marketing_campaign_post_id');
+    }
 }

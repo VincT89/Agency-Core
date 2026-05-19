@@ -829,6 +829,80 @@
                 </div>
             </div>
 
+            @if(in_array($post->status->value, ['approved', 'published']))
+                <div class="panel u-mb-lg u-overflow-hidden">
+                    <div class="lw-modal-hd">
+                        <div class="cmp-panel-title">Pubblicazione Social</div>
+                    </div>
+                    <div class="u-p-lg u-flex-col u-gap-md">
+                        @if(empty($form['publishing_platforms']))
+                            <div class="u-text-meta u-text-muted">Nessuna piattaforma selezionata per questo post.</div>
+                        @else
+                            @foreach($form['publishing_platforms'] as $platform)
+                                <div class="u-border u-border-line u-rounded u-p-md u-flex-col u-gap-sm">
+                                    <div class="u-flex u-justify-between u-align-center">
+                                        <strong class="u-text-transform-capitalize">{{ $platform }}</strong>
+                                        @if(session()->has("success_publish_{$platform}"))
+                                            <span class="u-text-green u-text-meta"><i data-lucide="check" class="u-icon-sm"></i> Inviato</span>
+                                        @endif
+                                    </div>
+                                    
+                                    @php
+                                        $publication = \App\Models\MarketingCampaignPostPublication::where('marketing_campaign_post_id', $post->id)
+                                            ->where('platform', $platform)
+                                            ->orderBy('created_at', 'desc')
+                                            ->first();
+                                    @endphp
+                                    
+                                    @if($publication)
+                                        @if($publication->status === 'published')
+                                            <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-rounded u-p-sm u-text-meta">
+                                                Pubblicato il {{ $publication->published_at?->format('d/m/Y H:i') }}<br>
+                                                ID: {{ $publication->external_post_id }}
+                                            </div>
+                                        @elseif($publication->status === 'publishing' || $publication->status === 'pending')
+                                            <div class="u-bg-blue-50 u-border u-border-blue-200 u-text-blue-700 u-rounded u-p-sm u-text-meta">
+                                                Pubblicazione in corso...
+                                                @if($publication->meta_processing_state)
+                                                <br>Stato Meta: {{ $publication->meta_processing_state }}
+                                                @endif
+                                            </div>
+                                        @elseif($publication->status === 'needs_manual_review')
+                                            <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
+                                                <strong>Intervento Manuale Richiesto</strong><br>
+                                                {{ $publication->error_message }}
+                                                @if(auth()->user()->is_admin && $publication->provider_last_response)
+                                                    <div class="u-mt-xs">
+                                                        <details>
+                                                            <summary class="u-cursor-pointer u-text-xs">Raw Response (Admin)</summary>
+                                                            <pre class="u-text-xs u-mt-xs" style="white-space: pre-wrap; word-break: break-all;">{{ json_encode($publication->provider_last_response, JSON_PRETTY_PRINT) }}</pre>
+                                                        </details>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div class="u-flex u-gap-sm">
+                                                <button type="button" wire:click="retryManualReview('{{ $platform }}')" class="btn btn-p btn-sm u-flex-grow">Forza Retry</button>
+                                                <button type="button" wire:click="markFailedManualReview('{{ $platform }}')" class="btn btn-red btn-sm">Segna Fallito</button>
+                                            </div>
+                                        @elseif($publication->status === 'failed')
+                                            <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
+                                                Errore: {{ $publication->error_message }}
+                                            </div>
+                                            <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full">Riprova Pubblicazione</button>
+                                        @endif
+                                    @else
+                                        <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full" wire:loading.attr="disabled">
+                                            <span wire:loading.remove wire:target="publishToSocial('{{ $platform }}')">Pubblica Ora</span>
+                                            <span wire:loading wire:target="publishToSocial('{{ $platform }}')">Pubblicazione in corso...</span>
+                                        </button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- Sticky Instagram Preview --}}
             <div class="cmp-sticky-preview">
                 <div class="panel u-overflow-hidden">

@@ -148,7 +148,7 @@
       </div>
 
       {{-- 2. SOCIAL MEDIA — marketing e admin --}}
-      @if(auth()->user()->isMarketing() || auth()->user()->canManageSystem())
+      @if(auth()->user()->isMarketing() || auth()->user()->canManageSystem() || auth()->user()->can('manage_social_connections'))
         <div class="nav-divider"></div>
         <div class="nav-group">
           <div class="nav-group-label">Social Media</div>
@@ -168,6 +168,11 @@
             <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
               :active="request()->routeIs('admin.shooting.*')" />
           @endif
+              
+          @can('manage_social_connections')
+            <x-nav-item href="{{ route('admin.social.connections.index') }}" icon="share-2" label="Connessioni Social"
+              :active="request()->routeIs('admin.social.connections.*')" />
+          @endcan
         </div>
       @endif
 

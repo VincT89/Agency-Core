@@ -25,6 +25,7 @@ Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\Mark
     ->name('public.marketing-campaign-posts.review')
     ->middleware('throttle:30,1');
 
+
 Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
     
@@ -159,6 +160,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('admin/shooting')->name('admin.shooting.')->group(function () {
         Route::get('/', \App\Livewire\Admin\Shooting\ShootsIndex::class)->name('index');
         Route::get('/{shoot}', \App\Livewire\Admin\Shooting\ShootShow::class)->name('show');
+    });
+    
+    // ADMIN - SOCIAL CONNECTIONS
+    Route::prefix('admin/social/connections')->name('admin.social.connections.')->middleware('can:manage_social_connections')->group(function () {
+        // Il Livewire Index verrà aggiunto qui successivamente
+        Route::get('/', \App\Livewire\Admin\Social\AgencySocialConnections::class)->name('index');
+        
+        Route::get('/meta/redirect', [\App\Http\Controllers\Admin\Social\AgencyMetaOAuthController::class, 'redirect'])->name('meta.redirect');
+        Route::get('/meta/callback', [\App\Http\Controllers\Admin\Social\AgencyMetaOAuthController::class, 'callback'])->name('meta.callback');
     });
     // AMMINISTRAZIONE - SPESE
     Route::get('/expenses', \App\Livewire\Expenses\ExpensesIndex::class)->name('expenses.index');

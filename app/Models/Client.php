@@ -123,7 +123,10 @@ class Client extends Model
 
     public function socialAccountFor(string $platform): ?ClientSocialAccount
     {
-        return $this->socialAccounts->firstWhere('platform', $platform);
+        $enumPlatform = \App\Enums\Social\SocialPlatform::tryFrom($platform);
+        return $this->socialAccounts->first(function ($account) use ($enumPlatform, $platform) {
+            return $account->platform === $enumPlatform || $account->platform === $platform;
+        });
     }
 
 
@@ -146,6 +149,15 @@ class Client extends Model
             return false;
         }
 
+        $fbIsOauth = $fb->connection_mode === \App\Enums\Social\SocialConnectionMode::Oauth;
+        $igIsOauth = $ig->connection_mode === \App\Enums\Social\SocialConnectionMode::Oauth;
+
+        // Se entrambi sono connessi via OAuth e sono ready, sono ok
+        if ($fbIsOauth && $igIsOauth) {
+            return true;
+        }
+
+        // Se anche solo uno non è OAuth, si fa il fallback sulla logica manuale legacy
         if (blank($fb->business_manager_id) || blank($ig->business_manager_id)) {
             return false;
         }

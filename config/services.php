@@ -42,12 +42,23 @@ return [
         'submit_marketing_campaign_post_webhook_url' => env('N8N_SUBMIT_MARKETING_CAMPAIGN_POST_WEBHOOK_URL', env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL')),
         'send_whatsapp_review_webhook_url' => env('N8N_SEND_WHATSAPP_REVIEW_WEBHOOK_URL'),
         'chatbot_outgoing_message_webhook_url' => env('N8N_CHATBOT_OUTGOING_MESSAGE_WEBHOOK_URL'),
+        'sody_connection_webhook_url' => env('N8N_SODY_CONNECTION_WEBHOOK_URL'),
     ],
 
     'meta' => [
         'client_id' => env('META_CLIENT_ID'),
         'client_secret' => env('META_CLIENT_SECRET'),
         'redirect_uri' => env('META_REDIRECT_URI'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v19.0'),
+        'instagram' => [
+            'max_container_lifecycle' => env('META_INSTAGRAM_MAX_CONTAINER_LIFECYCLE', 15),
+        ],
+    ],
+
+    'facebook' => [
+        'client_id' => env('META_CLIENT_ID'),
+        'client_secret' => env('META_CLIENT_SECRET'),
+        'redirect' => env('META_REDIRECT_URI'),
     ],
 
     'tiktok' => [

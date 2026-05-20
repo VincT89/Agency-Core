@@ -40,6 +40,8 @@ class RefreshAgencyConnectionAction
                     'last_token_refresh_at' => now(),
                     'requires_reauth' => false,
                     'status' => AgencyConnectionStatus::Connected,
+                    'token_refresh_error' => null,
+                    'last_api_error' => null,
                 ]);
 
                 // Ritiriamo anche giù i page token aggiornati
@@ -55,6 +57,13 @@ class RefreshAgencyConnectionAction
                     $connection->update([
                         'requires_reauth' => true,
                         'status' => AgencyConnectionStatus::Expired,
+                        'last_api_error' => $errorData['error']['message'] ?? 'Token invalid o scaduto',
+                        'token_refresh_error' => $errorData['error']['message'] ?? 'Token invalid o scaduto',
+                    ]);
+                } else {
+                    $connection->update([
+                        'last_api_error' => $errorData['error']['message'] ?? 'Errore imprevisto API Meta',
+                        'token_refresh_error' => $errorData['error']['message'] ?? 'Errore imprevisto API Meta',
                     ]);
                 }
                 

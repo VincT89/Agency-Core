@@ -28,6 +28,8 @@ class MarketingCampaignPostPublication extends Model
     protected function casts(): array
     {
         return [
+            'status' => \App\Enums\Social\PublicationStatus::class,
+            'platform' => \App\Enums\Social\SocialPlatform::class,
             'payload_snapshot' => 'array',
             'response_snapshot' => 'array',
             'provider_state_payload' => 'array',

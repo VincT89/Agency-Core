@@ -55,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
             return $user->canManageSystem();
         });
 
+        Gate::define('manage_social_operations', function (\App\Models\User $user) {
+            return $user->canManageSystem() || in_array($user->role, [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing]);
+        });
+
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             if (auth()->check()) {
                 $user = auth()->user();

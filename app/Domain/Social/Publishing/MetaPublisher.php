@@ -90,6 +90,14 @@ class MetaPublisher implements SocialPublisherInterface
                 }
             }
 
+            $contentTypeStr = $post->content_type instanceof \App\Enums\Social\MarketingCampaignPostType 
+                ? $post->content_type->value 
+                : $post->content_type;
+
+            if ($contentTypeStr === 'reel' && $mediaType !== 'VIDEO') {
+                return PublishResult::failure('Dominio Meta: Un Reel richiede obbligatoriamente un file video.');
+            }
+
             if ($isInstagram) {
                 return $this->publishToInstagram($account, $payload, $mediaUrl, $mediaType, $correlationId, $providerAccountId);
             } else {

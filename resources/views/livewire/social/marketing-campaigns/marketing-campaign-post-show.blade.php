@@ -172,15 +172,14 @@
                                     </svg>
                                     <span class="cmp-platform-label">Facebook</span>
                                 </label>
-                                <label class="cmp-platform-option"
-                                    x-bind:class="($wire.form.publishing_platforms || []).includes('tiktok') ? 'active' : ''">
+                                <label class="cmp-platform-option disabled" title="Piattaforma in arrivo">
                                     <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok"
-                                        class="hidden">
+                                        class="hidden" disabled>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" class="cmp-platform-icon">
                                         <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
                                     </svg>
-                                    <span class="cmp-platform-label">TikTok</span>
+                                    <span class="cmp-platform-label">TikTok <span class="u-text-meta u-text-muted">(In arrivo)</span></span>
                                 </label>
                             </div>
                             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
@@ -415,6 +414,8 @@
                                             <div class="u-flex u-gap-xs">
                                                 <button type="button" wire:click="openNextcloudPicker('photo')"
                                                     class="btn btn-sec">Esplora Foto</button>
+                                                <button type="button" wire:click="openNextcloudPicker('video')"
+                                                    class="btn btn-sec">Esplora Video</button>
                                             </div>
                                         </div>
                                         @error('form.nextcloud_path') <div class="form-err">{{ $message }}</div> @enderror
@@ -829,7 +830,7 @@
                 </div>
             </div>
 
-            @if(in_array($post->status->value, ['approved', 'published']))
+            @if(!$post->status->isDraft() && ($post->publications->isNotEmpty() || $post->status->isSocialPublicationVisible()))
                 <div class="panel u-mb-lg u-overflow-hidden">
                     <div class="lw-modal-hd">
                         <div class="cmp-panel-title">Pubblicazione Social</div>
@@ -855,19 +856,19 @@
                                     @endphp
                                     
                                     @if($publication)
-                                        @if($publication->status === 'published')
+                                        @if($publication->status === \App\Enums\Social\PublicationStatus::Published)
                                             <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-rounded u-p-sm u-text-meta">
                                                 Pubblicato il {{ $publication->published_at?->format('d/m/Y H:i') }}<br>
                                                 ID: {{ $publication->external_post_id }}
                                             </div>
-                                        @elseif($publication->status === 'publishing' || $publication->status === 'pending')
+                                        @elseif($publication->status === \App\Enums\Social\PublicationStatus::Publishing || $publication->status === \App\Enums\Social\PublicationStatus::Pending)
                                             <div class="u-bg-blue-50 u-border u-border-blue-200 u-text-blue-700 u-rounded u-p-sm u-text-meta">
                                                 Pubblicazione in corso...
                                                 @if($publication->meta_processing_state)
                                                 <br>Stato Meta: {{ $publication->meta_processing_state }}
                                                 @endif
                                             </div>
-                                        @elseif($publication->status === 'needs_manual_review')
+                                        @elseif($publication->status === \App\Enums\Social\PublicationStatus::NeedsManualReview)
                                             <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
                                                 <strong>Intervento Manuale Richiesto</strong><br>
                                                 {{ $publication->error_message }}
@@ -881,10 +882,10 @@
                                                 @endif
                                             </div>
                                             <div class="u-flex u-gap-sm">
-                                                <button type="button" wire:click="retryManualReview('{{ $platform }}')" class="btn btn-p btn-sm u-flex-grow">Forza Retry</button>
-                                                <button type="button" wire:click="markFailedManualReview('{{ $platform }}')" class="btn btn-red btn-sm">Segna Fallito</button>
+                                                <button type="button" wire:confirm="Sei sicuro? Se il container Meta era solo in ritardo potresti causare un post doppio." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow">Forza Retry</button>
+                                                <button type="button" wire:click="forceFailPublication({{ $publication->id }})" class="btn btn-red btn-sm">Segna Fallito</button>
                                             </div>
-                                        @elseif($publication->status === 'failed')
+                                        @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
                                             <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
                                                 Errore: {{ $publication->error_message }}
                                             </div>

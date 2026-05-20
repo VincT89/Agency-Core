@@ -48,16 +48,8 @@ class MarketingCampaignPostMediaPayloadBuilder
             // Fallback for legacy
             $primaryMediaType = null;
             if ($mediaCount > 0) {
-                // Handle Enums correctly, the property might be an Enum or scalar depending on casting
-                $contentType = $post->content_type instanceof MarketingCampaignPostType 
-                    ? $post->content_type 
-                    : MarketingCampaignPostType::tryFrom($post->content_type);
-                    
-                if (in_array($contentType, [MarketingCampaignPostType::Video, MarketingCampaignPostType::Reel])) {
-                    $primaryMediaType = 'video';
-                } else {
-                    $primaryMediaType = 'image';
-                }
+                $mime = $post->media_mime ?? 'image/jpeg';
+                $primaryMediaType = \App\Models\MarketingCampaignPostMedia::detectMediaType($mime);
             }
         }
 

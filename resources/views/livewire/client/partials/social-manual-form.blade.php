@@ -147,9 +147,16 @@
                         class="form-sel w-100">
                     <option value="">-- Seleziona un asset sincronizzato --</option>
                     @foreach($availableAssets as $asset)
+                        @php
+                            $statusLabel = [];
+                            if(!$asset->is_active) $statusLabel[] = 'Disattivato';
+                            if($asset->revoked_at) $statusLabel[] = 'Revocato';
+                            if($asset->connection && $asset->connection->requires_reauth) $statusLabel[] = 'Re-Auth';
+                            $statusStr = !empty($statusLabel) ? ' [' . implode(', ', $statusLabel) . ']' : '';
+                        @endphp
                         <option value="{{ $asset->id }}">
                             {{ $asset->name }} {{ $asset->username ? '(@' . $asset->username . ')' : '' }}
-                            (Connessione: {{ $asset->connection->provider_user_name ?? 'N/A' }})
+                            (Connessione: {{ $asset->connection->provider_user_name ?? 'N/A' }}){{ $statusStr }}
                         </option>
                     @endforeach
                 </select>
@@ -161,6 +168,14 @@
                 $selectedAsset = collect($availableAssets ?? [])->firstWhere('id', $forms[$platformValue]['agency_social_asset_id']);
             @endphp
             @if($selectedAsset)
+                @if(!$selectedAsset->is_active || $selectedAsset->revoked_at || ($selectedAsset->connection && $selectedAsset->connection->requires_reauth) || !$selectedAsset->is_assignable)
+                    <div class="u-alert-error u-mb-sm" style="padding: 1rem; border-radius: 6px; background-color: #fef2f2; border: 1px solid #f87171; color: #b91c1c;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <i data-lucide="alert-triangle" class="u-icon-sm"></i>
+                            <strong>Attenzione:</strong> L'asset selezionato ha problemi operativi. La pubblicazione fallirà.
+                        </div>
+                    </div>
+                @endif
                 <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
                     <h6 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">Preview Asset Selezionato</h6>
                     <div class="flex items-start gap-4">
@@ -184,6 +199,26 @@
                                 <span class="px-2 py-1 text-xs rounded-md bg-green-100 text-green-800 border border-green-200">
                                     {{ $selectedAsset->publishing_status?->label() ?? 'Pronto' }}
                                 </span>
+                                @if(!$selectedAsset->is_active)
+                                    <span class="px-2 py-1 text-xs rounded-md bg-red-100 text-red-800 border border-red-200">
+                                        Disattivato
+                                    </span>
+                                @endif
+                                @if($selectedAsset->connection && $selectedAsset->connection->requires_reauth)
+                                    <span class="px-2 py-1 text-xs rounded-md bg-red-100 text-red-800 border border-red-200" title="La connessione richiede riautenticazione">
+                                        Re-Auth Necessario
+                                    </span>
+                                @endif
+                                @if(!$selectedAsset->is_assignable)
+                                    <span class="px-2 py-1 text-xs rounded-md bg-orange-100 text-orange-800 border border-orange-200">
+                                        Non Assegnabile
+                                    </span>
+                                @endif
+                                @if($selectedAsset->revoked_at)
+                                    <span class="px-2 py-1 text-xs rounded-md bg-red-100 text-red-800 border border-red-200">
+                                        Revocato
+                                    </span>
+                                @endif
                             </div>
                         </div>
                     </div>

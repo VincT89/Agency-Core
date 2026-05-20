@@ -41,12 +41,12 @@
                     </svg>
                     <span class="cmp-platform-label">Facebook</span>
                 </label>
-                <label class="cmp-platform-option" x-bind:class="($wire.form.publishing_platforms || []).includes('tiktok') ? 'active' : ''">
-                    <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok" class="hidden">
+                <label class="cmp-platform-option disabled" title="Piattaforma in arrivo">
+                    <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok" class="hidden" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cmp-platform-icon">
                         <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
                     </svg>
-                    <span class="cmp-platform-label">TikTok</span>
+                    <span class="cmp-platform-label">TikTok <span class="u-text-meta u-text-muted">(In arrivo)</span></span>
                 </label>
             </div>
             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
@@ -152,7 +152,7 @@
             </div>
 
             @if($form['media_source'] === 'local')
-                <input type="file" wire:model="media" multiple class="form-in p-2 text-sm" accept="image/jpeg,image/png,image/webp">
+                <input type="file" wire:model="media" multiple class="form-in p-2 text-sm" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
                 <div wire:loading wire:target="media" class="text-xs text-blue-500 mt-1">Caricamento anteprima...</div>
                 <div class="text-xs text-gray-500 mt-1 u-mb-md">Puoi selezionare più file (max 10 in totale).</div>
                 @error('media') <span class="form-err">{{ $message }}</span> @enderror
@@ -197,6 +197,7 @@
                         <input type="text" wire:model="nextcloud_browse_path" class="form-in" placeholder="/" disabled>
                         <div class="u-flex u-gap-xs">
                             <button type="button" wire:click="openNextcloudPicker('photo')" class="btn btn-sec">Esplora Foto</button>
+                            <button type="button" wire:click="openNextcloudPicker('video')" class="btn btn-sec">Esplora Video</button>
                         </div>
                     </div>
                     @error('form.nextcloud_path') <div class="form-err">{{ $message }}</div> @enderror
@@ -581,11 +582,15 @@
                   </button>
 
                   <div class="nc-preview-image-wrap">
-                      <img
-                          src="{{ route('nextcloud.preview', ['path' => $preview_nextcloud_file['path'], 'w' => 800, 'h' => 800]) }}"
-                          alt="{{ $preview_nextcloud_file['name'] }}"
-                          class="nc-preview-image"
-                      >
+                      @if($preview_nextcloud_file['is_video'] ?? false)
+                          <video src="{{ route('nextcloud.download', ['path' => $preview_nextcloud_file['path']]) }}" controls class="nc-preview-image"></video>
+                      @else
+                          <img
+                              src="{{ route('nextcloud.preview', ['path' => $preview_nextcloud_file['path'], 'w' => 800, 'h' => 800]) }}"
+                              alt="{{ $preview_nextcloud_file['name'] }}"
+                              class="nc-preview-image"
+                          >
+                      @endif
                   </div>
 
                   <button

@@ -430,7 +430,7 @@
                                         if (res.ok) {
                                             // Aggiorna lo state interno
                                             eventObj.start = newStart.toISOString();
-                                            if (eventObj.end) eventObj.end = new Date(newStartStr).toISOString(); // approssimato
+                                            if (eventObj.end) eventObj.end = newEnd.toISOString();
                                             self.groupEvents();
                                             // Se il calendario FullCalendar è inizializzato, ricarica
                                             if (window.calendarEventsInstance) {

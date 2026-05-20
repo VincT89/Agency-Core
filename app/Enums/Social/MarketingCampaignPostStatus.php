@@ -14,6 +14,8 @@ enum MarketingCampaignPostStatus: string
     case ClientChangesRequested = 'client_changes_requested';
     case ClientApproved = 'client_approved';
     case Approved = 'approved';
+    case Publishing = 'publishing';
+    case NeedsManualReview = 'needs_manual_review';
     case Published = 'published';
     case PartialSuccess = 'partial_success';
     case Failed = 'failed';
@@ -32,6 +34,8 @@ enum MarketingCampaignPostStatus: string
             self::ClientChangesRequested => 'Modifiche Cliente',
             self::ClientApproved => 'Approvato dal Cliente',
             self::Approved => 'Approvato (Finale)',
+            self::Publishing => 'In Pubblicazione',
+            self::NeedsManualReview => 'Richiede Revisione Manuale',
             self::Published => 'Pubblicato',
             self::PartialSuccess => 'Pubblicazione Parziale',
             self::Failed => 'Fallito',
@@ -48,9 +52,23 @@ enum MarketingCampaignPostStatus: string
             self::SentToClient => 'var(--purple)',
             self::ClientChangesRequested => 'var(--red)',
             self::ClientApproved, self::Approved => 'var(--teal)',
+            self::Publishing => 'var(--blue)',
+            self::NeedsManualReview => 'var(--orange)',
             self::Published => 'var(--green)',
             self::PartialSuccess => 'var(--yellow)',
             self::Failed, self::Cancelled => 'var(--red)',
         };
+    }
+
+    public function isSocialPublicationVisible(): bool
+    {
+        return in_array($this, [
+            self::Approved,
+            self::Publishing,
+            self::Published,
+            self::PartialSuccess,
+            self::NeedsManualReview,
+            self::Failed,
+        ]);
     }
 }

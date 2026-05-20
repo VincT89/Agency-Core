@@ -171,7 +171,12 @@
               
           @can('manage_social_connections')
             <x-nav-item href="{{ route('admin.social.connections.index') }}" icon="share-2" label="Connessioni Social"
-              :active="request()->routeIs('admin.social.connections.*')" />
+                :active="request()->routeIs('admin.social.connections.*')" />
+          @endcan
+            
+          @can('manage_social_operations')
+            <x-nav-item href="{{ route('admin.social.operations.index') }}" icon="server-crash" label="Coda Social"
+                :active="request()->routeIs('admin.social.operations.*')" />
           @endcan
         </div>
       @endif

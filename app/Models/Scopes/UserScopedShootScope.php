@@ -25,8 +25,14 @@ class UserScopedShootScope implements Scope
         }
 
         // Filtro di progetto per team interno (Marketing, Developer)
-        $builder->whereHas('project', function ($q) use ($user) {
-            $q->whereIn('projects.id', $user->projects()->pluck('projects.id'));
+        $builder->where(function($q) use ($user) {
+            $q->whereHas('project', function ($q2) use ($user) {
+                $q2->whereIn('projects.id', $user->projects()->pluck('projects.id'));
+            })->orWhereHas('marketingCampaign.client', function ($q2) use ($user) {
+                $q2->whereHas('users', function ($q3) use ($user) {
+                    $q3->where('user_id', $user->id);
+                });
+            });
         });
     }
 }

@@ -68,7 +68,7 @@ class MarketingCampaignPostShow extends Component
         return [
             'form.title' => 'nullable|string|max:255',
             'form.description' => 'nullable|string',
-            'form.content_type' => ['required', \Illuminate\Validation\Rule::in(['post', 'story', 'reel'])],
+            'form.content_type' => ['required', \Illuminate\Validation\Rule::in(array_column(MarketingCampaignPostType::cases(), 'value'))],
             'form.scheduled_date' => 'nullable|date',
             'form.scheduled_time' => 'nullable|date_format:H:i',
             'form.status' => ['required', \Illuminate\Validation\Rule::in(array_column(MarketingCampaignPostStatus::cases(), 'value'))],
@@ -80,9 +80,8 @@ class MarketingCampaignPostShow extends Component
             'media' => ['nullable', 'array', 'max:10'],
             'media.*' => [
                 'file',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:51200',
+                'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm',
+                'max:204800',
             ],
             'runtime_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'runtime_activity_description' => 'nullable|string|max:1000',
@@ -303,7 +302,7 @@ class MarketingCampaignPostShow extends Component
 
     public function openNextcloudPicker(string $mediaKind = 'photo'): void
     {
-        $this->nextcloud_media_kind = 'photo'; // Force photo
+        $this->nextcloud_media_kind = $mediaKind;
         $this->showNextcloudPicker = true;
         $this->pending_nextcloud_files = $this->selected_nextcloud_files;
 
@@ -389,7 +388,7 @@ class MarketingCampaignPostShow extends Component
 
     public function openNextcloudPreview(string $path): void
     {
-        $file = collect($this->nextcloudFilesOnlyImages())
+        $file = collect($this->nextcloudFilesOnlyImagesOrVideos())
             ->firstWhere('path', $path);
 
         if (!$file) {
@@ -406,13 +405,13 @@ class MarketingCampaignPostShow extends Component
 
     public function previewNextcloudPrevious(): void
     {
-        $files = $this->nextcloudFilesOnlyImages();
+        $files = $this->nextcloudFilesOnlyImagesOrVideos();
         $this->moveNextcloudPreview($files, -1);
     }
 
     public function previewNextcloudNext(): void
     {
-        $files = $this->nextcloudFilesOnlyImages();
+        $files = $this->nextcloudFilesOnlyImagesOrVideos();
         $this->moveNextcloudPreview($files, 1);
     }
 
@@ -437,12 +436,51 @@ class MarketingCampaignPostShow extends Component
         $this->preview_nextcloud_file = $files[$nextIndex];
     }
 
-    private function nextcloudFilesOnlyImages(): array
+    private function nextcloudFilesOnlyImagesOrVideos(): array
     {
         return collect($this->nextcloud_files)
-            ->filter(fn ($file) => empty($file['is_dir']) && ($file['is_image'] ?? false))
+            ->filter(fn ($file) => empty($file['is_dir']) && (($file['is_image'] ?? false) || ($file['is_video'] ?? false)))
             ->values()
             ->all();
+    }
+
+    private function validateReelMedia(): bool
+    {
+        if ($this->form['content_type'] !== 'reel') return true;
+        
+        $hasVideo = false;
+        
+        foreach ($this->existing_media as $media) {
+            if (\App\Models\MarketingCampaignPostMedia::detectMediaType($media['mime_type'] ?? 'image/jpeg') === 'video') {
+                $hasVideo = true;
+                break;
+            }
+        }
+        
+        if (!$hasVideo && $this->form['media_source'] === 'local' && !empty($this->media)) {
+            foreach ($this->media as $uploadedFile) {
+                if (\App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()) === 'video') {
+                    $hasVideo = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!$hasVideo && $this->form['media_source'] === 'nextcloud' && !empty($this->selected_nextcloud_files)) {
+            foreach ($this->selected_nextcloud_files as $ncFile) {
+                if (\App\Models\MarketingCampaignPostMedia::detectMediaType($ncFile['mime'] ?? 'image/jpeg') === 'video') {
+                    $hasVideo = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$hasVideo) {
+            $this->addError('media', 'Un Reel richiede almeno un file video.');
+            return false;
+        }
+
+        return true;
     }
 
     private function buildPostDataAndStoredMedia(array &$data): bool
@@ -470,6 +508,7 @@ class MarketingCampaignPostShow extends Component
                 $storedMedia[] = [
                     'marketing_campaign_post_id' => $this->post->id,
                     'source' => 'local',
+                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()),
                     'path' => $path,
                     'original_name' => $uploadedFile->getClientOriginalName(),
                     'mime_type' => $uploadedFile->getMimeType(),
@@ -489,6 +528,7 @@ class MarketingCampaignPostShow extends Component
                 $storedMedia[] = [
                     'marketing_campaign_post_id' => $this->post->id,
                     'source' => 'nextcloud',
+                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($ncFile['mime'] ?? 'image/jpeg'),
                     'nextcloud_path' => $ncFile['path'],
                     'original_name' => $ncFile['name'] ?? basename($ncFile['path']),
                     'mime_type' => $ncFile['mime'] ?? null,
@@ -518,6 +558,10 @@ class MarketingCampaignPostShow extends Component
     public function savePost()
     {
         $this->validate();
+
+        if (!$this->validateReelMedia()) {
+            return;
+        }
 
         $this->processClientIdentity();
 
@@ -581,6 +625,11 @@ class MarketingCampaignPostShow extends Component
         }
 
         $this->validate();
+        
+        if (!$this->validateReelMedia()) {
+            return;
+        }
+        
         $this->processClientIdentity();
 
         $data = $this->form;
@@ -605,6 +654,10 @@ class MarketingCampaignPostShow extends Component
     public function saveAndSubmitToN8n(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction, $generationType = 'full')
     {
         $this->validate();
+
+        if (!$this->validateReelMedia()) {
+            return;
+        }
 
         $this->processClientIdentity();
 
@@ -735,8 +788,14 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('update', $this->post);
 
-        if ($this->post->status !== MarketingCampaignPostStatus::Approved && $this->post->status !== MarketingCampaignPostStatus::ClientApproved) {
-            $this->addError('post', 'Solo i post approvati possono essere pubblicati.');
+        if (!in_array($this->post->status, [
+            MarketingCampaignPostStatus::Approved,
+            MarketingCampaignPostStatus::ClientApproved,
+            MarketingCampaignPostStatus::Failed,
+            MarketingCampaignPostStatus::NeedsManualReview,
+            MarketingCampaignPostStatus::PartialSuccess,
+        ])) {
+            $this->addError('post', 'Stato del post non compatibile con la pubblicazione.');
             return;
         }
 
@@ -752,27 +811,40 @@ class MarketingCampaignPostShow extends Component
         }
     }
 
-    public function retryManualReview(string $platform)
+    public function retryPublication(int $publicationId)
     {
-        $this->authorize('update', $this->post);
-        $publication = $this->post->publications()->where('platform', $platform)->latest()->first();
+        $this->authorize('update', clone $this->post);
 
-        if ($publication && $publication->status === 'needs_manual_review') {
-            $publication->update(['status' => 'pending']);
-            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $platform);
-            session()->flash("success_publish_{$platform}", "Riavvio forzato pubblicazione su {$platform}.");
+        $publication = \App\Models\MarketingCampaignPostPublication::find($publicationId);
+        if (!$publication) return;
+
+        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === \App\Enums\Social\PublicationStatus::NeedsManualReview) {
+            $publication->update([
+                'status' => \App\Enums\Social\PublicationStatus::Superseded->value,
+                'error_message' => 'Dismesso (sostituito da nuovo tentativo)'
+            ]);
+            
+            app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
+            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, 'instagram');
+            session()->flash("success_publish_{$publication->platform->value}", "Nuova pubblicazione Instagram avviata. Il vecchio container è stato scartato.");
+            $this->refreshPost();
+        } else {
+            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $publication->platform->value);
+            session()->flash("success_publish_{$publication->platform->value}", "Riavvio forzato pubblicazione su {$publication->platform->value}.");
             $this->refreshPost();
         }
     }
 
-    public function markFailedManualReview(string $platform)
+    public function forceFailPublication(int $publicationId)
     {
-        $this->authorize('update', $this->post);
-        $publication = $this->post->publications()->where('platform', $platform)->latest()->first();
+        $this->authorize('update', clone $this->post);
 
-        if ($publication && $publication->status === 'needs_manual_review') {
-            $publication->update(['status' => 'failed']);
-            session()->flash("error_publish_{$platform}", "Post marcato come definitivamente fallito su {$platform}.");
+        $publication = \App\Models\MarketingCampaignPostPublication::find($publicationId);
+        if ($publication && $publication->status === \App\Enums\Social\PublicationStatus::NeedsManualReview) {
+            $publication->update(['status' => \App\Enums\Social\PublicationStatus::Failed->value]);
+            
+            app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
+            session()->flash("error_publish_{$publication->platform->value}", "Post marcato come definitivamente fallito su {$publication->platform->value}.");
             $this->refreshPost();
         }
     }

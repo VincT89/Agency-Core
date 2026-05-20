@@ -46,7 +46,11 @@ class TaskPolicy
 
     private function canAccessTask(User $user, Task $task): bool
     {
-        // Limita la visibilità al perimetro del progetto
+        // Limita la visibilità al perimetro del progetto o ai task liberi assegnati direttamente
+        if (!$task->project_id && $task->assigned_to === $user->id) {
+            return true;
+        }
+
         if ($task->project_id && $user->projects()->where('projects.id', $task->project_id)->exists()) {
             return true;
         }

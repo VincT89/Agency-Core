@@ -141,9 +141,20 @@ class ClientSocialAccountForm extends Component
         $availableAssets = [];
         if ($this->activeTab === 'facebook' || $this->activeTab === 'instagram') {
             $platformType = $this->activeTab === 'facebook' ? 'facebook_page' : 'instagram_business_account';
-            $availableAssets = \App\Models\AgencySocialAsset::where('asset_type', $platformType)
-                ->where('is_active', true)
-                ->get();
+            
+            $query = \App\Models\AgencySocialAsset::where('asset_type', $platformType);
+            
+            if (!empty($this->forms[$this->activeTab]['agency_social_asset_id'])) {
+                $selectedId = $this->forms[$this->activeTab]['agency_social_asset_id'];
+                $query->where(function($q) use ($selectedId) {
+                    $q->where('is_active', true)
+                      ->orWhere('id', $selectedId);
+                });
+            } else {
+                $query->where('is_active', true);
+            }
+            
+            $availableAssets = $query->get();
         }
 
         return view('livewire.client.client-social-account-form', [

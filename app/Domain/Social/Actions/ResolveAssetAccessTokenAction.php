@@ -36,15 +36,8 @@ class ResolveAssetAccessTokenAction
         }
 
         // Se arriviamo qui e siamo un root asset (senza parent) e non abbiamo token,
-        // per alcune piattaforme il fallback è il token della connessione agenzia.
-        if ($asset->connection) {
-            if ($asset->connection->requires_reauth) {
-                Log::warning("ResolveAssetAccessTokenAction: Fallback negato perché la connessione {$asset->connection->id} richiede reauth.");
-                return null;
-            }
-            return $asset->connection->access_token;
-        }
-
+        // non facciamo fallback cieco al connection access_token (pericoloso e non deterministico).
+        // Il publishing richiede un page token reale.
         return null;
     }
 }

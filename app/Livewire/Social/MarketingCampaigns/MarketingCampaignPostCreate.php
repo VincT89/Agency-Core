@@ -70,9 +70,9 @@ class MarketingCampaignPostCreate extends Component
             'form.publishing_platforms.*' => 'string|in:instagram,facebook,tiktok',
             'media' => 'nullable|array|max:10',
             'media.*' => [
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:51200',
+                'file',
+                'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm',
+                'max:204800',
             ],
             'runtime_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'runtime_activity_description' => 'nullable|string|max:1000',
@@ -136,7 +136,7 @@ class MarketingCampaignPostCreate extends Component
 
     public function openNextcloudPicker(string $mediaKind = 'photo'): void
     {
-        $this->nextcloud_media_kind = 'photo'; // Force photo
+        $this->nextcloud_media_kind = $mediaKind;
         $this->showNextcloudPicker = true;
         $this->pending_nextcloud_files = $this->selected_nextcloud_files;
 
@@ -217,7 +217,7 @@ class MarketingCampaignPostCreate extends Component
 
     public function openNextcloudPreview(string $path): void
     {
-        $file = collect($this->nextcloudFilesOnlyImages())
+        $file = collect($this->nextcloudFilesOnlyImagesOrVideos())
             ->firstWhere('path', $path);
 
         if (!$file) {
@@ -235,13 +235,13 @@ class MarketingCampaignPostCreate extends Component
 
     public function previewNextcloudPrevious(): void
     {
-        $files = $this->nextcloudFilesOnlyImages();
+        $files = $this->nextcloudFilesOnlyImagesOrVideos();
         $this->moveNextcloudPreview($files, -1);
     }
 
     public function previewNextcloudNext(): void
     {
-        $files = $this->nextcloudFilesOnlyImages();
+        $files = $this->nextcloudFilesOnlyImagesOrVideos();
         $this->moveNextcloudPreview($files, 1);
     }
 
@@ -267,10 +267,10 @@ class MarketingCampaignPostCreate extends Component
         $this->pending_nextcloud_file = $files[$nextIndex];
     }
 
-    private function nextcloudFilesOnlyImages(): array
+    private function nextcloudFilesOnlyImagesOrVideos(): array
     {
         return collect($this->nextcloud_files)
-            ->filter(fn ($file) => empty($file['is_dir']) && ($file['is_image'] ?? false))
+            ->filter(fn ($file) => empty($file['is_dir']) && (($file['is_image'] ?? false) || ($file['is_video'] ?? false)))
             ->values()
             ->all();
     }
@@ -309,6 +309,10 @@ class MarketingCampaignPostCreate extends Component
         $storedMedia = [];
 
         if (!$this->buildPostDataAndStoredMedia($data, $storedMedia)) {
+            return;
+        }
+
+        if (!$this->validateReelMedia($storedMedia)) {
             return;
         }
 
@@ -353,6 +357,10 @@ class MarketingCampaignPostCreate extends Component
             return;
         }
 
+        if (!$this->validateReelMedia($storedMedia)) {
+            return;
+        }
+
         $this->processClientIdentity();
 
         $post = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $storedMedia) {
@@ -383,6 +391,26 @@ class MarketingCampaignPostCreate extends Component
         ]);
     }
 
+    private function validateReelMedia(array $storedMedia): bool
+    {
+        if ($this->form['content_type'] !== 'reel') return true;
+        
+        $hasVideo = false;
+        foreach ($storedMedia as $media) {
+            if (($media['media_type'] ?? '') === 'video') {
+                $hasVideo = true;
+                break;
+            }
+        }
+
+        if (!$hasVideo) {
+            $this->addError('media', 'Un Reel richiede almeno un file video.');
+            return false;
+        }
+
+        return true;
+    }
+
     private function buildPostDataAndStoredMedia(array &$data, array &$storedMedia): bool
     {
         // NOTA ARCHITETTURALE: Attualmente l'UI permette una sola sorgente alla volta 
@@ -403,7 +431,7 @@ class MarketingCampaignPostCreate extends Component
 
                     $storedMedia[] = [
                         'source' => 'local',
-                        'media_type' => 'image',
+                        'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()),
                         'disk' => 'public',
                         'path' => $path,
                         'mime_type' => $uploadedFile->getMimeType(),
@@ -448,7 +476,7 @@ class MarketingCampaignPostCreate extends Component
 
             $storedMedia[] = [
                 'source' => 'nextcloud',
-                'media_type' => 'image',
+                'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($ncFile['mime'] ?? 'image/jpeg'),
                 'disk' => null,
                 'path' => null,
                 'mime_type' => $ncFile['mime'] ?? null,

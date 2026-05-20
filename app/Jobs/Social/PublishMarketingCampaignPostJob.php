@@ -50,7 +50,7 @@ class PublishMarketingCampaignPostJob implements ShouldQueue, ShouldBeUnique
             // Correlation ID is propagated to action
             $publication = $action->execute($this->post, $this->platform, $this->correlationId);
 
-            if ($publication->status === 'failed') {
+            if ($publication->status === \App\Enums\Social\PublicationStatus::Failed) {
                 $circuitBreaker->recordFailure();
             } else {
                 $circuitBreaker->recordSuccess();

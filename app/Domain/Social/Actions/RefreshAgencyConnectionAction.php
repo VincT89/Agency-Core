@@ -71,6 +71,10 @@ class RefreshAgencyConnectionAction
             }
         } catch (\Exception $e) {
             Log::error("RefreshAgencyConnectionAction eccezione", ['error' => $e->getMessage(), 'id' => $connection->id]);
+            $connection->update([
+                'last_api_error' => 'Eccezione interna: ' . $e->getMessage(),
+                'token_refresh_error' => 'Eccezione interna: ' . $e->getMessage(),
+            ]);
             return false;
         }
     }

@@ -35,6 +35,15 @@ class SocialOperationsDashboard extends Component
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
 
+        if (in_array($publication->status, [
+            PublicationStatus::Published,
+            PublicationStatus::Superseded,
+            PublicationStatus::Abandoned
+        ])) {
+            session()->flash('error', 'Impossibile riprovare: la pubblicazione è in uno stato terminale o di successo.');
+            return;
+        }
+
         // Se era IG manual review e stiamo rifacendo da zero, dismettiamo questo e non usiamo il vecchio container
         if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === PublicationStatus::NeedsManualReview) {
             $publication->update([
@@ -83,7 +92,12 @@ class SocialOperationsDashboard extends Component
             return;
         }
 
-        if (in_array($publication->status, [PublicationStatus::Published, PublicationStatus::Failed])) {
+        if (in_array($publication->status, [
+            PublicationStatus::Published, 
+            PublicationStatus::Failed,
+            PublicationStatus::Superseded,
+            PublicationStatus::Abandoned
+        ])) {
             session()->flash('error', 'La pubblicazione è già in uno stato terminale.');
             return;
         }
@@ -109,8 +123,12 @@ class SocialOperationsDashboard extends Component
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
 
-        if (in_array($publication->status, [PublicationStatus::Published])) {
-            session()->flash('error', 'Impossibile forzare il fallimento: la pubblicazione è già in uno stato di successo.');
+        if (in_array($publication->status, [
+            PublicationStatus::Published,
+            PublicationStatus::Superseded,
+            PublicationStatus::Abandoned
+        ])) {
+            session()->flash('error', 'Impossibile forzare il fallimento: la pubblicazione è in uno stato terminale o di successo.');
             return;
         }
 

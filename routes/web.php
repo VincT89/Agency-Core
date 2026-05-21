@@ -171,6 +171,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/meta/callback', [\App\Http\Controllers\Admin\Social\AgencyMetaOAuthController::class, 'callback'])->name('meta.callback');
     });
 
+    // ADMIN - TIKTOK CONNECTIONS (Client Specific)
+    Route::prefix('admin/social/tiktok')->name('admin.social.tiktok.')->middleware('can:manage_social_connections')->group(function () {
+        Route::get('/redirect', [\App\Http\Controllers\Admin\Social\TikTokOAuthController::class, 'redirect'])->name('redirect');
+        Route::get('/callback', [\App\Http\Controllers\Admin\Social\TikTokOAuthController::class, 'callback'])->name('callback');
+    });
+
     // ADMIN - SOCIAL OPERATIONS
     Route::prefix('admin/social/operations')->name('admin.social.operations.')->middleware('can:manage_social_operations')->group(function () {
         Route::get('/', \App\Livewire\Admin\Social\SocialOperationsDashboard::class)->name('index');

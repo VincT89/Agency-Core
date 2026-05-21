@@ -52,9 +52,15 @@
                                 @if($pub->post && $pub->post->campaign && $pub->post->campaign->client)
                                     <div class="u-text-sm u-fw-bold">{{ $pub->post->campaign->client->name }}</div>
                                 @endif
-                                <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $pub->post->campaign->id ?? 0, 'post' => $pub->post_id ?? $pub->marketing_campaign_post_id]) }}" class="u-text-meta u-text-accent u-no-underline">
-                                    {{ \Illuminate\Support\Str::limit($pub->post->title ?? 'Senza Titolo', 30) }}
-                                </a>
+                                @if($pub->post && $pub->post->campaign)
+                                    <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $pub->post->campaign->id, 'post' => $pub->post_id ?? $pub->marketing_campaign_post_id]) }}" class="u-text-meta u-text-accent u-no-underline">
+                                        {{ \Illuminate\Support\Str::limit($pub->post->title ?? 'Senza Titolo', 30) }}
+                                    </a>
+                                @else
+                                    <span class="u-text-meta muted">
+                                        {{ \Illuminate\Support\Str::limit($pub->post->title ?? 'Post senza campagna (Orfano)', 30) }}
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 <span class="u-text-transform-capitalize badge badge-subtle">{{ $pub->platform->value }}</span>
@@ -74,7 +80,7 @@
                             </td>
                             <td class="u-text-right">
                                 <div class="u-flex u-justify-end u-gap-xs">
-                                    @if($pub->status === \App\Enums\Social\PublicationStatus::NeedsManualReview && $pub->platform === 'instagram')
+                                    @if($pub->status === \App\Enums\Social\PublicationStatus::NeedsManualReview && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
                                         <button 
                                             wire:click="refreshContainer({{ $pub->id }})" 
                                             class="btn btn-sec btn-xs"

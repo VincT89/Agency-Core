@@ -64,6 +64,7 @@ return [
         'client_key' => env('TIKTOK_CLIENT_KEY'),
         'client_secret' => env('TIKTOK_CLIENT_SECRET'),
         'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
+        'api_base' => env('TIKTOK_API_BASE', 'https://open.tiktokapis.com'),
     ],
 
     'nextcloud' => [

@@ -17,11 +17,10 @@ class AgencyMetaOAuthController extends Controller
                 'pages_manage_posts',
                 'pages_read_engagement',
                 'pages_show_list',
+                'pages_manage_metadata',
                 'business_management',
                 'instagram_basic',
-                'instagram_content_publish',
-                'instagram_manage_comments',
-                'instagram_manage_insights'
+                'instagram_content_publish'
             ])
             ->redirect();
     }

@@ -113,11 +113,17 @@ class ClientSocialAccount extends Model
 
     public function isReadyToPublish(): bool
     {
-        if ($this->connection_mode === SocialConnectionMode::Oauth) {
+        if ($this->connection_mode === SocialConnectionMode::Oauth || 
+            $this->connection_strategy === \App\Enums\Social\SocialConnectionStrategy::PlatformOauth) {
             // Un account OAuth è "pronto a pubblicare" solo se ha un token API valido,
             // non ha uno stato error/disconnected/revoked, e ha almeno una capability attiva.
             if (!$this->isApiConnected() || !is_array($this->publishing_capabilities) || empty($this->publishing_capabilities)) {
                 return false;
+            }
+
+            if ($this->platform === SocialPlatform::Tiktok) {
+                return isset($this->publishing_capabilities['tiktok']['can_publish_video']) 
+                    && $this->publishing_capabilities['tiktok']['can_publish_video'] === true;
             }
 
             foreach ($this->publishing_capabilities as $capability) {

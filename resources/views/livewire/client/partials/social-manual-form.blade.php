@@ -3,16 +3,18 @@
         <div class="form-g">
             <label class="form-lbl">Strategia di Connessione</label>
             <select wire:model.live="forms.{{ $platformValue }}.connection_strategy" class="form-sel w-100">
-                <option value="agency_oauth">Gestione Agenzia (OAuth Centralizzato)</option>
-                <option value="manual_token_config">Configurazione Manuale (Token/App)</option>
+                @if($platformValue === 'tiktok')
+                    <option value="platform_oauth">Connessione Piattaforma (OAuth)</option>
+                @else
+                    <option value="agency_oauth">Gestione Agenzia (OAuth Centralizzato)</option>
+                    <option value="manual_token_config">Configurazione Manuale (Token/App)</option>
+                @endif
             </select>
         </div>
         <div class="form-g">
             <label class="form-lbl">Account esiste?</label>
             <select wire:model="forms.{{ $platformValue }}.account_exists" class="form-sel w-100">
-                @foreach(\App\Enums\Social\SocialPlatform::cases() as $p)
-                    @php if($p->value !== $platformValue) continue; @endphp
-                @endforeach
+
                 <!-- Usa l'array $existsOptions globale dal componente -->
                 @foreach($existsOptions as $val => $label)
                     <option value="{{ $val }}">{{ $label }}</option>
@@ -23,7 +25,13 @@
 
     <div class="form-row">
         <div class="form-g">
-            <label class="form-lbl">Nome Account (es. Pagina FB)</label>
+            <label class="form-lbl">
+                @if($platformValue === 'tiktok')
+                    Nome Profilo TikTok
+                @else
+                    Nome Account (es. Pagina FB)
+                @endif
+            </label>
             <input type="text" wire:model="forms.{{ $platformValue }}.account_name" class="form-in w-100">
         </div>
         <div class="form-g">
@@ -94,15 +102,73 @@
                 <span>Questo account è operativamente PRONTO per la pubblicazione?</span>
             </label>
         </div>
-    @else
-        <div class="u-alert-info u-text-sm" style="padding: 1.5rem; margin-top: 2.5rem; margin-bottom: 2.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; background-color: #eff6ff;">
-            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;">
-                <i data-lucide="info" class="u-icon-sm" style="color: #2563eb;"></i>
-                <strong style="color: #1e40af; font-size: 1.1em;">Gestione Centralizzata Attiva</strong>
-            </div>
-            <div style="color: #1e3a8a; line-height: 1.6; margin-left: 2rem;">
-                Poiché stai utilizzando la modalità <strong>Gestione Agenzia (OAuth)</strong>, lo stato di pubblicazione (<em>is_ready_to_publish</em>) e i parametri di accesso vengono elaborati in modo completamente automatico sincronizzando l'Asset.<br>
-                Usa il pannello sottostante per selezionare l'Asset corretto.
+    @elseif($forms[$platformValue]['connection_strategy'] === 'platform_oauth')
+        <div class="social-api-panel u-mt-lg u-pt-md u-border-t-dashed">
+            <h5 class="u-text-strong u-mb-md u-mt-0 u-flex u-align-center u-gap-xs u-text-lg">
+                <i data-lucide="link" class="u-text-blue u-icon-md"></i> Connessione OAuth Piattaforma
+            </h5>
+            
+            @php
+                $account = $client->socialAccountFor($platformValue);
+                $isConnected = $account && $account->api_status === \App\Enums\Social\SocialApiStatus::Connected;
+            @endphp
+
+            @if($isConnected)
+                <div class="u-alert-success u-mb-md">
+                    <div class="u-flex u-align-start u-gap-sm">
+                        <i data-lucide="check-circle" class="u-icon-md"></i>
+                        <div>
+                            <div class="u-mb-xs"><strong>Account Collegato!</strong></div>
+                            <div class="u-text-muted">I token sono salvati in sicurezza.</div>
+                        </div>
+                    </div>
+                    @if($platformValue === 'tiktok' && !$account->isReadyToPublish())
+                        <div class="u-mt-sm u-text-sm" style="margin-left: 2.25rem;">
+                            <em>Nota: Collegato con successo, ma il publishing diretto non è abilitato in questa fase (Sprint 1).</em>
+                        </div>
+                    @endif
+                </div>
+                <div class="u-flex u-gap-sm">
+                    <button type="button" wire:click="disconnectOauth('{{ $platformValue }}')" class="btn btn-error" wire:confirm="Scollegare definitivamente questo account?">
+                        Scollega Account
+                    </button>
+                </div>
+            @else
+                <div class="u-alert-warning u-mb-md">
+                    <div class="u-flex u-align-start u-gap-sm">
+                        <i data-lucide="alert-triangle" class="u-icon-md"></i>
+                        <div>
+                            <div class="u-mb-xs"><strong>Attenzione: Account Non Collegato</strong></div>
+                            <div class="u-text-muted">Non risulta alcun token attivo per questo profilo. Effettua la connessione OAuth per abilitare la pubblicazione.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                @if($account)
+                    <button type="button" wire:click="startTikTokOauth('{{ $platformValue }}')" class="btn btn-p u-inline-flex u-align-center u-gap-xs u-mb-md">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: -2px;">
+                            <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+                        </svg>
+                        Collega {{ ucfirst($platformValue) }}
+                    </button>
+                @else
+                    <div class="u-text-sm u-text-muted">
+                        Salva questo modulo prima di poter avviare la procedura di connessione OAuth.
+                    </div>
+                @endif
+            @endif
+        </div>
+    @elseif($forms[$platformValue]['connection_strategy'] === 'agency_oauth')
+        <div class="u-alert-info u-mb-lg u-mt-lg">
+            <div class="u-flex u-align-start u-gap-sm">
+                <i data-lucide="info" class="u-icon-md u-text-blue"></i>
+                <div>
+                    <div class="u-mb-xs"><strong class="u-text-blue">Gestione Centralizzata (OAuth)</strong></div>
+                    <div class="u-text-muted">
+                        La connessione a questa piattaforma è gestita automaticamente tramite l'Asset condiviso dell'Agenzia.<br>
+                        Non è necessario configurare credenziali o token manualmente. Lo stato di pubblicazione verrà elaborato in automatico.
+                    </div>
+                </div>
             </div>
         </div>
     @endif

@@ -32,29 +32,46 @@ class SyncMetaAssetsAction
         $endpoint = "https://graph.facebook.com/{$apiVersion}/me/accounts";
 
         try {
-            // Otteniamo tutte le pagine (con impaginazione se necessario, qui limitiamo per semplicità/MVP a un first fetch largo)
-            $response = Http::get($endpoint, [
+            $pages = [];
+            $nextUrl = $endpoint;
+            $queryParams = [
                 'access_token' => $connection->access_token,
                 'fields' => 'id,name,access_token,instagram_business_account{id,username,profile_picture_url},tasks,picture',
                 'limit' => 100
-            ]);
+            ];
 
-            if ($response->failed()) {
-                $connection->update([
-                    'status' => AgencyConnectionStatus::SyncFailed,
-                    'last_api_error' => $response->body(),
-                    'last_api_check_at' => now(),
-                ]);
-                return new SyncMetaAssetsResult(errors: 1, errorMessage: 'Errore API Meta: ' . $response->body());
+            while ($nextUrl) {
+                $response = Http::get($nextUrl, $queryParams);
+
+                if ($response->failed()) {
+                    $connection->update([
+                        'status' => AgencyConnectionStatus::SyncFailed,
+                        'last_api_error' => $response->body(),
+                        'last_api_check_at' => now(),
+                    ]);
+                    return new SyncMetaAssetsResult(errors: 1, errorMessage: 'Errore API Meta: ' . $response->body());
+                }
+
+                $data = $response->json();
+                $pages = array_merge($pages, $data['data'] ?? []);
+
+                // Controlla se c'è una pagina successiva
+                $nextUrl = $data['paging']['next'] ?? null;
+                // Svuota queryParams per le chiamate successive, dato che la nextUrl contiene già tutti i parametri
+                if ($nextUrl) {
+                    $queryParams = []; 
+                }
             }
 
-            $data = $response->json();
-            $pages = $data['data'] ?? [];
             $totalFound = count($pages);
 
             $syncedAssetIds = [];
 
             foreach ($pages as $page) {
+                $tasks = $page['tasks'] ?? [];
+                $canPublish = count(array_intersect($tasks, ['CREATE_CONTENT', 'MANAGE'])) > 0;
+                $fbPublishingStatus = $canPublish ? PublishingStatus::Ready : PublishingStatus::MissingPermissions;
+
                 // Sincronizza Pagina Facebook (Root Asset)
                 $fbAsset = AgencySocialAsset::updateOrCreate(
                     [
@@ -70,10 +87,10 @@ class SyncMetaAssetsAction
                         'page_access_token' => $page['access_token'] ?? null,
                         'page_token_status' => $page['access_token'] ? 'connected' : 'invalid',
                         'page_token_last_validated_at' => now(),
-                        'capabilities' => $page['tasks'] ?? [],
+                        'capabilities' => $tasks,
                         'raw_payload' => $page,
                         'status' => AgencyConnectionStatus::Connected,
-                        'publishing_status' => PublishingStatus::Ready, // Semplificazione: per FB se hai la pagina e il token, tendenzialmente puoi pubblicare (se hai i tasks MANAGE)
+                        'publishing_status' => $fbPublishingStatus,
                         'is_active' => true,
                         'revoked_at' => null,
                         'last_synced_at' => now(),
@@ -108,7 +125,7 @@ class SyncMetaAssetsAction
                             'page_access_token' => null, // Non duplicare il token!
                             'raw_payload' => $igData,
                             'status' => AgencyConnectionStatus::Connected,
-                            'publishing_status' => PublishingStatus::Ready,
+                            'publishing_status' => $fbPublishingStatus,
                             'is_active' => true,
                             'revoked_at' => null,
                             'last_synced_at' => now(),

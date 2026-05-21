@@ -70,8 +70,8 @@ class SocialOperationsDashboardTest extends TestCase
             ->call('retryPublication', $publication->id);
 
         $publication->refresh();
-        $this->assertEquals(PublicationStatus::Failed->value, $publication->status->value);
-        $this->assertEquals('Dismesso manualmente per retry da zero', $publication->error_message);
+        $this->assertEquals(PublicationStatus::Superseded->value, $publication->status->value);
+        $this->assertEquals('Dismesso (sostituito da nuovo tentativo)', $publication->error_message);
     }
 
     public function test_refresh_container_blocks_terminal_state()
@@ -109,5 +109,43 @@ class SocialOperationsDashboardTest extends TestCase
             ->call('refreshContainer', $publication->id);
             
         $this->assertEquals(PublicationStatus::Failed->value, $publication->refresh()->status->value);
+    }
+
+    public function test_force_fail_publication_blocks_terminal_state()
+    {
+        $client = \App\Models\Client::factory()->create();
+        $campaign = \App\Models\MarketingCampaign::create([
+            'client_id' => $client->id,
+            'name' => 'Test Campaign',
+            'status' => 'active'
+        ]);
+        
+        $post = MarketingCampaignPost::create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Superseded->value,
+        ]);
+        
+        $socialAccount = \App\Models\ClientSocialAccount::create([
+            'client_id' => $client->id,
+            'platform' => 'instagram',
+            'account_name' => 'test_ig',
+            'account_exists' => true,
+        ]);
+
+        $publication = MarketingCampaignPostPublication::create([
+            'marketing_campaign_post_id' => $post->id,
+            'client_social_account_id' => $socialAccount->id,
+            'platform' => 'instagram',
+            'status' => PublicationStatus::Superseded->value,
+            'external_container_id' => '12345',
+            'correlation_id' => 'abc',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(SocialOperationsDashboard::class)
+            ->call('forceFailPublication', $publication->id)
+            ->assertSessionHas('error'); // Ensure error flash message is set
+            
+        $this->assertEquals(PublicationStatus::Superseded->value, $publication->refresh()->status->value);
     }
 }

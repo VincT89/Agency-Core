@@ -86,7 +86,11 @@ class MetaPublisher implements SocialPublisherInterface
                         $correlationId
                     );
 
-                    $mediaType = in_array($extension, ['mp4', 'mov', 'webm']) ? 'VIDEO' : 'IMAGE';
+                    if (isset($primaryMedia->media_type) && in_array(strtolower($primaryMedia->media_type), ['video', 'image'])) {
+                        $mediaType = strtolower($primaryMedia->media_type) === 'video' ? 'VIDEO' : 'IMAGE';
+                    } else {
+                        $mediaType = in_array($extension, ['mp4', 'mov', 'webm']) ? 'VIDEO' : 'IMAGE';
+                    }
                 }
             }
 

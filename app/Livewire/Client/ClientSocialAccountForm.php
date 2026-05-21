@@ -54,7 +54,7 @@ class ClientSocialAccountForm extends Component
             'notes' => $account?->notes ?? '',
             'api_notes' => $account?->api_notes ?? '',
             'agency_social_asset_id' => $account?->agency_social_asset_id ?? '',
-            'connection_strategy' => $account?->connection_strategy?->value ?? ($platform === 'tiktok' ? 'manual_token_config' : 'agency_oauth'),
+            'connection_strategy' => $account?->connection_strategy?->value ?? ($platform === 'tiktok' ? 'platform_oauth' : 'agency_oauth'),
         ];
     }
 
@@ -134,6 +134,56 @@ class ClientSocialAccountForm extends Component
             session()->flash('success_'.$platform, "Account {$platform} scollegato (Assegnazione rimossa).");
             $this->dispatch('client-social-accounts-updated');
         }
+    }
+
+    public function disconnectOauth(string $platform)
+    {
+        $this->authorize('update', $this->client);
+        $account = $this->client->socialAccountFor($platform);
+        if ($account) {
+            if ($platform === 'tiktok' && $account->access_token) {
+                $apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
+                \Illuminate\Support\Facades\Http::asForm()->post("{$apiBase}/v2/oauth/revoke/", [
+                    'client_key' => config('services.tiktok.client_key'),
+                    'client_secret' => config('services.tiktok.client_secret'),
+                    'token' => $account->access_token,
+                ]);
+            }
+
+            $account->update([
+                'access_token' => null,
+                'refresh_token' => null,
+                'token_expires_at' => null,
+                'tiktok_open_id' => null,
+                'api_status' => SocialApiStatus::Disconnected,
+                'account_exists' => false,
+                'api_metadata' => null,
+                'publishing_capabilities' => null,
+            ]);
+            $this->hydrateFormForPlatform($platform);
+            session()->flash('success_'.$platform, "Connessione OAuth {$platform} revocata e scollegata.");
+            $this->dispatch('client-social-accounts-updated');
+        }
+    }
+
+    public function startTikTokOauth(string $platform)
+    {
+        $this->authorize('update', $this->client);
+        $account = $this->client->socialAccountFor($platform);
+
+        if (!$account || $platform !== 'tiktok') {
+            session()->flash('error_'.$platform, 'Account non valido per questa operazione.');
+            return;
+        }
+
+        // Salviamo dati di contesto estesi per validazione cross-tab
+        session([
+            'tiktok_oauth_account_id' => $account->id,
+            'tiktok_oauth_client_id' => $this->client->id,
+            'tiktok_oauth_expected_platform' => \App\Enums\Social\SocialPlatform::Tiktok->value,
+        ]);
+
+        return redirect()->route('admin.social.tiktok.redirect');
     }
 
     public function render()

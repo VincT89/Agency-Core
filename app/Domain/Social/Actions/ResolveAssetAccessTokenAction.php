@@ -14,6 +14,11 @@ class ResolveAssetAccessTokenAction
      */
     public function execute(AgencySocialAsset $asset, array $visitedIds = []): ?string
     {
+        // Verifica se la connessione alla base richiede re-auth
+        if ($asset->connection && $asset->connection->requires_reauth) {
+            throw new \App\Exceptions\Social\TokenRevokedException("La connessione dell'asset (Connection ID: {$asset->connection->id}) richiede riautenticazione. Impossibile risolvere il token.");
+        }
+
         // Anti-cycle safety net (rileva loop esatto)
         if (in_array($asset->id, $visitedIds)) {
             Log::error("ResolveAssetAccessTokenAction: Ciclo rilevato per l'asset ID {$asset->id}");

@@ -63,16 +63,14 @@ Route::get('/nextcloud/download', function (\Illuminate\Http\Request $request, \
     abort_unless($path, 404);
     $path = $nextcloud->normalizePath($path);
 
-    $allowedPrefixes = ['/Marketing/', '/Progetti/'];
-    $isAllowed = collect($allowedPrefixes)->contains(fn ($prefix) => str_starts_with($path, $prefix));
+    $photosRoot = rtrim(config('services.nextcloud.photos_root', '/FotoClienti'), '/');
+    $videosRoot = rtrim(config('services.nextcloud.videos_root', '/VideoClienti'), '/');
+    
+    $isAllowed = $path === $photosRoot || str_starts_with($path, $photosRoot . '/')
+              || $path === $videosRoot || str_starts_with($path, $videosRoot . '/');
     abort_unless($isAllowed, 403, 'Percorso non autorizzato.');
 
-    $content = $nextcloud->downloadFile($path);
-    abort_unless($content, 404);
-    $mime = str_ends_with(strtolower($path), 'mp4') ? 'video/mp4' : 'application/octet-stream';
-    if (str_ends_with(strtolower($path), 'webm')) $mime = 'video/webm';
-    if (str_ends_with(strtolower($path), 'mov')) $mime = 'video/quicktime';
-    return response($content, 200)->header('Content-Type', $mime);
+    return $nextcloud->streamFileResponse($path, $request);
 })->middleware(['auth', 'throttle:nextcloud-preview'])->name('nextcloud.download');
 
 Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
@@ -245,5 +243,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     // Note Operative
     Route::get('/daily-notes', \App\Livewire\Dashboard\UserDailyNotes::class)->name('daily-notes.index');
 });
+
+// Route pubblica protetta da firma e throttling (usata per erogazione asincrona ai provider Social)
+Route::get('/social/media/{media}', \App\Http\Controllers\SocialMediaDeliveryController::class)
+    ->name('social.media.delivery')
+    ->middleware(['signed', 'throttle:social-media-delivery']);
+
+// Route per la preview dei video temporanei di Livewire con supporto HTTP 206 Partial Content
+Route::get('/social/temporary-video-preview/{filename}', \App\Http\Controllers\SocialMedia\TemporaryVideoPreviewController::class)
+    ->name('social.temporary-video-preview')
+    ->middleware(['web', 'signed', 'auth']);
 
 require __DIR__ . '/auth.php';

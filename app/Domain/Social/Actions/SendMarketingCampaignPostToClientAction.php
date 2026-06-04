@@ -31,6 +31,12 @@ class SendMarketingCampaignPostToClientAction
         // Non blocchiamo se manca la mail, generiamo comunque il link
         $hasEmail = !empty($client->email);
 
+        // Invalida eventuali token attivi precedenti per questo post
+        ClientReviewToken::where('reviewable_type', MarketingCampaignPost::class)
+            ->where('reviewable_id', $post->id)
+            ->whereNull('used_at')
+            ->update(['expires_at' => now()]);
+
         $token = ClientReviewToken::create([
             'token' => Str::random(60),
             'reviewable_type' => MarketingCampaignPost::class,

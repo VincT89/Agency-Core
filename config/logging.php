@@ -52,6 +52,14 @@ return [
 
     'channels' => [
 
+        'social-runtime' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-runtime.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

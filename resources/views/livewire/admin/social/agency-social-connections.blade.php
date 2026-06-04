@@ -53,6 +53,8 @@
                     <div class="u-text-sm u-text-secondary u-mb-md">
                         <p><strong>Asset Trovati:</strong> {{ $connection->assets->count() }}</p>
                         <p><strong>Ultimo Sync:</strong> {{ $connection->last_sync_at ? $connection->last_sync_at->format('d/m/Y H:i') : 'Mai' }}</p>
+                        <p><strong>Scadenza Token:</strong> {{ $connection->token_expires_at ? $connection->token_expires_at->format('d/m/Y H:i') : 'Non scade / Non nota' }}</p>
+                        <p><strong>Ultimo Refresh Token:</strong> {{ $connection->last_token_refresh_at ? $connection->last_token_refresh_at->format('d/m/Y H:i') : 'Mai' }}</p>
                     </div>
 
                     <div class="u-flex u-justify-between u-items-center social-card-actions">

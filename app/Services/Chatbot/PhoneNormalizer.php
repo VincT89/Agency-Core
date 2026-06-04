@@ -20,7 +20,7 @@ class PhoneNormalizer
             $normalized = substr($normalized, 2);
         }
 
-        if (str_starts_with($normalized, '39')) {
+        if (str_starts_with($normalized, '39') && strlen($normalized) >= 12) {
             return $normalized;
         }
 

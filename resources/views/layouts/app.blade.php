@@ -93,13 +93,13 @@
         <div class="nav-group">
           <div class="nav-group-label">Accesso Rapido</div>
           <div class="sidebar-action-group">
-            <a href="{{ route('tasks.create') }}" wire:navigate class="btn btn-p sidebar-action-btn">
+            <a href="{{ route('tasks.create') }}" wire:navigate class="btn btn-p sidebar-action-btn" x-bind:title="!sidebarOpen ? 'Nuovo Task' : ''">
               <i data-lucide="plus" class="u-icon-sm"></i>
               <span class="sidebar-btn-text">Nuovo Task</span>
             </a>
             @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
               @if(isset($newTickets) && $newTickets > 0)
-                <a href="{{ route('tickets.index') }}" wire:navigate class="sidebar-ticket-alarm">
+                <a href="{{ route('tickets.index') }}" wire:navigate class="sidebar-ticket-alarm" x-bind:title="!sidebarOpen ? 'Ticket' : ''">
                   <i data-lucide="bell-ring" class="u-icon-sm sidebar-alarm-icon"></i>
                   <span class="sidebar-btn-text">
                     {{ $newTickets }} {{ $newTickets === 1 ? 'nuovo ticket' : 'nuovi ticket' }}
@@ -251,7 +251,7 @@
 
       <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
         @csrf
-        <button type="submit" class="nav-item logout sidebar-logout-btn">
+        <button type="submit" class="nav-item logout sidebar-logout-btn" x-bind:title="!sidebarOpen ? 'Logout' : ''">
           <div class="nav-icon"><i data-lucide="log-out" width="16" height="16" stroke-width="1.8"></i></div>
           <span class="nav-label">Logout</span>
           <div class="nav-tooltip">Logout</div>

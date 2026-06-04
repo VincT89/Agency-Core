@@ -232,7 +232,7 @@
                 window.financialChartInstance.destroy();
                 window.financialChartInstance = null;
             }
-            const data = {!! $financialChartData !!};
+            const data = {{ \Illuminate\Support\Js::from($financialChartData) }};
             const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
             const options = {
                 chart: { 
@@ -276,7 +276,7 @@
                 window.operationalChartInstance.destroy();
                 window.operationalChartInstance = null;
             }
-            const data = {!! $operationalChartData !!};
+            const data = {{ \Illuminate\Support\Js::from($operationalChartData) }};
             const options = {
                 chart: { 
                     type: 'area', 

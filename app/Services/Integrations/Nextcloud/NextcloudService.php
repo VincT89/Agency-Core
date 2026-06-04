@@ -184,6 +184,76 @@ class NextcloudService
         }
     }
 
+    /**
+     * Scarica un file in streaming da Nextcloud (utile per video con Range).
+     */
+    public function streamFileResponse(string $remotePath, \Illuminate\Http\Request $request)
+    {
+        if (!$this->isConfigured()) {
+            abort(404);
+        }
+
+        $url = $this->buildWebdavUrl($remotePath);
+
+        $headers = [];
+        if ($request->hasHeader('Range')) {
+            $headers['Range'] = $request->header('Range');
+        }
+
+        $client = new \GuzzleHttp\Client();
+        
+        $options = [
+            'auth' => [$this->username, $this->password],
+            'stream' => true,
+            'timeout' => 0,
+            'headers' => $headers,
+            'http_errors' => false,
+        ];
+
+        try {
+            $response = $client->request('GET', $url, $options);
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode !== 200 && $statusCode !== 206) {
+                abort($statusCode === 404 ? 404 : 500);
+            }
+
+            $responseHeaders = [
+                'Content-Type' => $response->getHeaderLine('Content-Type') ?: 'application/octet-stream',
+                'Content-Length' => $response->getHeaderLine('Content-Length'),
+                'Accept-Ranges' => $response->getHeaderLine('Accept-Ranges') ?: 'bytes',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ];
+
+            if ($statusCode === 206) {
+                $responseHeaders['Content-Range'] = $response->getHeaderLine('Content-Range');
+            }
+
+            // Aggiusto mime type per QuickTime e simili se non fornito da Nextcloud (spesso è octet-stream)
+            $mime = $responseHeaders['Content-Type'];
+            if ($mime === 'application/octet-stream' || empty($mime)) {
+                if (str_ends_with(strtolower($remotePath), 'mp4')) $mime = 'video/mp4';
+                if (str_ends_with(strtolower($remotePath), 'webm')) $mime = 'video/webm';
+                if (str_ends_with(strtolower($remotePath), 'mov')) $mime = 'video/quicktime';
+                $responseHeaders['Content-Type'] = $mime;
+            }
+
+            $body = $response->getBody();
+
+            return response()->stream(function () use ($body) {
+                while (!$body->eof()) {
+                    echo $body->read(8192);
+                    flush();
+                }
+                $body->close();
+            }, $statusCode, $responseHeaders);
+            
+        } catch (\Exception $e) {
+            Log::error('Errore stream Nextcloud: ' . $e->getMessage());
+            abort(500, 'Impossibile completare lo stream dal server Nextcloud.');
+        }
+    }
+
     public function mediaRoot(string $mediaKind): string
     {
         return match ($mediaKind) {

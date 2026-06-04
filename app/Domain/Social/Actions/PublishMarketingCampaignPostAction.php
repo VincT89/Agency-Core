@@ -9,6 +9,8 @@ use App\Domain\Social\Publishing\SocialPublisherInterface;
 use App\Domain\Social\Publishing\MetaPublisher;
 use App\Enums\Social\SocialPlatform;
 use App\Enums\Social\PublicationStatus;
+use App\Domain\Social\Services\MetaPreflightService;
+use App\Domain\Social\Services\TikTokPreflightService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -27,6 +29,25 @@ class PublishMarketingCampaignPostAction
         }
 
         try {
+            if (!$account) {
+                throw new \Exception("Nessun account social trovato per {$platform}");
+            }
+
+            if (in_array($platform, [SocialPlatform::Facebook->value, SocialPlatform::Instagram->value])) {
+                $preflightService = app(MetaPreflightService::class);
+                $preflight = $preflightService->runPreflight($post, $account);
+                if (!$preflight->isPass) {
+                    $errors = implode(', ', $preflight->errors);
+                    throw new \Exception("Preflight fallito: {$errors}");
+                }
+            } elseif ($platform === SocialPlatform::Tiktok->value) {
+                $preflightService = app(TikTokPreflightService::class);
+                $preflight = $preflightService->runPreflight($post, $account);
+                if (!$preflight->isPass) {
+                    $errors = implode(', ', $preflight->errors);
+                    throw new \Exception("TikTok Preflight fallito: {$errors}");
+                }
+            }
             $transactionResult = \Illuminate\Support\Facades\DB::transaction(function () use ($post, $platform, $correlationId, $account) {
                 // Idempotency check: prevent duplicate publications (con pessimistic lock)
                 $existingPublication = MarketingCampaignPostPublication::where('marketing_campaign_post_id', $post->id)
@@ -37,29 +58,22 @@ class PublishMarketingCampaignPostAction
 
                 if ($existingPublication && in_array($existingPublication->status, [PublicationStatus::Pending, PublicationStatus::Published, PublicationStatus::Publishing])) {
                     
-                    $timeoutMinutes = config('services.meta.instagram.max_container_lifecycle', 15);
+                    $timeoutMinutes = config("social.publication_stale_deadlines.{$platform}", 15);
                     // Stale Recovery Logic
                     if ($existingPublication->status === PublicationStatus::Publishing && $existingPublication->updated_at->diffInMinutes(now()) > $timeoutMinutes) {
-                        if ($platform === SocialPlatform::Instagram->value) {
-                            $existingPublication->update([
-                                'status' => PublicationStatus::NeedsManualReview->value,
-                                'error_message' => "Timeout: publication stuck in publishing for > {$timeoutMinutes}m. Async container might still be alive.",
-                            ]);
-                            Log::warning("Stale IG publication recovered for post {$post->id}. Marked as NeedsManualReview. Auto-retry blocked.");
-                            return ['publication' => $existingPublication, 'action' => 'blocked'];
-                        } else {
-                            $existingPublication->update([
-                                'status' => PublicationStatus::Failed->value,
-                                'error_message' => "Timeout: synchronous publication stuck in publishing for > {$timeoutMinutes}m.",
-                            ]);
-                            Log::warning("Stale FB publication recovered for post {$post->id}. Marked as Failed. Allowing auto-retry.");
-                            // Let it flow down to create a new pending publication
-                        }
+                        $existingPublication->update([
+                            'status' => PublicationStatus::Failed->value,
+                            'error_message' => "Timeout: publication stuck in publishing for > {$timeoutMinutes}m. Async container might still be alive.",
+                        ]);
+                        Log::warning("Stale publication recovered for post {$post->id}. Marked as Failed.");
+                        // Let it flow down to create a new pending publication
                     } else {
                         Log::info("Idempotency check: Post {$post->id} is already {$existingPublication->status->value} on {$platform}.");
                         return ['publication' => $existingPublication, 'action' => 'idempotency_hit'];
                     }
                 }
+
+                $timeoutMinutes = config("social.publication_stale_deadlines.{$platform}", 15);
 
                 $publication = MarketingCampaignPostPublication::create([
                     'marketing_campaign_post_id' => $post->id,
@@ -67,6 +81,10 @@ class PublishMarketingCampaignPostAction
                     'platform' => $platform,
                     'status' => PublicationStatus::Pending->value,
                     'correlation_id' => $correlationId,
+                    'publishing_started_at' => now(),
+                    'stale_deadline_at' => now()->addMinutes($timeoutMinutes),
+                    'attempt_count' => 1,
+                    'poll_count' => 0,
                 ]);
                 
                 // Compare-and-swap status transition: atomico e sicuro
@@ -90,10 +108,7 @@ class PublishMarketingCampaignPostAction
 
 
 
-        if (!$account) {
-            $this->failPublication($publication, "Nessun account social trovato per la piattaforma {$platform}");
-            return $publication;
-        }
+
 
         $publisher = $this->resolvePublisher($platform);
         
@@ -103,36 +118,44 @@ class PublishMarketingCampaignPostAction
             return $publication;
         }
 
-        if (!$publisher->verifyConfiguration($account)) {
-            $this->failPublication($publication, "Account non configurato per la pubblicazione API.");
-            app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($post);
-            return $publication;
-        }
-
         $result = $publisher->publish($post, $account, $correlationId);
 
         if ($result->success) {
-            $updateData = [
-                'external_post_id' => $result->externalPostId,
-                'external_container_id' => $result->externalContainerId,
-                'external_permalink' => $result->externalPermalink,
-                'response_snapshot' => $result->responseSnapshot,
-                'provider_last_response' => $result->responseSnapshot,
-            ];
+            \Illuminate\Support\Facades\DB::transaction(function () use ($result, $platform, $publication) {
+                $updateData = [
+                    'external_post_id' => $result->externalPostId,
+                    'external_container_id' => $result->externalContainerId,
+                    'external_task_id' => $result->externalTaskId,
+                    'external_permalink' => $result->externalPermalink,
+                    'response_snapshot' => $result->responseSnapshot,
+                    'provider_last_response' => $result->responseSnapshot,
+                ];
 
-            // Gestione stato parziale per Instagram Container (reconciliation required)
-            if ($result->isProcessing()) {
-                $updateData['status'] = PublicationStatus::Publishing->value;
-                $updateData['meta_processing_state'] = 'IN_PROGRESS';
-                $publication->update($updateData);
-                
-                \App\Jobs\Social\CheckInstagramContainerStatusJob::dispatch($publication)
-                    ->delay(now()->addSeconds(15));
-            } else {
-                $updateData['status'] = PublicationStatus::Published->value;
-                $updateData['published_at'] = now();
-                $publication->update($updateData);
-            }
+                if ($result->providerStatePayload !== null) {
+                    $updateData['provider_state_payload'] = $result->providerStatePayload;
+                }
+
+                // Gestione stato parziale per Instagram e TikTok Container (reconciliation required)
+                if ($result->isProcessing()) {
+                    $updateData['status'] = PublicationStatus::Publishing->value;
+                    if ($platform === SocialPlatform::Instagram->value) {
+                        $updateData['meta_processing_state'] = 'IN_PROGRESS';
+                    }
+                    $publication->update($updateData);
+                    
+                    if ($platform === SocialPlatform::Instagram->value) {
+                        \App\Jobs\Social\CheckInstagramContainerStatusJob::dispatch($publication)
+                            ->delay(now()->addSeconds(15));
+                    } elseif ($platform === SocialPlatform::Tiktok->value) {
+                        \App\Jobs\Social\TikTok\CheckTikTokPostStatusJob::dispatch($publication->id)
+                            ->delay(now()->addSeconds(60));
+                    }
+                } else {
+                    $updateData['status'] = PublicationStatus::Published->value;
+                    $updateData['published_at'] = now();
+                    $publication->update($updateData);
+                }
+            });
         } else {
             $this->failPublication($publication, $result->errorMessage, $result->responseSnapshot);
         }
@@ -149,6 +172,9 @@ class PublishMarketingCampaignPostAction
     {
         if (in_array($platform, [SocialPlatform::Facebook->value, SocialPlatform::Instagram->value])) {
             return app(MetaPublisher::class); // Uso l'app() per iniettare il mediaUrlService
+        }
+        if ($platform === SocialPlatform::Tiktok->value) {
+            return app(\App\Domain\Social\Publishing\TikTokPublisher::class);
         }
         return null;
     }

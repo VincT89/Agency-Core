@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MarketingCampaignPostMedia extends Model
 {
+    use HasFactory;
+
     protected $guarded = [];
 
     public function post(): BelongsTo
@@ -17,6 +20,13 @@ class MarketingCampaignPostMedia extends Model
     public static function isVideoMime(string $mime): bool
     {
         return str_starts_with(strtolower($mime), 'video/');
+    }
+
+    public function isVideo(): bool
+    {
+        if ($this->media_type === 'video') return true;
+        if ($this->mime_type && self::isVideoMime($this->mime_type)) return true;
+        return false;
     }
 
     public static function detectMediaType(string $mime): string

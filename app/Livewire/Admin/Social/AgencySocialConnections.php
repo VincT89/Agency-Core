@@ -11,6 +11,7 @@ class AgencySocialConnections extends Component
 {
     public function syncConnection($connectionId)
     {
+        $this->authorize('manage_social_operations');
         $connection = AgencySocialConnection::findOrFail($connectionId);
 
         try {
@@ -30,6 +31,7 @@ class AgencySocialConnections extends Component
 
     public function revokeConnection(int $connectionId): void
     {
+        $this->authorize('manage_social_operations');
         $connection = AgencySocialConnection::findOrFail($connectionId);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($connection) {

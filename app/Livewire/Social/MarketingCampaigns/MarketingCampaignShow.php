@@ -343,9 +343,11 @@ class MarketingCampaignShow extends Component
 
         $allPosts = $this->campaign->posts()
             ->with('currentVersion')
-            ->orderBy('scheduled_date', 'asc')
-            ->orderBy('scheduled_time', 'asc')
-            ->limit(10)
+            ->orderByRaw('scheduled_date IS NULL')
+            ->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
             ->get();
         
         $firstDayOfMonth = $currentDate->copy()->startOfMonth();

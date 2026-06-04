@@ -68,8 +68,8 @@ class DashboardController extends Controller
             'expiredHosting'   => $renewalService->getExpiredCount(),
             'expiringHostingList' => $renewalService->getExpiring(30),
             'expiredHostingList'  => $renewalService->getExpired(),
-            'financialChartData' => json_encode($financialChartData),
-            'operationalChartData' => json_encode($operationalChartData),
+            'financialChartData' => $financialChartData,
+            'operationalChartData' => $operationalChartData,
         ];
     }
 
@@ -90,9 +90,9 @@ class DashboardController extends Controller
             'upcomingDeadlines'    => Invoice::where('status', 'issued')
                                         ->whereDate('due_date', '<=', now()->addDays(14))
                                         ->orderBy('due_date')->limit(5)->get(),
-            'lineChartData'        => json_encode($financialService->getIncassatoVsDaIncassareMonthlyData(12)),
-            'donutChartData'       => json_encode($financialService->getYearlyDonutData()),
-            'sparklineData'        => json_encode($financialService->getSparklineData(6)),
+            'lineChartData'        => $financialService->getIncassatoVsDaIncassareMonthlyData(12),
+            'donutChartData'       => $financialService->getYearlyDonutData(),
+            'sparklineData'        => $financialService->getSparklineData(6),
         ];
     }
 

@@ -31,7 +31,10 @@ Schedule::command('chatbot:sync-tables')
     ->name('chatbot-sync-tables')
     ->withoutOverlapping();
 
-Schedule::command('social:cleanup-sessions')->daily();
-Schedule::command('social:sync-accounts')->hourly();
-Schedule::command('social:extend-tokens')->daily();
+
+Schedule::command('social:sync-accounts')->hourly()->withoutOverlapping();
+Schedule::command('social:extend-tokens')->daily()->withoutOverlapping();
 Schedule::command('social:cleanup-media')->daily();
+Schedule::command('social:fail-stale-publications')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('social:refresh-agency-connections')->daily()->withoutOverlapping();
+Schedule::command('social:sync-post-publication-statuses')->everyFiveMinutes()->withoutOverlapping();

@@ -34,6 +34,15 @@ class MarketingCampaignCreate extends Component
     {
         $this->validate();
 
+        $client = Client::findOrFail($this->client_id);
+        
+        $user = auth()->user();
+        if (!$user->canManageSystem() && !$user->isMarketing()) {
+            if (!$client->projects()->whereHas('users', fn($q) => $q->where('users.id', $user->id))->exists()) {
+                abort(403, 'Non hai accesso a questo cliente.');
+            }
+        }
+
         $campaign = MarketingCampaign::create([
             'client_id' => $this->client_id,
             'created_by' => auth()->id(),

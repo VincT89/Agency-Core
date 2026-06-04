@@ -3,7 +3,7 @@
         @php
             $isMetaReady = $client->isMetaReady();
             $tiktokAccount = $client->socialAccountFor(\App\Enums\Social\SocialPlatform::Tiktok->value);
-            $isTiktokReady = $tiktokAccount?->isReadyToPublish() ?? false;
+            $isTiktokReady = $tiktokAccount?->canPublishTikTokVideo() ?? false;
         @endphp
         
         <div class="u-flex-between u-py-sm u-border-b">

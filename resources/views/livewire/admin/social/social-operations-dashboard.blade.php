@@ -74,24 +74,43 @@
                                 <div class="u-text-sm u-text-red u-text-truncate" title="{{ $pub->error_message }}">
                                     {{ $pub->error_message ?: 'Nessun messaggio di errore esplicito' }}
                                 </div>
-                                @if($pub->external_container_id)
-                                    <div class="u-text-meta muted u-mt-xs">Container: {{ $pub->external_container_id }}</div>
+                                @if($pub->external_container_id || $pub->platform_post_id)
+                                    <div class="u-text-meta muted u-mt-xs">
+                                        @if($pub->platform === \App\Enums\Social\SocialPlatform::Instagram && $pub->external_container_id)
+                                            Container: {{ $pub->external_container_id }}
+                                        @elseif($pub->platform === \App\Enums\Social\SocialPlatform::Tiktok && $pub->platform_post_id)
+                                            Publish ID: {{ $pub->platform_post_id }}
+                                        @elseif(!in_array($pub->platform, [\App\Enums\Social\SocialPlatform::Instagram, \App\Enums\Social\SocialPlatform::Tiktok]) && $pub->platform_post_id)
+                                            Post ID: {{ $pub->platform_post_id }}
+                                        @endif
+                                    </div>
                                 @endif
                             </td>
                             <td class="u-text-right">
                                 <div class="u-flex u-justify-end u-gap-xs">
-                                    @if($pub->status === \App\Enums\Social\PublicationStatus::NeedsManualReview && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
-                                        <button 
-                                            wire:click="refreshContainer({{ $pub->id }})" 
-                                            class="btn btn-sec btn-xs"
-                                            title="Ricontrolla stato del container attuale su Meta">
-                                            <i data-lucide="refresh-cw" class="u-icon-sm"></i> Ricontrolla
+                                    @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Publishing]))
+                                        <button wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Controlla stato asincrono">
+                                            <i class="fas fa-sync-alt"></i> Check Sync
                                         </button>
+                                    @endif
+                                    @if($pub->status === \App\Enums\Social\PublicationStatus::Failed && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
+                                        <button wire:click="forceFailPublication({{ $pub->id }})" class="btn-xs btn-outline-danger" title="Forza fallimento definitivo">
+                                            <i class="fas fa-times-circle"></i> Mark Failed
+                                        </button>
+                                    @endif
+                                    @if($pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
                                         <button 
                                             wire:confirm="ATTENZIONE: Questo creerà un NUOVO container scartando l'attuale. Se Meta stava ancora processando il vecchio, potresti causare un doppio post. Vuoi procedere da zero?"
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
                                             Riprova IG da zero
+                                        </button>
+                                    @elseif($pub->platform === \App\Enums\Social\SocialPlatform::Tiktok)
+                                        <button 
+                                            wire:confirm="Verrà creato un nuovo tentativo di pubblicazione e il precedente sarà archiviato come superato. Procedere?"
+                                            wire:click="retryPublication({{ $pub->id }})" 
+                                            class="btn btn-p btn-xs">
+                                            Riprova TikTok
                                         </button>
                                     @else
                                         <button 

@@ -24,8 +24,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         
+        $user = auth()->user();
+        if ($user && $user->status !== 'active') {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Il tuo account è disattivato o sospeso.',
+            ]);
+        }
+
         try {
-            $user = auth()->user();
             if ($user) {
                 app(\App\Services\AuditLogService::class)->log('login', $user, null, null, null, $user->id);
             }

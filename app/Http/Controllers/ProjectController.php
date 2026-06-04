@@ -58,7 +58,7 @@ class ProjectController extends Controller
     public function store(StoreProjectRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $data['slug'] = Str::slug($data['name']);
+        $data['slug'] = $this->uniqueSlug($data['name']);
 
         $members = $data['members'] ?? [];
         $roles = $data['roles'] ?? [];
@@ -133,6 +133,10 @@ class ProjectController extends Controller
     {
         $data = $request->validated();
 
+        if (($data['name'] ?? null) && $data['name'] !== $project->name) {
+            $data['slug'] = $this->uniqueSlug($data['name'], $project->id);
+        }
+
         $members = $data['members'] ?? [];
         $roles = $data['roles'] ?? [];
 
@@ -168,5 +172,20 @@ class ProjectController extends Controller
 
         return redirect()->route('projects.index')
             ->with('success', 'Progetto eliminato correttamente.');
+    }
+
+    protected function uniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+        $slug = $base;
+        $i = 2;
+        while (Project::withTrashed()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->whereKeyNot($ignoreId))
+            ->exists()) {
+            $slug = "{$base}-{$i}";
+            $i++;
+        }
+        return $slug;
     }
 }

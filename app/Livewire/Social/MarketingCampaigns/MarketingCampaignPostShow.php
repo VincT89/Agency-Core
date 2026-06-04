@@ -46,7 +46,9 @@ class MarketingCampaignPostShow extends Component
     public $save_runtime_activity_to_client = false;
 
     public $media = []; // Uploaded file(s)
-    public array $existing_media = []; // Existing media from DB
+    public $all_local_media = []; 
+    public array $selected_media_items = []; 
+    public array $existing_media = []; // Legacy / reference
 
     // Nextcloud State
     public $nextcloud_media_kind = 'photo';
@@ -57,6 +59,8 @@ class MarketingCampaignPostShow extends Component
     public ?array $preview_nextcloud_file = null;
     public bool $showNextcloudPicker = false;
     public ?string $nextcloud_error = null;
+
+    public array $preflightResults = [];
 
     // Regeneration state
     public bool $regeneration_timeout = false;
@@ -80,7 +84,7 @@ class MarketingCampaignPostShow extends Component
             'media' => ['nullable', 'array', 'max:10'],
             'media.*' => [
                 'file',
-                'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm',
+                'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime',
                 'max:204800',
             ],
             'runtime_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -91,6 +95,7 @@ class MarketingCampaignPostShow extends Component
     public function mount(MarketingCampaign $campaign, MarketingCampaignPost $post)
     {
         $this->authorize('view', $post);
+        abort_unless($post->marketing_campaign_id === $campaign->id, 404);
         $this->campaign = $campaign;
 
         // Eager load related data
@@ -110,6 +115,8 @@ class MarketingCampaignPostShow extends Component
             'nextcloud_path' => $post->nextcloud_path,
             'publishing_platforms' => $post->publishing_platforms ?? [],
         ];
+
+        $this->refreshPreflight();
     }
 
     #[On('post-saved')]
@@ -165,6 +172,8 @@ class MarketingCampaignPostShow extends Component
 
     public function cancelRegeneration(): void
     {
+        $this->authorize('update', $this->post);
+
         $previous = $this->post->n8n_previous_status?->value
             ?? \App\Enums\Social\MarketingCampaignPostStatus::Generated->value;
 
@@ -182,7 +191,7 @@ class MarketingCampaignPostShow extends Component
         $this->dispatch('marketing-post-regeneration-cancelled');
     }
 
-    private function loadExistingMedia()
+    private function loadExistingMedia(bool $preserveUnsaved = true)
     {
         $this->existing_media = $this->post->mediaItems()
             ->orderBy('sort_order')
@@ -197,27 +206,56 @@ class MarketingCampaignPostShow extends Component
                         : ($item->nextcloud_share_url ? $item->nextcloud_share_url . '/preview' : null),
                     'original_name' => $item->original_name,
                     'mime_type' => $item->mime_type,
+                    'media_type' => $item->media_type,
                     'nextcloud_share_url' => $item->nextcloud_share_url,
                     'nextcloud_file_id' => $item->nextcloud_file_id,
                     'sort_order' => $item->sort_order,
                 ];
             })->toArray();
+            
+        // Rebuild selected_media_items preserving local/nextcloud pending uploads if any
+        $newSelected = [];
+        foreach ($this->existing_media as $existing) {
+            $isVid = ($existing['media_type'] ?? null) === 'video' || \Illuminate\Support\Str::startsWith($existing['mime_type'] ?? '', 'video/');
+            $newSelected[] = [
+                'uid' => 'existing:' . $existing['id'],
+                'source' => 'existing',
+                'existing_id' => $existing['id'],
+                'type' => $isVid ? 'video' : 'image',
+                'name' => $existing['original_name'],
+                'preview_url' => $existing['preview_url'],
+            ];
+        }
+        
+        // Append current un-saved items (if any)
+        if ($preserveUnsaved) {
+            foreach ($this->selected_media_items as $item) {
+                if ($item['source'] !== 'existing') {
+                    $newSelected[] = $item;
+                }
+            }
+        }
+        $this->selected_media_items = $newSelected;
     }
 
     private function syncLegacyMediaFields()
     {
-        $first = collect($this->existing_media)->first();
+        // Now sync legacy media fields using selected_media_items first item if existing
+        $first = collect($this->selected_media_items)->firstWhere('source', 'existing');
         if ($first) {
-            $this->post->update([
-                'media_path' => $first['source'] === 'local' ? $first['path'] : null,
-                'media_original_name' => $first['original_name'],
-                'media_mime' => $first['mime_type'],
-                'nextcloud_path' => $first['source'] === 'nextcloud' ? $first['path'] : null,
-                'nextcloud_share_url' => $first['source'] === 'nextcloud' ? $first['nextcloud_share_url'] : null,
-                'nextcloud_file_id' => $first['source'] === 'nextcloud' ? $first['nextcloud_file_id'] : null,
-            ]);
-            $this->form['media_source'] = $first['source'];
-            $this->form['nextcloud_path'] = $first['source'] === 'nextcloud' ? $first['path'] : null;
+            $model = \App\Models\MarketingCampaignPostMedia::find($first['existing_id']);
+            if ($model) {
+                $this->post->update([
+                    'media_path' => $model->source === 'local' ? $model->path : null,
+                    'media_original_name' => $model->original_name,
+                    'media_mime' => $model->mime_type,
+                    'nextcloud_path' => $model->source === 'nextcloud' ? $model->nextcloud_path : null,
+                    'nextcloud_share_url' => $model->source === 'nextcloud' ? $model->nextcloud_share_url : null,
+                    'nextcloud_file_id' => $model->source === 'nextcloud' ? $model->nextcloud_file_id : null,
+                ]);
+                $this->form['media_source'] = $model->source;
+                $this->form['nextcloud_path'] = $model->source === 'nextcloud' ? $model->nextcloud_path : null;
+            }
         } else {
             $this->post->update([
                 'media_path' => null,
@@ -232,41 +270,61 @@ class MarketingCampaignPostShow extends Component
         $this->post->refresh();
     }
 
-    public function removeExistingMedia($id)
+    public function removeSelectedMediaItem(string $uid): void
     {
         $this->authorize('update', $this->post);
         
-        $item = \App\Models\MarketingCampaignPostMedia::find($id);
-        if ($item && $item->marketing_campaign_post_id === $this->post->id) {
-            if ($item->source === 'local' && $item->path) {
-                Storage::disk('public')->delete($item->path);
+        $item = collect($this->selected_media_items)->firstWhere('uid', $uid);
+        if (!$item) return;
+
+        if ($item['source'] === 'existing') {
+            $dbItem = \App\Models\MarketingCampaignPostMedia::find($item['existing_id']);
+            if ($dbItem && $dbItem->marketing_campaign_post_id === $this->post->id) {
+                if ($dbItem->source === 'local' && $dbItem->path) {
+                    Storage::disk('public')->delete($dbItem->path);
+                }
+                $dbItem->delete();
+                $this->loadExistingMedia();
+                $this->syncLegacyMediaFields();
             }
-            $item->delete();
-            $this->loadExistingMedia();
-            $this->syncLegacyMediaFields();
+        } else {
+            $this->selected_media_items = array_values(array_filter($this->selected_media_items, fn($i) => $i['uid'] !== $uid));
+            
+            // Legacy sync
+            $this->selected_nextcloud_files = [];
+            foreach ($this->selected_media_items as $i) {
+                if ($i['source'] === 'nextcloud') {
+                    $this->selected_nextcloud_files[] = [
+                        'path' => $i['nextcloud_path'],
+                        'name' => $i['name'],
+                        'is_image' => $i['type'] === 'image',
+                    ];
+                }
+            }
         }
     }
 
-    public function removeLocalMedia($index): void
+    public function reorderSelectedMedia(int $fromIndex, int $toIndex): void
     {
-        if (isset($this->media[$index])) {
-            $newMedia = [];
-            foreach ($this->media as $i => $file) {
-                if ($i !== $index) $newMedia[] = $file;
-            }
-            $this->media = $newMedia;
-        }
+        if (!isset($this->selected_media_items[$fromIndex]) || $toIndex < 0 || $toIndex >= count($this->selected_media_items)) return;
+        
+        $item = array_splice($this->selected_media_items, $fromIndex, 1)[0];
+        array_splice($this->selected_media_items, $toIndex, 0, [$item]);
+        
+        // Immediate reorder in DB for existing items if they changed order?
+        // Let's just update all existing items sort_order based on current selected_media_items
+        $this->syncSortOrderToDb();
     }
 
-    public function reorderLocalMedia($fromIndex, $toIndex): void
+    private function syncSortOrderToDb()
     {
-        if (!is_array($this->media) || !isset($this->media[$fromIndex])) return;
-        if ($toIndex < 0 || $toIndex >= count($this->media)) return;
-
-        $item = $this->media[$fromIndex];
-        array_splice($this->media, $fromIndex, 1);
-        array_splice($this->media, $toIndex, 0, [$item]);
-        $this->media = array_values($this->media);
+        foreach ($this->selected_media_items as $index => $item) {
+            if ($item['source'] === 'existing') {
+                \App\Models\MarketingCampaignPostMedia::where('id', $item['existing_id'])
+                    ->update(['sort_order' => $index]);
+            }
+        }
+        $this->loadExistingMedia();
     }
 
     public function updatedFormAiAnalysisEnabled($value)
@@ -304,12 +362,15 @@ class MarketingCampaignPostShow extends Component
     {
         $this->nextcloud_media_kind = $mediaKind;
         $this->showNextcloudPicker = true;
-        $this->pending_nextcloud_files = $this->selected_nextcloud_files;
+        $this->pending_nextcloud_files = [];
 
         $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
-        $startPath = $service->mediaRoot('photo');
-        if ($this->campaign->client && !empty($this->campaign->client->nextcloud_photos_path)) {
-            $startPath = $this->campaign->client->nextcloud_photos_path;
+        $startPath = $service->mediaRoot($mediaKind);
+        if ($this->campaign->client) {
+            $clientPath = $mediaKind === 'video' ? $this->campaign->client->nextcloud_videos_path : $this->campaign->client->nextcloud_photos_path;
+            if (!empty($clientPath)) {
+                $startPath = $clientPath;
+            }
         }
         $this->browseNextcloud($startPath);
     }
@@ -350,9 +411,31 @@ class MarketingCampaignPostShow extends Component
             return;
         }
 
-        $this->selected_nextcloud_files = $this->pending_nextcloud_files;
-        $this->form['nextcloud_path'] = $this->selected_nextcloud_files[0]['path'];
-        $this->form['media_source'] = 'nextcloud';
+        $alreadySelectedPaths = collect($this->selected_media_items)
+            ->where('source', 'nextcloud')
+            ->pluck('nextcloud_path')
+            ->all();
+
+        foreach ($this->pending_nextcloud_files as $ncFile) {
+            if (in_array($ncFile['path'], $alreadySelectedPaths, true)) {
+                continue;
+            }
+
+            if (count($this->selected_media_items) >= 10) {
+                $this->addError('form.nextcloud_path', 'Hai raggiunto il limite massimo di 10 media.');
+                break;
+            }
+            $isVid = !empty($ncFile['mime']) ? str_starts_with($ncFile['mime'], 'video/') : (preg_match('/\.(mp4|mov|m4v|webm|avi)$/i', $ncFile['name'] ?? '') === 1);
+            $this->selected_media_items[] = [
+                'uid' => 'nc:' . uniqid(),
+                'source' => 'nextcloud',
+                'type' => $isVid ? 'video' : 'image',
+                'name' => $ncFile['name'] ?? basename($ncFile['path']),
+                'nextcloud_path' => $ncFile['path'],
+            ];
+        }
+
+        $this->syncLegacyPropertiesFromUnified();
 
         $this->showNextcloudPicker = false;
         $this->pending_nextcloud_files = [];
@@ -443,39 +526,32 @@ class MarketingCampaignPostShow extends Component
             ->values()
             ->all();
     }
+    public function getPendingMediaCountProperty(): int
+    {
+        return collect($this->selected_media_items)->filter(fn($i) => $i['source'] !== 'existing')->count();
+    }
+
+    public function hasVideoMedia(): bool
+    {
+        foreach ($this->selected_media_items as $item) {
+            if ($item['type'] === 'video') return true;
+        }
+        return false;
+    }
+
+    public function hasPhotoMedia(): bool
+    {
+        foreach ($this->selected_media_items as $item) {
+            if ($item['type'] === 'image') return true;
+        }
+        return false;
+    }
 
     private function validateReelMedia(): bool
     {
         if ($this->form['content_type'] !== 'reel') return true;
         
-        $hasVideo = false;
-        
-        foreach ($this->existing_media as $media) {
-            if (\App\Models\MarketingCampaignPostMedia::detectMediaType($media['mime_type'] ?? 'image/jpeg') === 'video') {
-                $hasVideo = true;
-                break;
-            }
-        }
-        
-        if (!$hasVideo && $this->form['media_source'] === 'local' && !empty($this->media)) {
-            foreach ($this->media as $uploadedFile) {
-                if (\App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()) === 'video') {
-                    $hasVideo = true;
-                    break;
-                }
-            }
-        }
-        
-        if (!$hasVideo && $this->form['media_source'] === 'nextcloud' && !empty($this->selected_nextcloud_files)) {
-            foreach ($this->selected_nextcloud_files as $ncFile) {
-                if (\App\Models\MarketingCampaignPostMedia::detectMediaType($ncFile['mime'] ?? 'image/jpeg') === 'video') {
-                    $hasVideo = true;
-                    break;
-                }
-            }
-        }
-
-        if (!$hasVideo) {
+        if (!$this->hasVideoMedia()) {
             $this->addError('media', 'Un Reel richiede almeno un file video.');
             return false;
         }
@@ -483,23 +559,44 @@ class MarketingCampaignPostShow extends Component
         return true;
     }
 
+    private function hasPendingLocalMedia(): bool
+    {
+        return collect($this->selected_media_items)
+            ->contains(fn ($item) => ($item['source'] ?? null) === 'local_pending');
+    }
+
     private function buildPostDataAndStoredMedia(array &$data): bool
     {
         $storedMedia = [];
-        $baseSortOrder = collect($this->existing_media)->max('sort_order');
-        $baseSortOrder = $baseSortOrder !== null ? $baseSortOrder + 1 : 0;
+        $baseSortOrder = 0; // We just re-write sort_orders
 
-        $totalCount = count($this->existing_media) + 
-            ($data['media_source'] === 'local' ? (is_array($this->media) ? count($this->media) : 0) : 0) + 
-            ($data['media_source'] === 'nextcloud' ? count($this->selected_nextcloud_files) : 0);
+        $totalCount = count($this->selected_media_items);
             
         if ($totalCount > 10) {
             $this->addError('media', 'Il totale dei media non può superare i 10 elementi.');
             return false;
         }
 
-        if ($data['media_source'] === 'local' && !empty($this->media)) {
-            foreach ($this->media as $index => $uploadedFile) {
+        $service = null;
+        if (collect($this->selected_media_items)->contains('source', 'nextcloud')) {
+            $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+        }
+
+        foreach ($this->selected_media_items as $index => $item) {
+            if (($item['source'] ?? null) === 'local_pending') {
+                $this->addError('media', 'Uno o più file locali non hanno ancora terminato il caricamento.');
+                return false;
+            }
+
+            if ($item['source'] === 'existing') {
+                // sort_order is already synced, nothing to insert
+                continue;
+            }
+
+            if ($item['source'] === 'local') {
+                $uploadedFile = $this->all_local_media[$item['local_index']] ?? null;
+                if (!$uploadedFile) continue;
+
                 $filename = \Illuminate\Support\Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME))
                     . '_' . time() . '_' . $index . '.' . $uploadedFile->getClientOriginalExtension();
                 
@@ -508,31 +605,29 @@ class MarketingCampaignPostShow extends Component
                 $storedMedia[] = [
                     'marketing_campaign_post_id' => $this->post->id,
                     'source' => 'local',
+                    'disk' => 'public',
                     'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()),
                     'path' => $path,
                     'original_name' => $uploadedFile->getClientOriginalName(),
                     'mime_type' => $uploadedFile->getMimeType(),
                     'sort_order' => $baseSortOrder + $index,
                 ];
-            }
-        } elseif ($data['media_source'] === 'nextcloud' && !empty($this->selected_nextcloud_files)) {
-            $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
-            foreach ($this->selected_nextcloud_files as $index => $ncFile) {
-                $shareUrl = $service->createPublicShare($ncFile['path']);
+            } elseif ($item['source'] === 'nextcloud') {
+                $shareUrl = $service->createPublicShare($item['nextcloud_path']);
                 
                 if (!$shareUrl) {
-                    $this->addError('form.nextcloud_path', "Impossibile creare link pubblico per: {$ncFile['name']}");
+                    $this->addError('form.nextcloud_path', "Impossibile creare link pubblico per: {$item['name']}");
                     return false;
                 }
 
                 $storedMedia[] = [
                     'marketing_campaign_post_id' => $this->post->id,
                     'source' => 'nextcloud',
-                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($ncFile['mime'] ?? 'image/jpeg'),
-                    'nextcloud_path' => $ncFile['path'],
-                    'original_name' => $ncFile['name'] ?? basename($ncFile['path']),
-                    'mime_type' => $ncFile['mime'] ?? null,
-                    'nextcloud_file_id' => $ncFile['file_id'] ?? null,
+                    'media_type' => $item['type'] === 'video' ? 'video' : 'image',
+                    'nextcloud_path' => $item['nextcloud_path'],
+                    'original_name' => $item['name'],
+                    'mime_type' => null,
+                    'nextcloud_file_id' => null,
                     'nextcloud_share_url' => $shareUrl,
                     'sort_order' => $baseSortOrder + $index,
                 ];
@@ -543,7 +638,8 @@ class MarketingCampaignPostShow extends Component
             \App\Models\MarketingCampaignPostMedia::insert($storedMedia);
         }
 
-        $this->loadExistingMedia();
+        $this->selected_media_items = [];
+        $this->loadExistingMedia(false);
         $this->syncLegacyMediaFields();
 
         // Pulizia state per permettere ulteriori modifiche senza duplicati
@@ -557,6 +653,11 @@ class MarketingCampaignPostShow extends Component
 
     public function savePost()
     {
+        if ($this->hasPendingLocalMedia()) {
+            $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+            return;
+        }
+
         $this->validate();
 
         if (!$this->validateReelMedia()) {
@@ -580,34 +681,43 @@ class MarketingCampaignPostShow extends Component
         $data['marketing_campaign_id'] = $this->campaign->id;
 
         $this->authorize('update', $this->post);
-        $this->post->update($data); // first save normal data
 
-        if (!$this->buildPostDataAndStoredMedia($data)) {
-            return;
-        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            if (!$this->buildPostDataAndStoredMedia($data)) {
+                throw new \RuntimeException('Errore durante il salvataggio dei media.');
+            }
 
-        if ($this->post->currentVersion) {
-            $mediaPayload = \App\Domain\Social\Builders\MarketingCampaignPostMediaPayloadBuilder::build($this->post);
-            $imageUrls = collect($mediaPayload['media_items'] ?? [])
-                ->pluck('url')
-                ->filter()
-                ->values()
-                ->all();
+            $this->post->update($data); // save normal data
 
-            $this->post->currentVersion->update([
-                'title' => $data['title'],
-                'caption' => $data['description'],
-                'image_url' => $imageUrls[0] ?? null,
-                'image_urls' => $imageUrls,
-            ]);
-        }
+            if ($this->post->currentVersion) {
+                $mediaPayload = \App\Domain\Social\Builders\MarketingCampaignPostMediaPayloadBuilder::build($this->post);
+                $imageUrls = collect($mediaPayload['media_items'] ?? [])
+                    ->pluck('url')
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                $this->post->currentVersion->update([
+                    'title' => $data['title'],
+                    'caption' => $data['description'],
+                    'image_url' => $imageUrls[0] ?? null,
+                    'image_urls' => $imageUrls,
+                ]);
+            }
+        });
 
         $this->dispatch('post-saved');
         $this->refreshPost();
+        $this->refreshPreflight();
     }
 
     public function saveAsManualVersion(): void
     {
+        if ($this->hasPendingLocalMedia()) {
+            $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+            return;
+        }
+
         $this->authorize('update', $this->post);
 
         if ($this->post->current_version_id) {
@@ -635,14 +745,16 @@ class MarketingCampaignPostShow extends Component
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
 
-        $this->post->update($data);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            if (!$this->buildPostDataAndStoredMedia($data)) {
+                throw new \RuntimeException('Errore durante il salvataggio dei media.');
+            }
 
-        if (!$this->buildPostDataAndStoredMedia($data)) {
-            return;
-        }
+            $this->post->update($data);
 
-        app(\App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction::class)
-            ->execute($this->post->fresh(), auth()->user());
+            app(\App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction::class)
+                ->execute($this->post->fresh(), auth()->user());
+        });
 
         $this->post->refresh();
         $this->dispatch('post-saved');
@@ -651,8 +763,14 @@ class MarketingCampaignPostShow extends Component
         session()->flash('success', 'Post salvato come versione pronta senza Sody.');
     }
 
-    public function saveAndSubmitToN8n(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction $submitAction, $generationType = 'full')
+    public function saveAndSubmitToN8n(string $generationType = 'full')
     {
+        $submitAction = app(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction::class);
+        if ($this->hasPendingLocalMedia()) {
+            $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+            return;
+        }
+
         $this->validate();
 
         if (!$this->validateReelMedia()) {
@@ -671,11 +789,14 @@ class MarketingCampaignPostShow extends Component
         $data['status'] = MarketingCampaignPostStatus::PendingN8n->value;
 
         $this->authorize('update', $this->post);
-        $this->post->update($data);
 
-        if (!$this->buildPostDataAndStoredMedia($data)) {
-            return;
-        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            if (!$this->buildPostDataAndStoredMedia($data)) {
+                throw new \RuntimeException('Errore durante il salvataggio dei media.');
+            }
+
+            $this->post->update($data);
+        });
 
         $this->showCancelRegenerationButton = false;
         $this->regeneration_timeout = false;
@@ -790,16 +911,35 @@ class MarketingCampaignPostShow extends Component
 
         if (!in_array($this->post->status, [
             MarketingCampaignPostStatus::Approved,
-            MarketingCampaignPostStatus::ClientApproved,
             MarketingCampaignPostStatus::Failed,
-            MarketingCampaignPostStatus::NeedsManualReview,
-            MarketingCampaignPostStatus::PartialSuccess,
         ])) {
             $this->addError('post', 'Stato del post non compatibile con la pubblicazione.');
             return;
         }
 
         try {
+            if (in_array($platform, [\App\Enums\Social\SocialPlatform::Facebook->value, \App\Enums\Social\SocialPlatform::Instagram->value])) {
+                $preflightService = app(\App\Domain\Social\Services\MetaPreflightService::class);
+                $account = $this->post->campaign->client->socialAccountFor($platform);
+                if ($account) {
+                    $preflight = $preflightService->runPreflight($this->post, $account);
+                    if (!$preflight->isPass) {
+                        $this->addError('post', 'Preflight fallito: ' . implode(', ', $preflight->errors));
+                        return;
+                    }
+                }
+            } elseif ($platform === \App\Enums\Social\SocialPlatform::Tiktok->value) {
+                $preflightService = app(\App\Domain\Social\Services\TikTokPreflightService::class);
+                $account = $this->post->campaign->client->socialAccountFor($platform);
+                if ($account) {
+                    $preflight = $preflightService->runPreflight($this->post, $account);
+                    if (!$preflight->isPass) {
+                        $this->addError('post', 'TikTok Preflight fallito: ' . implode(', ', $preflight->errors));
+                        return;
+                    }
+                }
+            }
+
             // Dispatch async job
             \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $platform);
             
@@ -818,10 +958,10 @@ class MarketingCampaignPostShow extends Component
         $publication = \App\Models\MarketingCampaignPostPublication::find($publicationId);
         if (!$publication) return;
 
-        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === \App\Enums\Social\PublicationStatus::NeedsManualReview) {
+        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === \App\Enums\Social\PublicationStatus::Failed) {
             $publication->update([
-                'status' => \App\Enums\Social\PublicationStatus::Superseded->value,
-                'error_message' => 'Dismesso (sostituito da nuovo tentativo)'
+                'status' => \App\Enums\Social\PublicationStatus::Cancelled->value,
+                'error_message' => 'Dismesso (sostituito da nuovo tentativo)',
             ]);
             
             app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
@@ -840,7 +980,8 @@ class MarketingCampaignPostShow extends Component
         $this->authorize('update', clone $this->post);
 
         $publication = \App\Models\MarketingCampaignPostPublication::find($publicationId);
-        if ($publication && $publication->status === \App\Enums\Social\PublicationStatus::NeedsManualReview) {
+        // forceFailPublication is redundant if already failed, but kept for compatibility
+        if ($publication && $publication->status === \App\Enums\Social\PublicationStatus::Failed) {
             $publication->update(['status' => \App\Enums\Social\PublicationStatus::Failed->value]);
             
             app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
@@ -895,5 +1036,137 @@ class MarketingCampaignPostShow extends Component
     {
         return view('livewire.social.marketing-campaigns.marketing-campaign-post-show')
             ->layout('layouts.app');
+    }
+
+    public function refreshPreflight(): void
+    {
+        $this->preflightResults = [];
+        $platforms = [
+            \App\Enums\Social\SocialPlatform::Instagram->value,
+            \App\Enums\Social\SocialPlatform::Facebook->value,
+            \App\Enums\Social\SocialPlatform::Tiktok->value,
+        ];
+        foreach ($platforms as $platform) {
+            $account = $this->post->campaign->client->socialAccountFor($platform);
+            if (!$account) {
+                $this->preflightResults[$platform] = null;
+                continue;
+            }
+
+            if (in_array($platform, [\App\Enums\Social\SocialPlatform::Facebook->value, \App\Enums\Social\SocialPlatform::Instagram->value])) {
+                $this->preflightResults[$platform] = app(\App\Domain\Social\Services\MetaPreflightService::class)->runPreflight($this->post, $account);
+            } elseif ($platform === \App\Enums\Social\SocialPlatform::Tiktok->value) {
+                $this->preflightResults[$platform] = app(\App\Domain\Social\Services\TikTokPreflightService::class)->runPreflight($this->post, $account);
+            }
+        }
+    }
+
+    public function getPreflightResult(string $platform): ?\App\Domain\Social\Services\PreflightResult
+    {
+        return $this->preflightResults[$platform] ?? null;
+    }
+
+    public function registerPendingLocalMedia(array $filesMeta): void
+    {
+        foreach ($filesMeta as $meta) {
+            if (count($this->selected_media_items) >= 10) {
+                $this->addError('media', 'Hai raggiunto il limite massimo di 10 media.');
+                break;
+            }
+            $this->selected_media_items[] = [
+                'uid' => $meta['uid'],
+                'source' => 'local_pending',
+                'type' => $meta['type'],
+                'name' => $meta['name'],
+                'local_index' => null,
+            ];
+        }
+    }
+
+    public function updatedMedia()
+    {
+        if (!is_array($this->media)) return;
+
+        foreach ($this->media as $uploadedFile) {
+            $this->all_local_media[] = $uploadedFile;
+            $localIndex = count($this->all_local_media) - 1;
+
+            $pendingIndex = collect($this->selected_media_items)
+                ->search(fn ($item) => ($item['source'] ?? null) === 'local_pending');
+
+            if ($pendingIndex !== false) {
+                $this->selected_media_items[$pendingIndex]['source'] = 'local';
+                $this->selected_media_items[$pendingIndex]['local_index'] = $localIndex;
+                continue;
+            }
+
+            $isVid = \Illuminate\Support\Str::startsWith($uploadedFile->getMimeType(), 'video/');
+            $this->selected_media_items[] = [
+                'uid' => 'local:' . uniqid(),
+                'source' => 'local',
+                'type' => $isVid ? 'video' : 'image',
+                'name' => $uploadedFile->getClientOriginalName(),
+                'local_index' => $localIndex,
+            ];
+        }
+
+        $this->media = []; 
+    }
+
+    #[Computed]
+    public function getPreviewMediaProperty(): array
+    {
+        return collect($this->selected_media_items)
+            ->map(function ($item) {
+                if ($item['source'] === 'existing') {
+                    return [
+                        'uid' => $item['uid'],
+                        'type' => $item['type'],
+                        'source' => 'existing',
+                        'url' => $item['preview_url'],
+                    ];
+                }
+
+                if ($item['source'] === 'local') {
+                    $m = $this->all_local_media[$item['local_index']] ?? null;
+                    if (!$m) return null;
+                    $isVid = $item['type'] === 'video';
+                    $url = method_exists($m, 'temporaryUrl') ? ($isVid ? $this->temporaryVideoPreviewUrl($m) . '#t=0.001' : $m->temporaryUrl()) : '';
+                    return $url ? ['uid' => $item['uid'], 'type' => $item['type'], 'url' => $url, 'source' => 'local'] : null;
+                }
+                
+                if ($item['source'] === 'nextcloud') {
+                    $isVid = $item['type'] === 'video';
+                    return [
+                        'uid' => $item['uid'],
+                        'type' => $item['type'],
+                        'source' => 'nextcloud',
+                        'url' => $isVid
+                            ? route('nextcloud.download', ['path' => $item['nextcloud_path']]) . '#t=0.001'
+                            : route('nextcloud.preview', ['path' => $item['nextcloud_path'], 'w' => 600, 'h' => 600]),
+                    ];
+                }
+                
+                if ($item['source'] === 'local_pending') {
+                    return [
+                        'uid' => $item['uid'],
+                        'type' => $item['type'],
+                        'source' => 'local_pending',
+                        'url' => null,
+                    ];
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    public function temporaryVideoPreviewUrl(\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string
+    {
+        return \Illuminate\Support\Facades\URL::signedRoute('social.temporary-video-preview', [
+            'filename' => $file->getFilename(),
+        ], now()->addMinutes(30));
     }
 }

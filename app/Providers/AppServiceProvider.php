@@ -27,6 +27,20 @@ class AppServiceProvider extends ServiceProvider
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
+        \Illuminate\Support\Facades\RateLimiter::for('social-media-delivery', function (\Illuminate\Http\Request $request) {
+            $media = $request->route('media');
+            $mediaId = is_object($media) ? $media->getKey() : $media;
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)->by(
+                $mediaId.'|'.$request->ip()
+            )->response(function (\Illuminate\Http\Request $request, array $headers) use ($mediaId) {
+                \Illuminate\Support\Facades\Log::warning('Rate limit superato per Provider Delivery', [
+                    'media_id' => $mediaId,
+                    'ip' => $request->ip()
+                ]);
+                return response('Too Many Requests', 429, $headers);
+            });
+        });
+
         Gate::policy(Ticket::class,        TicketPolicy::class);
         Gate::policy(Invoice::class,       InvoicePolicy::class);
         Gate::policy(Payment::class,       PaymentPolicy::class);

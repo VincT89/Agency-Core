@@ -42,24 +42,35 @@ class TikTokCreatorInfoService
         $userData = $data['data']['user'] ?? [];
 
         // Qui mappiamo le "capabilities" (can_publish_video, max_video_duration, privacy_levels_supported, etc)
-        // NOTA ARCHITETTURALE: /v2/user/info/ ritorna solo i dati base. 
-        // Per ottenere i limiti di pubblicazione effettivi, nella FASE 2 dovremo chiamare 
-        // l'endpoint del Content Posting API dedicato (es. /v2/post/creator_info/query/)
-        // prima di poter riempire correttamente le capabilities reali.
+        // NOTA ARCHITETTURALE: Recuperiamo le capability reali dal Content Posting API mock
+        $contentService = app(\App\Domain\Social\TikTok\TikTokContentPostingService::class);
+        $contentInfo = [];
+        try {
+            $contentInfo = $contentService->queryCreatorInfo($account->access_token, (string) $account->id);
+        } catch (\Exception $e) {
+            Log::warning('TikTok queryCreatorInfo Failed', ['error' => $e->getMessage()]);
+        }
         
         $apiMetadata = $account->api_metadata ?? [];
         $apiMetadata['creator_info'] = $userData;
+        if (!empty($contentInfo)) {
+            $apiMetadata['content_posting_info'] = $contentInfo;
+        }
         
         $publishingCapabilities = $account->publishing_capabilities ?? [];
-        // Mappatura hardcoded parziale (il resto verrà risolto in FASE 2)
+        $publishMode = config('services.tiktok.delivery_mode', 'disabled');
+        
+        $canUploadVideoDraft = in_array('video.upload', $account->scopes ?? []);
+        $canDirectPublishVideo = in_array('video.publish', $account->scopes ?? []);
+        
         $publishingCapabilities['tiktok'] = [
-            'can_publish_video' => in_array('video.publish', $account->scopes ?? []),
-            // I seguenti campi andranno risolti con query reali nella Fase 2.
-            // Li marchiamo provvisori per non dichiarare capabilities non verificate.
-            'max_video_duration' => null, 
-            'privacy_levels_supported' => null,
+            'can_upload_video_draft' => $canUploadVideoDraft,
+            'can_direct_publish_video' => $canDirectPublishVideo,
+            'can_publish_video' => $canUploadVideoDraft || $canDirectPublishVideo, // Alias di fallback per compatibilità retroattiva
+            'max_video_duration' => $contentInfo['max_video_post_duration_sec'] ?? null, 
+            'privacy_levels_supported' => $contentInfo['privacy_level_options'] ?? null,
             'commercial_content_allowed' => null,
-            'publish_mode' => 'unknown', 
+            'delivery_mode' => $publishMode, 
         ];
 
         $account->update([
@@ -72,3 +83,4 @@ class TikTokCreatorInfoService
         return true;
     }
 }
+

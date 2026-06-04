@@ -11,7 +11,41 @@
     </x-slot:title>
   </x-page-header>
 
-  <div class="cmp-post-detail-layout relative">
+  <div class="cmp-post-detail-layout relative"
+       x-data="{
+           isUploadingLocalMedia: false,
+           localBlobUrls: {},
+           handleLocalFiles(event) {
+               const files = Array.from(event.target.files || []);
+               if (files.length === 0) return;
+
+               this.isUploadingLocalMedia = true;
+
+               const meta = files.map(file => {
+                   const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|avi)$/i.test(file.name);
+                   const uid = 'local_pending:' + Math.random().toString(36).substr(2, 9);
+                   this.localBlobUrls[uid] = URL.createObjectURL(file);
+                   return {
+                       uid: uid,
+                       name: file.name,
+                       type: isVideo ? 'video' : 'image'
+                   };
+               });
+
+               $wire.registerPendingLocalMedia(meta).then(() => {
+                   $wire.uploadMultiple(
+                       'media',
+                       files,
+                       () => { this.isUploadingLocalMedia = false; },
+                       () => { this.isUploadingLocalMedia = false; this.clearLocalPreviews(); }
+                   );
+               });
+           },
+           clearLocalPreviews() {
+               Object.values(this.localBlobUrls).forEach(url => URL.revokeObjectURL(url));
+               this.localBlobUrls = {};
+           }
+       }">
     {{-- Colonna Sinistra (2fr): Modulo di modifica --}}
     <div class="u-flex-col u-gap-lg">
       <div class="panel u-overflow-hidden">
@@ -22,10 +56,10 @@
           <form wire:submit.prevent class="form-stack">
         
         {{-- Blocco 1: Piattaforme --}}
-        <div class="panel cmp-panel-pad">
+        <div class="panel cmp-panel-pad" x-data="{ platforms: $wire.entangle('form.publishing_platforms') }">
             <div class="cmp-section-label mb-2">Piattaforme di pubblicazione</div>
             <div class="cmp-platform-options">
-                <label class="cmp-platform-option" x-bind:class="($wire.form.publishing_platforms || []).includes('instagram') ? 'active' : ''">
+                <label class="cmp-platform-option" x-bind:class="(platforms || []).includes('instagram') ? 'active' : ''">
                     <input type="checkbox" wire:model="form.publishing_platforms" value="instagram" class="hidden">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cmp-platform-icon">
                         <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -34,19 +68,58 @@
                     </svg>
                     <span class="cmp-platform-label">Instagram</span>
                 </label>
-                <label class="cmp-platform-option" x-bind:class="($wire.form.publishing_platforms || []).includes('facebook') ? 'active' : ''">
+                <label class="cmp-platform-option" x-bind:class="(platforms || []).includes('facebook') ? 'active' : ''">
                     <input type="checkbox" wire:model="form.publishing_platforms" value="facebook" class="hidden">
                     <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" class="cmp-platform-icon">
                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                     </svg>
                     <span class="cmp-platform-label">Facebook</span>
                 </label>
-                <label class="cmp-platform-option disabled" title="Piattaforma in arrivo">
-                    <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok" class="hidden" disabled>
+                @php
+                    $tiktokAccount = $campaign->client->socialAccountFor(\App\Enums\Social\SocialPlatform::Tiktok->value);
+                    $canVideo = $tiktokAccount?->canPublishTikTokVideo() ?? false;
+                    $canPhoto = $tiktokAccount?->canPublishTikTokPhoto() ?? false;
+                    
+                    $hasVideo = $this->hasVideoMedia();
+                    $hasPhoto = $this->hasPhotoMedia();
+                    
+                    $isMixed = $hasVideo && $hasPhoto;
+                    $canSelectTikTok = false;
+                    $tiktokTitle = 'TikTok';
+                    $tiktokLabelMeta = '';
+                    
+                    if (!$tiktokAccount) {
+                        $tiktokTitle = 'Account TikTok non configurato';
+                        $tiktokLabelMeta = '(Non collegato)';
+                    } elseif ($isMixed) {
+                        $tiktokTitle = 'TikTok non supporta media misti (video + foto)';
+                        $tiktokLabelMeta = '(Media misti non supportati)';
+                    } elseif ($hasVideo && !$canVideo) {
+                        $tiktokTitle = 'L\'account non è abilitato ai video TikTok';
+                        $tiktokLabelMeta = '(Video non abilitati)';
+                    } elseif ($hasPhoto && !$canPhoto) {
+                        $tiktokTitle = 'L\'account non è abilitato alle foto TikTok';
+                        $tiktokLabelMeta = '(Foto non abilitate)';
+                    } elseif (!$hasVideo && !$hasPhoto) {
+                        $tiktokTitle = 'Richiede un video o delle foto per TikTok';
+                        $tiktokLabelMeta = '(Richiede media)';
+                    } else {
+                        $canSelectTikTok = true;
+                        if ($hasPhoto) {
+                            $tiktokLabelMeta = '(Slideshow Fotografico)';
+                        }
+                    }
+                @endphp
+                <label class="cmp-platform-option {{ $canSelectTikTok ? '' : 'disabled' }}" title="{{ $tiktokTitle }}" x-bind:class="(platforms || []).includes('tiktok') ? 'active' : ''">
+                    <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok" class="hidden" {{ $canSelectTikTok ? '' : 'disabled' }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cmp-platform-icon">
                         <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
                     </svg>
-                    <span class="cmp-platform-label">TikTok <span class="u-text-meta u-text-muted">(In arrivo)</span></span>
+                    <span class="cmp-platform-label">TikTok 
+                        @if($tiktokLabelMeta)
+                            <span class="u-text-meta u-text-muted">{{ $tiktokLabelMeta }}</span>
+                        @endif
+                    </span>
                 </label>
             </div>
             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
@@ -104,8 +177,8 @@
 
         {{-- Box 2: Media e Copy --}}
         <div class="panel cmp-panel-pad u-mb-md">
-            {{-- Blocco 4: Preview Media --}}
-            @if ($media && count($media) > 0)
+            {{-- Blocco 4: Preview Media Unificata --}}
+            @if (count($selected_media_items) > 0)
             <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md"
                  x-data="{
                     draggingIndex: null,
@@ -114,15 +187,15 @@
                     dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
                     drop(index) {
                         if (this.draggingIndex !== null && this.draggingIndex !== index) {
-                            $wire.reorderLocalMedia(this.draggingIndex, index);
+                            $wire.reorderSelectedMedia(this.draggingIndex, index);
                         }
                         this.draggingIndex = null;
                         this.dropIndex = null;
                     }
                  }">
-                @foreach($media as $index => $m)
+                @foreach($selected_media_items as $index => $item)
                 <div class="cmp-media-preview-item"
-                     wire:key="media-{{ $index }}"
+                     wire:key="media-{{ $item['uid'] }}"
                      draggable="true"
                      @dragstart="dragStart({{ $index }})"
                      @dragover="dragOver($event, {{ $index }})"
@@ -130,8 +203,39 @@
                      @dragend="draggingIndex = null; dropIndex = null"
                      :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
                     <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i></div>
-                    <img src="{{ $m->temporaryUrl() }}" class="cmp-media-preview-img cmp-local-preview-img">
-                    <div class="cmp-media-preview-label">Upload {{ $index + 1 }}</div>
+                    
+                    @if($item['source'] === 'local_pending')
+                        <template x-if="localBlobUrls['{{ $item['uid'] }}']">
+                            <div class="u-h-full u-w-full">
+                                <template x-if="'{{ $item['type'] }}' === 'video'">
+                                    <video :src="localBlobUrls['{{ $item['uid'] }}']" class="cmp-media-preview-img cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                                </template>
+                                <template x-if="'{{ $item['type'] }}' === 'image'">
+                                    <img :src="localBlobUrls['{{ $item['uid'] }}']" class="cmp-media-preview-img cmp-local-preview-img">
+                                </template>
+                            </div>
+                        </template>
+                    @elseif($item['source'] === 'local')
+                        @php
+                            $m = $this->all_local_media[$item['local_index']] ?? null;
+                        @endphp
+                        @if($m)
+                            @if(\Illuminate\Support\Str::startsWith($m->getMimeType(), 'video/'))
+                                <video src="{{ $this->temporaryVideoPreviewUrl($m) }}#t=0.001" class="cmp-media-preview-img cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                            @else
+                                <img src="{{ $m->temporaryUrl() }}" class="cmp-media-preview-img cmp-local-preview-img">
+                            @endif
+                        @endif
+                    @elseif($item['source'] === 'nextcloud')
+                        @if($item['type'] === 'video')
+                            <video src="{{ route('nextcloud.download', ['path' => $item['nextcloud_path']]) }}#t=0.001" class="cmp-nc-preview-img" controls muted playsinline preload="metadata"></video>
+                        @else
+                            <img src="{{ route('nextcloud.preview', ['path' => $item['nextcloud_path'], 'w' => 150, 'h' => 150]) }}" class="cmp-nc-preview-img">
+                        @endif
+                    @endif
+
+                    <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="{{ $item['name'] }}">{{ $index + 1 }}. {{ $item['name'] }}</div>
+                    <button type="button" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
                 </div>
                 @endforeach
             </div>
@@ -152,44 +256,32 @@
             </div>
 
             @if($form['media_source'] === 'local')
-                <input type="file" wire:model="media" multiple class="form-in p-2 text-sm" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
-                <div wire:loading wire:target="media" class="text-xs text-blue-500 mt-1">Caricamento anteprima...</div>
-                <div class="text-xs text-gray-500 mt-1 u-mb-md">Puoi selezionare più file (max 10 in totale).</div>
+                <div>
+                    <input
+                        type="file"
+                        multiple
+                        class="form-in p-2 text-sm"
+                        accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                        x-on:change="handleLocalFiles($event)"
+                        x-on:livewire-upload-error="clearLocalPreviews()"
+                    >
+
+                    <div class="u-mt-sm u-mb-md">
+                        <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
+                            <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Upload in background (Livewire)...
+                        </div>
+                        <div wire:loading.remove wire:target="media" class="u-bg-gray-50 u-border u-border-line u-p-sm u-flex u-gap-sm" style="border-radius: 6px;" x-show="Object.keys(localBlobUrls).length === 0">
+                            <i data-lucide="info" class="u-icon-sm u-text-muted u-mt-xs"></i>
+                            <div class="u-text-meta u-text-muted">
+                                Puoi selezionare più file (max 10 in totale). <br>
+                                <strong class="u-text-heading">MP4 H.264 consigliato.</strong> Formati come HEVC/H.265 potrebbero non mostrare l'anteprima o fallire la pubblicazione sui social.
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 @error('media') <span class="form-err">{{ $message }}</span> @enderror
             @else
                 {{-- Nextcloud Section --}}
-                @if(!empty($selected_nextcloud_files))
-                    <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-sm"
-                         x-data="{
-                            draggingIndex: null,
-                            dropIndex: null,
-                            dragStart(index) { this.draggingIndex = index; },
-                            dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
-                            drop(index) {
-                                if (this.draggingIndex !== null && this.draggingIndex !== index) {
-                                    $wire.reorderNextcloudMedia(this.draggingIndex, index);
-                                }
-                                this.draggingIndex = null;
-                                this.dropIndex = null;
-                            }
-                         }">
-                        @foreach($selected_nextcloud_files as $index => $ncFile)
-                            <div class="cmp-nc-preview-item"
-                                 wire:key="nc-{{ $index }}"
-                                 draggable="true"
-                                 @dragstart="dragStart({{ $index }})"
-                                 @dragover="dragOver($event, {{ $index }})"
-                                 @drop="drop({{ $index }})"
-                                 @dragend="draggingIndex = null; dropIndex = null"
-                                 :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
-                                <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i></div>
-                                <img src="{{ route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 150, 'h' => 150]) }}" class="cmp-nc-preview-img">
-                                <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="{{ $ncFile['name'] }}">{{ $index + 1 }}. {{ $ncFile['name'] }}</div>
-                                <button type="button" wire:click="removeNextcloudFile('{{ addslashes($ncFile['path']) }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
 
                 <div class="form-g u-mb-md">
                     <label class="form-lbl cmp-lbl-sm">Sfoglia Cartelle Nextcloud</label>
@@ -306,25 +398,27 @@
             <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-s">Annulla</a>
             
             @if($form['ai_analysis_enabled'])
-                <button type="button" wire:click="save" class="btn btn-s">
+                <button type="button" wire:click="save" class="btn btn-s" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                   <span wire:loading.remove wire:target="save">Salva Bozza</span>
                   <span wire:loading wire:target="save">Salvataggio...</span>
                 </button>
-                <button type="button" wire:click="saveAndSubmitToN8n" class="btn btn-p u-flex-center u-gap-xs">
+                <button type="button" wire:click="saveAndSubmitToN8n" class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                   <i data-lucide="sparkles" class="u-icon-md"></i>
                   <span wire:loading.remove wire:target="saveAndSubmitToN8n">Salva e Invia a Sody</span>
                   <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
                 </button>
             @else
-                <button type="button" wire:click="save" class="btn btn-s u-flex-center u-gap-xs">
+                <button type="button" wire:click="save" class="btn btn-s u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                     <i data-lucide="save" class="u-icon-md"></i>
-                    <span wire:loading.remove wire:target="save">Salva Post</span>
+                    <span wire:loading.remove wire:target="save">Salva Bozza</span>
                     <span wire:loading wire:target="save">Salvataggio...</span>
                 </button>
 
                 <button type="button"
                     x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))"
                     wire:click="saveAndSubmitToN8n('caption')"
+                    wire:loading.attr="disabled"
+                    :disabled="isUploadingLocalMedia"
                     class="btn btn-p u-flex-center u-gap-xs">
                     <i data-lucide="type" class="u-icon-md"></i>
                     <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
@@ -358,41 +452,52 @@
                     </div>
 
                     @php
-                        $previewMedia = [];
-                        if ($form['media_source'] === 'local' && is_array($media)) {
-                            foreach($media as $m) {
-                                if (!$m) continue;
-                                $previewMedia[] = [
-                                    'type' => \Illuminate\Support\Str::startsWith($m->getMimeType(), 'video/') ? 'video' : 'image',
-                                    'url' => method_exists($m, 'temporaryUrl') ? $m->temporaryUrl() : ''
-                                ];
-                            }
-                        } elseif ($form['media_source'] === 'nextcloud' && !empty($selected_nextcloud_files)) {
-                            foreach($selected_nextcloud_files as $ncFile) {
-                                $previewMedia[] = [
-                                    'type' => ($ncFile['is_image'] ?? true) ? 'image' : 'video',
-                                    'url' => route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 600, 'h' => 600])
-                                ];
-                            }
-                        }
+                        $previewMedia = $this->previewMedia;
                     @endphp
 
-                    <div class="cmp-ig-preview-media" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ min(count($previewMedia), 10) }} }" @endif>
-                        @if(count($previewMedia) > 0)
+                    <div class="cmp-ig-preview-media">
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ min(count($previewMedia), 10) }} }" @endif>
+                            @if(count($previewMedia) > 0)
                             @if(count($previewMedia) == 1)
-                                @if($previewMedia[0]['type'] === 'video')
-                                    <video src="{{ $previewMedia[0]['url'] }}" controls></video>
+                                @if($previewMedia[0]['source'] === 'local_pending')
+                                    <template x-if="localBlobUrls['{{ $previewMedia[0]['uid'] }}']">
+                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                            <template x-if="'{{ $previewMedia[0]['type'] }}' === 'video'">
+                                                <video :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" controls muted playsinline preload="metadata" class="cmp-ig-preview-local-media"></video>
+                                            </template>
+                                            <template x-if="'{{ $previewMedia[0]['type'] }}' === 'image'">
+                                                <img :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" class="cmp-ig-preview-local-media">
+                                            </template>
+                                        </div>
+                                    </template>
                                 @else
-                                    <img src="{{ $previewMedia[0]['url'] }}" alt="Preview Media">
+                                    @if($previewMedia[0]['type'] === 'video')
+                                        <video src="{{ $previewMedia[0]['url'] }}" controls muted playsinline preload="metadata"></video>
+                                    @else
+                                        <img src="{{ $previewMedia[0]['url'] }}" alt="Preview Media">
+                                    @endif
                                 @endif
                             @else
-                                <div class="cmp-carousel-inner" :data-slide="currentSlide">
+                                <div class="cmp-carousel-inner" :style="`transform: translateX(-${currentSlide * 100}%); display: flex; transition: transform 0.3s ease;`">
                                     @foreach($previewMedia as $index => $item)
-                                        <div class="cmp-carousel-item">
-                                            @if($item['type'] === 'video')
-                                                <video src="{{ $item['url'] }}" controls></video>
+                                        <div class="cmp-carousel-item" style="flex: 0 0 100%; width: 100%;">
+                                            @if($item['source'] === 'local_pending')
+                                                <template x-if="localBlobUrls['{{ $item['uid'] }}']">
+                                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                                        <template x-if="'{{ $item['type'] }}' === 'video'">
+                                                            <video :src="localBlobUrls['{{ $item['uid'] }}']" controls muted playsinline preload="metadata"></video>
+                                                        </template>
+                                                        <template x-if="'{{ $item['type'] }}' === 'image'">
+                                                            <img :src="localBlobUrls['{{ $item['uid'] }}']" alt="Preview Media {{ $index + 1 }}">
+                                                        </template>
+                                                    </div>
+                                                </template>
                                             @else
-                                                <img src="{{ $item['url'] }}" alt="Preview Media {{ $index + 1 }}">
+                                                @if($item['type'] === 'video')
+                                                    <video src="{{ $item['url'] }}" controls muted playsinline preload="metadata"></video>
+                                                @else
+                                                    <img src="{{ $item['url'] }}" alt="Preview Media {{ $index + 1 }}">
+                                                @endif
                                             @endif
                                         </div>
                                     @endforeach
@@ -415,6 +520,7 @@
                                 <div class="u-mt-xs">Nessun media</div>
                             </div>
                         @endif
+                        </div>
                     </div>
 
                     <div class="cmp-ig-preview-actions">
@@ -474,7 +580,7 @@
 
 
                   @forelse($nextcloud_files as $ncFile)
-                      @if(!$ncFile['is_dir'] && !($ncFile['is_image'] ?? false))
+                      @if(!$ncFile['is_dir'] && !(($ncFile['is_image'] ?? false) || ($ncFile['is_video'] ?? false)))
                           @continue
                       @endif
 

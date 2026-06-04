@@ -15,5 +15,5 @@ interface SocialPublisherInterface
     /**
      * Verifica se i requisiti per la pubblicazione (token, permessi) sono soddisfatti.
      */
-    public function verifyConfiguration(ClientSocialAccount $account): bool;
+    public function verifyAccountCapabilities(ClientSocialAccount $account): bool;
 }

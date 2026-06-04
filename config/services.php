@@ -65,6 +65,12 @@ return [
         'client_secret' => env('TIKTOK_CLIENT_SECRET'),
         'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
         'api_base' => env('TIKTOK_API_BASE', 'https://open.tiktokapis.com'),
+        'delivery_mode' => env('TIKTOK_DELIVERY_MODE', 'disabled'),
+        'upload_mode' => env('TIKTOK_UPLOAD_MODE', 'PullFromUrl'),
+        'max_photo_count' => env('TIKTOK_MAX_PHOTO_COUNT', 10),
+        'media_url_ttl' => env('TIKTOK_MEDIA_URL_TTL', 1440),
+        'enable_photo_mode' => env('TIKTOK_ENABLE_PHOTO_MODE', false),
+        'mock_publishing' => env('TIKTOK_MOCK_PUBLISHING', true),
     ],
 
     'nextcloud' => [
@@ -78,3 +84,4 @@ return [
     ],
 
 ];
+

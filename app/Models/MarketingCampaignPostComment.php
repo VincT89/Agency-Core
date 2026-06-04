@@ -6,7 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class MarketingCampaignPostComment extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'marketing_campaign_post_id',
+        'marketing_campaign_post_version_id',
+        'user_id',
+        'client_name',
+        'client_email',
+        'body',
+        'source',
+        'type',
+        'visibility',
+    ];
 
     protected $casts = [
         'visibility' => \App\Enums\Social\MarketingCampaignPostCommentVisibility::class,

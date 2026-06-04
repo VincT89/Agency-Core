@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class MarketingCampaignPost extends Model
 {
+    use HasFactory;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -167,5 +170,15 @@ class MarketingCampaignPost extends Model
     public function publications()
     {
         return $this->hasMany(MarketingCampaignPostPublication::class, 'marketing_campaign_post_id');
+    }
+
+    public function getResolvedCaptionAttribute(): string
+    {
+        return $this->currentVersion?->caption ?? $this->description ?? '';
+    }
+
+    public function getResolvedTitleAttribute(): string
+    {
+        return $this->currentVersion?->title ?? $this->title ?? '';
     }
 }

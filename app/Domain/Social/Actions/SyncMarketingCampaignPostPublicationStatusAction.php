@@ -11,11 +11,14 @@ class SyncMarketingCampaignPostPublicationStatusAction
     public function execute(MarketingCampaignPost $post): void
     {
         $post->loadMissing('publications');
-        $publications = $post->publications;
+        // Prendi solo l'ultima pubblicazione per ciascuna piattaforma
+        $latestPerPlatform = $post->publications
+            ->sortByDesc('id')
+            ->unique('platform')
+            ->values();
 
-        $activePublications = $publications->filter(fn($p) => !in_array($p->status instanceof PublicationStatus ? $p->status->value : $p->status, [
-            PublicationStatus::Abandoned->value,
-            PublicationStatus::Superseded->value,
+        $activePublications = $latestPerPlatform->filter(fn($p) => !in_array($p->status instanceof PublicationStatus ? $p->status->value : $p->status, [
+            PublicationStatus::Cancelled->value,
         ]));
 
         if ($activePublications->isEmpty()) {
@@ -29,11 +32,10 @@ class SyncMarketingCampaignPostPublicationStatusAction
 
         $hasPublished = in_array(PublicationStatus::Published->value, $statuses);
         $hasFailed = in_array(PublicationStatus::Failed->value, $statuses);
-        $hasNeedsManualReview = in_array(PublicationStatus::NeedsManualReview->value, $statuses);
         $hasPendingOrPublishing = in_array(PublicationStatus::Pending->value, $statuses) || in_array(PublicationStatus::Publishing->value, $statuses);
 
         $allPublished = count(array_unique($statuses)) === 1 && $statuses[0] === PublicationStatus::Published->value;
-        $allTerminalFailure = collect($statuses)->every(fn($s) => in_array($s, [PublicationStatus::Failed->value, PublicationStatus::NeedsManualReview->value]));
+        $allTerminalFailure = collect($statuses)->every(fn($s) => $s === PublicationStatus::Failed->value);
 
         $newState = null;
 
@@ -42,10 +44,8 @@ class SyncMarketingCampaignPostPublicationStatusAction
         } elseif ($hasPendingOrPublishing) {
             // Include sia il caso (1 Published + 1 Publishing) sia (Nessuna Published + 1 Publishing)
             $newState = MarketingCampaignPostStatus::Publishing;
-        } elseif ($hasPublished && ($hasFailed || $hasNeedsManualReview)) {
+        } elseif ($hasPublished && $hasFailed) {
             $newState = MarketingCampaignPostStatus::PartialSuccess;
-        } elseif ($hasNeedsManualReview && !$hasPublished) {
-            $newState = MarketingCampaignPostStatus::NeedsManualReview;
         } elseif ($allTerminalFailure) {
             $newState = MarketingCampaignPostStatus::Failed;
         } else {

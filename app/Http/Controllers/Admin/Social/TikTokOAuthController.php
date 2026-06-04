@@ -35,11 +35,17 @@ class TikTokOAuthController extends Controller
         $state = Str::random(40);
         session(['tiktok_oauth_state' => $state]);
 
-        $scopes = [
-            'user.info.basic',
-            // 'video.publish', // rimosso per FASE 1: richiediamo solo il base per testare OAuth
-            // Aggiungere gli scope di publishing nella FASE 2
-        ];
+        $scopes = ['user.info.basic'];
+        $publishMode = config('services.tiktok.delivery_mode', 'disabled');
+        
+        if ($publishMode === 'draft') {
+            $scopes[] = 'video.upload';
+        } elseif ($publishMode === 'direct') {
+            // Blocco temporaneo "Sprint 2A/2B" finché il direct publish non è approvato.
+            // Solleviamo un'eccezione esplicita o blocchiamo l'auth.
+            return redirect()->route('admin.clients.show', $account->client_id)
+                ->with('error', 'La modalità direct publish (video.publish) è disabilitata temporaneamente. Impostare delivery_mode=draft.');
+        }
 
         $query = http_build_query([
             'client_key' => $clientKey,
@@ -134,3 +140,4 @@ class TikTokOAuthController extends Controller
             ->with('success', 'Account TikTok collegato con successo e capabilities aggiornate.');
     }
 }
+

@@ -9,9 +9,12 @@ use App\Enums\Social\SocialApiProvider;
 use App\Enums\Social\SocialApiStatus;
 use App\Enums\Social\SocialConnectionMode;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ClientSocialAccount extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'client_id',
         'platform',
@@ -113,21 +116,18 @@ class ClientSocialAccount extends Model
 
     public function isReadyToPublish(): bool
     {
-        if ($this->connection_mode === SocialConnectionMode::Oauth || 
-            $this->connection_strategy === \App\Enums\Social\SocialConnectionStrategy::PlatformOauth) {
-            // Un account OAuth è "pronto a pubblicare" solo se ha un token API valido,
-            // non ha uno stato error/disconnected/revoked, e ha almeno una capability attiva.
-            if (!$this->isApiConnected() || !is_array($this->publishing_capabilities) || empty($this->publishing_capabilities)) {
+        if ($this->isApiConnected()) {
+            if ($this->isTikTok()) {
+                return $this->canPublishTikTokVideo() || $this->canPublishTikTokPhoto();
+            }
+
+            if (!is_array($this->publishing_capabilities) || empty($this->publishing_capabilities)) {
                 return false;
             }
 
-            if ($this->platform === SocialPlatform::Tiktok) {
-                return isset($this->publishing_capabilities['tiktok']['can_publish_video']) 
-                    && $this->publishing_capabilities['tiktok']['can_publish_video'] === true;
-            }
-
             foreach ($this->publishing_capabilities as $capability) {
-                if (isset($capability['enabled']) && $capability['enabled'] === true) {
+                if ((isset($capability['enabled']) && $capability['enabled'] === true) ||
+                    (isset($capability['can_publish_video']) && $capability['can_publish_video'] === true)) {
                     return true;
                 }
             }
@@ -138,6 +138,26 @@ class ClientSocialAccount extends Model
         // Per gli account manuali ci basiamo sui flag manuali impostati dall'operatore
         return $this->is_ready_to_publish 
             && $this->access_status === SocialAccessStatus::ReadyToPublish;
+    }
+
+    public function canPublishTikTokVideo(): bool
+    {
+        if (!$this->isTikTok() || !$this->isApiConnected()) {
+            return false;
+        }
+
+        return (isset($this->publishing_capabilities['tiktok']['can_upload_video_draft']) && $this->publishing_capabilities['tiktok']['can_upload_video_draft'] === true)
+            || (isset($this->publishing_capabilities['tiktok']['can_publish_video']) && $this->publishing_capabilities['tiktok']['can_publish_video'] === true);
+    }
+
+    public function canPublishTikTokPhoto(): bool
+    {
+        if (!$this->isTikTok() || !$this->isApiConnected() || config('services.tiktok.enable_photo_mode') !== true) {
+            return false;
+        }
+
+        return (isset($this->publishing_capabilities['tiktok']['can_publish_photo']) && $this->publishing_capabilities['tiktok']['can_publish_photo'] === true)
+            || (isset($this->publishing_capabilities['tiktok']['supports_photo_mode']) && $this->publishing_capabilities['tiktok']['supports_photo_mode'] === true);
     }
 
     public function verifyPublishingReadiness(): void

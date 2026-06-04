@@ -65,6 +65,8 @@ class N8nChatbotController extends Controller
             $client = $clientByPhone;
         }
 
+        abort_if(! $client, 422, 'Cliente non risolvibile dal payload.');
+
         // Step 2.5, 2.6 & 2.7 - Creazione commento, Stati post e Notifiche
         if ($validated['session_type'] === 'marketing') {
             $chatbotPost = \App\Models\Chatbot\ChatbotMarketingPost::query()

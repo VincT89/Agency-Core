@@ -18,8 +18,8 @@ class ProcessInstagramContainerAction
 
     public function execute(MarketingCampaignPostPublication $publication): void
     {
-        if (!in_array($publication->status, [PublicationStatus::Publishing, PublicationStatus::NeedsManualReview]) || !$publication->external_container_id || $publication->external_post_id) {
-            return; // Niente da riconciliare
+        if (!in_array($publication->status, [PublicationStatus::Publishing]) || $publication->external_post_id) {
+            return;
         }
 
         $account = $publication->socialAccount;
@@ -33,61 +33,125 @@ class ProcessInstagramContainerAction
         // Verifica Max Lifecycle
         $maxLifecycle = config('services.meta.instagram.max_container_lifecycle', 15);
         if ($publication->created_at->diffInMinutes(now()) > $maxLifecycle) {
-            $this->escalateToManualReview($publication, "Timeout processo Instagram Container. Superato Max Lifecycle di {$maxLifecycle} minuti.");
+            $this->failPublication($publication, "Timeout processo Instagram Container. Superato Max Lifecycle di {$maxLifecycle} minuti.");
             return;
         }
 
-        $result = $this->service->checkAndPublishContainer(
-            $publication->external_container_id,
-            $accessToken,
-            $igAccountId,
-            $publication->correlation_id
-        );
+        $publication->increment('poll_count');
 
-        if ($result->isFinished()) {
+        $statePayload = $publication->provider_state_payload ?? [];
+        $phase = $statePayload['phase'] ?? 'single_container_processing';
+
+        try {
+            if ($phase === 'carousel_children_processing') {
+                $this->processCarouselChildren($publication, $accessToken, $igAccountId, $statePayload);
+            } elseif ($phase === 'carousel_parent_processing') {
+                $this->processCarouselParent($publication, $accessToken, $igAccountId);
+            } elseif ($phase === 'single_container_processing') {
+                $this->processSingleContainer($publication, $accessToken, $igAccountId);
+            }
+        } catch (\Exception $e) {
+            if ($e instanceof ContainerProcessingException) {
+                throw $e;
+            }
+            $this->failPublication($publication, $e->getMessage());
+        }
+    }
+
+    private function processCarouselChildren(MarketingCampaignPostPublication $publication, string $accessToken, string $igAccountId, array $statePayload): void
+    {
+        $children = $statePayload['children'] ?? [];
+        $allFinished = true;
+        
+        foreach ($children as $child) {
+            $statusResult = $this->service->getContainerStatus($child['id'], $accessToken, $publication->correlation_id);
+            if ($statusResult->isPermanentError) {
+                $this->failPublication($publication, "Errore permanente in uno dei child container ({$child['id']}): {$statusResult->errorMessage}");
+                return;
+            }
+            if ($statusResult->status !== 'FINISHED') {
+                $allFinished = false;
+                break;
+            }
+        }
+
+        if ($allFinished) {
+            // Tutti i child pronti, creiamo il parent
+            $childIds = array_column($children, 'id');
+            $caption = $statePayload['caption'] ?? '';
+            
+            $parentResponse = $this->service->createCarouselParent($igAccountId, $childIds, $caption, $accessToken, $publication->correlation_id);
+            
+            $statePayload['phase'] = 'carousel_parent_processing';
+            $publication->update([
+                'external_container_id' => $parentResponse['id'],
+                'provider_state_payload' => $statePayload,
+                'meta_processing_state' => 'IN_PROGRESS'
+            ]);
+
+            throw new ContainerProcessingException("Carousel parent creato. In attesa di elaborazione...");
+        }
+
+        throw new ContainerProcessingException("Carousel children in elaborazione...");
+    }
+
+    private function processCarouselParent(MarketingCampaignPostPublication $publication, string $accessToken, string $igAccountId): void
+    {
+        $this->processSingleContainer($publication, $accessToken, $igAccountId);
+    }
+
+    private function processSingleContainer(MarketingCampaignPostPublication $publication, string $accessToken, string $igAccountId): void
+    {
+        if (!$publication->external_container_id) {
+            $this->failPublication($publication, "Manca external_container_id per processSingleContainer.");
+            return;
+        }
+
+        $statusResult = $this->service->getContainerStatus($publication->external_container_id, $accessToken, $publication->correlation_id);
+
+        if ($statusResult->isPermanentError) {
+            $this->failPublication($publication, $statusResult->errorMessage ?? "Errore permanente da Meta.", $statusResult->responseData);
+            return;
+        }
+
+        if ($statusResult->status === 'FINISHED') {
+            // Pubblichiamo il container
+            $publishResponse = $this->service->publishContainer($igAccountId, $publication->external_container_id, $accessToken, $publication->correlation_id);
+            
+            $statePayload = $publication->provider_state_payload ?? [];
+            $statePayload['phase'] = 'published';
+
             $publication->update([
                 'status' => PublicationStatus::Published->value,
                 'meta_processing_state' => 'FINISHED',
-                'external_post_id' => $result->externalPostId,
-                'provider_last_response' => $result->publishResponse ?? $result->responseData,
+                'external_post_id' => $publishResponse['id'],
+                'provider_last_response' => $publishResponse,
+                'provider_state_payload' => $statePayload,
                 'published_at' => now(),
             ]);
             
             if ($publication->post) {
                 $this->syncAction->execute($publication->post);
             }
-        } elseif ($result->isTemporary()) {
-            $publication->update([
-                'meta_processing_state' => $result->status,
-                'provider_state_payload' => $result->responseData
-            ]);
-            throw new ContainerProcessingException("Container IG ancora in progress o errore temporaneo... (Stato: {$result->status})");
         } else {
-            $this->escalateToManualReview($publication, $result->errorMessage ?? "Errore permanente da Meta.", $result->publishResponse ?? $result->responseData);
+            $publication->update([
+                'meta_processing_state' => $statusResult->status,
+                'provider_last_response' => $statusResult->responseData
+            ]);
+            throw new ContainerProcessingException("Container IG ancora in progress o errore temporaneo... (Stato: {$statusResult->status})");
         }
     }
 
-    private function failPublication(MarketingCampaignPostPublication $publication, string $error): void
+    private function failPublication(MarketingCampaignPostPublication $publication, string $error, ?array $response = null): void
     {
-        $publication->update([
+        $statePayload = $publication->provider_state_payload ?? [];
+        $statePayload['phase'] = 'failed';
+
+        $updateData = [
             'status' => PublicationStatus::Failed->value,
             'error_message' => $error,
             'meta_processing_state' => 'FAILED',
-        ]);
-        
-        Log::error("Instagram Publication Failed", ['publication_id' => $publication->id, 'error' => $error]);
-        
-        if ($publication->post) {
-            $this->syncAction->execute($publication->post);
-        }
-    }
-
-    private function escalateToManualReview(MarketingCampaignPostPublication $publication, string $error, ?array $response = null): void
-    {
-        $updateData = [
-            'status' => PublicationStatus::NeedsManualReview->value,
-            'error_message' => $error,
-            'meta_processing_state' => 'FAILED',
+            'provider_state_payload' => $statePayload,
         ];
         
         if ($response) {
@@ -96,11 +160,7 @@ class ProcessInstagramContainerAction
 
         $publication->update($updateData);
         
-        Log::error("Instagram Publication Escalatated to Manual Review", [
-            'publication_id' => $publication->id, 
-            'error' => $error,
-            'correlation_id' => $publication->correlation_id
-        ]);
+        Log::error("Instagram Publication Failed", ['publication_id' => $publication->id, 'error' => $error]);
         
         if ($publication->post) {
             $this->syncAction->execute($publication->post);

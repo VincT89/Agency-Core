@@ -11,7 +11,9 @@ class PublishResult
         public readonly ?string $externalPermalink = null,
         public readonly ?string $errorMessage = null,
         public readonly ?array $responseSnapshot = null,
-        public readonly bool $isProcessing = false
+        public readonly bool $isProcessing = false,
+        public readonly ?string $externalTaskId = null,
+        public readonly ?array $providerStatePayload = null
     ) {}
 
     public static function success(string $postId, ?string $permalink = null, ?array $response = null): self
@@ -19,9 +21,18 @@ class PublishResult
         return new self(true, $postId, null, $permalink, null, $response, false);
     }
 
-    public static function processing(string $containerId, ?array $response = null): self
+    public static function processing(
+        ?string $externalContainerId = null,
+        ?array $response = null,
+        ?string $externalTaskId = null,
+        ?array $providerStatePayload = null
+    ): self {
+        return new self(true, null, $externalContainerId, null, null, $response, true, $externalTaskId, $providerStatePayload);
+    }
+
+    public static function processingTask(string $taskId, ?array $response = null, ?array $providerStatePayload = null): self
     {
-        return new self(true, null, $containerId, null, null, $response, true);
+        return new self(true, null, null, null, null, $response, true, $taskId, $providerStatePayload);
     }
 
     public static function failure(string $errorMessage, ?array $response = null): self

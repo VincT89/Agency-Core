@@ -50,5 +50,23 @@ class CleanupTemporaryMedia extends Command
         }
 
         $this->info("Puliti {$deletedCount} media temporanei (con orphan recovery).");
+
+        // Pulizia loghi temporanei N8n (Orphan Recovery se callback non arriva)
+        $this->info("Verifica loghi temporanei orfani...");
+        $deletedLogosCount = 0;
+        try {
+            if (Storage::disk('public')->exists('clients/logos/temp')) {
+                $files = Storage::disk('public')->files('clients/logos/temp');
+                foreach ($files as $file) {
+                    if (Storage::disk('public')->lastModified($file) < now()->subDays(2)->timestamp) {
+                        Storage::disk('public')->delete($file);
+                        $deletedLogosCount++;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Errore pulizia loghi temporanei", ['error' => $e->getMessage()]);
+        }
+        $this->info("Puliti {$deletedLogosCount} loghi temporanei orfani.");
     }
 }

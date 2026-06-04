@@ -4,7 +4,7 @@ namespace App\Domain\Social\Publishing;
 
 use App\Models\MarketingCampaignPost;
 use App\Models\ClientSocialAccount;
-use App\Services\SocialMediaPublicUrlService;
+use App\Domain\Social\Services\SocialMediaPublicUrlService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +18,7 @@ class MetaPublisher implements SocialPublisherInterface
         $this->mediaUrlService = $mediaUrlService;
     }
 
-    public function verifyConfiguration(ClientSocialAccount $account): bool
+    public function verifyAccountCapabilities(ClientSocialAccount $account): bool
     {
         if ($account->connection_strategy?->value === 'agency_oauth') {
             if (!$account->agencyAsset || !$account->agencyAsset->connection) return false;
@@ -40,13 +40,18 @@ class MetaPublisher implements SocialPublisherInterface
             }
         }
 
-        if (!$this->verifyConfiguration($account)) {
+        if (!$this->verifyAccountCapabilities($account)) {
             return PublishResult::failure('Account non configurato per la pubblicazione API (o token mancante).');
         }
 
         try {
             $isInstagram = $account->platform->value === 'instagram';
-            $message = $post->caption ?? '';
+            $message = $post->resolved_caption;
+            if ($post->currentVersion?->hashtags) {
+                $message = trim($message . "\n\n" . collect($post->currentVersion->hashtags)
+                    ->map(fn ($h) => str_starts_with($h, '#') ? $h : "#{$h}")
+                    ->implode(' '));
+            }
             
             // Risolvi token e ID tramite metodo isolato
             [$accessToken, $providerAccountId] = $this->resolveTokenAndProviderId($account);
@@ -58,39 +63,36 @@ class MetaPublisher implements SocialPublisherInterface
 
             // Media attachment handling
             $mediaItems = $post->orderedMediaItems;
-            $primaryMedia = $mediaItems->first();
-            $mediaUrl = null;
+            $mediaUrls = [];
             $mediaType = null;
+            $diagnosticPayloads = [];
 
-            if ($primaryMedia) {
-                // Determine file content and extension
-                $fileContent = null;
-                $extension = null;
+            $mediaDescriptors = [];
 
-                if ($primaryMedia->source === 'nextcloud') {
-                    /** @var \App\Services\Integrations\Nextcloud\NextcloudService $nextcloud */
-                    $nextcloud = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
-                    $fileContent = $nextcloud->downloadFile($primaryMedia->nextcloud_path);
-                    $extension = strtolower(pathinfo($primaryMedia->nextcloud_path, PATHINFO_EXTENSION));
-                } else if ($primaryMedia->path) {
-                    $fileContent = Storage::disk('public')->get($primaryMedia->path);
-                    $extension = strtolower(pathinfo($primaryMedia->path, PATHINFO_EXTENSION));
+            if ($mediaItems->count() > 0) {
+                // Prendi il tipo dal primo media per Facebook
+                $primaryMedia = $mediaItems->first();
+                if (isset($primaryMedia->media_type) && in_array(strtolower($primaryMedia->media_type), ['video', 'image'])) {
+                    $mediaType = strtolower($primaryMedia->media_type) === 'video' ? 'VIDEO' : 'IMAGE';
+                } else {
+                    $mediaType = in_array(strtolower(pathinfo($primaryMedia->path ?? '', PATHINFO_EXTENSION)), ['mp4', 'mov', 'webm']) ? 'VIDEO' : 'IMAGE';
                 }
 
-                if ($fileContent && $extension) {
-                    $mediaUrl = $this->mediaUrlService->getPublicUrl(
-                        $primaryMedia->path ?? $primaryMedia->nextcloud_path ?? 'unknown',
-                        $fileContent,
-                        $extension,
-                        $post->id,
-                        $correlationId
-                    );
-
-                    if (isset($primaryMedia->media_type) && in_array(strtolower($primaryMedia->media_type), ['video', 'image'])) {
-                        $mediaType = strtolower($primaryMedia->media_type) === 'video' ? 'VIDEO' : 'IMAGE';
-                    } else {
-                        $mediaType = in_array($extension, ['mp4', 'mov', 'webm']) ? 'VIDEO' : 'IMAGE';
-                    }
+                // Genera public URLs per tutti i media
+                $validatedItems = $this->mediaUrlService->getValidatedPublicUrls($mediaItems, $correlationId);
+                foreach ($mediaItems as $idx => $media) {
+                    $v = $validatedItems[$idx] ?? null;
+                    if (!$v) continue;
+                    $mediaUrls[] = $v['url'];
+                    $diagnosticPayloads[] = $v['diagnostic'];
+                    
+                    $ext = strtolower(pathinfo($media->path ?? '', PATHINFO_EXTENSION));
+                    $isVideo = strtolower($media->media_type ?? '') === 'video' || in_array($ext, ['mp4', 'mov', 'webm']);
+                    $mediaDescriptors[] = [
+                        'id' => $media->id,
+                        'url' => $v['url'],
+                        'type' => $isVideo ? 'video' : 'image'
+                    ];
                 }
             }
 
@@ -103,10 +105,28 @@ class MetaPublisher implements SocialPublisherInterface
             }
 
             if ($isInstagram) {
-                return $this->publishToInstagram($account, $payload, $mediaUrl, $mediaType, $correlationId, $providerAccountId);
+                $result = $this->publishToInstagram($account, $payload, $mediaDescriptors, $contentTypeStr, $correlationId, $providerAccountId);
             } else {
-                return $this->publishToFacebook($account, $payload, $mediaUrl, $mediaType, $correlationId, $providerAccountId);
+                $result = $this->publishToFacebook($account, $payload, $mediaUrls[0] ?? null, $mediaType, $correlationId, $providerAccountId);
             }
+
+            if (!empty($diagnosticPayloads)) {
+                $snapshot = $result->responseSnapshot ?? [];
+                $snapshot['media_diagnostics'] = $diagnosticPayloads;
+                $result = new PublishResult(
+                    $result->success,
+                    $result->externalPostId,
+                    $result->externalContainerId,
+                    $result->externalPermalink,
+                    $result->errorMessage,
+                    $snapshot,
+                    $result->isProcessing(),
+                    $result->externalTaskId,
+                    $result->providerStatePayload
+                );
+            }
+
+            return $result;
 
         } catch (\Exception $e) {
             Log::error('Meta Publisher Exception', [
@@ -121,20 +141,20 @@ class MetaPublisher implements SocialPublisherInterface
     protected function publishToFacebook(ClientSocialAccount $account, array $payload, ?string $mediaUrl, ?string $mediaType, ?string $correlationId, string $providerAccountId): PublishResult
     {
         $graphVersion = config('services.meta.graph_version', 'v19.0');
-        $endpoint = "https://graph.facebook.com/{$graphVersion}/{$providerAccountId}";
+        $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$providerAccountId}";
         
         if ($mediaUrl) {
             if ($mediaType === 'VIDEO') {
-                $endpoint .= "/videos";
+                $endpoint = "{$baseEndpoint}/videos";
                 $payload['file_url'] = $mediaUrl;
                 $payload['description'] = $payload['message'];
                 unset($payload['message']);
             } else {
-                $endpoint .= "/photos";
+                $endpoint = "{$baseEndpoint}/photos";
                 $payload['url'] = $mediaUrl;
             }
         } else {
-            $endpoint .= "/feed";
+            $endpoint = "{$baseEndpoint}/feed";
         }
 
         $client = Http::withHeaders([
@@ -151,9 +171,9 @@ class MetaPublisher implements SocialPublisherInterface
         return PublishResult::success($data['id'] ?? null, null, $data);
     }
 
-    protected function publishToInstagram(ClientSocialAccount $account, array $payload, ?string $mediaUrl, ?string $mediaType, ?string $correlationId, string $providerAccountId): PublishResult
+    protected function publishToInstagram(ClientSocialAccount $account, array $payload, array $mediaDescriptors, ?string $contentTypeStr, ?string $correlationId, string $providerAccountId): PublishResult
     {
-        if (!$mediaUrl) {
+        if (empty($mediaDescriptors)) {
             return PublishResult::failure('Instagram richiede un file multimediale (Immagine o Video).');
         }
 
@@ -163,37 +183,79 @@ class MetaPublisher implements SocialPublisherInterface
              $igAccountId = $account->instagram_business_account_id;
         }
 
-        // STEP 1: Creazione Container
         $graphVersion = config('services.meta.graph_version', 'v19.0');
-        $containerEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}/media";
-        $containerPayload = [
-            'access_token' => $payload['access_token'],
-            'caption' => $payload['message'],
-        ];
-
-        if ($mediaType === 'VIDEO') {
-            $containerPayload['media_type'] = 'REELS'; // o VIDEO
-            $containerPayload['video_url'] = $mediaUrl;
-        } else {
-            $containerPayload['image_url'] = $mediaUrl;
-        }
+        $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}";
 
         $client = Http::withHeaders([
             'X-Correlation-Id' => $correlationId ?? 'none'
         ]);
 
-        $containerResponse = $client->post($containerEndpoint, $containerPayload);
+        if (count($mediaDescriptors) > 1) {
+            // STEP 1: Creazione Item Container(s)
+            $itemContainerIds = [];
+            $childrenPayload = [];
+            foreach ($mediaDescriptors as $index => $media) {
+                $itemPayload = [
+                    'access_token' => $payload['access_token'],
+                    'is_carousel_item' => 'true',
+                ];
 
-        if (!$containerResponse->successful()) {
-            return PublishResult::failure('Errore IG Container: ' . $containerResponse->body(), $containerResponse->json());
+                if ($media['type'] === 'video') {
+                    $itemPayload['media_type'] = 'VIDEO';
+                    $itemPayload['video_url'] = $media['url'];
+                } else {
+                    $itemPayload['image_url'] = $media['url'];
+                }
+
+                $itemResponse = $client->post("{$baseEndpoint}/media", $itemPayload);
+
+                if (!$itemResponse->successful()) {
+                    return PublishResult::failure("Errore IG Carousel Item Container (Indice {$index}): " . $itemResponse->body(), $itemResponse->json());
+                }
+
+                $childId = $itemResponse->json('id');
+                $itemContainerIds[] = $childId;
+                $childrenPayload[] = ['id' => $childId, 'type' => $media['type']];
+            }
+
+            $providerStatePayload = [
+                'phase' => 'carousel_children_processing',
+                'children' => $childrenPayload,
+                'caption' => $payload['message'] ?? ''
+            ];
+
+            return PublishResult::processing(null, ['message' => 'Carousel children processing'], null, $providerStatePayload);
+
+        } else {
+            // STEP 1: Creazione Single Container
+            $media = $mediaDescriptors[0];
+            $containerPayload = [
+                'access_token' => $payload['access_token'],
+                'caption' => $payload['message'] ?? '',
+            ];
+
+            if ($media['type'] === 'video') {
+                $containerPayload['media_type'] = $contentTypeStr === 'reel' ? 'REELS' : 'VIDEO';
+                $containerPayload['video_url'] = $media['url'];
+            } else {
+                $containerPayload['image_url'] = $media['url'];
+            }
+
+            $containerResponse = $client->post("{$baseEndpoint}/media", $containerPayload);
+
+            if (!$containerResponse->successful()) {
+                return PublishResult::failure('Errore IG Single Container: ' . $containerResponse->body(), $containerResponse->json());
+            }
+
+            $containerData = $containerResponse->json();
+            $containerId = $containerData['id'];
+
+            $providerStatePayload = [
+                'phase' => 'single_container_processing'
+            ];
+
+            return PublishResult::processing($containerId, $containerData, null, $providerStatePayload);
         }
-
-        $containerData = $containerResponse->json();
-        $containerId = $containerData['id'];
-
-        // Ritorniamo un risultato di successo asincrono indicando che siamo in stato PROCESSING_CONTAINER
-        // e salviamo il container_id per il job asincrono di riconciliazione.
-        return PublishResult::processing($containerId, $containerData);
     }
 
     /**

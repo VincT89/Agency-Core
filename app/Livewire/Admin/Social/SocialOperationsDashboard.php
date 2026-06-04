@@ -9,8 +9,6 @@ use App\Models\MarketingCampaignPostPublication;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Jobs\Social\CheckInstagramContainerStatusJob;
-use App\Domain\Social\Actions\ProcessInstagramContainerAction;
 use Illuminate\Support\Str;
 
 class SocialOperationsDashboard extends Component
@@ -37,17 +35,16 @@ class SocialOperationsDashboard extends Component
 
         if (in_array($publication->status, [
             PublicationStatus::Published,
-            PublicationStatus::Superseded,
-            PublicationStatus::Abandoned
+            PublicationStatus::Cancelled
         ])) {
             session()->flash('error', 'Impossibile riprovare: la pubblicazione è in uno stato terminale o di successo.');
             return;
         }
 
-        // Se era IG manual review e stiamo rifacendo da zero, dismettiamo questo e non usiamo il vecchio container
-        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === PublicationStatus::NeedsManualReview) {
+        // Se era failed IG e stiamo rifacendo da zero, dismettiamo questo e non usiamo il vecchio container
+        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === PublicationStatus::Failed) {
             $publication->update([
-                'status' => PublicationStatus::Superseded->value,
+                'status' => PublicationStatus::Cancelled->value,
                 'error_message' => 'Dismesso (sostituito da nuovo tentativo)',
             ]);
             
@@ -76,27 +73,16 @@ class SocialOperationsDashboard extends Component
         $syncAction->execute($publication->post);
     }
 
-    public function refreshContainer(int $publicationId, ProcessInstagramContainerAction $action, SyncMarketingCampaignPostPublicationStatusAction $syncAction)
+    public function refreshPublication(int $publicationId, \App\Domain\Social\Actions\RefreshPublicationStatusAction $action, SyncMarketingCampaignPostPublicationStatusAction $syncAction)
     {
         $this->authorize('manage_social_operations');
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
 
-        if ($publication->platform !== \App\Enums\Social\SocialPlatform::Instagram) {
-            session()->flash('error', 'Azione consentita solo per le pubblicazioni Instagram.');
-            return;
-        }
-
-        if (empty($publication->external_container_id)) {
-            session()->flash('error', 'Nessun Container ID presente. Impossibile controllare.');
-            return;
-        }
-
         if (in_array($publication->status, [
             PublicationStatus::Published, 
             PublicationStatus::Failed,
-            PublicationStatus::Superseded,
-            PublicationStatus::Abandoned
+            PublicationStatus::Cancelled
         ])) {
             session()->flash('error', 'La pubblicazione è già in uno stato terminale.');
             return;
@@ -105,13 +91,16 @@ class SocialOperationsDashboard extends Component
         try {
             $action->execute($publication);
             
-            if ($publication->post) {
-                $syncAction->execute($publication->post);
+            if ($publication->platform === \App\Enums\Social\SocialPlatform::Tiktok) {
+                session()->flash('success', 'Aggiornamento accodato.');
+            } else {
+                if ($publication->post) {
+                    $syncAction->execute($publication->post);
+                }
+                session()->flash('success', 'Stato pubblicazione verificato.');
             }
-            
-            session()->flash('success', 'Stato container verificato.');
         } catch (\App\Exceptions\Social\ContainerProcessingException $e) {
-            session()->flash('info', 'Container ancora in progress: ' . $e->getMessage());
+            session()->flash('info', 'Pubblicazione ancora in progress: ' . $e->getMessage());
         } catch (\Exception $e) {
             session()->flash('error', 'Errore imprevisto durante il controllo: ' . $e->getMessage());
         }
@@ -125,8 +114,7 @@ class SocialOperationsDashboard extends Component
 
         if (in_array($publication->status, [
             PublicationStatus::Published,
-            PublicationStatus::Superseded,
-            PublicationStatus::Abandoned
+            PublicationStatus::Cancelled
         ])) {
             session()->flash('error', 'Impossibile forzare il fallimento: la pubblicazione è in uno stato terminale o di successo.');
             return;
@@ -151,7 +139,7 @@ class SocialOperationsDashboard extends Component
         ->orderBy('updated_at', 'desc');
 
         if ($this->filter === 'needs_manual_review') {
-            $query->where('status', PublicationStatus::NeedsManualReview->value);
+            $query->where('status', PublicationStatus::Failed->value); // Mappato su failed per compatibilità
         } elseif ($this->filter === 'failed') {
             $query->where('status', PublicationStatus::Failed->value);
         } elseif ($this->filter === 'stale_publishing') {
@@ -163,8 +151,7 @@ class SocialOperationsDashboard extends Component
             $maxLifecycle = config('services.meta.instagram.max_container_lifecycle', 15);
             
             $query->where(function($q) use ($maxLifecycle) {
-                $q->where('status', PublicationStatus::NeedsManualReview->value)
-                  ->orWhere('status', PublicationStatus::Failed->value)
+                $q->where('status', PublicationStatus::Failed->value)
                   ->orWhere(function($staleQ) use ($maxLifecycle) {
                       $staleQ->whereIn('status', [PublicationStatus::Publishing->value, PublicationStatus::Pending->value])
                              ->where('updated_at', '<', now()->subMinutes($maxLifecycle));

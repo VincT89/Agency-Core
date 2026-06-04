@@ -122,9 +122,9 @@
                             <div class="u-text-muted">I token sono salvati in sicurezza.</div>
                         </div>
                     </div>
-                    @if($platformValue === 'tiktok' && !$account->isReadyToPublish())
+                    @if($platformValue === 'tiktok' && !$account->canPublishTikTokVideo())
                         <div class="u-mt-sm u-text-sm" style="margin-left: 2.25rem;">
-                            <em>Nota: Collegato con successo, ma il publishing diretto non è abilitato in questa fase (Sprint 1).</em>
+                            <em>Nota: Account collegato. La pubblicazione TikTok sarà disponibile solo in modalità draft quando le capability saranno verificate.</em>
                         </div>
                     @endif
                 </div>
@@ -152,8 +152,14 @@
                         Collega {{ ucfirst($platformValue) }}
                     </button>
                 @else
-                    <div class="u-text-sm u-text-muted">
-                        Salva questo modulo prima di poter avviare la procedura di connessione OAuth.
+                    <button type="button" class="btn btn-p u-inline-flex u-align-center u-gap-xs u-mb-md" disabled title="Salva prima il profilo TikTok per avviare OAuth.">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: -2px;">
+                            <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+                        </svg>
+                        Collega {{ ucfirst($platformValue) }}
+                    </button>
+                    <div class="u-text-sm u-text-muted u-mt-xs">
+                        Salva prima il profilo TikTok per avviare OAuth.
                     </div>
                 @endif
             @endif

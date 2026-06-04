@@ -19,7 +19,7 @@ class MarketingCampaignPostResultController extends Controller
         \Illuminate\Support\Facades\Log::info('Ricevuto callback N8N [Prima generazione]', [
             'post_id' => $post->id,
             'ip' => $request->ip(),
-            'payload' => $request->all()
+            'request_id' => $request->validated('request_id')
         ]);
 
         if ($post->n8n_request_id !== $request->validated('request_id')) {

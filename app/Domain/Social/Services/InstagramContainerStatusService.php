@@ -11,7 +11,7 @@ class InstagramContainerStatusService
      * Controlla lo stato del container su Meta ed esegue il publish se pronto.
      * Ritorna un DTO puro, senza fare side-effects sul DB.
      */
-    public function checkAndPublishContainer(string $containerId, string $accessToken, string $igAccountId, ?string $correlationId = null): InstagramContainerStatusResult
+    public function getContainerStatus(string $containerId, string $accessToken, ?string $correlationId = null): InstagramContainerStatusResult
     {
         try {
             $client = Http::withHeaders([
@@ -55,38 +55,6 @@ class InstagramContainerStatusService
             $statusData = $statusResponse->json();
             $statusCode = $statusData['status_code'] ?? 'UNKNOWN';
 
-            if ($statusCode === 'FINISHED') {
-                // Procediamo con la pubblicazione finale del container
-                $publishEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}/media_publish";
-                $publishResponse = $client->post($publishEndpoint, [
-                    'creation_id' => $containerId,
-                    'access_token' => $accessToken,
-                ]);
-
-                if ($publishResponse->successful()) {
-                    $publishData = $publishResponse->json();
-                    return new InstagramContainerStatusResult(
-                        status: 'FINISHED',
-                        isPermanentError: false,
-                        errorMessage: null,
-                        responseData: $statusData,
-                        externalPostId: $publishData['id'],
-                        publishResponse: $publishData
-                    );
-                } else {
-                    $publishErrorData = $publishResponse->json();
-                    return new InstagramContainerStatusResult(
-                        status: 'ERROR',
-                        isPermanentError: true, // Se fallisce la media_publish consideriamolo errore da rivedere
-                        errorMessage: "Errore nella media_publish di Instagram.",
-                        responseData: $statusData, // Manteniamo lo status per referenza
-                        externalPostId: null,
-                        publishResponse: $publishErrorData
-                    );
-                }
-            }
-
-            // IN_PROGRESS, ERROR, o EXPIRED
             $isPermanent = in_array($statusCode, ['ERROR', 'EXPIRED']);
             return new InstagramContainerStatusResult(
                 status: $statusCode,
@@ -104,9 +72,54 @@ class InstagramContainerStatusService
             return new InstagramContainerStatusResult(
                 status: 'UNKNOWN',
                 isPermanentError: false,
-                errorMessage: 'Eccezione interna durante check/publish: ' . $e->getMessage(),
+                errorMessage: 'Eccezione interna durante check: ' . $e->getMessage(),
                 responseData: null
             );
         }
+    }
+
+    public function createCarouselParent(string $igAccountId, array $childrenIds, string $caption, string $accessToken, ?string $correlationId = null): array
+    {
+        $client = Http::withHeaders([
+            'X-Correlation-Id' => $correlationId ?? 'none'
+        ]);
+
+        $graphVersion = config('services.meta.graph_version', 'v19.0');
+        $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}";
+
+        $carouselPayload = [
+            'access_token' => $accessToken,
+            'caption' => $caption,
+            'media_type' => 'CAROUSEL',
+            'children' => implode(',', $childrenIds),
+        ];
+
+        $containerResponse = $client->post("{$baseEndpoint}/media", $carouselPayload);
+
+        if (!$containerResponse->successful()) {
+            throw new \Exception('Errore IG Carousel Container Parent: ' . $containerResponse->body());
+        }
+
+        return $containerResponse->json();
+    }
+
+    public function publishContainer(string $igAccountId, string $containerId, string $accessToken, ?string $correlationId = null): array
+    {
+        $client = Http::withHeaders([
+            'X-Correlation-Id' => $correlationId ?? 'none'
+        ]);
+
+        $graphVersion = config('services.meta.graph_version', 'v19.0');
+        $publishEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}/media_publish";
+        $publishResponse = $client->post($publishEndpoint, [
+            'creation_id' => $containerId,
+            'access_token' => $accessToken,
+        ]);
+
+        if (!$publishResponse->successful()) {
+            throw new \Exception('Errore nella media_publish di Instagram: ' . $publishResponse->body());
+        }
+
+        return $publishResponse->json();
     }
 }

@@ -7,6 +7,18 @@
             $versionImages = [$post->currentVersion->image_url];
         }
     }
+    
+    $previewMedia = $this->previewMedia;
+    
+    if (empty($previewMedia) && count($versionImages) > 0) {
+        foreach($versionImages as $vImg) {
+            $previewMedia[] = [
+                'type' => 'image',
+                'url' => $vImg,
+                'source' => 'version'
+            ];
+        }
+    }
 @endphp
 <div>
     @if(in_array($form['status'] ?? ($post->status->value ?? null), ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true))
@@ -128,7 +140,46 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="cmp-post-detail-layout relative">
+    <div class="cmp-post-detail-layout relative"
+         x-data="{
+             isUploadingLocalMedia: false,
+             localBlobUrls: {},
+             handleLocalFiles(event) {
+                 const files = Array.from(event.target.files || []);
+                 if (!files.length) return;
+
+                 this.isUploadingLocalMedia = true;
+
+                 const newMeta = [];
+                 
+                 for (const file of files) {
+                     const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|avi)$/i.test(file.name);
+                     const type = isVideo ? 'video' : 'image';
+                     const uid = 'local_pending:' + file.name + ':' + Date.now() + ':' + Math.random().toString(36).substr(2, 5);
+                     
+                     this.localBlobUrls[uid] = URL.createObjectURL(file);
+                     
+                     newMeta.push({
+                         uid: uid,
+                         name: file.name,
+                         type: type
+                     });
+                 }
+                 
+                 $wire.registerPendingLocalMedia(newMeta).then(() => {
+                     $wire.uploadMultiple(
+                         'media',
+                         files,
+                         () => { this.isUploadingLocalMedia = false; },
+                         () => { this.isUploadingLocalMedia = false; this.clearLocalPreviews(); }
+                     );
+                 });
+             },
+             clearLocalPreviews() {
+                 Object.values(this.localBlobUrls).forEach(url => URL.revokeObjectURL(url));
+                 this.localBlobUrls = {};
+             }
+         }">
 
 
 
@@ -146,11 +197,11 @@
                     <form wire:submit.prevent class="form-stack">
 
                         {{-- Blocco 1: Piattaforme --}}
-                        <div class="panel cmp-panel-pad">
+                        <div class="panel cmp-panel-pad" x-data="{ platforms: $wire.entangle('form.publishing_platforms') }">
                             <div class="cmp-section-label mb-2">Piattaforme di pubblicazione</div>
                             <div class="cmp-platform-options">
                                 <label class="cmp-platform-option"
-                                    x-bind:class="($wire.form.publishing_platforms || []).includes('instagram') ? 'active' : ''">
+                                    x-bind:class="(platforms || []).includes('instagram') ? 'active' : ''">
                                     <input type="checkbox" wire:model="form.publishing_platforms" value="instagram"
                                         class="hidden">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -162,7 +213,7 @@
                                     <span class="cmp-platform-label">Instagram</span>
                                 </label>
                                 <label class="cmp-platform-option"
-                                    x-bind:class="($wire.form.publishing_platforms || []).includes('facebook') ? 'active' : ''">
+                                    x-bind:class="(platforms || []).includes('facebook') ? 'active' : ''">
                                     <input type="checkbox" wire:model="form.publishing_platforms" value="facebook"
                                         class="hidden">
                                     <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"
@@ -172,18 +223,73 @@
                                     </svg>
                                     <span class="cmp-platform-label">Facebook</span>
                                 </label>
-                                <label class="cmp-platform-option disabled" title="Piattaforma in arrivo">
+                                @php
+                                    $tiktokAccount = $campaign->client->socialAccountFor(\App\Enums\Social\SocialPlatform::Tiktok->value);
+                                    $canVideo = $tiktokAccount?->canPublishTikTokVideo() ?? false;
+                                    $canPhoto = $tiktokAccount?->canPublishTikTokPhoto() ?? false;
+                                    
+                                    $hasVideo = $this->hasVideoMedia();
+                                    $hasPhoto = $this->hasPhotoMedia();
+                                    
+                                    $isMixed = $hasVideo && $hasPhoto;
+                                    $canSelectTikTok = false;
+                                    $tiktokTitle = 'TikTok';
+                                    $tiktokLabelMeta = '';
+                                    
+                                    if (!$tiktokAccount) {
+                                        $tiktokTitle = 'Account TikTok non configurato';
+                                        $tiktokLabelMeta = '(Non collegato)';
+                                    } elseif ($isMixed) {
+                                        $tiktokTitle = 'TikTok non supporta media misti (video + foto)';
+                                        $tiktokLabelMeta = '(Media misti non supportati)';
+                                    } elseif ($hasVideo && !$canVideo) {
+                                        $tiktokTitle = 'L\'account non è abilitato ai video TikTok';
+                                        $tiktokLabelMeta = '(Video non abilitati)';
+                                    } elseif ($hasPhoto && !$canPhoto) {
+                                        $tiktokTitle = 'L\'account non è abilitato alle foto TikTok';
+                                        $tiktokLabelMeta = '(Foto non abilitate)';
+                                    } elseif (!$hasVideo && !$hasPhoto) {
+                                        $tiktokTitle = 'Richiede un video o delle foto per TikTok';
+                                        $tiktokLabelMeta = '(Richiede media)';
+                                    } else {
+                                        $canSelectTikTok = true;
+                                        if ($hasPhoto) {
+                                            $tiktokLabelMeta = '(Slideshow Fotografico)';
+                                        }
+                                    }
+                                @endphp
+                                <label class="cmp-platform-option {{ $canSelectTikTok ? '' : 'disabled' }}" title="{{ $tiktokTitle }}" x-bind:class="(platforms || []).includes('tiktok') ? 'active' : ''">
                                     <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok"
-                                        class="hidden" disabled>
+                                        class="hidden" {{ $canSelectTikTok ? '' : 'disabled' }}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" class="cmp-platform-icon">
                                         <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
                                     </svg>
-                                    <span class="cmp-platform-label">TikTok <span class="u-text-meta u-text-muted">(In arrivo)</span></span>
+                                    <span class="cmp-platform-label">TikTok 
+                                        @if($tiktokLabelMeta)
+                                            <span class="u-text-meta u-text-muted">{{ $tiktokLabelMeta }}</span>
+                                        @endif
+                                    </span>
                                 </label>
                             </div>
                             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
                         </div>
+
+                        @if(config('services.tiktok.mock_publishing', true))
+                            <div class="cmp-alert cmp-alert-warning u-mt-md u-mb-md" style="background: rgba(255, 170, 0, 0.1); border-left: 4px solid #ffaa00; padding: 12px; border-radius: 4px; display: flex; align-items: flex-start; gap: 12px;">
+                                <div class="cmp-alert-icon" style="color: #ffaa00;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                </div>
+                                <div class="cmp-alert-content">
+                                    <h4 style="margin:0 0 4px 0; color: #b37700; font-weight: 600;">Simulazione TikTok Attiva</h4>
+                                    <p style="margin:0; font-size: 13px; color: #b37700;">TikTok è in modalità simulazione: il flusso di pubblicazione viene testato, ma nessun contenuto viene inviato realmente a TikTok.</p>
+                                </div>
+                            </div>
+                        @endif
 
                         {{-- Box 1: Dati Editoriali --}}
                         <div class="panel cmp-panel-pad u-mb-md">
@@ -275,108 +381,99 @@
                                     <div x-show="showOriginals" x-collapse x-cloak>
                             @endif
 
-                            {{-- Blocco 4: Preview Media Esistenti --}}
-                            @if(count($existing_media) > 0)
-                                <div class="cmp-section-label mb-2 u-mt-md">Media Attuali (Salvati)</div>
-                                <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap">
-                                    @foreach($existing_media as $item)
-                                        <div class="cmp-media-preview-item {{ $post->currentVersion ? 'u-opacity-70 hover:u-opacity-100 transition-opacity' : '' }}">
-                                            @if(\Illuminate\Support\Str::startsWith($item['mime_type'], 'video/'))
-                                                <video src="{{ $item['preview_url'] }}"
-                                                    class="cmp-media-preview-video cmp-local-preview-img" controls></video>
-                                            @else
-                                                <img src="{{ $item['preview_url'] }}"
-                                                    class="cmp-media-preview-img cmp-local-preview-img">
-                                            @endif
-                                            <div class="u-text-truncate u-w-full u-text-meta u-mt-xs"
-                                                title="{{ $item['original_name'] }}">{{ $item['original_name'] }}</div>
-                                            @if(!$post->currentVersion)
-                                                <button type="button" wire:click="removeExistingMedia({{ $item['id'] }})"
-                                                    class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
-
-                            {{-- Blocco 4.5: Preview Nuovi Media in Upload --}}
-                            @if((is_array($media) && count($media) > 0) || !empty($selected_nextcloud_files))
-                                <div class="cmp-section-label mb-2 u-mt-md">Nuovi Media da aggiungere</div>
-
-                                {{-- Local Previews --}}
-                                @if(is_array($media) && count($media) > 0)
-                                        <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md" x-data="{
-                                        draggingIndex: null,
-                                        dropIndex: null,
-                                        dragStart(index) { this.draggingIndex = index; },
-                                        dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
-                                        drop(index) {
-                                            if (this.draggingIndex !== null && this.draggingIndex !== index) {
-                                                $wire.reorderLocalMedia(this.draggingIndex, index);
-                                            }
-                                            this.draggingIndex = null;
-                                            this.dropIndex = null;
+                            {{-- Unified Media Preview Block --}}
+                            @if(count($selected_media_items) > 0)
+                                <div class="cmp-section-label mb-2 u-mt-md">Media Selezionati (Drag per riordinare)</div>
+                                <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md" x-data="{
+                                    draggingIndex: null,
+                                    dropIndex: null,
+                                    dragStart(index) { this.draggingIndex = index; },
+                                    dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
+                                    drop(index) {
+                                        if (this.draggingIndex !== null && this.draggingIndex !== index) {
+                                            $wire.reorderSelectedMedia(this.draggingIndex, index);
                                         }
-                                     }">
-                                            @foreach($media as $index => $localFile)
-                                                <div class="cmp-media-preview-item" wire:key="media-{{ $index }}" draggable="true"
-                                                    @dragstart="dragStart({{ $index }})" @dragover="dragOver($event, {{ $index }})"
-                                                    @drop="drop({{ $index }})" @dragend="draggingIndex = null; dropIndex = null"
-                                                    :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
-                                                    <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i>
-                                                    </div>
-                                                    @if(\Illuminate\Support\Str::startsWith($localFile->getMimeType(), 'video/'))
-                                                        <video src="{{ $localFile->temporaryUrl() }}"
-                                                            class="cmp-media-preview-video cmp-local-preview-img" controls></video>
+                                        this.draggingIndex = null;
+                                        this.dropIndex = null;
+                                    }
+                                }">
+                                    @foreach($selected_media_items as $index => $item)
+                                        <div class="cmp-media-preview-item" wire:key="media-item-{{ $item['uid'] }}" draggable="true"
+                                            @dragstart="dragStart({{ $index }})" @dragover="dragOver($event, {{ $index }})"
+                                            @drop="drop({{ $index }})" @dragend="draggingIndex = null; dropIndex = null"
+                                            :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
+                                            
+                                            <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i></div>
+                                            
+                                            @if($item['source'] === 'local_pending')
+                                                <template x-if="localBlobUrls['{{ $item['uid'] }}']">
+                                                    @if($item['type'] === 'video')
+                                                        <video :src="localBlobUrls['{{ $item['uid'] }}']" class="cmp-media-preview-video cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
                                                     @else
-                                                        <img src="{{ $localFile->temporaryUrl() }}"
-                                                            class="cmp-media-preview-img cmp-local-preview-img">
+                                                        <img :src="localBlobUrls['{{ $item['uid'] }}']" class="cmp-media-preview-img cmp-local-preview-img">
                                                     @endif
-                                                    <div class="cmp-media-preview-label">Upload {{ $index + 1 }}</div>
-                                                    <button type="button" wire:click="removeLocalMedia({{ $index }})"
-                                                        class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                @endif
-
-                                {{-- Nextcloud Previews --}}
-                                @if(!empty($selected_nextcloud_files))
-                                        <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-sm" x-data="{
-                                        draggingIndex: null,
-                                        dropIndex: null,
-                                        dragStart(index) { this.draggingIndex = index; },
-                                        dragOver(event, index) { event.preventDefault(); this.dropIndex = index; },
-                                        drop(index) {
-                                            if (this.draggingIndex !== null && this.draggingIndex !== index) {
-                                                $wire.reorderNextcloudMedia(this.draggingIndex, index);
-                                            }
-                                            this.draggingIndex = null;
-                                            this.dropIndex = null;
-                                        }
-                                     }">
-                                            @foreach($selected_nextcloud_files as $index => $ncFile)
-                                                <div class="cmp-nc-preview-item" wire:key="nc-{{ $index }}" draggable="true"
-                                                    x-data="{ imageFailed: false }"
-                                                    @dragstart="dragStart({{ $index }})" @dragover="dragOver($event, {{ $index }})"
-                                                    @drop="drop({{ $index }})" @dragend="draggingIndex = null; dropIndex = null"
-                                                    :class="{ 'cmp-dragging': draggingIndex === {{ $index }}, 'cmp-drag-over': dropIndex === {{ $index }} && draggingIndex !== {{ $index }} }">
-                                                    <div class="cmp-drag-handle"><i data-lucide="grip-vertical" class="u-icon-sm"></i>
+                                                </template>
+                                                <template x-if="!localBlobUrls['{{ $item['uid'] }}']">
+                                                    <div class="marketing-media-placeholder">
+                                                        <i data-lucide="loader-2" class="u-icon-md mkt-spin"></i>
                                                     </div>
-                                                    <img src="{{ route('nextcloud.preview', ['path' => $ncFile['path'], 'w' => 150, 'h' => 150]) }}"
-                                                        class="cmp-nc-preview-img" :class="imageFailed ? 'u-hidden' : ''" x-on:error="imageFailed = true">
+                                                </template>
+                                            @elseif($item['source'] === 'local' || $item['source'] === 'existing')
+                                                @php
+                                                    $url = null;
+                                                    if ($item['source'] === 'local') {
+                                                        $m = $this->all_local_media[$item['local_index']] ?? null;
+                                                        if ($m) {
+                                                            $url = $item['type'] === 'video' ? $this->temporaryVideoPreviewUrl($m) . '#t=0.001' : $m->temporaryUrl();
+                                                        }
+                                                    } else {
+                                                        $url = $item['preview_url'] ?? null;
+                                                        if ($item['type'] === 'video' && $url) {
+                                                            $url .= '#t=0.001';
+                                                        }
+                                                    }
+                                                @endphp
+                                                @if($url)
+                                                    @if($item['type'] === 'video')
+                                                        <video src="{{ $url }}" class="cmp-media-preview-video cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                                                    @else
+                                                        <img src="{{ $url }}" class="cmp-media-preview-img cmp-local-preview-img">
+                                                    @endif
+                                                @else
+                                                    <div class="marketing-media-placeholder"><i data-lucide="image" class="u-icon-md"></i></div>
+                                                @endif
+                                            @elseif($item['source'] === 'nextcloud')
+                                                <div x-data="{ imageFailed: false }" class="u-w-full u-h-full">
+                                                    @if($item['type'] === 'video')
+                                                        <video src="{{ route('nextcloud.download', ['path' => $item['nextcloud_path']]) }}#t=0.001" class="cmp-media-preview-video cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                                                    @else
+                                                        <img src="{{ route('nextcloud.preview', ['path' => $item['nextcloud_path'], 'w' => 150, 'h' => 150]) }}"
+                                                             class="cmp-media-preview-img cmp-local-preview-img" :class="imageFailed ? 'u-hidden' : ''" x-on:error="imageFailed = true">
+                                                    @endif
                                                     <div x-show="imageFailed" class="marketing-media-placeholder" x-cloak>
                                                         <i data-lucide="image-off" class="u-icon-md"></i>
                                                     </div>
-                                                    <div class="u-text-truncate u-w-full u-text-meta u-mt-xs"
-                                                        title="{{ $ncFile['name'] }}">{{ $index + 1 }}. {{ $ncFile['name'] }}</div>
-                                                    <button type="button"
-                                                        wire:click="removeNextcloudFile('{{ addslashes($ncFile['path']) }}')"
-                                                        class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
                                                 </div>
-                                            @endforeach
+                                            @endif
+                                            
+                                            <div class="cmp-media-preview-label u-flex u-align-center u-justify-between">
+                                                <span class="u-text-truncate" title="{{ $item['name'] }}">{{ $item['name'] }}</span>
+                                                <span class="u-text-meta u-text-muted" style="font-size: 0.65rem;">
+                                                    @if($item['source'] === 'local_pending')
+                                                        <i data-lucide="loader-2" class="u-icon-xs mkt-spin u-mr-xs"></i>(In upload...)
+                                                    @elseif($item['source'] === 'local')
+                                                        <i data-lucide="upload-cloud" class="u-icon-xs u-mr-xs"></i>(Caricato)
+                                                    @elseif($item['source'] === 'nextcloud')
+                                                        <i data-lucide="cloud" class="u-icon-xs u-mr-xs"></i>(NC)
+                                                    @elseif($item['source'] === 'existing')
+                                                        <i data-lucide="database" class="u-icon-xs u-mr-xs"></i>(Salvato)
+                                                    @endif
+                                                </span>
+                                            </div>
+                                            <button type="button" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
                                         </div>
-                                @endif
+                                    @endforeach
+                                </div>
                             @endif
 
                             {{-- Blocco 4.6: Sorgente Nuovi Media --}}
@@ -396,12 +493,29 @@
                                 </div>
 
                                 @if($form['media_source'] === 'local')
-                                    <input type="file" wire:model="media" multiple class="form-in p-2 text-sm"
-                                        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
-                                    <div wire:loading wire:target="media" class="text-xs text-blue-500 mt-1">Caricamento
-                                        anteprima...</div>
-                                    <div class="text-xs text-gray-500 mt-1 u-mb-md">Puoi selezionare più file (max 10 in
-                                        totale).</div>
+                                    <div>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            class="form-in p-2 text-sm"
+                                            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                                            x-on:change="handleLocalFiles($event)"
+                                            x-on:livewire-upload-error="clearLocalPreviews()"
+                                        >
+
+                                        <div class="u-mt-sm u-mb-md">
+                                            <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
+                                                <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Upload in background (Livewire)...
+                                            </div>
+                                            <div wire:loading.remove wire:target="media" class="u-bg-gray-50 u-border u-border-line u-p-sm u-flex u-gap-sm" style="border-radius: 6px;" x-show="Object.keys(localBlobUrls).length === 0">
+                                                <i data-lucide="info" class="u-icon-sm u-text-muted u-mt-xs"></i>
+                                                <div class="u-text-meta u-text-muted">
+                                                    Puoi selezionare più file (max 10 in totale). <br>
+                                                    <strong class="u-text-heading">MP4 H.264 consigliato.</strong> Formati come HEVC/H.265 potrebbero non mostrare l'anteprima o fallire la pubblicazione sui social.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     @error('media') <span class="form-err">{{ $message }}</span> @enderror
                                     @error('media.*') <span class="form-err">{{ $message }}</span> @enderror
                                 @else
@@ -687,7 +801,7 @@
 
                                 @if(!$post->currentVersion && in_array($post->status->value, ['draft', 'client_changes_requested', 'generated']))
                                     <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
-                                        wire:loading.attr="disabled">
+                                        wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                                         <i data-lucide="check-circle" class="u-icon-sm"></i>
                                         <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
                                         <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
@@ -696,7 +810,7 @@
                                 @endif
                                 @if($form['ai_analysis_enabled'])
                                     <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
-                                        wire:loading.attr="disabled">
+                                        wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                                         <span wire:loading.remove wire:target="savePost">
                                             {{ $post->status->value !== 'draft' ? ($post->currentVersion ? 'Salva Versione Sody' : 'Salva Modifiche') : 'Salva Bozza' }}
                                         </span>
@@ -704,7 +818,7 @@
                                     </button>
                                     @if(!$post->currentVersion)
                                         <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('full')"
-                                            class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled">
+                                            class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                                             <i data-lucide="sparkles" class="u-icon-md"></i>
                                             <span wire:loading.remove wire:target="saveAndSubmitToN8n('full')">
                                                 {{ $post->status->value !== 'draft' ? 'Rigenera Tutto' : 'Genera Immagine e Testo' }}
@@ -712,7 +826,7 @@
                                             <span wire:loading wire:target="saveAndSubmitToN8n('full')">Invio in corso...</span>
                                         </button>
                                         <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('caption')"
-                                            class="btn btn-sec u-flex-center u-gap-xs" wire:loading.attr="disabled">
+                                            class="btn btn-sec u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                                             <i data-lucide="type" class="u-icon-md"></i>
                                             <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
                                                 Genera solo Testo
@@ -722,7 +836,7 @@
                                     @endif
                                 @else
                                     <button type="button" wire:click="savePost" class="btn btn-p u-flex-center u-gap-xs"
-                                        wire:loading.attr="disabled">
+                                        wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                                         <i data-lucide="save" class="u-icon-md"></i>
                                         <span wire:loading.remove wire:target="savePost">
                                             {{ $post->status->value !== 'draft' ? 'Salva Modifiche' : 'Salva Post' }}
@@ -853,13 +967,36 @@
                                             ->where('platform', $platform)
                                             ->orderBy('created_at', 'desc')
                                             ->first();
+                                        $preflight = $this->getPreflightResult($platform);
+                                        $canPublish = !$preflight || $preflight->isPass;
                                     @endphp
+                                    
+                                    @if($platform === \App\Enums\Social\SocialPlatform::Tiktok->value)
+                                        <div class="u-bg-gray-50 u-border u-border-gray-200 u-text-gray-700 u-rounded u-p-sm u-text-meta u-mb-sm">
+                                            <strong>Nota:</strong> I post su TikTok vengono inviati in <em>Modalità Inbox</em>. Dovrai finalizzare e pubblicare il video direttamente dall'app TikTok sul tuo telefono.
+                                        </div>
+                                    @endif
+                                    
+                                    @if($preflight && !$preflight->isPass)
+                                        <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
+                                            <strong>Verifica Preflight Fallita</strong>
+                                            <ul class="u-pl-sm u-mt-xs" style="list-style-type: disc; margin-left: 1rem;">
+                                                @foreach($preflight->errors as $err)
+                                                    <li>{{ $err }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
                                     
                                     @if($publication)
                                         @if($publication->status === \App\Enums\Social\PublicationStatus::Published)
                                             <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-rounded u-p-sm u-text-meta">
-                                                Pubblicato il {{ $publication->published_at?->format('d/m/Y H:i') }}<br>
-                                                ID: {{ $publication->external_post_id }}
+                                                @if($publication->delivery_state === 'delivered_to_tiktok')
+                                                    Inviato a TikTok il {{ $publication->published_at?->format('d/m/Y H:i') }} (da completare in app)<br>
+                                                @else
+                                                    Pubblicato il {{ $publication->published_at?->format('d/m/Y H:i') }}<br>
+                                                @endif
+                                                ID: {{ $publication->external_post_id ?: $publication->external_container_id }}
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Publishing || $publication->status === \App\Enums\Social\PublicationStatus::Pending)
                                             <div class="u-bg-blue-50 u-border u-border-blue-200 u-text-blue-700 u-rounded u-p-sm u-text-meta">
@@ -868,9 +1005,9 @@
                                                 <br>Stato Meta: {{ $publication->meta_processing_state }}
                                                 @endif
                                             </div>
-                                        @elseif($publication->status === \App\Enums\Social\PublicationStatus::NeedsManualReview)
-                                            <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                                <strong>Intervento Manuale Richiesto</strong><br>
+                                        @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
+                                            <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
+                                                <strong>Pubblicazione Fallita</strong><br>
                                                 {{ $publication->error_message }}
                                                 @if(auth()->user()->is_admin && $publication->provider_last_response)
                                                     <div class="u-mt-xs">
@@ -882,17 +1019,12 @@
                                                 @endif
                                             </div>
                                             <div class="u-flex u-gap-sm">
-                                                <button type="button" wire:confirm="Sei sicuro? Se il container Meta era solo in ritardo potresti causare un post doppio." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow">Forza Retry</button>
-                                                <button type="button" wire:click="forceFailPublication({{ $publication->id }})" class="btn btn-red btn-sm">Segna Fallito</button>
+                                                <button type="button" wire:confirm="Sei sicuro di voler forzare il riavvio? Potrebbe causare doppioni." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Forza Retry</button>
+                                                <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-sec btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Nuovo Tentativo</button>
                                             </div>
-                                        @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
-                                            <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                                Errore: {{ $publication->error_message }}
-                                            </div>
-                                            <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full">Riprova Pubblicazione</button>
                                         @endif
                                     @else
-                                        <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full" wire:loading.attr="disabled">
+                                        <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full" wire:loading.attr="disabled" {{ !$canPublish ? 'disabled' : '' }}>
                                             <span wire:loading.remove wire:target="publishToSocial('{{ $platform }}')">Pubblica Ora</span>
                                             <span wire:loading wire:target="publishToSocial('{{ $platform }}')">Pubblicazione in corso...</span>
                                         </button>
@@ -924,50 +1056,49 @@
                             <div class="cmp-ig-preview-author">{{ $campaign->client->name }}</div>
                         </div>
 
-                        <div class="cmp-ig-preview-media" @if((!$post->currentVersion && count($existing_media) > 1) || count($versionImages) > 1)
-                        x-data="{ currentSlide: 0, slides: {{ $post->currentVersion ? count($versionImages) : min(count($existing_media), 10) }} }" @endif>
-                            @if(count($versionImages) > 0)
-                                @if(count($versionImages) == 1)
-                                    <img src="{{ $versionImages[0] }}" alt="Preview Media">
-                                @else
-                                    <div class="cmp-carousel-inner" :data-slide="currentSlide">
-                                        @foreach($versionImages as $index => $vImg)
-                                            <div class="cmp-carousel-item">
-                                                <img src="{{ $vImg }}" alt="Preview Media {{ $index + 1 }}">
+                        <div class="cmp-ig-preview-media">
+                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ min(count($previewMedia), 10) }} }" @endif>
+                                @if(count($previewMedia) > 0)
+                                @if(count($previewMedia) == 1)
+                                    @if($previewMedia[0]['source'] === 'local_pending')
+                                        <template x-if="localBlobUrls['{{ $previewMedia[0]['uid'] }}']">
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                                <template x-if="'{{ $previewMedia[0]['type'] }}' === 'video'">
+                                                    <video :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" controls muted playsinline preload="metadata" class="cmp-ig-preview-local-media"></video>
+                                                </template>
+                                                <template x-if="'{{ $previewMedia[0]['type'] }}' === 'image'">
+                                                    <img :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" class="cmp-ig-preview-local-media">
+                                                </template>
                                             </div>
-                                        @endforeach
-                                    </div>
-                                    <button type="button" class="cmp-carousel-prev" x-show="currentSlide > 0"
-                                        @click="currentSlide--">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left u-icon-sm"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                                    </button>
-                                    <button type="button" class="cmp-carousel-next" x-show="currentSlide < slides - 1"
-                                        @click="currentSlide++">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right u-icon-sm"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                    </button>
-                                    <div class="cmp-carousel-dots">
-                                        <template x-for="i in slides">
-                                            <span class="cmp-carousel-dot" :class="currentSlide === i - 1 ? 'active' : ''"
-                                                @click="currentSlide = i - 1"></span>
                                         </template>
-                                    </div>
-                                @endif
-                            @elseif(count($existing_media) > 0)
-                                @if(count($existing_media) == 1)
-                                    @php $firstMedia = $existing_media[0]; @endphp
-                                    @if(\Illuminate\Support\Str::startsWith($firstMedia['mime_type'], 'video/'))
-                                        <video src="{{ $firstMedia['preview_url'] }}" controls></video>
                                     @else
-                                        <img src="{{ $firstMedia['preview_url'] }}" alt="Preview Media">
+                                        @if($previewMedia[0]['type'] === 'video')
+                                            <video src="{{ $previewMedia[0]['url'] }}" controls muted playsinline preload="metadata"></video>
+                                        @else
+                                            <img src="{{ $previewMedia[0]['url'] }}" alt="Preview Media">
+                                        @endif
                                     @endif
                                 @else
-                                    <div class="cmp-carousel-inner" :data-slide="currentSlide">
-                                        @foreach($existing_media as $index => $mediaItem)
-                                            <div class="cmp-carousel-item">
-                                                @if(\Illuminate\Support\Str::startsWith($mediaItem['mime_type'], 'video/'))
-                                                    <video src="{{ $mediaItem['preview_url'] }}" controls></video>
+                                    <div class="cmp-carousel-inner" :style="`transform: translateX(-${currentSlide * 100}%); display: flex; transition: transform 0.3s ease;`">
+                                        @foreach($previewMedia as $index => $item)
+                                            <div class="cmp-carousel-item" style="flex: 0 0 100%; width: 100%;">
+                                                @if($item['source'] === 'local_pending')
+                                                    <template x-if="localBlobUrls['{{ $item['uid'] }}']">
+                                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                                            <template x-if="'{{ $item['type'] }}' === 'video'">
+                                                                <video :src="localBlobUrls['{{ $item['uid'] }}']" controls muted playsinline preload="metadata"></video>
+                                                            </template>
+                                                            <template x-if="'{{ $item['type'] }}' === 'image'">
+                                                                <img :src="localBlobUrls['{{ $item['uid'] }}']" alt="Preview Media {{ $index + 1 }}">
+                                                            </template>
+                                                        </div>
+                                                    </template>
                                                 @else
-                                                    <img src="{{ $mediaItem['preview_url'] }}" alt="Preview Media {{ $index + 1 }}">
+                                                    @if($item['type'] === 'video')
+                                                        <video src="{{ $item['url'] }}" controls muted playsinline preload="metadata"></video>
+                                                    @else
+                                                        <img src="{{ $item['url'] }}" alt="Preview Media {{ $index + 1 }}">
+                                                    @endif
                                                 @endif
                                             </div>
                                         @endforeach
@@ -987,12 +1118,13 @@
                                         </template>
                                     </div>
                                 @endif
-                            @else
-                                <div class="cmp-ig-preview-placeholder">
-                                    <i data-lucide="image" class="u-icon-lg u-text-muted"></i>
-                                    <div class="u-mt-xs">Nessun media</div>
-                                </div>
-                            @endif
+                                @else
+                                    <div class="cmp-ig-preview-placeholder">
+                                        <i data-lucide="image" class="u-icon-lg u-text-muted"></i>
+                                        <div class="u-mt-xs">Nessun media</div>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
 
                         <div class="cmp-ig-preview-actions">

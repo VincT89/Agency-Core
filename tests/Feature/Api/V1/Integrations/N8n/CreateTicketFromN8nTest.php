@@ -129,6 +129,25 @@ class CreateTicketFromN8nTest extends TestCase
                  ->assertJsonValidationErrors(['client_id']);
     }
 
+    public function test_creates_ticket_with_client_id_and_project_id_matching()
+    {
+        $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+
+        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+            'client_id' => $client->id,
+            'project_id' => $project->id,
+            'source' => 'whatsapp',
+            'n8n_execution_id' => 'exec-matching',
+        ], [
+            'Authorization' => 'Bearer test-token'
+        ]);
+
+        $response->assertStatus(201)
+                 ->assertJsonPath('data.client_id', $client->id)
+                 ->assertJsonPath('data.project_id', $project->id);
+    }
+
     public function test_creates_ticket_with_client_id_only()
     {
         $client = Client::factory()->create();

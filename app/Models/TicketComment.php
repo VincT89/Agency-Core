@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TicketComment extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'ticket_id', 'user_id', 'body', 'source',
         'delivery_channel', 'delivery_status', 'delivery_requested_at',

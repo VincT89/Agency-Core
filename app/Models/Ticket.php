@@ -10,6 +10,8 @@ use App\Models\User;
 
 class Ticket extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected static function booted()
     {
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);

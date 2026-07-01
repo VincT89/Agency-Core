@@ -32,6 +32,7 @@ class N8nCallbackValidationTest extends TestCase
             'version_number' => 1,
             'title' => 'Test Title',
             'caption' => 'Test Caption',
+            'image_url' => 'https://example.com/image.jpg',
         ];
 
         $token = 'test-token';

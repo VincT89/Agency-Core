@@ -35,7 +35,7 @@ class ChatbotSyncTest extends TestCase
     public function test_n_plus_one_marketing_posts_eager_loading(): void
     {
         $client = Client::factory()->create();
-        $chatbotClient = ChatbotClient::factory()->create(['client_id' => $client->id]);
+        $chatbotClient = ChatbotClient::create(['client_id' => $client->id, 'name' => $client->name]);
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
         $post = MarketingCampaignPost::factory()->create(['marketing_campaign_id' => $campaign->id]);
 

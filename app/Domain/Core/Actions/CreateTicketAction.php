@@ -32,7 +32,9 @@ class CreateTicketAction
                 event(new \App\Domain\Core\Events\TicketAssigned($ticket));
             } else {
                 foreach ($this->resolver->admins() as $admin) {
-                    $admin->notify(new TicketUnassignedNotification($ticket));
+                    if ($admin->id !== auth()->id()) {
+                        $admin->notify(new TicketUnassignedNotification($ticket));
+                    }
                 }
             }
 

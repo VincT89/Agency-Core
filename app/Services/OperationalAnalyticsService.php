@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
 use App\Models\Task;
 use App\Models\Ticket;
 use Illuminate\Support\Carbon;
@@ -30,9 +31,10 @@ class OperationalAnalyticsService
 
         // Closed Tasks
         // Assuming 'done' status or based on updated_at/completed_at. Let's use updated_at for when it was marked done.
+        $dateFormat = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', updated_at)" : "DATE_FORMAT(updated_at, '%Y-%m')";
         $tasks = Task::where('status', 'done')
             ->where('updated_at', '>=', $startDate)
-            ->selectRaw('DATE_FORMAT(updated_at, "%Y-%m") as month, COUNT(*) as total')
+            ->selectRaw("{$dateFormat} as month, COUNT(*) as total")
             ->groupBy('month')
             ->get();
 
@@ -44,9 +46,10 @@ class OperationalAnalyticsService
 
         // Closed Tickets
         // Assuming 'closed' or 'resolved' status. Let's use 'closed' or 'done'
-        $tickets = Ticket::whereIn('status', ['closed', 'done'])
+        $dateFormat2 = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', updated_at)" : "DATE_FORMAT(updated_at, '%Y-%m')";
+        $tickets = Ticket::whereIn('status', ['closed', 'resolved', 'done'])
             ->where('updated_at', '>=', $startDate)
-            ->selectRaw('DATE_FORMAT(updated_at, "%Y-%m") as month, COUNT(*) as total')
+            ->selectRaw("{$dateFormat2} as month, COUNT(*) as total")
             ->groupBy('month')
             ->get();
 

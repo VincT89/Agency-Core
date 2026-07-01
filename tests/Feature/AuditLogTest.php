@@ -21,11 +21,17 @@ class AuditLogTest extends TestCase
     {
         $admin = User::factory()->create(['role' => UserRole::Admin, 'password_changed_at' => now()]);
         
+        $this->mock(\App\Services\Integrations\Nextcloud\NextcloudService::class, function ($mock) {
+            $mock->shouldReceive('mediaRoot')->andReturn('/mock_root');
+            $mock->shouldReceive('ensureDirectoryExists')->andReturn(true);
+        });
+
         $this->actingAs($admin)->post(route('clients.store'), [
             'name' => 'Acme Test Srl',
             'status' => 'active',
             'email' => 'info@acmetest.it',
-        ])->assertRedirect();
+            'nextcloud_folder_name' => 'acme_test',
+        ])->assertSessionHasNoErrors()->assertRedirect();
 
         $client = Client::where('name', 'Acme Test Srl')->first();
         

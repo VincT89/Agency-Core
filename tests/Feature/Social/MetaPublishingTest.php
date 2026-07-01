@@ -23,6 +23,8 @@ class MetaPublishingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \Illuminate\Support\Facades\URL::forceRootUrl('https://agency-core.test');
+        \Illuminate\Support\Facades\URL::forceScheme('https');
         
         $this->user = User::factory()->create();
         $this->client = Client::factory()->create();
@@ -57,8 +59,7 @@ class MetaPublishingTest extends TestCase
             'original_name' => 'image.jpg',
             'media_type' => 'image',
             'path' => 'test/image.jpg',
-            'size' => 1024,
-            'order' => 1
+            'sort_order' => 1
         ]);
         
         MarketingCampaignPostMedia::factory()->create([
@@ -66,14 +67,21 @@ class MetaPublishingTest extends TestCase
             'original_name' => 'video.mp4',
             'media_type' => 'video',
             'path' => 'test/video.mp4',
-            'size' => 1024,
-            'order' => 2
+            'sort_order' => 2
         ]);
-        
+        $mockMediaUrlService = \Mockery::mock(\App\Domain\Social\Services\SocialMediaPublicUrlService::class);
+        $mockMediaUrlService->shouldReceive('getValidatedPublicUrl')->andReturn(['url' => 'https://example.com/mock.jpg', 'diagnostic' => []]);
+        $mockMediaUrlService->shouldReceive('getValidatedPublicUrls')->andReturn([
+            ['url' => 'https://example.com/mock1.jpg', 'diagnostic' => []],
+            ['url' => 'https://example.com/mock2.mp4', 'diagnostic' => []]
+        ]);
+        $this->app->instance(\App\Domain\Social\Services\SocialMediaPublicUrlService::class, $mockMediaUrlService);
+
         $preflightService = app(MetaPreflightService::class);
         $result = $preflightService->runPreflight($this->post->fresh(), $this->account);
         
         $this->assertFalse($result->isPass);
+
         $this->assertContains("Supporto carousel immagini-only per ora. Non sono ammessi formati misti o video multipli in questa versione.", $result->errors);
     }
 
@@ -85,8 +93,7 @@ class MetaPublishingTest extends TestCase
             'original_name' => 'image1.jpg',
             'media_type' => 'image',
             'path' => 'test/image1.jpg',
-            'size' => 1024,
-            'order' => 1
+            'sort_order' => 1
         ]);
         
         MarketingCampaignPostMedia::factory()->create([
@@ -94,8 +101,7 @@ class MetaPublishingTest extends TestCase
             'original_name' => 'image2.png',
             'media_type' => 'image',
             'path' => 'test/image2.png',
-            'size' => 1024,
-            'order' => 2
+            'sort_order' => 2
         ]);
         
         // Mock getValidatedPublicUrl per evitare la HEAD request reale

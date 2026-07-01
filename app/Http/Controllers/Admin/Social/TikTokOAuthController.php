@@ -18,14 +18,14 @@ class TikTokOAuthController extends Controller
         $expectedPlatform = session('tiktok_oauth_expected_platform');
 
         if (!$accountId || !$clientId || $expectedPlatform !== \App\Enums\Social\SocialPlatform::Tiktok->value) {
-            return redirect()->route('admin.clients.index')->with('error', 'Sessione OAuth non inizializzata o contesto invalido. Riprova dal pannello del cliente.');
+            return redirect()->route('clients.index')->with('error', 'Sessione OAuth non inizializzata o contesto invalido. Riprova dal pannello del cliente.');
         }
 
         $account = ClientSocialAccount::findOrFail($accountId);
 
         // Blocco sicurezza tenant/platform
         if ($account->client_id !== $clientId || $account->platform !== \App\Enums\Social\SocialPlatform::Tiktok) {
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Incoerenza tenant/platform rilevata. Azione annullata.');
         }
 
@@ -43,7 +43,7 @@ class TikTokOAuthController extends Controller
         } elseif ($publishMode === 'direct') {
             // Blocco temporaneo "Sprint 2A/2B" finché il direct publish non è approvato.
             // Solleviamo un'eccezione esplicita o blocchiamo l'auth.
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'La modalità direct publish (video.publish) è disabilitata temporaneamente. Impostare delivery_mode=draft.');
         }
 
@@ -71,30 +71,30 @@ class TikTokOAuthController extends Controller
         $expectedPlatform = session()->pull('tiktok_oauth_expected_platform');
 
         if (!$accountId || !$clientId || $expectedPlatform !== \App\Enums\Social\SocialPlatform::Tiktok->value) {
-            return redirect()->route('admin.clients.index')->with('error', 'Sessione OAuth scaduta o già utilizzata (possibile doppio click o multi-tab).');
+            return redirect()->route('clients.index')->with('error', 'Sessione OAuth scaduta o già utilizzata (possibile doppio click o multi-tab).');
         }
 
         $account = ClientSocialAccount::findOrFail($accountId);
 
         // Validazione cross-tab del tenant e platform
         if ($account->client_id !== $clientId || $account->platform !== \App\Enums\Social\SocialPlatform::Tiktok) {
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Incoerenza tenant/platform rilevata nel callback. Connessione annullata.');
         }
 
         if ($error) {
             Log::warning('TikTok OAuth Error', ['error' => $error, 'description' => $errorDescription]);
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', "Errore durante il collegamento TikTok: {$errorDescription}");
         }
 
         if (!$state || $state !== $sessionState) {
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Stato OAuth non valido o scaduto. Riprova.');
         }
 
         if (!$code) {
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Codice di autorizzazione non ricevuto da TikTok.');
         }
 
@@ -114,7 +114,7 @@ class TikTokOAuthController extends Controller
                 'status' => $response->status(),
                 'body' => $response->body()
             ]);
-            return redirect()->route('admin.clients.show', $account->client_id)
+            return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Impossibile completare lo scambio del token con TikTok.');
         }
 
@@ -136,7 +136,7 @@ class TikTokOAuthController extends Controller
         $creatorInfoService = new \App\Domain\Social\TikTok\TikTokCreatorInfoService();
         $creatorInfoService->updateCreatorInfo($account);
 
-        return redirect()->route('admin.clients.show', $account->client_id)
+        return redirect()->route('clients.show', $account->client_id)
             ->with('success', 'Account TikTok collegato con successo e capabilities aggiornate.');
     }
 }

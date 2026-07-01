@@ -10,6 +10,8 @@ enum PublicationStatus: string
     case Failed = 'failed';
     case Cancelled = 'cancelled';
     case NeedsManualReview = 'needs_manual_review';
+    case Superseded = 'superseded';
+    case Abandoned = 'abandoned';
 
     public function label(): string
     {
@@ -20,6 +22,8 @@ enum PublicationStatus: string
             self::Failed => 'Fallito',
             self::Cancelled => 'Annullato',
             self::NeedsManualReview => 'Richiede Revisione Manuale',
+            self::Superseded => 'Sostituito',
+            self::Abandoned => 'Abbandonato',
         };
     }
 
@@ -32,6 +36,8 @@ enum PublicationStatus: string
             self::Failed => 'br',
             self::Cancelled => 'bd',
             self::NeedsManualReview => 'bo', // bo for orange maybe?
+            self::Superseded => 'bd',
+            self::Abandoned => 'bd',
         };
     }
 }

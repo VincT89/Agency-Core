@@ -39,6 +39,7 @@ class RequestMarketingCampaignPostRegenerationJobTest extends TestCase
     public function test_job_restores_previous_status_on_failure()
     {
         $post = Mockery::mock(MarketingCampaignPost::class)->makePartial();
+        $post->status = MarketingCampaignPostStatus::Regenerating;
         $post->shouldReceive('refresh')->once();
         $post->shouldReceive('update')->once()->with([
             'status' => MarketingCampaignPostStatus::Generated->value,

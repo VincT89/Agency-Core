@@ -28,7 +28,7 @@ class PublicationLifecycleTest extends TestCase
             ],
             'Failed and NeedsManualReview' => [
                 [PublicationStatus::Failed, PublicationStatus::NeedsManualReview],
-                MarketingCampaignPostStatus::NeedsManualReview
+                MarketingCampaignPostStatus::Failed
             ],
             'Publishing and Published' => [
                 [PublicationStatus::Publishing, PublicationStatus::Published],
@@ -42,11 +42,15 @@ class PublicationLifecycleTest extends TestCase
     {
         $post = MarketingCampaignPost::factory()->create();
 
+        $platforms = [\App\Enums\Social\SocialPlatform::Instagram->value, \App\Enums\Social\SocialPlatform::Facebook->value, \App\Enums\Social\SocialPlatform::Tiktok->value];
+        $index = 0;
         foreach ($publicationStatuses as $status) {
             MarketingCampaignPostPublication::factory()->create([
                 'marketing_campaign_post_id' => $post->id,
                 'status' => $status->value,
+                'platform' => $platforms[$index % count($platforms)],
             ]);
+            $index++;
         }
 
         $action = new SyncMarketingCampaignPostPublicationStatusAction();
@@ -63,16 +67,19 @@ class PublicationLifecycleTest extends TestCase
         MarketingCampaignPostPublication::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'status' => PublicationStatus::Published->value,
+            'platform' => \App\Enums\Social\SocialPlatform::Facebook->value,
         ]);
 
         MarketingCampaignPostPublication::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'status' => PublicationStatus::Superseded->value, // should be ignored
+            'platform' => \App\Enums\Social\SocialPlatform::Instagram->value,
         ]);
 
         MarketingCampaignPostPublication::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'status' => PublicationStatus::Abandoned->value, // should be ignored
+            'platform' => \App\Enums\Social\SocialPlatform::Tiktok->value,
         ]);
 
         $action = new SyncMarketingCampaignPostPublicationStatusAction();

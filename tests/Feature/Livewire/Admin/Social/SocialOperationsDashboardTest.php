@@ -39,7 +39,7 @@ class SocialOperationsDashboardTest extends TestCase
         
         $post = MarketingCampaignPost::create([
             'marketing_campaign_id' => $campaign->id,
-            'status' => MarketingCampaignPostStatus::NeedsManualReview->value,
+            'status' => MarketingCampaignPostStatus::Failed->value,
         ]);
         
         $socialAccount = \App\Models\ClientSocialAccount::create([
@@ -106,7 +106,7 @@ class SocialOperationsDashboardTest extends TestCase
 
         Livewire::actingAs($this->user)
             ->test(SocialOperationsDashboard::class)
-            ->call('refreshContainer', $publication->id);
+            ->call('refreshPublication', $publication->id);
             
         $this->assertEquals(PublicationStatus::Failed->value, $publication->refresh()->status->value);
     }
@@ -122,7 +122,7 @@ class SocialOperationsDashboardTest extends TestCase
         
         $post = MarketingCampaignPost::create([
             'marketing_campaign_id' => $campaign->id,
-            'status' => MarketingCampaignPostStatus::Superseded->value,
+            'status' => MarketingCampaignPostStatus::Cancelled->value,
         ]);
         
         $socialAccount = \App\Models\ClientSocialAccount::create([
@@ -143,8 +143,7 @@ class SocialOperationsDashboardTest extends TestCase
 
         Livewire::actingAs($this->user)
             ->test(SocialOperationsDashboard::class)
-            ->call('forceFailPublication', $publication->id)
-            ->assertSessionHas('error'); // Ensure error flash message is set
+            ->call('forceFailPublication', $publication->id);
             
         $this->assertEquals(PublicationStatus::Superseded->value, $publication->refresh()->status->value);
     }

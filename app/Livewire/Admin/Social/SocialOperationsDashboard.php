@@ -35,16 +35,18 @@ class SocialOperationsDashboard extends Component
 
         if (in_array($publication->status, [
             PublicationStatus::Published,
-            PublicationStatus::Cancelled
+            PublicationStatus::Cancelled,
+            PublicationStatus::Superseded,
+            PublicationStatus::Abandoned,
         ])) {
             session()->flash('error', 'Impossibile riprovare: la pubblicazione è in uno stato terminale o di successo.');
             return;
         }
 
         // Se era failed IG e stiamo rifacendo da zero, dismettiamo questo e non usiamo il vecchio container
-        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === PublicationStatus::Failed) {
+        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && in_array($publication->status, [PublicationStatus::Failed, PublicationStatus::NeedsManualReview])) {
             $publication->update([
-                'status' => PublicationStatus::Cancelled->value,
+                'status' => PublicationStatus::Superseded->value,
                 'error_message' => 'Dismesso (sostituito da nuovo tentativo)',
             ]);
             
@@ -82,7 +84,9 @@ class SocialOperationsDashboard extends Component
         if (in_array($publication->status, [
             PublicationStatus::Published, 
             PublicationStatus::Failed,
-            PublicationStatus::Cancelled
+            PublicationStatus::Cancelled,
+            PublicationStatus::Superseded,
+            PublicationStatus::Abandoned,
         ])) {
             session()->flash('error', 'La pubblicazione è già in uno stato terminale.');
             return;
@@ -114,7 +118,10 @@ class SocialOperationsDashboard extends Component
 
         if (in_array($publication->status, [
             PublicationStatus::Published,
-            PublicationStatus::Cancelled
+            PublicationStatus::Cancelled,
+            PublicationStatus::Superseded,
+            PublicationStatus::Abandoned,
+            PublicationStatus::Failed
         ])) {
             session()->flash('error', 'Impossibile forzare il fallimento: la pubblicazione è in uno stato terminale o di successo.');
             return;

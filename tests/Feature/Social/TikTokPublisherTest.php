@@ -91,7 +91,7 @@ class TikTokPublisherTest extends TestCase
 
         $this->assertInstanceOf(\App\Domain\Social\Publishing\PublishResult::class, $result);
         $this->assertTrue($result->isProcessing(), "Publish failed with error: " . $result->errorMessage);
-        $this->assertEquals('dummy_external_id', $result->externalContainerId);
+        $this->assertEquals('dummy_external_id', $result->externalTaskId);
     }
 
     public function test_aborts_on_lock_collision()

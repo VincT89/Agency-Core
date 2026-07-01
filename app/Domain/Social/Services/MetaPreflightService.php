@@ -39,6 +39,13 @@ class MetaPreflightService
                 // Carousel Limit: Misto immagini e video
                 if ($mediaItems->count() > 1) {
                     $result->addCheck('carousel_count_limit', $mediaItems->count() <= 10, $mediaItems->count() <= 10 ? null : 'Instagram supporta un massimo di 10 media in un carousel.');
+
+                    $hasVideo = $mediaItems->contains(fn($m) => strtolower($m->media_type ?? '') === 'video' || in_array(strtolower(pathinfo($m->path ?? '', PATHINFO_EXTENSION)), ['mp4', 'mov', 'webm']));
+                    $hasPhoto = $mediaItems->contains(fn($m) => strtolower($m->media_type ?? '') !== 'video' && !in_array(strtolower(pathinfo($m->path ?? '', PATHINFO_EXTENSION)), ['mp4', 'mov', 'webm']));
+
+                    if ($hasVideo && $hasPhoto || ($hasVideo && $mediaItems->count() > 1)) {
+                        $result->addCheck('carousel_mixed_format', false, 'Supporto carousel immagini-only per ora. Non sono ammessi formati misti o video multipli in questa versione.');
+                    }
                 }
 
                 // Check Media Specs (Immagini: JPEG, max 8MB) (Video: max limit)

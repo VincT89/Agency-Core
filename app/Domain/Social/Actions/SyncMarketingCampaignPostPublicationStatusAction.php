@@ -19,6 +19,8 @@ class SyncMarketingCampaignPostPublicationStatusAction
 
         $activePublications = $latestPerPlatform->filter(fn($p) => !in_array($p->status instanceof PublicationStatus ? $p->status->value : $p->status, [
             PublicationStatus::Cancelled->value,
+            PublicationStatus::Superseded->value,
+            PublicationStatus::Abandoned->value,
         ]));
 
         if ($activePublications->isEmpty()) {

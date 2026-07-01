@@ -21,7 +21,7 @@ class MyShootsIndex extends Component
 
     public function mount()
     {
-        if (!auth()->user()->isPhotographer()) {
+        if (!auth()->user()->isPhotographer() && !auth()->user()->canManageSystem()) {
             abort(403, 'Accesso negato: sezione riservata ai fotografi.');
         }
     }

@@ -140,7 +140,7 @@
           :active="request()->routeIs('calendar-events.*')" />
 
         @can('viewAny', \App\Models\Team::class)
-          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing() && !auth()->user()->isDeveloper())
             <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
               :active="request()->routeIs('teams.*')" />
           @endif

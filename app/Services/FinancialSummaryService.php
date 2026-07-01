@@ -32,9 +32,10 @@ class FinancialSummaryService
         }
 
         // Fatturato (Invoices issued/partially_paid/paid/overdue)
+        $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
         $invoices = Invoice::where('issue_date', '>=', $startDate)
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue'])
-            ->selectRaw('DATE_FORMAT(issue_date, "%Y-%m") as month, SUM(total) as total')
+            ->selectRaw("{$dateFormat} as month, SUM(total) as total")
             ->groupBy('month')
             ->get();
 
@@ -45,8 +46,9 @@ class FinancialSummaryService
         }
 
         // Incassato (Payments)
+        $paymentFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', payment_date)" : "DATE_FORMAT(payment_date, '%Y-%m')";
         $payments = Payment::where('payment_date', '>=', $startDate)
-            ->selectRaw('DATE_FORMAT(payment_date, "%Y-%m") as month, SUM(amount) as total')
+            ->selectRaw("{$paymentFormat} as month, SUM(amount) as total")
             ->groupBy('month')
             ->get();
 
@@ -57,9 +59,10 @@ class FinancialSummaryService
         }
 
         // Spese pagate (Expenses)
+        $expenseFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', paid_at)" : "DATE_FORMAT(paid_at, '%Y-%m')";
         $expenses = Expense::where('paid_at', '>=', $startDate)
             ->where('status', 'paid')
-            ->selectRaw('DATE_FORMAT(paid_at, "%Y-%m") as month, SUM(amount) as total')
+            ->selectRaw("{$expenseFormat} as month, SUM(amount) as total")
             ->groupBy('month')
             ->get();
 
@@ -141,9 +144,10 @@ class FinancialSummaryService
         }
 
         // We can approximate pending by month based on invoice issue date
+        $dateFormat2 = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
         $invoices = Invoice::where('issue_date', '>=', $startDate)
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue'])
-            ->selectRaw('DATE_FORMAT(issue_date, "%Y-%m") as month, SUM(total) as invoiced, SUM(paid_total) as collected, SUM(total - paid_total) as pending')
+            ->selectRaw("{$dateFormat2} as month, SUM(total) as invoiced, SUM(paid_total) as collected, SUM(total - paid_total) as pending")
             ->groupBy('month')
             ->get();
 

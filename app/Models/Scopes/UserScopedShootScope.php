@@ -28,10 +28,8 @@ class UserScopedShootScope implements Scope
         $builder->where(function($q) use ($user) {
             $q->whereHas('project', function ($q2) use ($user) {
                 $q2->whereIn('projects.id', $user->projects()->pluck('projects.id'));
-            })->orWhereHas('marketingCampaign.client', function ($q2) use ($user) {
-                $q2->whereHas('users', function ($q3) use ($user) {
-                    $q3->where('user_id', $user->id);
-                });
+            })->orWhereHas('marketingCampaign.client.projects.users', function ($q2) use ($user) {
+                $q2->where('users.id', $user->id);
             });
         });
     }

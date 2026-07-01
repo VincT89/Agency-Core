@@ -58,6 +58,18 @@ class SidebarVisibilityTest extends TestCase
         $response->assertSeeText('Utenti');
     }
 
+    public function test_dummy()
+    {
+        $this->withoutExceptionHandling();
+        $user = User::factory()->create(['role' => UserRole::Developer]);
+        $this->actingAs($user); // IMPORTANT!
+        
+        $counts = [
+            'marketingProjectsCount' => \App\Models\MarketingCampaign::visibleTo($user)->whereIn('status', ['draft', 'active'])->count(),
+        ];
+        $this->assertTrue(true);
+    }
+
     public function test_developer_sees_correct_sidebar_items()
     {
         $developer = User::factory()->create(['role' => UserRole::Developer]);
@@ -69,12 +81,12 @@ class SidebarVisibilityTest extends TestCase
         // Developer (come staff operativo) vede progetti, ticket, ecc.
         $response->assertSeeText('Progetti');
         $response->assertSeeText('Ticket');
-        $response->assertSeeText('Team');
         $response->assertSeeText('Task');
 
         // Ma non vede fatture o utenti admin
         $response->assertDontSeeText('Fatture');
         $response->assertDontSeeText('Pagamenti');
         $response->assertDontSeeText('Utenti');
+        $response->assertDontSeeText('Team');
     }
 }

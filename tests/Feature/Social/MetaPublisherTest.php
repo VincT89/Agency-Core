@@ -41,10 +41,12 @@ class MetaPublisherTest extends TestCase
         $post->load('orderedMediaItems');
 
         $mockUrlService = \Mockery::mock(\App\Domain\Social\Services\SocialMediaPublicUrlService::class);
-        $mockUrlService->shouldReceive('getValidatedPublicUrl')
+        $mockUrlService->shouldReceive('getValidatedPublicUrls')
             ->andReturn([
-                'url' => 'https://agency-core.test/dummy.jpg',
-                'diagnostic' => []
+                [
+                    'url' => 'https://agency-core.test/dummy.jpg',
+                    'diagnostic' => []
+                ]
             ]);
         $this->app->instance(\App\Domain\Social\Services\SocialMediaPublicUrlService::class, $mockUrlService);
 

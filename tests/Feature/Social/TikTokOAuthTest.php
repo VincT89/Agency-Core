@@ -22,10 +22,7 @@ class TikTokOAuthTest extends TestCase
         $this->admin = User::factory()->create(['role' => 'admin'] ?? []); 
         $this->actingAs($this->admin);
 
-        // Mock rotte admin per evitare RouteNotFoundException nel controller
-        \Illuminate\Support\Facades\Route::get('/admin/clients', fn() => 'index')->name('admin.clients.index');
-        \Illuminate\Support\Facades\Route::get('/admin/clients/{client}', fn() => 'show')->name('admin.clients.show');
-        app('router')->getRoutes()->refreshNameLookups();
+
     }
 
     public function test_redirect_fails_if_session_state_missing()
@@ -33,7 +30,7 @@ class TikTokOAuthTest extends TestCase
         // Nessuna sessione configurata
         $response = $this->get(route('admin.social.tiktok.redirect'));
 
-        $response->assertRedirect(route('admin.clients.index'));
+        $response->assertRedirect(route('clients.index'));
         $response->assertSessionHas('error');
     }
 
@@ -51,7 +48,7 @@ class TikTokOAuthTest extends TestCase
 
         $response = $this->get(route('admin.social.tiktok.redirect'));
 
-        $response->assertRedirect(route('admin.clients.show', $account->client_id));
+        $response->assertRedirect(route('clients.show', $account->client_id));
         $response->assertSessionHas('error');
     }
 
@@ -73,7 +70,7 @@ class TikTokOAuthTest extends TestCase
             'code' => 'dummy_code',
         ]));
 
-        $response->assertRedirect(route('admin.clients.show', $account->client_id));
+        $response->assertRedirect(route('clients.show', $account->client_id));
         $response->assertSessionHas('error', 'Stato OAuth non valido o scaduto. Riprova.');
     }
 
@@ -112,7 +109,7 @@ class TikTokOAuthTest extends TestCase
             'code' => 'dummy_code',
         ]));
 
-        $response->assertRedirect(route('admin.clients.show', $account->client_id));
+        $response->assertRedirect(route('clients.show', $account->client_id));
         $response->assertSessionHas('success');
 
         $account->refresh();

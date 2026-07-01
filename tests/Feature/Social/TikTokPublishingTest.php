@@ -145,7 +145,7 @@ class TikTokPublishingTest extends TestCase
         $this->app->instance(\App\Domain\Social\Services\SocialMediaPublicUrlService::class, $mockMediaUrlService);
 
         Http::fake([
-            'open.tiktokapis.com/v2/post/publish/inbox/video/init/' => Http::response([
+            'open.tiktokapis.com/v2/post/publish/video/init/' => Http::response([
                 'data' => ['publish_id' => 'v.g.12345'],
                 'error' => ['code' => 'ok']
             ], 200),
@@ -154,9 +154,10 @@ class TikTokPublishingTest extends TestCase
         $publisher = app(TikTokPublisher::class);
         $result = $publisher->publish($this->post->fresh(), $this->account);
 
+
         $this->assertTrue($result->success);
         $this->assertTrue($result->isProcessing());
-        $this->assertEquals('v.g.12345', $result->externalContainerId);
+        $this->assertEquals('v.g.12345', $result->externalTaskId);
     }
 
     public function test_tiktok_polling_job_marks_failed_status()

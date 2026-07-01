@@ -16,7 +16,7 @@ class MyShootShow extends Component
 
     public function mount(Shoot $shoot)
     {
-        if (!auth()->user()->isPhotographer()) {
+        if (!auth()->user()->isPhotographer() && !auth()->user()->canManageSystem()) {
             abort(403, 'Accesso negato: sezione riservata ai fotografi.');
         }
 

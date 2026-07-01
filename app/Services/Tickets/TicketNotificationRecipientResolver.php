@@ -25,6 +25,12 @@ class TicketNotificationRecipientResolver
             $recipients->push($ticket->assignee);
         }
 
-        return $recipients->unique('id')->values();
+        $recipients = $recipients->unique('id');
+
+        if (auth()->check()) {
+            $recipients = $recipients->reject(fn($user) => $user->id === auth()->id());
+        }
+
+        return $recipients->values();
     }
 }

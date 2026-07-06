@@ -16,10 +16,17 @@ class TikTokPostStatusService
         // FAILED è solo per errori sistemici. Per problemi lato content, meglio NeedsManualReview
         return match ($tiktokStatus) {
             'PUBLISH_COMPLETE' => PublicationStatus::Published,
-            'PROCESSING', 'UPLOADING', 'PENDING_REVIEW', 'MODERATION' => PublicationStatus::Publishing,
-            'CREATOR_ACTION_REQUIRED', 'PRIVACY_RESTRICTION' => PublicationStatus::NeedsManualReview,
+
+            'PROCESSING_UPLOAD',
+            'PROCESSING_DOWNLOAD' => PublicationStatus::Publishing,
+
+            // Per draft/upload non è ancora "published":
+            // TikTok ha consegnato la notifica inbox, ora serve azione dell'utente.
+            'SEND_TO_USER_INBOX' => PublicationStatus::NeedsManualReview,
+
             'FAILED' => PublicationStatus::Failed,
-            default => PublicationStatus::Publishing, // UNKNOWN o altri si considerano Publishing fino a timeout
+
+            default => PublicationStatus::Publishing,
         };
     }
 }

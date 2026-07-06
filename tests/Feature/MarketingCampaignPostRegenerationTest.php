@@ -56,23 +56,25 @@ class MarketingCampaignPostRegenerationTest extends TestCase
         $this->assertFalse($post->canRegenerate());
     }
 
-    public function test_regeneration_callback_creates_caption_version()
-    {
-        $this->markTestIncomplete('To be implemented with specific JSON payload');
-    }
-
-    public function test_regeneration_callback_creates_image_version()
-    {
-        $this->markTestIncomplete('To be implemented with specific JSON payload');
-    }
-
-    public function test_regeneration_callback_rejects_wrong_request_id()
-    {
-        $this->markTestIncomplete('To be implemented with specific JSON payload');
-    }
-
     public function test_cancel_regeneration_restores_previous_status()
     {
-        $this->markTestIncomplete('To be implemented by Livewire component testing');
+        $user = User::factory()->create(['role' => 'admin']);
+        $client = \App\Models\Client::factory()->create();
+        $campaign = \App\Models\MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Regenerating,
+            'n8n_previous_status' => MarketingCampaignPostStatus::SentToClient,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post,
+        ]);
+
+        \Livewire\Livewire::actingAs($user)
+            ->test(\App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post])
+            ->call('cancelRegeneration');
+
+        $post->refresh();
+        $this->assertEquals(MarketingCampaignPostStatus::SentToClient, $post->status);
+        $this->assertEquals('N8N_ERROR_FORCE_CANCELLED', $post->n8n_error);
     }
 }

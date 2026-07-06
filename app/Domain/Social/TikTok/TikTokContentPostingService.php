@@ -46,37 +46,94 @@ class TikTokContentPostingService
     {
         $publishMode = config('services.tiktok.delivery_mode', 'disabled');
 
-        if ($publishMode === 'disabled') {
-            throw new Exception("TikTok publishing non configurato o non ancora abilitato.");
-        }
+        return match ($publishMode) {
+            'draft' => $this->initializeVideoDraftUpload($accessToken, $postData, $strategy),
+            'direct' => $this->initializeVideoDirectPost($accessToken, $postData, $strategy),
+            default => throw new Exception("TikTok publishing non configurato o non ancora abilitato."),
+        };
+    }
 
-        $basePayload = [
-            'post_info' => [
-                'title' => $postData['title'] ?? '',
-                'privacy_level' => 'SELF_ONLY',
-                'disable_comment' => false,
-                'disable_duet' => true,
-                'disable_stitch' => true,
-            ]
-        ];
-
-        $payload = $strategy->applyStrategy($accessToken, $basePayload, [$postData['video_url']], 'video');
+    private function initializeVideoDraftUpload(
+        string $accessToken,
+        array $postData,
+        TikTokMediaTransferStrategy $strategy
+    ): array {
+        $payload = $strategy->applyStrategy(
+            $accessToken,
+            [],
+            [$postData['video_url']],
+            'video'
+        );
 
         $response = Http::withToken($accessToken)
-            ->post("{$this->apiBase}/v2/post/publish/video/init/", $payload);
+            ->withHeaders([
+                'Content-Type' => 'application/json; charset=UTF-8',
+            ])
+            ->post("{$this->apiBase}/v2/post/publish/inbox/video/init/", $payload);
 
         if (!$response->successful()) {
-            throw new Exception("TikTok API Init Video Fallito: " . $response->body());
+            throw new Exception("TikTok API Draft Upload Video fallito: " . $response->body());
         }
 
         $data = $response->json();
-        if (isset($data['error']['code']) && $data['error']['code'] !== 'ok') {
-            throw new Exception("TikTok Init Video Error: " . ($data['error']['message'] ?? 'Unknown error'));
+
+        if (($data['error']['code'] ?? 'ok') !== 'ok') {
+            throw new Exception("TikTok Draft Upload Video Error: " . ($data['error']['message'] ?? 'Unknown error'));
         }
 
         return [
             'publish_id' => $data['data']['publish_id'] ?? null,
-            'response' => $data
+            'mode' => 'draft',
+            'response' => $data,
+        ];
+    }
+
+    private function initializeVideoDirectPost(
+        string $accessToken,
+        array $postData,
+        TikTokMediaTransferStrategy $strategy
+    ): array {
+        if (!config('services.tiktok.direct_publish_enabled', false)) {
+            throw new Exception("TikTok direct publish disabilitato. Usa TIKTOK_DELIVERY_MODE=draft.");
+        }
+
+        $basePayload = [
+            'post_info' => [
+                'title' => mb_substr($postData['title'] ?? '', 0, 2200),
+                'privacy_level' => $postData['privacy_level'] ?? 'SELF_ONLY',
+                'disable_comment' => $postData['disable_comment'] ?? false,
+                'disable_duet' => $postData['disable_duet'] ?? true,
+                'disable_stitch' => $postData['disable_stitch'] ?? true,
+            ],
+        ];
+
+        $payload = $strategy->applyStrategy(
+            $accessToken,
+            $basePayload,
+            [$postData['video_url']],
+            'video'
+        );
+
+        $response = Http::withToken($accessToken)
+            ->withHeaders([
+                'Content-Type' => 'application/json; charset=UTF-8',
+            ])
+            ->post("{$this->apiBase}/v2/post/publish/video/init/", $payload);
+
+        if (!$response->successful()) {
+            throw new Exception("TikTok API Direct Post Video fallito: " . $response->body());
+        }
+
+        $data = $response->json();
+
+        if (($data['error']['code'] ?? 'ok') !== 'ok') {
+            throw new Exception("TikTok Direct Post Video Error: " . ($data['error']['message'] ?? 'Unknown error'));
+        }
+
+        return [
+            'publish_id' => $data['data']['publish_id'] ?? null,
+            'mode' => 'direct',
+            'response' => $data,
         ];
     }
 
@@ -85,40 +142,11 @@ class TikTokContentPostingService
      */
     public function initializePhotoPost(string $accessToken, array $postData, TikTokMediaTransferStrategy $strategy): array
     {
-        $publishMode = config('services.tiktok.delivery_mode', 'disabled');
-
-        if ($publishMode === 'disabled') {
-            throw new Exception("TikTok publishing non configurato o non ancora abilitato.");
+        if (!config('services.tiktok.enable_photo_mode', false)) {
+            throw new Exception("TikTok Photo Mode disabilitato in questa release.");
         }
 
-        $basePayload = [
-            'post_info' => [
-                'title' => $postData['title'] ?? '',
-                'privacy_level' => 'SELF_ONLY',
-                'disable_comment' => false,
-                'disable_duet' => true,
-                'disable_stitch' => true,
-            ]
-        ];
-
-        $payload = $strategy->applyStrategy($accessToken, $basePayload, $postData['photo_urls'], 'photo');
-
-        $response = Http::withToken($accessToken)
-            ->post("{$this->apiBase}/v2/post/publish/content/init/", $payload);
-
-        if (!$response->successful()) {
-            throw new Exception("TikTok API Init Photo Fallito: " . $response->body());
-        }
-
-        $data = $response->json();
-        if (isset($data['error']['code']) && $data['error']['code'] !== 'ok') {
-            throw new Exception("TikTok Init Photo Error: " . ($data['error']['message'] ?? 'Unknown error'));
-        }
-
-        return [
-            'publish_id' => $data['data']['publish_id'] ?? null,
-            'response' => $data
-        ];
+        throw new Exception("TikTok Photo Mode non ancora implementato.");
     }
 
     /**

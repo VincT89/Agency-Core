@@ -141,4 +141,30 @@ class OutgoingMessageStatusContractTest extends TestCase
         $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
             ->assertStatus(200); // Idempotente, nessuna eccezione
     }
+
+    public function test_task_comment_sent_status()
+    {
+        $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+        $task = \App\Models\Task::factory()->create(['project_id' => $project->id, 'title' => 'Test Task']);
+        
+        $comment = \App\Models\TaskComment::create([
+            'task_id' => $task->id,
+            'user_id' => \App\Models\User::factory()->create()->id,
+            'body' => 'Test task comment',
+            'delivery_channel' => 'sody',
+            'delivery_status' => 'pending',
+        ]);
+
+        $payload = [
+            'status' => 'sent',
+            'external_message_id' => 'msg-task-123',
+        ];
+
+        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/task_comment_{$comment->id}/status", $payload, $this->getHeaders())
+            ->assertStatus(200);
+
+        $this->assertEquals('sent', $comment->refresh()->delivery_status);
+        $this->assertEquals('msg-task-123', $comment->external_message_id);
+    }
 }

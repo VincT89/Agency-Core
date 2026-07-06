@@ -65,6 +65,23 @@ class TikTokPublisher implements SocialPublisherInterface
             );
         }
 
+        if (config('social.publishing.dry_run', false) || config('services.tiktok.mock_publishing', false)) {
+            return PublishResult::processingTask(
+                'dryrun_tiktok_' . $post->id . '_' . now()->timestamp,
+                [
+                    'dry_run' => true,
+                    'platform' => 'tiktok',
+                    'delivery_mode' => config('services.tiktok.delivery_mode'),
+                    'post_id' => $post->id,
+                    'account_id' => $account->id,
+                ],
+                [
+                    'phase' => 'dry_run',
+                    'delivery_mode' => config('services.tiktok.delivery_mode'),
+                ]
+            );
+        }
+
         // 2. Controllo base
         if (!$account->isApiConnected()) {
             return PublishResult::failure("Account TikTok non valido, disconnesso o token scaduto.");

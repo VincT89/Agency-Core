@@ -215,4 +215,60 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
 
         $this->assertEquals($versionsCount, $post->versions()->count());
     }
+
+    public function test_failed_callback_with_correct_request_id_returns_200()
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create(['marketing_campaign_id' => $campaign->id, 'n8n_request_id' => 'test-req-id', 'status' => 'submitted_to_n8n']);
+
+        $payload = [
+            'request_id' => 'test-req-id',
+            'error' => 'Generation failed due to timeout',
+        ];
+
+        $this->postJson(
+            route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
+            $payload,
+            $this->getHeaders()
+        )->assertStatus(200);
+
+        $this->assertEquals('Generation failed due to timeout', $post->refresh()->n8n_error);
+    }
+
+    public function test_failed_callback_with_wrong_request_id_returns_400()
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create(['marketing_campaign_id' => $campaign->id, 'n8n_request_id' => 'test-req-id', 'status' => 'submitted_to_n8n']);
+
+        $payload = [
+            'request_id' => 'wrong-id',
+            'error' => 'Generation failed due to timeout',
+        ];
+
+        $this->postJson(
+            route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
+            $payload,
+            $this->getHeaders()
+        )->assertStatus(400);
+    }
+
+    public function test_failed_callback_without_error_returns_422()
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create(['marketing_campaign_id' => $campaign->id, 'n8n_request_id' => 'test-req-id', 'status' => 'submitted_to_n8n']);
+
+        $payload = [
+            'request_id' => 'test-req-id',
+            // missing error
+        ];
+
+        $this->postJson(
+            route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
+            $payload,
+            $this->getHeaders()
+        )->assertStatus(422);
+    }
 }

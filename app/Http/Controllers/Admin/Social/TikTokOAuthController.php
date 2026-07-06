@@ -41,10 +41,11 @@ class TikTokOAuthController extends Controller
         if ($publishMode === 'draft') {
             $scopes[] = 'video.upload';
         } elseif ($publishMode === 'direct') {
-            // Blocco temporaneo "Sprint 2A/2B" finché il direct publish non è approvato.
-            // Solleviamo un'eccezione esplicita o blocchiamo l'auth.
-            return redirect()->route('clients.show', $account->client_id)
-                ->with('error', 'La modalità direct publish (video.publish) è disabilitata temporaneamente. Impostare delivery_mode=draft.');
+            if (!config('services.tiktok.direct_publish_enabled', false)) {
+                return redirect()->route('clients.show', $account->client_id)
+                    ->with('error', 'La modalità direct publish (video.publish) è disabilitata temporaneamente. Impostare delivery_mode=draft.');
+            }
+            $scopes[] = 'video.publish';
         }
 
         $query = http_build_query([
@@ -125,9 +126,11 @@ class TikTokOAuthController extends Controller
             'access_token' => $data['access_token'] ?? null,
             'refresh_token' => $data['refresh_token'] ?? null,
             'token_expires_at' => isset($data['expires_in']) ? now()->addSeconds($data['expires_in']) : null,
+            'refresh_token_expires_at' => isset($data['refresh_expires_in']) ? now()->addSeconds($data['refresh_expires_in']) : null,
             'tiktok_open_id' => $data['open_id'] ?? null,
-            'scopes' => explode(',', $data['scope'] ?? ''),
+            'scopes' => array_values(array_filter(explode(',', $data['scope'] ?? ''))),
             'api_status' => 'connected',
+            'connected_at' => now(),
             'account_exists' => true,
         ]);
 

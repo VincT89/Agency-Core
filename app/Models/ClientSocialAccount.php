@@ -60,6 +60,7 @@ class ClientSocialAccount extends Model
         'access_token',
         'refresh_token',
         'token_expires_at',
+        'refresh_token_expires_at',
         'api_notes',
         'notes',
     ];
@@ -83,6 +84,7 @@ class ClientSocialAccount extends Model
             
             'access_verified_at' => 'datetime',
             'token_expires_at' => 'datetime',
+            'refresh_token_expires_at' => 'datetime',
             'connected_at' => 'datetime',
             'last_api_check_at' => 'datetime',
             

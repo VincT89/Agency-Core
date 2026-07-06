@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Expense extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'user_id',
         'expenseable_type',

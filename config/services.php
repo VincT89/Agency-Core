@@ -48,7 +48,7 @@ return [
         'client_id' => env('META_CLIENT_ID'),
         'client_secret' => env('META_CLIENT_SECRET'),
         'redirect_uri' => env('META_REDIRECT_URI'),
-        'graph_version' => env('META_GRAPH_VERSION', 'v19.0'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v25.0'),
         'instagram' => [
             'max_container_lifecycle' => env('META_INSTAGRAM_MAX_CONTAINER_LIFECYCLE', 15),
         ],
@@ -71,6 +71,7 @@ return [
         'media_url_ttl' => env('TIKTOK_MEDIA_URL_TTL', 1440),
         'enable_photo_mode' => env('TIKTOK_ENABLE_PHOTO_MODE', false),
         'mock_publishing' => env('TIKTOK_MOCK_PUBLISHING', true),
+        'direct_publish_enabled' => env('TIKTOK_DIRECT_PUBLISH_ENABLED', false),
     ],
 
     'nextcloud' => [

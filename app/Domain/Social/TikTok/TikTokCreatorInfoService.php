@@ -41,14 +41,24 @@ class TikTokCreatorInfoService
         $data = $response->json();
         $userData = $data['data']['user'] ?? [];
 
-        // Qui mappiamo le "capabilities" (can_publish_video, max_video_duration, privacy_levels_supported, etc)
+        $scopes = $account->scopes ?? [];
+
+        $canUploadVideoDraft = in_array('video.upload', $scopes, true);
+        $canDirectPublishVideo = in_array('video.publish', $scopes, true);
+
         // NOTA ARCHITETTURALE: Recuperiamo le capability reali dal Content Posting API mock
         $contentService = app(\App\Domain\Social\TikTok\TikTokContentPostingService::class);
         $contentInfo = [];
-        try {
-            $contentInfo = $contentService->queryCreatorInfo($account->access_token, (string) $account->id);
-        } catch (\Exception $e) {
-            Log::warning('TikTok queryCreatorInfo Failed', ['error' => $e->getMessage()]);
+        
+        if ($canDirectPublishVideo) {
+            try {
+                $contentInfo = $contentService->queryCreatorInfo($account->access_token, (string) $account->id);
+            } catch (\Exception $e) {
+                Log::warning('TikTok queryCreatorInfo Failed', [
+                    'account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
         
         $apiMetadata = $account->api_metadata ?? [];
@@ -60,13 +70,13 @@ class TikTokCreatorInfoService
         $publishingCapabilities = $account->publishing_capabilities ?? [];
         $publishMode = config('services.tiktok.delivery_mode', 'disabled');
         
-        $canUploadVideoDraft = in_array('video.upload', $account->scopes ?? []);
-        $canDirectPublishVideo = in_array('video.publish', $account->scopes ?? []);
-        
         $publishingCapabilities['tiktok'] = [
             'can_upload_video_draft' => $canUploadVideoDraft,
             'can_direct_publish_video' => $canDirectPublishVideo,
-            'can_publish_video' => $canUploadVideoDraft || $canDirectPublishVideo, // Alias di fallback per compatibilità retroattiva
+            // Alias interno: significa "può usare il flusso video configurato"
+            'can_publish_video' => config('services.tiktok.delivery_mode') === 'draft'
+                ? $canUploadVideoDraft
+                : $canDirectPublishVideo,
             'max_video_duration' => $contentInfo['max_video_post_duration_sec'] ?? null, 
             'privacy_levels_supported' => $contentInfo['privacy_level_options'] ?? null,
             'commercial_content_allowed' => null,

@@ -15,5 +15,9 @@ return [
     'media_hardening' => [
         // Enable FFprobe deep inspection for videos
         'ffprobe_enabled' => env('SOCIAL_FFPROBE_ENABLED', false),
-    ]
+    ],
+
+    'publishing' => [
+        'dry_run' => env('SOCIAL_PUBLISHING_DRY_RUN', false),
+    ],
 ];

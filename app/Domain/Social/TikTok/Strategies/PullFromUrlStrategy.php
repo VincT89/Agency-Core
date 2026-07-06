@@ -7,18 +7,25 @@ class PullFromUrlStrategy implements TikTokMediaTransferStrategy
     public function applyStrategy(string $accessToken, array $basePayload, array $mediaUrls, string $postType): array
     {
         $payload = $basePayload;
-        $payload['source_info'] = [
-            'source' => 'PULL_FROM_URL',
-        ];
 
         if ($postType === 'video') {
-            $payload['source_info']['video_url'] = $mediaUrls[0];
-        } elseif ($postType === 'photo') {
-            $payload['source_info']['photo_images'] = array_map(function ($url) {
-                return $url;
-            }, $mediaUrls);
+            $payload['source_info'] = [
+                'source' => 'PULL_FROM_URL',
+                'video_url' => $mediaUrls[0],
+            ];
+
+            return $payload;
         }
 
-        return $payload;
+        if ($postType === 'photo') {
+            $payload['source_info'] = [
+                'source' => 'PULL_FROM_URL',
+                'photo_images' => array_values($mediaUrls),
+            ];
+
+            return $payload;
+        }
+
+        throw new \InvalidArgumentException("Post type TikTok non supportato: {$postType}");
     }
 }

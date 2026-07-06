@@ -44,6 +44,20 @@ class MetaPublisher implements SocialPublisherInterface
             return PublishResult::failure('Account non configurato per la pubblicazione API (o token mancante).');
         }
 
+        if (config('social.publishing.dry_run', false)) {
+            return PublishResult::success(
+                'dryrun_meta_' . $post->id . '_' . now()->timestamp,
+                null,
+                [
+                    'dry_run' => true,
+                    'platform' => $account->platform->value,
+                    'post_id' => $post->id,
+                    'account_id' => $account->id,
+                    'should_not_count_as_real_publication' => true,
+                ]
+            );
+        }
+
         try {
             $isInstagram = $account->platform->value === 'instagram';
             $message = $post->resolved_caption;

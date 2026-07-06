@@ -41,8 +41,9 @@ class CheckTikTokPostStatusJob implements ShouldQueue
             return;
         }
 
-        // Il external_container_id contiene il publish_id asincrono restituito da TikTok
-        if (empty($pub->external_container_id)) {
+        $publishId = $pub->external_task_id ?: $pub->external_container_id;
+
+        if (empty($publishId)) {
             $pub->update([
                 'status' => PublicationStatus::Failed,
                 'error_message' => 'Nessun publish_id di TikTok trovato per fare polling.'
@@ -61,7 +62,7 @@ class CheckTikTokPostStatusJob implements ShouldQueue
 
         try {
             $pub->increment('poll_count');
-            $rawStatus = $contentService->getPostStatus($account->access_token, $pub->external_container_id);
+            $rawStatus = $contentService->getPostStatus($account->access_token, $publishId);
             $newStatus = $statusService->mapStatus($rawStatus);
 
             if ($newStatus === PublicationStatus::Publishing) {
@@ -81,11 +82,17 @@ class CheckTikTokPostStatusJob implements ShouldQueue
                 return;
             }
 
-            // Status finale raggiunto (Published, Failed, Cancelled)
+            $deliveryState = match ($newStatus) {
+                PublicationStatus::Published => 'delivered_to_tiktok',
+                PublicationStatus::NeedsManualReview => 'awaiting_creator_inbox_action',
+                PublicationStatus::Failed => 'failed_on_tiktok',
+                default => null,
+            };
+
             $pub->update([
-                'status' => $newStatus,
+                'status' => $newStatus->value,
                 'published_at' => $newStatus === PublicationStatus::Published ? now() : null,
-                'delivery_state' => $newStatus === PublicationStatus::Published ? 'delivered_to_tiktok' : null,
+                'delivery_state' => $deliveryState,
                 'error_message' => $newStatus === PublicationStatus::Failed ? 'La pubblicazione è fallita asincronamente su TikTok.' : null,
             ]);
             
@@ -108,8 +115,10 @@ class CheckTikTokPostStatusJob implements ShouldQueue
                 if ($status === 401 || $status === 403) {
                     // Token scaduto o non autorizzato
                     $account->update([
-                        'requires_reauth' => true,
-                        'api_status' => SocialApiStatus::Error
+                        'api_status' => SocialApiStatus::TokenExpired,
+                        'last_api_error' => "Autorizzazione fallita ($status). Token scaduto o permessi insufficienti.",
+                        'api_notes' => 'Ricollegare account TikTok.',
+                        'last_api_check_at' => now(),
                     ]);
                     $pub->update([
                         'status' => PublicationStatus::Failed,

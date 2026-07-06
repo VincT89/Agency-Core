@@ -11,6 +11,8 @@ use App\Models\User;
 
 class Invoice extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     public const STATUSES = [
         'draft',
         'issued',

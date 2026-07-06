@@ -35,7 +35,7 @@ class ChatbotClientMessageContractTest extends TestCase
         $chatbotClient = ChatbotClient::firstOrCreate(['client_id' => $client->id], ['name' => $client->name]);
 
         $chatbotPost = ChatbotMarketingPost::firstOrCreate([
-            'chatbot_client_id' => $chatbotClient->id ?? 1,
+            'chatbot_client_id' => $chatbotClient->id,
             'client_id' => $client->id,
             'marketing_campaign_id' => $campaign->id,
             'marketing_campaign_post_id' => $post->id,
@@ -153,7 +153,7 @@ class ChatbotClientMessageContractTest extends TestCase
     public function test_approval_type_updates_post_status()
     {
         $client = Client::factory()->create();
-        ChatbotClient::firstOrCreate(['client_id' => $client->id], ['name' => $client->name]);
+        $chatbotClient = ChatbotClient::firstOrCreate(['client_id' => $client->id], ['name' => $client->name]);
 
         $campaign = \App\Models\MarketingCampaign::factory()->create(['client_id' => $client->id]);
         $post = \App\Models\MarketingCampaignPost::factory()->create([
@@ -162,7 +162,7 @@ class ChatbotClientMessageContractTest extends TestCase
         ]);
         
         $chatbotPost = ChatbotMarketingPost::firstOrCreate([
-            'chatbot_client_id' => 1,
+            'chatbot_client_id' => $chatbotClient->id,
             'client_id' => $client->id,
             'marketing_campaign_id' => $campaign->id,
             'marketing_campaign_post_id' => $post->id,
@@ -189,7 +189,7 @@ class ChatbotClientMessageContractTest extends TestCase
     public function test_change_request_type_updates_post_status()
     {
         $client = Client::factory()->create();
-        ChatbotClient::firstOrCreate(['client_id' => $client->id], ['name' => $client->name]);
+        $chatbotClient = ChatbotClient::firstOrCreate(['client_id' => $client->id], ['name' => $client->name]);
 
         $campaign = \App\Models\MarketingCampaign::factory()->create(['client_id' => $client->id]);
         $post = \App\Models\MarketingCampaignPost::factory()->create([
@@ -198,7 +198,7 @@ class ChatbotClientMessageContractTest extends TestCase
         ]);
         
         $chatbotPost = ChatbotMarketingPost::firstOrCreate([
-            'chatbot_client_id' => 1,
+            'chatbot_client_id' => $chatbotClient->id,
             'client_id' => $client->id,
             'marketing_campaign_id' => $campaign->id,
             'marketing_campaign_post_id' => $post->id,

@@ -91,48 +91,43 @@ class SubmitMarketingCampaignPostToN8nAction
                 }
             }
 
-            // Genera Request ID per idempotenza se non esiste
-            if (!$post->n8n_request_id) {
-                $post->n8n_request_id = 'cmp_' . Str::uuid()->toString();
-            }
+            // Genera Request ID nuovo per ogni invio
+            $post->n8n_request_id = 'cmp_' . Str::uuid()->toString();
 
-            // Riusa il payload esistente se c'è, altrimenti ricostruisci
-            if (!empty($post->approved_payload_snapshot)) {
-                $payload = $post->approved_payload_snapshot;
-            } else {
-                $clientPayload = [
-                    'id' => $client->id,
-                    'name' => $client->name,
-                    'logo_url' => $logoUrl,
-                    'activity_description' => $activityDescription,
-                ];
+            // Costruzione del payload sempre dai dati correnti
+            $clientPayload = [
+                'id' => $client->id,
+                'name' => $client->name,
+                'logo_url' => $logoUrl,
+                'activity_description' => $activityDescription,
+            ];
 
-                $mediaPayload = MarketingCampaignPostMediaPayloadBuilder::build($post);
+            $mediaPayload = MarketingCampaignPostMediaPayloadBuilder::build($post);
 
-                $payload = [
-                    'type' => 'marketing_campaign_post',
-                    'request_id' => $post->n8n_request_id,
-                    'campaign' => [
-                        'id' => $campaign->id,
-                        'name' => $campaign->name,
-                    ],
-                    'client' => $clientPayload,
-                    'post' => array_merge([
-                        'id' => $post->id,
-                        'title' => $post->title,
-                        'description' => $post->description,
-                        'content_type' => $post->content_type->value,
-                        'scheduled_date' => $post->scheduled_date ? $post->scheduled_date->format('Y-m-d') : null,
-                        'scheduled_time' => $post->scheduled_time ? date('H:i', strtotime($post->scheduled_time)) : null,
-                        'ai_analysis_enabled' => $post->ai_analysis_enabled,
-                        'publishing_platforms' => $post->publishing_platforms ?? [],
-                    ], $mediaPayload),
-                    'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
-                ];
+            $payload = [
+                'type' => 'marketing_campaign_post',
+                'request_id' => $post->n8n_request_id,
+                'campaign' => [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                ],
+                'client' => $clientPayload,
+                'post' => array_merge([
+                    'id' => $post->id,
+                    'title' => $post->title,
+                    'description' => $post->description,
+                    'content_type' => $post->content_type->value,
+                    'scheduled_date' => $post->scheduled_date ? $post->scheduled_date->format('Y-m-d') : null,
+                    'scheduled_time' => $post->scheduled_time ? date('H:i', strtotime($post->scheduled_time)) : null,
+                    'ai_analysis_enabled' => $post->ai_analysis_enabled,
+                    'publishing_platforms' => $post->publishing_platforms ?? [],
+                ], $mediaPayload),
+                'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
+                'failed_callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
+            ];
 
-                if (!empty($runtimeClientData['generation_type'])) {
-                    $payload['generation_type'] = $runtimeClientData['generation_type'];
-                }
+            if (!empty($runtimeClientData['generation_type'])) {
+                $payload['generation_type'] = $runtimeClientData['generation_type'];
             }
 
             $n8nInternalContext = [
@@ -151,6 +146,9 @@ class SubmitMarketingCampaignPostToN8nAction
                 'approved_payload_snapshot' => $payload,
                 'n8n_payload_hash' => hash('sha256', json_encode($payload)),
                 'n8n_internal_context' => $n8nInternalContext,
+                'n8n_error' => null,
+                'submitted_to_n8n_at' => null,
+                'n8n_completed_at' => null,
             ]);
 
             return [

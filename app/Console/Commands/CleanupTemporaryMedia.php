@@ -6,67 +6,73 @@ use Illuminate\Console\Command;
 use App\Models\TemporaryMediaUpload;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Support\Monitoring\TracksSystemCommandRuns;
 
 class CleanupTemporaryMedia extends Command
 {
+    use TracksSystemCommandRuns;
     protected $signature = 'social:cleanup-media';
     protected $description = 'Pulisce i media temporanei usati per il publishing social (Orphan Recovery)';
 
     public function handle()
     {
-        $this->info("Pulizia media temporanei in corso...");
+        return $this->runTracked($this->getName(), function () {
+            $this->info("Pulizia media temporanei in corso...");
 
-        // Eliminiamo i record più vecchi di 2 giorni 
-        // per dare tempo a Meta di scaricarli e al sistema di fare retry
-        $expiredMedia = TemporaryMediaUpload::where('created_at', '<', now()->subDays(2))
-            ->where('cleanup_status', 'pending')
-            ->get();
+            // Eliminiamo i record più vecchi di 2 giorni 
+            // per dare tempo a Meta di scaricarli e al sistema di fare retry
+            $expiredMedia = TemporaryMediaUpload::where('created_at', '<', now()->subDays(2))
+                ->where('cleanup_status', 'pending')
+                ->get();
 
-        $deletedCount = 0;
+            $deletedCount = 0;
 
-        foreach ($expiredMedia as $media) {
+            foreach ($expiredMedia as $media) {
+                try {
+                    if (Storage::disk('public')->exists($media->temp_path)) {
+                        // Controlla se lo stesso file è usato da un altro upload più recente
+                        // tramite hash deduplication
+                        $isShared = TemporaryMediaUpload::where('hash', $media->hash)
+                            ->where('id', '!=', $media->id)
+                            ->where('created_at', '>=', now()->subDays(2))
+                            ->exists();
+
+                        if (!$isShared) {
+                            Storage::disk('public')->delete($media->temp_path);
+                        }
+                    }
+
+                    $media->update(['cleanup_status' => 'completed']);
+                    $deletedCount++;
+                } catch (\Exception $e) {
+                    Log::error("Errore pulizia media", [
+                        'media_id' => $media->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            $this->info("Puliti {$deletedCount} media temporanei (con orphan recovery).");
+
+            // Pulizia loghi temporanei N8n (Orphan Recovery se callback non arriva)
+            $this->info("Verifica loghi temporanei orfani...");
+            $deletedLogosCount = 0;
             try {
-                if (Storage::disk('public')->exists($media->temp_path)) {
-                    // Controlla se lo stesso file è usato da un altro upload più recente
-                    // tramite hash deduplication
-                    $isShared = TemporaryMediaUpload::where('hash', $media->hash)
-                        ->where('id', '!=', $media->id)
-                        ->where('created_at', '>=', now()->subDays(2))
-                        ->exists();
-
-                    if (!$isShared) {
-                        Storage::disk('public')->delete($media->temp_path);
+                if (Storage::disk('public')->exists('clients/logos/temp')) {
+                    $files = Storage::disk('public')->files('clients/logos/temp');
+                    foreach ($files as $file) {
+                        if (Storage::disk('public')->lastModified($file) < now()->subDays(2)->timestamp) {
+                            Storage::disk('public')->delete($file);
+                            $deletedLogosCount++;
+                        }
                     }
                 }
-
-                $media->update(['cleanup_status' => 'completed']);
-                $deletedCount++;
             } catch (\Exception $e) {
-                Log::error("Errore pulizia media", [
-                    'media_id' => $media->id,
-                    'error' => $e->getMessage()
-                ]);
+                Log::error("Errore pulizia loghi temporanei", ['error' => $e->getMessage()]);
             }
-        }
-
-        $this->info("Puliti {$deletedCount} media temporanei (con orphan recovery).");
-
-        // Pulizia loghi temporanei N8n (Orphan Recovery se callback non arriva)
-        $this->info("Verifica loghi temporanei orfani...");
-        $deletedLogosCount = 0;
-        try {
-            if (Storage::disk('public')->exists('clients/logos/temp')) {
-                $files = Storage::disk('public')->files('clients/logos/temp');
-                foreach ($files as $file) {
-                    if (Storage::disk('public')->lastModified($file) < now()->subDays(2)->timestamp) {
-                        Storage::disk('public')->delete($file);
-                        $deletedLogosCount++;
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Errore pulizia loghi temporanei", ['error' => $e->getMessage()]);
-        }
-        $this->info("Puliti {$deletedLogosCount} loghi temporanei orfani.");
+            $this->info("Puliti {$deletedLogosCount} loghi temporanei orfani.");
+            
+            return self::SUCCESS;
+        });
     }
 }

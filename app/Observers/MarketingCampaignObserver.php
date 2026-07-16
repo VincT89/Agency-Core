@@ -11,6 +11,7 @@ class MarketingCampaignObserver
     {
         if ($campaign->wasChanged(['name', 'status', 'starts_at', 'ends_at', 'client_id'])) {
             SyncChatbotClientDataJob::dispatch($campaign->client_id)
+                ->afterCommit()
                 ->delay(now()->addSeconds(10))
                 ->onQueue('chatbot');
         }
@@ -19,6 +20,7 @@ class MarketingCampaignObserver
     public function deleted(MarketingCampaign $campaign): void
     {
         SyncChatbotClientDataJob::dispatch($campaign->client_id)
+            ->afterCommit()
             ->delay(now()->addSeconds(10))
             ->onQueue('chatbot');
     }

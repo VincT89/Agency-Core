@@ -5,31 +5,37 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\ClientSocialAccount;
 use Illuminate\Support\Facades\Log;
+use App\Support\Monitoring\TracksSystemCommandRuns;
 
 class SyncSocialAccountsStatus extends Command
 {
+    use TracksSystemCommandRuns;
     protected $signature = 'social:sync-accounts';
     protected $description = 'Verifica lo stato degli account social connessi e aggiorna i booleani/capability';
 
     public function handle()
     {
-        $this->info("Sincronizzazione account social in corso...");
+        return $this->runTracked($this->getName(), function () {
+            $this->info("Sincronizzazione account social in corso...");
 
-        $accounts = ClientSocialAccount::whereNotNull('access_token')->get();
-        $synced = 0;
+            $accounts = ClientSocialAccount::whereNotNull('access_token')->get();
+            $synced = 0;
 
-        foreach ($accounts as $account) {
-            try {
-                $account->verifyPublishingReadiness();
-                $synced++;
-            } catch (\Exception $e) {
-                Log::error("Errore sync account social", [
-                    'account_id' => $account->id,
-                    'error' => $e->getMessage()
-                ]);
+            foreach ($accounts as $account) {
+                try {
+                    $account->verifyPublishingReadiness();
+                    $synced++;
+                } catch (\Exception $e) {
+                    Log::error("Errore sync account social", [
+                        'account_id' => $account->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
-        }
 
-        $this->info("Sincronizzati {$synced} account.");
+            $this->info("Sincronizzati {$synced} account.");
+            
+            return self::SUCCESS;
+        });
     }
 }

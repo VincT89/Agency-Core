@@ -82,6 +82,7 @@ class RequestMarketingCampaignPostRegenerationAction
             ] : null,
 
             'callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
+            'failed_callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
         ];
 
         $post->update([
@@ -89,6 +90,8 @@ class RequestMarketingCampaignPostRegenerationAction
             'status' => MarketingCampaignPostStatus::Regenerating->value,
             'n8n_request_id' => $requestId,
             'n8n_error' => null,
+            'submitted_to_n8n_at' => null,
+            'n8n_completed_at' => null,
             'approved_payload_snapshot' => $payload,
             'n8n_payload_hash' => hash('sha256', json_encode($payload)),
         ]);

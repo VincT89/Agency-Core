@@ -43,7 +43,10 @@ class TikTokPublishingTest extends TestCase
             'marketing_campaign_id' => $this->campaign->id,
         ]);
         
-        config(['services.tiktok.delivery_mode' => 'enabled']);
+        config(['services.tiktok.delivery_mode' => 'direct']);
+        config(['services.tiktok.direct_publish_enabled' => true]);
+        config(['social.publishing.dry_run' => false]);
+        config(['services.tiktok.mock_publishing' => false]);
     }
 
     public function test_preflight_blocks_tiktok_without_media()
@@ -155,7 +158,7 @@ class TikTokPublishingTest extends TestCase
         $result = $publisher->publish($this->post->fresh(), $this->account);
 
 
-        $this->assertTrue($result->success);
+        $this->assertTrue($result->success, $result->errorMessage . " Config: " . config('services.tiktok.delivery_mode'));
         $this->assertTrue($result->isProcessing());
         $this->assertEquals('v.g.12345', $result->externalTaskId);
     }

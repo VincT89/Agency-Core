@@ -26,8 +26,22 @@ class RequestMarketingCampaignPostRegenerationJob implements ShouldQueue
         public string $previousStatus,
     ) {}
 
+    public function backoff(): array
+    {
+        return [10, 60, 300];
+    }
+
     public function handle(N8nClient $client): void
     {
+        $currentPost = $this->post->fresh();
+        if (!$currentPost) {
+            return;
+        }
+
+        if ($currentPost->n8n_request_id !== $this->payload['request_id'] || $currentPost->status->value !== \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value) {
+            return;
+        }
+
         \Illuminate\Support\Facades\Log::info('Dispatching marketing regeneration', [
             'post_id' => $this->post->id,
             'type' => $this->payload['regeneration_type'] ?? null,
@@ -35,9 +49,13 @@ class RequestMarketingCampaignPostRegenerationJob implements ShouldQueue
 
         $client->requestMarketingCampaignPostRegeneration($this->payload);
 
-        $this->post->forceFill([
-            'submitted_to_n8n_at' => now(),
-        ])->saveQuietly();
+        MarketingCampaignPost::query()
+            ->whereKey($this->post->id)
+            ->where('status', \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value)
+            ->where('n8n_request_id', $this->payload['request_id'])
+            ->update([
+                'submitted_to_n8n_at' => now(),
+            ]);
     }
 
     public function failed(Throwable $e): void
@@ -46,16 +64,13 @@ class RequestMarketingCampaignPostRegenerationJob implements ShouldQueue
             'error' => $e->getMessage(),
         ]);
 
-        $this->post->refresh();
-
-        $updates = [
-            'n8n_error' => substr('Rigenerazione fallita dopo 3 tentativi: ' . $e->getMessage(), 0, 255),
-        ];
-
-        if ($this->post->status && $this->post->status->value === \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value) {
-            $updates['status'] = $this->previousStatus;
-        }
-
-        $this->post->update($updates);
+        MarketingCampaignPost::query()
+            ->whereKey($this->post->id)
+            ->where('n8n_request_id', $this->payload['request_id'])
+            ->where('status', \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value)
+            ->update([
+                'status' => $this->previousStatus,
+                'n8n_error' => substr('Rigenerazione fallita dopo 3 tentativi: ' . $e->getMessage(), 0, 255),
+            ]);
     }
 }

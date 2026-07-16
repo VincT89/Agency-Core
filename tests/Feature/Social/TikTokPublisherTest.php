@@ -26,14 +26,16 @@ class TikTokPublisherTest extends TestCase
     {
         parent::setUp();
         Config::set('services.tiktok.delivery_mode', 'mock');
+        Config::set('social.publishing.dry_run', false);
+        Config::set('services.tiktok.mock_publishing', false);
         \Illuminate\Support\Facades\URL::forceRootUrl('https://agency-core.test');
         \Illuminate\Support\Facades\URL::forceScheme('https');
     }
 
     protected function tearDown(): void
     {
-        Mockery::close();
         parent::tearDown();
+        Mockery::close();
     }
 
     public function test_fails_if_mixed_media()

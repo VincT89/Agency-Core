@@ -11,25 +11,11 @@ use Illuminate\View\View;
 class ProjectController extends Controller
 {
 
-    public function index(\Illuminate\Http\Request $request): View
+    public function index(\Illuminate\Http\Request $request, \App\Domain\Core\Queries\ProjectQuery $projectQuery): View
     {
         $this->authorize('viewAny', Project::class);
 
-        $query = Project::query()
-            ->with('client')
-            ->withCount(['tasks', 'tickets']);
-
-        if ($search = $request->get('search')) {
-            $searchStr = '%' . strtolower($search) . '%';
-            $query->where(function ($q) use ($searchStr) {
-                $q->whereRaw('LOWER(name) LIKE ?', [$searchStr])
-                    ->orWhereHas('client', function ($cq) use ($searchStr) {
-                        $cq->whereRaw('LOWER(name) LIKE ?', [$searchStr]);
-                    });
-            });
-        }
-
-        $projects = $query
+        $projects = $projectQuery->forIndex($request->all())
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
@@ -179,7 +165,7 @@ class ProjectController extends Controller
         $base = Str::slug($name);
         $slug = $base;
         $i = 2;
-        while (Project::withTrashed()
+        while (Project::query()
             ->where('slug', $slug)
             ->when($ignoreId, fn($q) => $q->whereKeyNot($ignoreId))
             ->exists()) {

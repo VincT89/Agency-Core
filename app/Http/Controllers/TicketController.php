@@ -24,17 +24,10 @@ class TicketController extends Controller
         return view('tickets.index', compact('tickets'));
     }
 
-    public function create(): View
+    public function create(\App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('create', Ticket::class);
-        $clients = Client::query()
-            ->where(function ($q) {
-                if (!auth()->user()->canBypassProjectScope()) {
-                    $q->whereHas('projects');
-                }
-            })
-            ->orderBy('name')
-            ->get();
+        $clients = $clientQuery->forDropdown()->get();
 
         $users = User::query()
             ->orderBy('name')
@@ -76,17 +69,10 @@ class TicketController extends Controller
         return view('tickets.show', compact('ticket'));
     }
 
-    public function edit(Ticket $ticket): View
+    public function edit(Ticket $ticket, \App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('update', $ticket);
-        $clients = Client::query()
-            ->where(function ($q) {
-                if (!auth()->user()->canBypassProjectScope()) {
-                    $q->whereHas('projects');
-                }
-            })
-            ->orderBy('name')
-            ->get();
+        $clients = $clientQuery->forDropdown()->get();
 
         $users = User::query()
             ->orderBy('name')

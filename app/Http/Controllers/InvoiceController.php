@@ -31,13 +31,10 @@ class InvoiceController extends Controller
         return view('invoices.index', compact('invoices', 'overdueCount', 'draftCount', 'unpaidTotal'));
     }
 
-    public function create(): View
+    public function create(\App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('create', Invoice::class);
-        $clients = Client::visibleTo(auth()->user())
-            ->with('projects')
-            ->orderBy('name')
-            ->get();
+        $clients = $clientQuery->forInvoiceDropdown()->get();
 
         return view('invoices.create', [
             'clients' => $clients,
@@ -62,14 +59,11 @@ class InvoiceController extends Controller
         return view('invoices.show', compact('invoice'));
     }
 
-    public function edit(Invoice $invoice): View
+    public function edit(Invoice $invoice, \App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('update', $invoice);
         $invoice->load(['client', 'project', 'items']);
-        $clients = Client::visibleTo(auth()->user())
-            ->with('projects')
-            ->orderBy('name')
-            ->get();
+        $clients = $clientQuery->forInvoiceDropdown()->get();
 
         return view('invoices.edit', [
             'invoice'       => $invoice,

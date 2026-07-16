@@ -12,6 +12,11 @@ class EventServiceProvider extends ServiceProvider
     }
 
 
+    protected $subscribe = [
+        //
+
+    ];
+
     public function boot(): void
     {
         Event::listen(
@@ -26,5 +31,9 @@ class EventServiceProvider extends ServiceProvider
             \App\Domain\Finance\Events\PaymentRecorded::class,
             \App\Domain\Finance\Listeners\SendPaymentRecordedNotification::class
         );
+        
+        foreach ($this->subscribe as $subscriber) {
+            Event::subscribe($subscriber);
+        }
     }
 }

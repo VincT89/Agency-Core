@@ -10,9 +10,11 @@ use App\Services\Tickets\TicketNotificationRecipientResolver;
 use App\Models\Scopes\ProjectSupremacyScope;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use App\Support\Monitoring\TracksSystemCommandRuns;
 
 class NotifyDueTickets extends Command
 {
+    use TracksSystemCommandRuns;
     protected $signature = 'notify:due-tickets';
 
     protected $description = 'Notifica admin e assegnatari sui ticket in scadenza o scaduti';
@@ -25,39 +27,43 @@ class NotifyDueTickets extends Command
 
     public function handle()
     {
-        $dueSoonTickets = Ticket::withoutGlobalScope(ProjectSupremacyScope::class)
-            ->open()
-            ->dueSoon(1)
-            ->with('assignee')
-            ->get();
+        return $this->runTracked($this->getName(), function () {
+            $dueSoonTickets = Ticket::withoutGlobalScope(ProjectSupremacyScope::class)
+                ->open()
+                ->dueSoon(1)
+                ->with('assignee')
+                ->get();
 
-        $overdueTickets = Ticket::withoutGlobalScope(ProjectSupremacyScope::class)
-            ->open()
-            ->overdue()
-            ->with('assignee')
-            ->get();
+            $overdueTickets = Ticket::withoutGlobalScope(ProjectSupremacyScope::class)
+                ->open()
+                ->overdue()
+                ->with('assignee')
+                ->get();
 
-        $countDueSoon = 0;
-        $countOverdue = 0;
+            $countDueSoon = 0;
+            $countOverdue = 0;
 
-        foreach ($dueSoonTickets as $ticket) {
-            foreach ($this->recipientResolver->recipientsFor($ticket) as $recipient) {
-                if ($this->notifyOncePerDay($recipient, $ticket, TicketDueSoonNotification::class, 'ticket_due_soon')) {
-                    $countDueSoon++;
+            foreach ($dueSoonTickets as $ticket) {
+                foreach ($this->recipientResolver->recipientsFor($ticket) as $recipient) {
+                    if ($this->notifyOncePerDay($recipient, $ticket, TicketDueSoonNotification::class, 'ticket_due_soon')) {
+                        $countDueSoon++;
+                    }
                 }
             }
-        }
 
-        foreach ($overdueTickets as $ticket) {
-            foreach ($this->recipientResolver->recipientsFor($ticket) as $recipient) {
-                if ($this->notifyOncePerDay($recipient, $ticket, TicketOverdueNotification::class, 'ticket_overdue')) {
-                    $countOverdue++;
+            foreach ($overdueTickets as $ticket) {
+                foreach ($this->recipientResolver->recipientsFor($ticket) as $recipient) {
+                    if ($this->notifyOncePerDay($recipient, $ticket, TicketOverdueNotification::class, 'ticket_overdue')) {
+                        $countOverdue++;
+                    }
                 }
             }
-        }
 
-        $this->info("Inviate {$countDueSoon} notifiche per ticket in scadenza.");
-        $this->info("Inviate {$countOverdue} notifiche per ticket scaduti.");
+            $this->info("Inviate {$countDueSoon} notifiche per ticket in scadenza.");
+            $this->info("Inviate {$countOverdue} notifiche per ticket scaduti.");
+            
+            return self::SUCCESS;
+        });
     }
 
     private function notifyOncePerDay(User $user, Ticket $ticket, string $notificationClass, string $type): bool

@@ -20,37 +20,54 @@ class MarketingCampaignPostFailedController extends Controller
             'error' => ['required', 'string'],
         ]);
 
-        Log::info('N8N Failed callback received', [
-            'post_id' => $post->id,
-            'request_id' => $request->input('request_id'),
-            'error' => $request->input('error'),
-        ]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $post) {
+            $post = MarketingCampaignPost::lockForUpdate()->findOrFail($post->id);
 
-        if ($post->n8n_request_id !== $request->input('request_id')) {
-            Log::warning('N8N Failed callback ignored due to request_id mismatch', [
-                'post_id' => $post->id,
-                'expected_request_id' => $post->n8n_request_id,
-                'received_request_id' => $request->input('request_id'),
+            if ($post->n8n_request_id !== $request->input('request_id')) {
+                Log::warning('N8N Failed callback ignored due to request_id mismatch', [
+                    'post_id' => $post->id,
+                    'expected_request_id' => $post->n8n_request_id,
+                    'received_request_id' => $request->input('request_id'),
+                ]);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid request_id for this post.',
+                ], 400);
+            }
+
+            $modifiableStatuses = [
+                \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value,
+                \App\Enums\Social\MarketingCampaignPostStatus::SubmittedToN8n->value,
+                \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value,
+            ];
+
+            if (!in_array($post->status->value, $modifiableStatuses, true)) {
+                return response()->json([
+                    'status' => 'ignored',
+                    'message' => 'Callback di fallimento ignorata: elaborazione già conclusa.',
+                ], 200);
+            }
+
+            $newStatus = $post->n8n_previous_status?->value;
+            // Se lo stato precedente non è valido (es. ancora in transitorio), usa draft
+            if (!$newStatus || in_array($newStatus, $modifiableStatuses, true)) {
+                $newStatus = \App\Enums\Social\MarketingCampaignPostStatus::Draft->value;
+            }
+
+            $post->update([
+                'status' => $newStatus,
+                'n8n_error' => $request->input('error'),
+                'n8n_completed_at' => now(),
             ]);
+
+            Log::info('N8N Failed callback processed', [
+                'post_id' => $post->id,
+            ]);
+
             return response()->json([
-                'status' => 'error',
-                'message' => 'Invalid request_id for this post.',
-            ], 400);
-        }
-
-        $post->update([
-            'status' => $post->n8n_previous_status?->value ?? \App\Enums\Social\MarketingCampaignPostStatus::Generated->value,
-            'n8n_error' => $request->input('error'),
-            'n8n_completed_at' => now(),
-        ]);
-
-        Log::info('N8N Failed callback processed', [
-            'post_id' => $post->id,
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Error status saved.',
-        ]);
+                'status' => 'success',
+                'message' => 'Error status saved.',
+            ]);
+        });
     }
 }

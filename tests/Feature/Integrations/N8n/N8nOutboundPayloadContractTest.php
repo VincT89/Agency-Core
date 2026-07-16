@@ -67,7 +67,8 @@ class N8nOutboundPayloadContractTest extends TestCase
                    $data['post']['publishing_platforms'] === ['instagram', 'facebook'] &&
                    isset($data['post']['media_count']) &&
                    isset($data['post']['media_items']) &&
-                   isset($data['callback_url']);
+                   isset($data['callback_url']) &&
+                   isset($data['failed_callback_url']);
         });
     }
 
@@ -179,7 +180,8 @@ class N8nOutboundPayloadContractTest extends TestCase
                    isset($data['post']) &&
                    isset($data['current_version']) &&
                    $data['current_version']['id'] === $version->id &&
-                   isset($data['callback_url']);
+                   isset($data['callback_url']) &&
+                   isset($data['failed_callback_url']);
         });
     }
 }

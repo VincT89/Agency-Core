@@ -41,6 +41,10 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 return $post;
             }
 
+            if (!empty($data['request_id']) && $post->n8n_request_id !== $data['request_id']) {
+                throw new \Symfony\Component\HttpKernel\Exception\ConflictHttpException('Request ID disallineato');
+            }
+
             // Check if external generation id already exists for idempotency
             if (!empty($data['external_generation_id'])) {
                 $existingVersion = MarketingCampaignPostVersion::where('external_generation_id', $data['external_generation_id'])->first();

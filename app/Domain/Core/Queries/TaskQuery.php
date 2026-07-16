@@ -42,6 +42,28 @@ class TaskQuery
         return $this->forIndex($filters)->reorder()->orderByRaw('due_date IS NULL, due_date ASC');
     }
 
+    public function forSidebar(int $projectId): Builder
+    {
+        return Task::query()
+            ->where('project_id', $projectId)
+            ->visibleTo(request()->user())
+            ->with(['assignee'])
+            ->orderByRaw("
+                CASE status
+                    WHEN 'in_progress' THEN 1
+                    WHEN 'review' THEN 2
+                    WHEN 'waiting' THEN 3
+                    WHEN 'todo' THEN 4
+                    WHEN 'done' THEN 5
+                    WHEN 'cancelled' THEN 6
+                    ELSE 7
+                END
+            ")
+            ->orderBy('due_date', 'asc')
+            ->latest('updated_at')
+            ->limit(50);
+    }
+
     // Bypass di sicurezza globale per processi di sistema in background
     public function forSystemBatch(): Builder
     {

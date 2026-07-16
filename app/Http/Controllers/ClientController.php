@@ -14,24 +14,11 @@ use App\Services\Integrations\Nextcloud\NextcloudService;
 
 class ClientController extends Controller
 {
-    public function index(\Illuminate\Http\Request $request): View
+    public function index(\Illuminate\Http\Request $request, \App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('viewAny', Client::class);
 
-        $query = Client::query()
-            ->withCount(['projects', 'tickets', 'invoices'])
-            ->orderBy('name');
-
-        if ($search = $request->get('search')) {
-            $searchStr = '%' . strtolower($search) . '%';
-            $query->where(function($q) use ($searchStr) {
-                $q->whereRaw('LOWER(name) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(email) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(vat_number) LIKE ?', [$searchStr]);
-            });
-        }
-
-        $clients = $query->paginate(20)->withQueryString();
+        $clients = $clientQuery->forIndex($request->all())->paginate(20)->withQueryString();
 
         return view('clients.index', compact('clients'));
     }
@@ -123,7 +110,7 @@ class ClientController extends Controller
             ->with('success', 'Cliente eliminato correttamente.');
     }
 
-    public function search(Request $request): JsonResponse
+    public function search(Request $request, \App\Domain\Core\Queries\ClientQuery $clientQuery): JsonResponse
     {
         $this->authorize('viewAny', Client::class);
 
@@ -133,16 +120,7 @@ class ClientController extends Controller
             return response()->json([]);
         }
 
-        $searchStr = '%' . strtolower($search) . '%';
-
-        $clients = Client::query()
-            ->where(function($q) use ($searchStr) {
-                $q->whereRaw('LOWER(name) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(company_name) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(email) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(phone) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(vat_number) LIKE ?', [$searchStr]);
-            })
+        $clients = $clientQuery->forSearch($search)
             ->limit(10)
             ->get(['id', 'name', 'company_name', 'email', 'vat_number']);
 

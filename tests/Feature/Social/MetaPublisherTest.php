@@ -19,6 +19,8 @@ class MetaPublisherTest extends TestCase
 
     public function test_fails_if_ig_reel_has_no_video()
     {
+        config(['social.publishing.dry_run' => false]);
+        
         $post = MarketingCampaignPost::factory()->create([
             'content_type' => MarketingCampaignPostType::Reel,
         ]);

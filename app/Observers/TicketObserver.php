@@ -25,6 +25,7 @@ class TicketObserver
             'closed_at'
         ])) {
             \App\Jobs\Chatbot\SyncChatbotClientDataJob::dispatch($ticket->client_id)
+                ->afterCommit()
                 ->delay(now()->addSeconds(10))
                 ->onQueue('chatbot');
         }
@@ -58,6 +59,7 @@ class TicketObserver
         $this->auditLog->log('deleted', $ticket, $ticket->getOriginal(), null);
         
         \App\Jobs\Chatbot\SyncChatbotClientDataJob::dispatch($ticket->client_id)
+            ->afterCommit()
             ->delay(now()->addSeconds(10))
             ->onQueue('chatbot');
     }

@@ -271,4 +271,21 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             $this->getHeaders()
         )->assertStatus(422);
     }
+    public function test_failed_callback_when_already_approved_returns_ignored()
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create(['marketing_campaign_id' => $campaign->id, 'n8n_request_id' => 'test-req-id', 'status' => 'approved']);
+
+        $payload = [
+            'request_id' => 'test-req-id',
+            'error' => 'Generation failed late',
+        ];
+
+        $this->postJson(
+            route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
+            $payload,
+            $this->getHeaders()
+        )->assertStatus(200)->assertJson(['status' => 'ignored']);
+    }
 }

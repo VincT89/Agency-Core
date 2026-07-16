@@ -46,9 +46,16 @@ class InvoiceQuery
         return $query;
     }
 
-    // Bypass di sicurezza globale per l'identificazione di sistema delle fatture scadute
-    public function forSystemDetection(): Builder
+    public function issuedAndExpired(\Carbon\CarbonInterface $date): Builder
     {
-        return Invoice::query()->withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class);
+        return Invoice::query()
+            ->where('status', 'issued')
+            ->whereDate('due_date', '<', $date);
+    }
+
+    public function currentlyOverdue(): Builder
+    {
+        return Invoice::query()
+            ->where('status', 'overdue');
     }
 }

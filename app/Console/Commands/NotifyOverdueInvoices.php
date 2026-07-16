@@ -8,9 +8,11 @@ use App\Enums\UserRole;
 use App\Notifications\InvoiceOverdueNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use App\Support\Monitoring\TracksSystemCommandRuns;
 
 class NotifyOverdueInvoices extends Command
 {
+    use TracksSystemCommandRuns;
 
     protected $signature = 'notify:overdue-invoices';
 
@@ -18,54 +20,56 @@ class NotifyOverdueInvoices extends Command
     protected $description = 'Cambia lo stato delle fatture scadute in overdue e invia una notifica ricorrente (1 al giorno) ad admin e administration.';
 
 
-    public function handle()
+    public function handle(\App\Domain\Finance\Queries\InvoiceQuery $invoices)
     {
-        // 1. Marca come "scadute" (overdue) le fatture emesse che hanno superato la data di scadenza
-        Invoice::query()
-            ->where('status', 'issued')
-            ->whereDate('due_date', '<', today())
-            ->each(function (Invoice $invoice) {
-                $invoice->status = 'overdue';
-                $invoice->save();
-            });
+        return $this->runTracked($this->getName(), function () use ($invoices) {
+            // 1. Marca come "scadute" (overdue) le fatture emesse che hanno superato la data di scadenza
+            $invoices->issuedAndExpired(today())
+                ->each(function (Invoice $invoice) {
+                    $invoice->status = 'overdue';
+                    $invoice->save();
+                });
 
-        // 2. Recupera tutte le fatture attualmente "overdue"
-        $overdueInvoices = Invoice::where('status', 'overdue')->get();
+            // 2. Recupera tutte le fatture attualmente "overdue"
+            $overdueInvoices = $invoices->currentlyOverdue()->get();
 
-        if ($overdueInvoices->isEmpty()) {
-            $this->info('Nessuna fattura overdue trovata.');
-            return;
-        }
+            if ($overdueInvoices->isEmpty()) {
+                $this->info('Nessuna fattura overdue trovata.');
+                return self::SUCCESS;
+            }
 
-        // Recupero gli utenti notificabili (Admin e Administration)
-        $notifiableUsers = User::whereIn('role', [UserRole::Admin, UserRole::Administration])
-            ->where('status', 'active')
-            ->get();
+            // Recupero gli utenti notificabili (Admin e Administration)
+            $notifiableUsers = User::whereIn('role', [UserRole::Admin, UserRole::Administration])
+                ->where('status', 'active')
+                ->get();
 
-        if ($notifiableUsers->isEmpty()) {
-            return;
-        }
+            if ($notifiableUsers->isEmpty()) {
+                return self::SUCCESS;
+            }
 
-        $count = 0;
+            $count = 0;
 
-        foreach ($overdueInvoices as $invoice) {
-            foreach ($notifiableUsers as $user) {
-                // Deduplica: massimo 1 notifica al giorno per questo utente per questa specifica fattura
-                $alreadyNotifiedToday = DB::table('notifications')
-                    ->where('notifiable_id', $user->id)
-                    ->where('notifiable_type', get_class($user))
-                    ->where('data->type', 'invoice_overdue')
-                    ->where('data->invoice_id', $invoice->id)
-                    ->whereDate('created_at', today())
-                    ->exists();
+            foreach ($overdueInvoices as $invoice) {
+                foreach ($notifiableUsers as $user) {
+                    // Deduplica: massimo 1 notifica al giorno per questo utente per questa specifica fattura
+                    $alreadyNotifiedToday = DB::table('notifications')
+                        ->where('notifiable_id', $user->id)
+                        ->where('notifiable_type', get_class($user))
+                        ->where('data->type', 'invoice_overdue')
+                        ->where('data->invoice_id', $invoice->id)
+                        ->whereDate('created_at', today())
+                        ->exists();
 
-                if (!$alreadyNotifiedToday) {
-                    $user->notify(new InvoiceOverdueNotification($invoice));
-                    $count++;
+                    if (!$alreadyNotifiedToday) {
+                        $user->notify(new InvoiceOverdueNotification($invoice));
+                        $count++;
+                    }
                 }
             }
-        }
 
-        $this->info("Inviate {$count} notifiche (deduplicate) per fatture overdue.");
+            $this->info("Inviate {$count} notifiche (deduplicate) per fatture overdue.");
+            
+            return self::SUCCESS;
+        });
     }
 }

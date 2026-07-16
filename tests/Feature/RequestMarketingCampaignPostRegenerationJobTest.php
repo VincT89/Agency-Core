@@ -25,7 +25,7 @@ class RequestMarketingCampaignPostRegenerationJobTest extends TestCase
         $post->id = 1;
         $post->status = MarketingCampaignPostStatus::Regenerating;
 
-        $payload = ['dummy' => 'data'];
+        $payload = ['request_id' => 'req_123', 'dummy' => 'data'];
 
         RequestMarketingCampaignPostRegenerationJob::dispatch($post, $payload, MarketingCampaignPostStatus::Draft->value);
 
@@ -46,7 +46,7 @@ class RequestMarketingCampaignPostRegenerationJobTest extends TestCase
             'n8n_error' => 'Rigenerazione fallita dopo 3 tentativi: N8n is down',
         ]);
 
-        $payload = ['dummy' => 'data'];
+        $payload = ['request_id' => 'req_123', 'dummy' => 'data'];
         $previousStatus = MarketingCampaignPostStatus::Generated->value;
 
         $job = new RequestMarketingCampaignPostRegenerationJob($post, $payload, $previousStatus);

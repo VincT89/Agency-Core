@@ -29,6 +29,7 @@ class MarketingCampaignPostObserver
             
             if ($client) {
                 SyncChatbotClientDataJob::dispatch($client->id)
+                    ->afterCommit()
                     ->delay(now()->addSeconds(10))
                     ->onQueue('chatbot');
             }
@@ -39,6 +40,7 @@ class MarketingCampaignPostObserver
     {
         if ($post->campaign) {
             SyncChatbotClientDataJob::dispatch($post->campaign->client_id)
+                ->afterCommit()
                 ->delay(now()->addSeconds(10))
                 ->onQueue('chatbot');
         }

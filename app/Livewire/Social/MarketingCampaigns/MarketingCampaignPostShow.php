@@ -786,7 +786,6 @@ class MarketingCampaignPostShow extends Component
 
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
-        $data['status'] = MarketingCampaignPostStatus::PendingN8n->value;
 
         $this->authorize('update', $this->post);
 

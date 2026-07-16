@@ -102,7 +102,7 @@ class TaskController extends Controller
             ->with('success', 'Task creato correttamente.');
     }
 
-    public function show(Task $task): View
+    public function show(Task $task, \App\Domain\Core\Queries\TaskQuery $taskQuery): View
     {
         $this->authorize('view', $task);
         $task->load([
@@ -118,25 +118,7 @@ class TaskController extends Controller
         $projectTasks = collect();
 
         if ($task->project_id) {
-            $projectTasks = Task::query()
-                ->where('project_id', $task->project_id)
-                ->visibleTo(request()->user())
-                ->with(['assignee'])
-                ->orderByRaw("
-                    CASE status
-                        WHEN 'in_progress' THEN 1
-                        WHEN 'review' THEN 2
-                        WHEN 'waiting' THEN 3
-                        WHEN 'todo' THEN 4
-                        WHEN 'done' THEN 5
-                        WHEN 'cancelled' THEN 6
-                        ELSE 7
-                    END
-                ")
-                ->orderBy('due_date', 'asc')
-                ->latest('updated_at')
-                ->limit(50)
-                ->get();
+            $projectTasks = $taskQuery->forSidebar($task->project_id)->get();
         }
 
         return view('tasks.show', compact('task', 'projectTasks'));

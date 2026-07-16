@@ -14,6 +14,7 @@ class ProjectObserver
     {
         if ($project->client_id) {
             SyncChatbotClientDataJob::dispatch($project->client_id)
+                ->afterCommit()
                 ->onQueue('chatbot')
                 ->delay(now()->addSeconds(10));
         }
@@ -43,6 +44,7 @@ class ProjectObserver
 
         if ($clientId) {
             SyncChatbotClientDataJob::dispatch($clientId)
+                ->afterCommit()
                 ->onQueue('chatbot')
                 ->delay(now()->addSeconds(10));
         }

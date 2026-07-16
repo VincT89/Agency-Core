@@ -27,6 +27,7 @@ class ClientObserver
     {
         if ($client->wasChanged(['name', 'company_name', 'email', 'phone', 'status', 'activity_description'])) {
             \App\Jobs\Chatbot\SyncChatbotClientDataJob::dispatch($client->id)
+                ->afterCommit()
                 ->delay(now()->addSeconds(10))
                 ->onQueue('chatbot');
         }

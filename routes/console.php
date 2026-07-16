@@ -38,3 +38,5 @@ Schedule::command('social:cleanup-media')->daily();
 Schedule::command('social:fail-stale-publications')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('social:refresh-agency-connections')->daily()->withoutOverlapping();
 Schedule::command('social:sync-post-publication-statuses')->everyFiveMinutes()->withoutOverlapping();
+
+Schedule::command('system:scheduler-heartbeat')->everyMinute()->withoutOverlapping();

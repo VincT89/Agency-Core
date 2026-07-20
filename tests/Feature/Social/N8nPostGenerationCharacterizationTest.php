@@ -89,6 +89,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
         $this->assertCount(1, $version->mediaItems);
         $media = $version->mediaItems->first();
         $this->assertEquals('n8n', $media->source);
+        $this->assertEquals('public', $media->disk);
         $this->assertNotNull($media->path);
         
         // Check current version ID is updated

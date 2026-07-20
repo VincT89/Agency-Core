@@ -12,11 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('client_review_tokens', function (Blueprint $table) {
-            $table->foreignId('marketing_campaign_post_version_id')
-                ->nullable()
-                ->after('reviewable_id')
-                ->constrained('marketing_campaign_post_versions')
-                ->nullOnDelete();
+            if (!Schema::hasColumn('client_review_tokens', 'marketing_campaign_post_version_id')) {
+                $table->foreignId('marketing_campaign_post_version_id')
+                    ->nullable()
+                    ->after('reviewable_id')
+                    ->constrained('marketing_campaign_post_versions')
+                    ->nullOnDelete();
+            }
         });
     }
 

@@ -12,16 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('marketing_campaign_post_publications', function (Blueprint $table) {
-            if (Schema::hasColumn('marketing_campaign_post_publications', 'marketing_campaign_post_version_id')) {
-                $table->dropColumn('marketing_campaign_post_version_id');
+            if (!Schema::hasColumn('marketing_campaign_post_publications', 'marketing_campaign_post_version_id')) {
+                $table->foreignId('marketing_campaign_post_version_id')
+                    ->nullable()
+                    ->after('marketing_campaign_post_id')
+                    ->constrained('marketing_campaign_post_versions', 'id', 'mcp_pub_version_id_fk')
+                    ->nullOnDelete();
             }
-        });
-        Schema::table('marketing_campaign_post_publications', function (Blueprint $table) {
-            $table->foreignId('marketing_campaign_post_version_id')
-                ->nullable()
-                ->after('marketing_campaign_post_id')
-                ->constrained('marketing_campaign_post_versions', 'id', 'mcp_pub_version_id_fk')
-                ->nullOnDelete();
         });
     }
 

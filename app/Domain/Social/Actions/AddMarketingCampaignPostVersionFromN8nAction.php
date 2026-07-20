@@ -137,6 +137,7 @@ class AddMarketingCampaignPostVersionFromN8nAction
                         $media = \App\Models\MarketingCampaignPostMedia::create([
                             'marketing_campaign_post_id' => $post->id,
                             'path' => $promotedPath,
+                            'disk' => 'public',
                             'source' => 'n8n',
                             'mime_type' => $mime,
                             'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($mime),

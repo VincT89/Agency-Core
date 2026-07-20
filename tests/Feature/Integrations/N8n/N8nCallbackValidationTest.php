@@ -14,6 +14,10 @@ class N8nCallbackValidationTest extends TestCase
 
     public function test_n8n_callback_fails_with_invalid_request_id()
     {
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response('fake-image-content', 200)]);
+        $this->mock(\App\Support\Network\HostResolver::class, function ($mock) {
+            $mock->shouldReceive('resolveAndValidatePublicHost')->andReturn('example.com');
+        });
         $user = User::factory()->create();
         $client = \App\Models\Client::create(['name' => 'Test', 'activity_description' => 'Test', 'slug' => 'test-slug']);
         $campaign = MarketingCampaign::create(['client_id' => $client->id, 'name' => 'Test', 'status' => 'draft']);

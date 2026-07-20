@@ -46,6 +46,23 @@ class CreateManualMarketingCampaignPostVersionAction
                 ],
             ]);
 
+            $currentVersion = $post->currentVersion;
+            $sourceMedia = collect();
+            if ($currentVersion && $currentVersion->mediaItems()->exists()) {
+                $sourceMedia = $currentVersion->mediaItems;
+            } elseif ($post->mediaItems()->exists()) {
+                $sourceMedia = $post->orderedMediaItems;
+            }
+
+            $pivotData = [];
+            foreach ($sourceMedia as $index => $media) {
+                $sortOrder = $media->pivot->sort_order ?? $index;
+                $pivotData[$media->id] = ['sort_order' => $sortOrder];
+            }
+            if (!empty($pivotData)) {
+                $version->mediaItems()->attach($pivotData);
+            }
+
             $post->forceFill([
                 'current_version_id' => $version->id,
                 'status' => MarketingCampaignPostStatus::Generated,

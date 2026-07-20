@@ -26,7 +26,7 @@ class MetaPublisherTest extends TestCase
         ]);
         
         // Add a photo media item instead of a video
-        MarketingCampaignPostMedia::factory()->create([
+        $media = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id, 
             'media_type' => 'photo',
             'mime_type' => 'image/jpeg',
@@ -40,7 +40,15 @@ class MetaPublisherTest extends TestCase
             'provider_account_id' => '123456789'
         ]);
 
-        $post->load('orderedMediaItems');
+        $publication = \App\Models\MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => SocialPlatform::Instagram->value,
+            'payload_snapshot' => [
+                'media' => [
+                    ['media_id' => $media->id]
+                ]
+            ]
+        ]);
 
         $mockUrlService = \Mockery::mock(\App\Domain\Social\Services\SocialMediaPublicUrlService::class);
         $mockUrlService->shouldReceive('getValidatedPublicUrls')
@@ -53,7 +61,7 @@ class MetaPublisherTest extends TestCase
         $this->app->instance(\App\Domain\Social\Services\SocialMediaPublicUrlService::class, $mockUrlService);
 
         $publisher = app(MetaPublisher::class);
-        $result = $publisher->publish($post, $account, Str::uuid()->toString());
+        $result = $publisher->publish($publication, $account, Str::uuid()->toString());
 
         $this->assertFalse($result->isSuccess());
         $this->assertEquals('Dominio Meta: Un Reel richiede obbligatoriamente un file video.', $result->errorMessage);

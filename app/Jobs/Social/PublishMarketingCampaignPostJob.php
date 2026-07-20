@@ -21,7 +21,8 @@ class PublishMarketingCampaignPostJob implements ShouldQueue, ShouldBeUnique
     public function __construct(
         public MarketingCampaignPost $post,
         public string $platform,
-        public ?string $correlationId = null
+        public ?string $correlationId = null,
+        public ?\App\Models\MarketingCampaignPostPublication $retryPublication = null
     ) {
         $this->onQueue('social-publishing');
         if (!$this->correlationId) {
@@ -48,7 +49,7 @@ class PublishMarketingCampaignPostJob implements ShouldQueue, ShouldBeUnique
 
         try {
             // Correlation ID is propagated to action
-            $publication = $action->execute($this->post, $this->platform, $this->correlationId);
+            $publication = $action->execute($this->post, $this->platform, $this->correlationId, $this->retryPublication);
 
             if ($publication->status === \App\Enums\Social\PublicationStatus::Failed) {
                 $circuitBreaker->recordFailure();

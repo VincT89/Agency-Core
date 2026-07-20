@@ -4,13 +4,14 @@ namespace App\Domain\Social\Publishing;
 
 use App\Models\MarketingCampaignPost;
 use App\Models\ClientSocialAccount;
+use App\Models\MarketingCampaignPostPublication;
 
 interface SocialPublisherInterface
 {
     /**
-     * Pubblica il post sull'account specificato.
+     * Pubblica il post sull'account specificato usando lo snapshot della pubblicazione.
      */
-    public function publish(MarketingCampaignPost $post, ClientSocialAccount $account, ?string $correlationId = null): PublishResult;
+    public function publish(MarketingCampaignPostPublication $publication, ClientSocialAccount $account, ?string $correlationId = null): PublishResult;
     
     /**
      * Verifica se i requisiti per la pubblicazione (token, permessi) sono soddisfatti.

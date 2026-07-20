@@ -38,12 +38,9 @@ class RequestMarketingCampaignPostRegenerationJobTest extends TestCase
 
     public function test_job_restores_previous_status_on_failure()
     {
-        $post = Mockery::mock(MarketingCampaignPost::class)->makePartial();
-        $post->status = MarketingCampaignPostStatus::Regenerating;
-        $post->shouldReceive('refresh')->once();
-        $post->shouldReceive('update')->once()->with([
-            'status' => MarketingCampaignPostStatus::Generated->value,
-            'n8n_error' => 'Rigenerazione fallita dopo 3 tentativi: N8n is down',
+        $post = MarketingCampaignPost::factory()->create([
+            'status' => MarketingCampaignPostStatus::Regenerating->value,
+            'n8n_request_id' => 'req_123',
         ]);
 
         $payload = ['request_id' => 'req_123', 'dummy' => 'data'];
@@ -54,6 +51,8 @@ class RequestMarketingCampaignPostRegenerationJobTest extends TestCase
         $exception = new Exception('N8n is down');
         $job->failed($exception);
         
-        $this->assertTrue(true); // Se arriviamo qui, i mock hanno verificato correttamente
+        $post->refresh();
+        $this->assertEquals($previousStatus, $post->status->value);
+        $this->assertEquals('Rigenerazione fallita dopo 3 tentativi: N8n is down', $post->n8n_error);
     }
 }

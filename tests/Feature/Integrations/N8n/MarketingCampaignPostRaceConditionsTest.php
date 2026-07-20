@@ -148,10 +148,13 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'request_id' => 'req-old', // This callback is from an old request
             'regeneration_type' => 'full',
             'title' => 'Title',
+            'raw_payload' => [],
         ];
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\ConflictHttpException::class);
-        $action->execute($post, $payload);
+        $data = \App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData::fromArray($post->id, $payload);
+        $result = $action->execute($data);
+
+        $this->assertEquals('conflict', $result->outcome);
     }
 
     public function test_deleted_record_in_job_handle_returns_gracefully()

@@ -48,8 +48,19 @@ class TikTokPublisherTest extends TestCase
 
         $post->load('orderedMediaItems'); // Reload to ensure relation is populated
         
+        $publication = \App\Models\MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => SocialPlatform::Tiktok->value,
+            'payload_snapshot' => [
+                'media' => [
+                    ['media_id' => 1],
+                    ['media_id' => 2]
+                ]
+            ]
+        ]);
+
         $publisher = app(TikTokPublisher::class);
-        $result = $publisher->publish($post, $account, Str::uuid()->toString());
+        $result = $publisher->publish($publication, $account, Str::uuid()->toString());
         
         $this->assertFalse($result->success);
         $this->assertEquals('TikTok non supporta media misti. Carica solo un video o un set di foto.', $result->errorMessage);
@@ -86,10 +97,20 @@ class TikTokPublisherTest extends TestCase
             ]);
         $this->app->instance(\App\Domain\Social\Services\SocialMediaPublicUrlService::class, $mockUrlService);
 
+        $publication = \App\Models\MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => SocialPlatform::Tiktok->value,
+            'payload_snapshot' => [
+                'media' => [
+                    ['media_id' => 1]
+                ]
+            ]
+        ]);
+
         $publisher = app(TikTokPublisher::class);
         
         // TikTok publishing returns async processing state
-        $result = $publisher->publish($post, $account, Str::uuid()->toString());
+        $result = $publisher->publish($publication, $account, Str::uuid()->toString());
 
         $this->assertInstanceOf(\App\Domain\Social\Publishing\PublishResult::class, $result);
         $this->assertTrue($result->isProcessing(), "Publish failed with error: " . $result->errorMessage);
@@ -125,8 +146,18 @@ class TikTokPublisherTest extends TestCase
             ]);
         $this->app->instance(\App\Domain\Social\Services\SocialMediaPublicUrlService::class, $mockUrlService);
 
+        $publication = \App\Models\MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => SocialPlatform::Tiktok->value,
+            'payload_snapshot' => [
+                'media' => [
+                    ['media_id' => 1]
+                ]
+            ]
+        ]);
+
         $publisher = app(TikTokPublisher::class);
-        $result = $publisher->publish($post, $account, Str::uuid()->toString());
+        $result = $publisher->publish($publication, $account, Str::uuid()->toString());
         
         $this->assertFalse($result->success);
         $this->assertEquals('Pubblicazione già in corso, attendere.', $result->errorMessage);
@@ -149,8 +180,18 @@ class TikTokPublisherTest extends TestCase
             'publishing_capabilities' => ['tiktok' => ['can_publish_photo' => true]]
         ]);
 
+        $publication = \App\Models\MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => SocialPlatform::Tiktok->value,
+            'payload_snapshot' => [
+                'media' => [
+                    ['media_id' => 1]
+                ]
+            ]
+        ]);
+
         $publisher = app(TikTokPublisher::class);
-        $result = $publisher->publish($post, $account, Str::uuid()->toString());
+        $result = $publisher->publish($publication, $account, Str::uuid()->toString());
         
         $this->assertFalse($result->success);
         $this->assertEquals('La pubblicazione foto su TikTok non è supportata o disabilitata dalle configurazioni di questo account.', $result->errorMessage);

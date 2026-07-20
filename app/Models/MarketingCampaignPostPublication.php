@@ -12,6 +12,7 @@ class MarketingCampaignPostPublication extends Model
 
     protected $fillable = [
         'marketing_campaign_post_id',
+        'marketing_campaign_post_version_id',
         'client_social_account_id',
         'platform',
         'status',
@@ -59,5 +60,10 @@ class MarketingCampaignPostPublication extends Model
     public function socialAccount(): BelongsTo
     {
         return $this->belongsTo(ClientSocialAccount::class, 'client_social_account_id');
+    }
+
+    public function version(): BelongsTo
+    {
+        return $this->belongsTo(MarketingCampaignPostVersion::class, 'marketing_campaign_post_version_id');
     }
 }

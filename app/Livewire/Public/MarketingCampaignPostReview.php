@@ -31,6 +31,11 @@ class MarketingCampaignPostReview extends Component
         }
 
         $this->post = $this->tokenRecord->reviewable;
+
+        if ($this->tokenRecord->marketing_campaign_post_version_id && 
+            $this->tokenRecord->marketing_campaign_post_version_id !== $this->post->current_version_id) {
+            abort(403, 'Questo link di revisione appartiene a una versione obsoleta del post. Richiedi un nuovo link al team.');
+        }
         
         $client = $this->post->campaign->client;
         $this->clientName = $client->name;

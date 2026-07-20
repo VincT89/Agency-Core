@@ -56,8 +56,9 @@ class TikTokPublisher implements SocialPublisherInterface
         return $account->canPublishTikTokVideo() || $account->canPublishTikTokPhoto();
     }
 
-    public function publish(MarketingCampaignPost $post, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
+    public function publish(\App\Models\MarketingCampaignPostPublication $publication, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
     {
+        $post = clone $publication->post;
         // 1. Blocco se disabilitato
         if (config('services.tiktok.delivery_mode', 'disabled') === 'disabled') {
             return PublishResult::failure(
@@ -87,8 +88,13 @@ class TikTokPublisher implements SocialPublisherInterface
             return PublishResult::failure("Account TikTok non valido, disconnesso o token scaduto.");
         }
 
-        // 3. Identificazione e validazione Media
-        $mediaCollection = $post->orderedMediaItems;
+        $snapshot = $publication->payload_snapshot ?? [];
+        $mediaItemsData = collect($snapshot['media'] ?? []);
+        $mediaItemIds = $mediaItemsData->pluck('media_id')->filter()->toArray();
+        $mediaCollection = \App\Models\MarketingCampaignPostMedia::whereIn('id', $mediaItemIds)->get()
+            ->sortBy(function($model) use ($mediaItemIds) {
+                return array_search($model->id, $mediaItemIds);
+            })->values();
         
         $hasVideo = $mediaCollection->contains(fn($m) => $m->isVideo() || $m->media_type === 'video');
         $hasPhoto = $mediaCollection->contains(fn($m) => !$m->isVideo() && $m->media_type !== 'video');
@@ -102,7 +108,8 @@ class TikTokPublisher implements SocialPublisherInterface
         }
 
         $publishMethod = null;
-        $postData = ['title' => $post->resolved_title ?: $post->resolved_caption];
+        $title = $snapshot['title'] ?? ($snapshot['caption'] ?? '');
+        $postData = ['title' => $title];
         $diagnosticPayload = null;
 
         if ($hasVideo) {

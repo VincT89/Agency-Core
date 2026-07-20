@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 
 class PublishMarketingCampaignPostAction
 {
-    public function execute(MarketingCampaignPost $post, string $platform, ?string $correlationId = null): MarketingCampaignPostPublication
+    public function execute(MarketingCampaignPost $post, string $platform, ?string $correlationId = null, ?MarketingCampaignPostPublication $retryPublication = null): MarketingCampaignPostPublication
     {
         $correlationId = $correlationId ?? Str::uuid()->toString();
         $client = $post->campaign->client;
@@ -48,7 +48,7 @@ class PublishMarketingCampaignPostAction
                     throw new \Exception("TikTok Preflight fallito: {$errors}");
                 }
             }
-            $transactionResult = \Illuminate\Support\Facades\DB::transaction(function () use ($post, $platform, $correlationId, $account) {
+            $transactionResult = \Illuminate\Support\Facades\DB::transaction(function () use ($post, $platform, $correlationId, $account, $retryPublication) {
                 // Idempotency check: prevent duplicate publications (con pessimistic lock)
                 $existingPublication = MarketingCampaignPostPublication::where('marketing_campaign_post_id', $post->id)
                     ->where('platform', $platform)
@@ -75,16 +75,55 @@ class PublishMarketingCampaignPostAction
 
                 $timeoutMinutes = config("social.publication_stale_deadlines.{$platform}", 15);
 
+                $currentVersionId = $post->current_version_id;
+                
+                if ($retryPublication) {
+                    $payloadSnapshot = $retryPublication->payload_snapshot;
+                    $currentVersionId = $retryPublication->marketing_campaign_post_version_id;
+                } else {
+                    $currentVersion = $post->currentVersion;
+                    
+                    // Build a stable payload snapshot
+                    $snapshotMedia = [];
+                    if ($currentVersion) {
+                        $mediaItems = app(\App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver::class)->resolveMediaItems($currentVersion);
+                        foreach ($mediaItems as $media) {
+                            $checksum = null;
+                            if ($media->path && \Illuminate\Support\Facades\Storage::disk('public')->exists($media->path)) {
+                                $checksum = md5_file(\Illuminate\Support\Facades\Storage::disk('public')->path($media->path));
+                            }
+                            $snapshotMedia[] = [
+                                'media_id' => $media->id,
+                                'path' => $media->path,
+                                'mime_type' => $media->mime_type,
+                                'checksum' => $checksum,
+                            ];
+                        }
+                    }
+
+                    $payloadSnapshot = [
+                        'version_id' => $currentVersion?->id,
+                        'caption' => $post->resolved_caption,
+                        'title' => $post->resolved_title,
+                        'hashtags' => $currentVersion?->hashtags,
+                        'media' => $snapshotMedia,
+                        'platform' => $platform,
+                        'account_id' => $account?->id,
+                    ];
+                }
+
                 $publication = MarketingCampaignPostPublication::create([
                     'marketing_campaign_post_id' => $post->id,
+                    'marketing_campaign_post_version_id' => $currentVersionId,
                     'client_social_account_id' => $account?->id,
                     'platform' => $platform,
                     'status' => PublicationStatus::Pending->value,
                     'correlation_id' => $correlationId,
                     'publishing_started_at' => now(),
                     'stale_deadline_at' => now()->addMinutes($timeoutMinutes),
-                    'attempt_count' => 1,
+                    'attempt_count' => ($retryPublication ? $retryPublication->attempt_count + 1 : 1),
                     'poll_count' => 0,
+                    'payload_snapshot' => $payloadSnapshot,
                 ]);
                 
                 // Compare-and-swap status transition: atomico e sicuro
@@ -118,7 +157,7 @@ class PublishMarketingCampaignPostAction
             return $publication;
         }
 
-        $result = $publisher->publish($post, $account, $correlationId);
+        $result = $publisher->publish($publication, $account, $correlationId);
 
         if ($result->success) {
             \Illuminate\Support\Facades\DB::transaction(function () use ($result, $platform, $publication) {

@@ -14,43 +14,51 @@ class MarketingCampaignPostResultController extends Controller
 {
     public function store(StoreMarketingCampaignPostResultRequest $request, AddMarketingCampaignPostVersionFromN8nAction $action): JsonResponse
     {
-        $post = MarketingCampaignPost::findOrFail($request->validated('post_id'));
-
+        $validated = $request->validated();
+        
         \Illuminate\Support\Facades\Log::info('Ricevuto callback N8N [Prima generazione]', [
-            'post_id' => $post->id,
+            'post_id' => $validated['post_id'],
             'ip' => $request->ip(),
-            'request_id' => $request->validated('request_id')
+            'request_id' => $validated['request_id'] ?? null
         ]);
 
-        if ($post->n8n_request_id !== $request->validated('request_id')) {
-            \Illuminate\Support\Facades\Log::warning('N8n Callback Security Mismatch [Result]', [
-                'post_id' => $post->id,
-                'expected_request_id' => $post->n8n_request_id,
-                'received_request_id' => $request->validated('request_id'),
-                'ip' => $request->ip(),
-            ]);
-            abort(409, 'Conflict: request_id mismatch.');
-        }
+        $data = \App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData::fromArray(
+            $validated['post_id'], 
+            $validated
+        );
 
-        $result = $action->execute($post, $request->validated());
+        $result = $action->execute($data);
 
-        if ($result instanceof MarketingCampaignPost) {
-            return response()->json([
+        return match($result->outcome) {
+            'created' => response()->json([
+                'status' => 'created',
+                'data' => [
+                    'post_id' => $validated['post_id'],
+                    'version_id' => $result->version->id,
+                    'version_number' => $result->version->version_number,
+                ]
+            ], 201),
+            
+            'duplicate' => response()->json([
+                'status' => 'duplicate',
+                'version_id' => $result->version->id ?? null,
+                'reason' => $result->reason ?? 'request_already_processed',
+            ], 200),
+            
+            'ignored' => response()->json([
                 'status' => 'ignored',
-                'message' => 'Operazione annullata dall\'utente',
-                'post_id' => $post->id,
-            ], 200);
-        }
-
-        $version = $result;
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'post_id' => $post->id,
-                'version_id' => $version->id,
-                'version_number' => $version->version_number,
-            ]
-        ], 201);
+                'reason' => $result->reason ?? 'post_already_finalized',
+            ], 200),
+            
+            'conflict' => response()->json([
+                'status' => 'conflict',
+                'reason' => $result->reason ?? 'request_id_mismatch_or_used',
+            ], 409),
+            
+            default => response()->json([
+                'status' => 'error',
+                'reason' => 'unknown_outcome',
+            ], 500),
+        };
     }
 }

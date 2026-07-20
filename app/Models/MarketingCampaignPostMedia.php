@@ -40,4 +40,16 @@ class MarketingCampaignPostMedia extends Model
         }
         return 'unknown';
     }
+
+    public function versions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketingCampaignPostVersion::class,
+            'marketing_campaign_post_version_media',
+            'marketing_campaign_post_media_id',
+            'marketing_campaign_post_version_id'
+        )
+            ->withPivot('sort_order')
+            ->withTimestamps();
+    }
 }

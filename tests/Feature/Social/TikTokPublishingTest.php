@@ -154,8 +154,18 @@ class TikTokPublishingTest extends TestCase
             ], 200),
         ]);
 
+        $publication = \App\Models\MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $this->post->id,
+            'platform' => SocialPlatform::Tiktok->value,
+            'payload_snapshot' => [
+                'media' => [
+                    ['media_id' => 1]
+                ]
+            ]
+        ]);
+
         $publisher = app(TikTokPublisher::class);
-        $result = $publisher->publish($this->post->fresh(), $this->account);
+        $result = $publisher->publish($publication, $this->account);
 
 
         $this->assertTrue($result->success, $result->errorMessage . " Config: " . config('services.tiktok.delivery_mode'));

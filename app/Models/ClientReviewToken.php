@@ -9,6 +9,7 @@ class ClientReviewToken extends Model
     protected $fillable = [
         'reviewable_id',
         'reviewable_type',
+        'marketing_campaign_post_version_id',
         'token',
         'expires_at',
         'used_at',

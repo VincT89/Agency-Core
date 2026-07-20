@@ -25,4 +25,17 @@ class MarketingCampaignPostVersion extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function mediaItems(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketingCampaignPostMedia::class,
+            'marketing_campaign_post_version_media',
+            'marketing_campaign_post_version_id',
+            'marketing_campaign_post_media_id'
+        )
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
+    }
 }

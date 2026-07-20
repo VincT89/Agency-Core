@@ -17,6 +17,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
     {
         parent::setUp();
         config(['services.n8n.token' => 'secret-testing-token']);
+        \Illuminate\Support\Facades\Http::fake();
     }
 
     protected function getHeaders(): array

@@ -41,6 +41,7 @@ class SendMarketingCampaignPostToClientAction
             'token' => Str::random(60),
             'reviewable_type' => MarketingCampaignPost::class,
             'reviewable_id' => $post->id,
+            'marketing_campaign_post_version_id' => $post->current_version_id,
             'expires_at' => now()->addDays(7),
             'metadata' => [
                 'version_number' => $post->currentVersion->version_number,

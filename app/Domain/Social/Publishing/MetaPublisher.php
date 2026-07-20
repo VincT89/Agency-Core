@@ -32,8 +32,10 @@ class MetaPublisher implements SocialPublisherInterface
             && !empty($account->provider_account_id);
     }
 
-    public function publish(MarketingCampaignPost $post, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
+    public function publish(\App\Models\MarketingCampaignPostPublication $publication, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
     {
+        $post = clone $publication->post; // Clone it so we don't mess up the instance, although we shouldn't use it directly much anymore.
+
         if ($account->connection_strategy?->value === 'agency_oauth' && $account->agencyAsset && $account->agencyAsset->connection) {
             if ($account->agencyAsset->connection->requires_reauth) {
                 return PublishResult::failure('La connessione dell\'agenzia Meta richiede un nuovo accesso (Token Scaduto/Revocato). Ricollega l\'account dal pannello Admin.');
@@ -60,9 +62,13 @@ class MetaPublisher implements SocialPublisherInterface
 
         try {
             $isInstagram = $account->platform->value === 'instagram';
-            $message = $post->resolved_caption;
-            if ($post->currentVersion?->hashtags) {
-                $message = trim($message . "\n\n" . collect($post->currentVersion->hashtags)
+            
+            $snapshot = $publication->payload_snapshot ?? [];
+            
+            $message = $snapshot['caption'] ?? '';
+            $hashtags = $snapshot['hashtags'] ?? [];
+            if (!empty($hashtags)) {
+                $message = trim($message . "\n\n" . collect($hashtags)
                     ->map(fn ($h) => str_starts_with($h, '#') ? $h : "#{$h}")
                     ->implode(' '));
             }
@@ -75,8 +81,20 @@ class MetaPublisher implements SocialPublisherInterface
                 'message' => $message,
             ];
 
-            // Media attachment handling
-            $mediaItems = $post->orderedMediaItems;
+            // Media attachment handling from snapshot
+            $mediaItemsData = collect($snapshot['media'] ?? []);
+            
+            // Generate public URLs for the media items from the snapshot
+            // We need to pass them to mediaUrlService which expects a collection of MarketingCampaignPostMedia,
+            // but the snapshot only has arrays. We can mock them or reconstruct them.
+            // Let's get the IDs and load them from DB, or if we want absolute isolation, we shouldn't use live DB.
+            // But SocialMediaPublicUrlService expects Media models. So we load them from DB using the snapshot IDs.
+            $mediaItemIds = $mediaItemsData->pluck('media_id')->filter()->toArray();
+            $mediaItems = \App\Models\MarketingCampaignPostMedia::whereIn('id', $mediaItemIds)->get()
+                ->sortBy(function($model) use ($mediaItemIds) {
+                    return array_search($model->id, $mediaItemIds);
+                })->values();
+
             $mediaUrls = [];
             $mediaType = null;
             $diagnosticPayloads = [];

@@ -28,8 +28,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('marketing_campaign_post_publications', function (Blueprint $table) {
-            $table->dropForeign('mcp_pub_version_id_fk');
-            $table->dropColumn('marketing_campaign_post_version_id');
+            if (Schema::hasColumn('marketing_campaign_post_publications', 'marketing_campaign_post_version_id')) {
+                $table->dropForeign('mcp_pub_version_id_fk');
+                $table->dropColumn('marketing_campaign_post_version_id');
+            }
         });
     }
 };

@@ -2,29 +2,43 @@
 
 namespace Tests\Support;
 
-use Illuminate\Support\Collection;
-use PHPUnit\Framework\Assert as PHPUnit;
+use App\Domain\Social\Publishing\SocialPublisherInterface;
+use App\Domain\Social\Publishing\PublishResult;
+use App\Models\ClientSocialAccount;
+use App\Models\MarketingCampaignPostPublication;
+use PHPUnit\Framework\Assert;
 
-class SocialPublisherFake
+class SocialPublisherFake implements SocialPublisherInterface
 {
-    private bool $called = false;
-    private ?array $lastCallArgs = null;
+    protected array $publishedPublications = [];
+    protected array $publishedAccounts = [];
+    protected bool $capabilitiesResult = true;
 
-    public function publish(array $data): array
+    public function publish(MarketingCampaignPostPublication $publication, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
     {
-        $this->called = true;
-        $this->lastCallArgs = $data;
+        $this->publishedPublications[] = $publication;
+        $this->publishedAccounts[] = $account;
 
-        return ['external_id' => 'fake_external_id_123', 'status' => 'success'];
+        return new PublishResult(true, 'fake-external-id');
+    }
+
+    public function verifyAccountCapabilities(ClientSocialAccount $account): bool
+    {
+        return $this->capabilitiesResult;
+    }
+
+    public function forceCapabilitiesResult(bool $result): void
+    {
+        $this->capabilitiesResult = $result;
     }
 
     public function assertNotCalled(): void
     {
-        PHPUnit::assertFalse($this->called, 'The publisher was unexpectedly called.');
+        Assert::assertEmpty($this->publishedPublications, 'Publisher was unexpectedly called.');
     }
 
     public function assertCalled(): void
     {
-        PHPUnit::assertTrue($this->called, 'The publisher was expected to be called but was not.');
+        Assert::assertNotEmpty($this->publishedPublications, 'Publisher was not called.');
     }
 }

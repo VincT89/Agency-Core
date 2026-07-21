@@ -28,8 +28,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('client_review_tokens', function (Blueprint $table) {
-            $table->dropForeign(['marketing_campaign_post_version_id']);
-            $table->dropColumn('marketing_campaign_post_version_id');
+            if (Schema::hasColumn('client_review_tokens', 'marketing_campaign_post_version_id')) {
+                $table->dropForeign(['marketing_campaign_post_version_id']);
+                $table->dropColumn('marketing_campaign_post_version_id');
+            }
         });
     }
 };

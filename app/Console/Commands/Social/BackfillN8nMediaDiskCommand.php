@@ -19,23 +19,32 @@ class BackfillN8nMediaDiskCommand extends Command
 
         $analyzed = 0;
         $updated = 0;
-        $ignored = 0;
+        $wouldUpdate = 0;
+        $missing = 0;
+        $ambiguous = 0;
 
         MarketingCampaignPostMedia::query()
             ->where('source', 'n8n')
             ->whereNull('disk')
-            ->chunkById(500, function ($mediaCollection) use (&$analyzed, &$updated, &$ignored, $dryRun) {
+            ->chunkById(500, function ($mediaCollection) use (&$analyzed, &$updated, &$wouldUpdate, &$missing, &$ambiguous, $dryRun) {
                 foreach ($mediaCollection as $media) {
                     $analyzed++;
 
-                    if ($media->path && Storage::disk('public')->exists($media->path)) {
+                    if (empty($media->path)) {
+                        $ambiguous++;
+                        continue;
+                    }
+
+                    if (Storage::disk('public')->exists($media->path)) {
                         if (!$dryRun) {
                             $media->update(['disk' => 'public']);
+                            $updated++;
+                        } else {
+                            $wouldUpdate++;
                         }
-                        $updated++;
                     } else {
-                        // File not found locally or path is empty
-                        $ignored++;
+                        // File not found locally
+                        $missing++;
                     }
                 }
             });
@@ -45,8 +54,9 @@ class BackfillN8nMediaDiskCommand extends Command
             ['Metric', 'Value'],
             [
                 ['Analyzed', $analyzed],
-                ['Updated', $updated],
-                ['Ignored (not found/ambiguous)', $ignored],
+                [$dryRun ? 'Would update' : 'Updated', $dryRun ? $wouldUpdate : $updated],
+                ['Missing (file not on disk)', $missing],
+                ['Ambiguous (null/empty path)', $ambiguous],
             ]
         );
 

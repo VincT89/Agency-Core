@@ -11,8 +11,8 @@ class ProjectPolicy
     use HandlesRoleAuthorization;
 
     public function viewAny(User $user): bool  
-    { 
-        return $user->canManageSystem() || $user->role === UserRole::Administration || in_array($user->role, [
+    {
+        return $user->canBypassProjectScope() || in_array($user->role, [
             UserRole::Developer, 
             UserRole::Marketing, 
             UserRole::Photographer, 
@@ -22,7 +22,7 @@ class ProjectPolicy
     
     public function view(User $user, Project $project): bool  
     { 
-        if ($user->role === UserRole::Administration) {
+        if ($user->canBypassProjectScope()) {
             return true;
         }
 
@@ -31,12 +31,12 @@ class ProjectPolicy
     
     public function create(User $user): bool   
     { 
-        return $user->role === UserRole::Administration;
+        return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager;
     }
 
     public function update(User $user, Project $project): bool
     {
-        return $user->role === UserRole::Administration;
+        return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager;
     }
 
     public function delete(User $user, Project $project): bool

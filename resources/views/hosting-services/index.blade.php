@@ -86,12 +86,16 @@
                     </td>
                     <td>
                         @if($service->username || $service->password)
-                            @if($service->username)
-                                <div class="hosting-user-lbl">User: <span class="hosting-user-val">{{ $service->username }}</span></div>
-                            @endif
-                            @if($service->password)
-                                <div class="hosting-user-lbl">Pass: <span class="hosting-password-value">••••••••</span></div>
-                            @endif
+                            @can('manageCredentials', $service)
+                                @if($service->username)
+                                    <div class="hosting-user-lbl">User: <span class="hosting-user-val">{{ $service->username }}</span></div>
+                                @endif
+                                @if($service->password)
+                                    <div class="hosting-user-lbl">Pass: <span class="hosting-password-value">••••••••</span></div>
+                                @endif
+                            @else
+                                <span class="hosting-text-na">Riservate</span>
+                            @endcan
                         @else
                             <span class="hosting-text-na">N/A</span>
                         @endif

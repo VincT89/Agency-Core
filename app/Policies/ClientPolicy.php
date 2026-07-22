@@ -12,12 +12,12 @@ class ClientPolicy
 
     public function viewAny(User $user): bool  
     { 
-        return $user->role === UserRole::Administration; 
+        return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager; 
     }
     
     public function view(User $user, Client $client): bool
     { 
-        if ($user->role === UserRole::Administration) {
+        if ($user->role === UserRole::Administration || $user->role === UserRole::OperationsManager) {
             return true;
         }
         
@@ -26,12 +26,12 @@ class ClientPolicy
     
     public function create(User $user): bool   
     { 
-        return $user->role === UserRole::Administration;
+        return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager;
     }
     
     public function update(User $user, Client $client): bool  
     { 
-        return false; // Autorizzazione gestita dal metodo before()
+        return $user->role === UserRole::OperationsManager;
     }
     
     public function delete(User $user, Client $client): bool  

@@ -30,7 +30,8 @@ class CalendarEventPolicy
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::Marketing, 
             \App\Enums\UserRole::Photographer, 
-            \App\Enums\UserRole::GraphicDesigner
+            \App\Enums\UserRole::GraphicDesigner,
+            \App\Enums\UserRole::OperationsManager,
         ], true); 
     }
 
@@ -45,7 +46,8 @@ class CalendarEventPolicy
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::Marketing, 
             \App\Enums\UserRole::Photographer, 
-            \App\Enums\UserRole::GraphicDesigner
+            \App\Enums\UserRole::GraphicDesigner,
+            \App\Enums\UserRole::OperationsManager,
         ], true); 
     }
 
@@ -76,6 +78,10 @@ class CalendarEventPolicy
     {
         if ($event->type === 'personal') {
             return $this->ownsPersonalEvent($user, $event);
+        }
+
+        if ($user->canBypassProjectScope()) {
+            return true;
         }
 
         if ($event->project_id) {

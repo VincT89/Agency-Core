@@ -799,50 +799,52 @@
                                     <div class="u-text-red u-text-meta u-mr-sm u-flex-center">{{ session('error') }}</div>
                                 @endif
 
-                                @if(!$post->currentVersion && in_array($post->status->value, ['draft', 'client_changes_requested', 'generated']))
-                                    <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
-                                        wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                        <i data-lucide="check-circle" class="u-icon-sm"></i>
-                                        <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
-                                        <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
-                                    </button>
-                                    <div class="u-flex-1"></div>
-                                @endif
-                                @if($form['ai_analysis_enabled'])
-                                    <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
-                                        wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                        <span wire:loading.remove wire:target="savePost">
-                                            {{ $post->status->value !== 'draft' ? ($post->currentVersion ? 'Salva Versione Sody' : 'Salva Modifiche') : 'Salva Bozza' }}
-                                        </span>
-                                        <span wire:loading wire:target="savePost">Salvataggio...</span>
-                                    </button>
-                                    @if(!$post->currentVersion)
-                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('full')"
-                                            class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                            <i data-lucide="sparkles" class="u-icon-md"></i>
-                                            <span wire:loading.remove wire:target="saveAndSubmitToN8n('full')">
-                                                {{ $post->status->value !== 'draft' ? 'Rigenera Tutto' : 'Genera Immagine e Testo' }}
-                                            </span>
-                                            <span wire:loading wire:target="saveAndSubmitToN8n('full')">Invio in corso...</span>
+                                @if($post->status->isManuallyEditable())
+                                    @if(!$post->currentVersion && in_array($post->status->value, ['draft', 'client_changes_requested', 'generated']))
+                                        <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
+                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            <i data-lucide="check-circle" class="u-icon-sm"></i>
+                                            <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
+                                            <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
                                         </button>
-                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('caption')"
-                                            class="btn btn-sec u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                            <i data-lucide="type" class="u-icon-md"></i>
-                                            <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
-                                                Genera solo Testo
+                                        <div class="u-flex-1"></div>
+                                    @endif
+                                    @if($form['ai_analysis_enabled'])
+                                        <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
+                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            <span wire:loading.remove wire:target="savePost">
+                                                {{ $post->status->value !== 'draft' ? ($post->currentVersion ? 'Salva Versione Sody' : 'Salva Modifiche') : 'Salva Bozza' }}
                                             </span>
-                                            <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Invio in corso...</span>
+                                            <span wire:loading wire:target="savePost">Salvataggio...</span>
+                                        </button>
+                                        @if(!$post->currentVersion)
+                                            <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('full')"
+                                                class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                                <i data-lucide="sparkles" class="u-icon-md"></i>
+                                                <span wire:loading.remove wire:target="saveAndSubmitToN8n('full')">
+                                                    {{ $post->status->value !== 'draft' ? 'Rigenera Tutto' : 'Genera Immagine e Testo' }}
+                                                </span>
+                                                <span wire:loading wire:target="saveAndSubmitToN8n('full')">Invio in corso...</span>
+                                            </button>
+                                            <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('caption')"
+                                                class="btn btn-sec u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                                <i data-lucide="type" class="u-icon-md"></i>
+                                                <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
+                                                    Genera solo Testo
+                                                </span>
+                                                <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Invio in corso...</span>
+                                            </button>
+                                        @endif
+                                    @else
+                                        <button type="button" wire:click="savePost" class="btn btn-p u-flex-center u-gap-xs"
+                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            <i data-lucide="save" class="u-icon-md"></i>
+                                            <span wire:loading.remove wire:target="savePost">
+                                                {{ $post->status->value !== 'draft' ? 'Salva Modifiche' : 'Salva Post' }}
+                                            </span>
+                                            <span wire:loading wire:target="savePost">Salvataggio...</span>
                                         </button>
                                     @endif
-                                @else
-                                    <button type="button" wire:click="savePost" class="btn btn-p u-flex-center u-gap-xs"
-                                        wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                        <i data-lucide="save" class="u-icon-md"></i>
-                                        <span wire:loading.remove wire:target="savePost">
-                                            {{ $post->status->value !== 'draft' ? 'Salva Modifiche' : 'Salva Post' }}
-                                        </span>
-                                        <span wire:loading wire:target="savePost">Salvataggio...</span>
-                                    </button>
                                 @endif
                             </div>
 

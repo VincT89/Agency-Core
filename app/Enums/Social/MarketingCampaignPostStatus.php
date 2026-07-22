@@ -72,4 +72,14 @@ enum MarketingCampaignPostStatus: string
     {
         return $this === self::Draft;
     }
+
+    public function isManuallyEditable(): bool
+    {
+        return in_array($this, [
+            self::Draft,
+            self::Generated,
+            self::ReadyForClient,
+            self::ClientChangesRequested,
+        ]);
+    }
 }

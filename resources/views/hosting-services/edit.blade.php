@@ -85,6 +85,7 @@
                 </x-form-group>
             </div>
 
+            @can('manageCredentials', $hostingService)
             <div class="sec-lbl hosting-services-section-title">Credenziali Accesso</div>
             <div class="form-row">
                 <x-form-group label="Username" name="username">
@@ -95,6 +96,7 @@
                     <div class="hosting-services-help-text">Lascia il campo vuoto se non vuoi sovrascrivere la password attuale.</div>
                 </x-form-group>
             </div>
+            @endcan
 
             <div class="sec-lbl hosting-services-section-title">Amministrazione</div>
             <div class="form-row">
@@ -107,18 +109,22 @@
                 </x-form-group>
             </div>
             <div class="form-row">
+                @if(auth()->user()->canAccessFinance())
                 <x-form-group label="Costo di Rinnovo (€)" name="renewal_cost">
                     <input type="number" step="0.01" name="renewal_cost" class="form-in @error('renewal_cost') is-invalid @enderror" value="{{ old('renewal_cost', $hostingService->renewal_cost) }}">
                 </x-form-group>
+                @endif
                 <x-form-group label="Data Scadenza / Rinnovo" name="renewal_date">
                     <input type="date" name="renewal_date" class="form-in @error('renewal_date') is-invalid @enderror" value="{{ old('renewal_date', optional($hostingService->renewal_date)->format('Y-m-d')) }}">
                 </x-form-group>
             </div>
 
             <div class="form-row">
+                @if(auth()->user()->canAccessFinance())
                 <x-form-group label="Costo Risorse (€)" name="resource_cost">
                     <input type="number" step="0.01" name="resource_cost" class="form-in @error('resource_cost') is-invalid @enderror" value="{{ old('resource_cost', $hostingService->resource_cost) }}">
                 </x-form-group>
+                @endif
                 <x-form-group label="Ciclo di Fatturazione" name="billing_cycle">
                     <select name="billing_cycle" class="form-sel @error('billing_cycle') is-invalid @enderror">
                         <option value="">-- Seleziona --</option>

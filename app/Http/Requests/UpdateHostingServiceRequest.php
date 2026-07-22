@@ -32,11 +32,30 @@ class UpdateHostingServiceRequest extends FormRequest
             'location' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::in(['active', 'suspended', 'cancelled'])],
             'access_url' => ['nullable', 'url', 'max:255'],
-            'username' => ['nullable', 'string', 'max:255'],
-            'password' => ['nullable', 'string'], // In update it might be blank
+            'username' => [
+                Rule::prohibitedIf(! $this->user()->can('manageCredentials', $this->route('hosting_service'))),
+                'nullable', 
+                'string', 
+                'max:255'
+            ],
+            'password' => [
+                Rule::prohibitedIf(! $this->user()->can('manageCredentials', $this->route('hosting_service'))),
+                'nullable', 
+                'string'
+            ], // In update it might be blank
             'renewal_date' => ['nullable', 'date'],
-            'renewal_cost' => ['nullable', 'numeric', 'min:0'],
-            'resource_cost' => ['nullable', 'numeric', 'min:0'],
+            'renewal_cost' => [
+                Rule::prohibitedIf(! $this->user()->canAccessFinance()),
+                'nullable', 
+                'numeric', 
+                'min:0'
+            ],
+            'resource_cost' => [
+                Rule::prohibitedIf(! $this->user()->canAccessFinance()),
+                'nullable', 
+                'numeric', 
+                'min:0'
+            ],
             'billing_cycle' => ['nullable', Rule::in(['monthly', 'yearly', 'one_time', 'other'])],
             'notes' => ['nullable', 'string'],
         ];

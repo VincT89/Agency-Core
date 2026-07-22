@@ -26,7 +26,7 @@ class AttachmentIntegrationTest extends TestCase
 
     public function test_user_can_upload_and_download_attachment_to_authorized_entity(): void
     {
-        $manager = User::factory()->create(['role' => UserRole::Administration, 'password_changed_at' => now()]);
+        $manager = User::factory()->create(['role' => UserRole::OperationsManager, 'password_changed_at' => now()]);
         
         $client = Client::create([
             'name' => 'Acme Srl',

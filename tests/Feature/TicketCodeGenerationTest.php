@@ -23,8 +23,11 @@ class TicketCodeGenerationTest extends TestCase
         $client->status = 'active';
         $client->save();
 
+        $project = \App\Models\Project::factory()->create(['client_id' => $client->id]);
+
         $response = $this->actingAs($admin)->post('/tickets', [
             'client_id' => $client->id,
+            'project_id' => $project->id,
             'title' => 'Nuovo Problema',
             'type' => 'support',
             'status' => 'open',
@@ -51,10 +54,13 @@ class TicketCodeGenerationTest extends TestCase
         $client->status = 'active';
         $client->save();
 
+        $project = \App\Models\Project::factory()->create(['client_id' => $client->id]);
+
         // Creiamo un ticket aggirando l'observer per forzare il codice nullo
-        $ticket = Ticket::withoutEvents(function () use ($admin, $client) {
+        $ticket = Ticket::withoutEvents(function () use ($admin, $client, $project) {
             return Ticket::create([
                 'client_id' => $client->id,
+                'project_id' => $project->id,
                 'created_by' => $admin->id,
                 'title' => 'Vecchio Problema',
                 'type' => 'bug',

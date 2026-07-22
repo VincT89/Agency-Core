@@ -14,7 +14,7 @@ class StoreCalendarEventRequest extends FormRequest
     use ValidatesProjectOwnership;
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', CalendarEvent::class);
     }
 
     public function rules(): array

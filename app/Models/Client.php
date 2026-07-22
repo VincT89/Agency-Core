@@ -178,7 +178,7 @@ class Client extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->canManageSystem() || $user->isMarketing()) {
+        if ($user->canAccessAllProjects() || $user->isMarketing()) {
             return $query;
         }
 

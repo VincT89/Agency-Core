@@ -21,7 +21,7 @@ class UpdateTicketRequest extends FormRequest
     {
         return [
             'client_id' => ['required', 'exists:clients,id'],
-            'project_id' => ['nullable', 'exists:projects,id'],
+            'project_id' => ['required', 'exists:projects,id'],
             'assigned_to' => ['nullable', 'exists:users,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

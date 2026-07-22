@@ -58,7 +58,15 @@ class BackfillN8nMediaDiskCommandTest extends TestCase
 
         // First run
         $this->artisan('social:backfill-n8n-media-disk')
-            ->expectsOutputToContain('Analyzed')
+            ->expectsTable(
+                ['Metric', 'Value'],
+                [
+                    ['Analyzed', '3'],
+                    ['Updated', '1'],
+                    ['Missing (file not on disk)', '1'],
+                    ['Ambiguous (null/empty path)', '1'],
+                ]
+            )
             ->assertExitCode(0);
 
         $this->assertEquals('public', $media1->fresh()->disk);
@@ -69,7 +77,15 @@ class BackfillN8nMediaDiskCommandTest extends TestCase
         
         // Second run (Idempotency)
         $this->artisan('social:backfill-n8n-media-disk')
-            ->expectsOutputToContain('Updated') // Assuming you adjust the command to output 0 updated
+            ->expectsTable(
+                ['Metric', 'Value'],
+                [
+                    ['Analyzed', '2'], // the successfully updated one is filtered out by whereNull('disk')
+                    ['Updated', '0'],
+                    ['Missing (file not on disk)', '1'],
+                    ['Ambiguous (null/empty path)', '1'],
+                ]
+            )
             ->assertExitCode(0);
             
         $this->assertEquals('public', $media1->fresh()->disk); // Still public
@@ -86,8 +102,15 @@ class BackfillN8nMediaDiskCommandTest extends TestCase
         ]);
 
         $this->artisan('social:backfill-n8n-media-disk', ['--dry-run' => true])
-            ->expectsOutputToContain('Dry run: YES')
-            ->expectsOutputToContain('Would update') // we need to change command to output "Would update"
+            ->expectsTable(
+                ['Metric', 'Value'],
+                [
+                    ['Analyzed', '1'],
+                    ['Would update', '1'],
+                    ['Missing (file not on disk)', '0'],
+                    ['Ambiguous (null/empty path)', '0'],
+                ]
+            )
             ->assertExitCode(0);
 
         $this->assertNull($media->fresh()->disk);

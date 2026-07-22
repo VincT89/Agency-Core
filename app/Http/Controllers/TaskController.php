@@ -9,6 +9,8 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreTaskRequest;
+use App\Http\Requests\UpdateTaskRequest;
 use Illuminate\View\View;
 
 class TaskController extends Controller
@@ -69,22 +71,9 @@ class TaskController extends Controller
         ]);
     }
 
-    public function store(Request $request, \App\Domain\Core\Actions\CreateTaskAction $action): RedirectResponse
+    public function store(StoreTaskRequest $request, \App\Domain\Core\Actions\CreateTaskAction $action): RedirectResponse
     {
-        $this->authorize('create', Task::class);
-
-        $data = $request->validate([
-            'project_id'  => ['required', 'exists:projects,id'],
-            'ticket_id'   => ['nullable', 'exists:tickets,id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
-            'title'       => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'status'      => ['required', 'in:' . implode(',', self::STATUSES)],
-            'priority'    => ['required', 'in:' . implode(',', self::PRIORITIES)],
-            'start_date'  => ['nullable', 'date'],
-            'due_date'    => ['nullable', 'date'],
-            'notes'       => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
 
         $data['created_by'] = auth()->id();
 
@@ -140,22 +129,9 @@ class TaskController extends Controller
         ]);
     }
 
-    public function update(Request $request, Task $task): RedirectResponse
+    public function update(UpdateTaskRequest $request, Task $task): RedirectResponse
     {
-        $this->authorize('update', $task);
-
-        $data = $request->validate([
-            'project_id'  => ['required', 'exists:projects,id'],
-            'ticket_id'   => ['nullable', 'exists:tickets,id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
-            'title'       => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'status'      => ['required', 'in:' . implode(',', self::STATUSES)],
-            'priority'    => ['required', 'in:' . implode(',', self::PRIORITIES)],
-            'start_date'  => ['nullable', 'date'],
-            'due_date'    => ['nullable', 'date'],
-            'notes'       => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
 
         // Imposta la data di completamento se il task viene chiuso
         if ($data['status'] === 'done' && !$task->completed_at) {

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreHostingServiceInterventionRequest extends FormRequest
 {
@@ -12,7 +13,7 @@ class StoreHostingServiceInterventionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('update', $this->route('hosting_service'));
     }
 
     /**
@@ -26,7 +27,12 @@ class StoreHostingServiceInterventionRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'intervention_date' => ['required', 'date'],
-            'cost' => ['nullable', 'numeric', 'min:0'],
+            'cost' => [
+                Rule::prohibitedIf(! $this->user()->canAccessFinance()),
+                'nullable', 
+                'numeric', 
+                'min:0'
+            ],
         ];
     }
 }

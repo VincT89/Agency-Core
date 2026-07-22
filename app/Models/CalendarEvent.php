@@ -6,8 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class CalendarEvent extends Model
 {
+    use HasFactory;
     protected static function booted()
     {
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);

@@ -41,16 +41,22 @@ class ProjectSupremacyScope implements Scope
             if ($model instanceof \App\Models\CalendarEvent) {
                 $query->orWhere(function ($q) use ($user) {
                     $q->whereNull('project_id')
-                      ->where('assigned_to', $user->id);
+                      ->where(function($q2) use ($user) {
+                          $q2->where('assigned_to', $user->id)
+                             ->orWhere('created_by', $user->id);
+                      });
                 });
             }
             
             // Permette la visibilità dei Task operativi (es. Shooting Marketing) senza progetto
-            // solo se assegnati direttamente all'utente
+            // solo se assegnati direttamente all'utente o creati da lui
             if ($model instanceof \App\Models\Task) {
                 $query->orWhere(function ($q) use ($user) {
                     $q->whereNull('project_id')
-                      ->where('assigned_to', $user->id);
+                      ->where(function($q2) use ($user) {
+                          $q2->where('assigned_to', $user->id)
+                             ->orWhere('created_by', $user->id);
+                      });
                 });
             }
         });

@@ -15,7 +15,8 @@ class TaskPolicy
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::Marketing, 
             \App\Enums\UserRole::Photographer, 
-            \App\Enums\UserRole::GraphicDesigner
+            \App\Enums\UserRole::GraphicDesigner,
+            \App\Enums\UserRole::OperationsManager,
         ], true); 
     }
 
@@ -30,7 +31,8 @@ class TaskPolicy
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::Marketing, 
             \App\Enums\UserRole::Photographer, 
-            \App\Enums\UserRole::GraphicDesigner
+            \App\Enums\UserRole::GraphicDesigner,
+            \App\Enums\UserRole::OperationsManager,
         ], true); 
     }
 
@@ -46,6 +48,10 @@ class TaskPolicy
 
     private function canAccessTask(User $user, Task $task): bool
     {
+        if ($user->canBypassProjectScope()) {
+            return true;
+        }
+
         // Limita la visibilità al perimetro del progetto o ai task liberi assegnati direttamente
         if (!$task->project_id && $task->assigned_to === $user->id) {
             return true;

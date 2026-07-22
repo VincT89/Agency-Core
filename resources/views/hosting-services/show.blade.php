@@ -60,24 +60,31 @@
                     @else
                         —
                     @endif
+                    @if(auth()->user()->canAccessFinance())
                     <br>
                     {{ $hostingService->renewal_cost ? '€ ' . number_format($hostingService->renewal_cost, 2, ',', '.') : '—' }}
+                    @endif
                 </div>
             </div>
             <div class="hosting-detail-row">
                 <div class="form-lbl">Credenziali Accesso</div>
                 <div class="hosting-user-val hosting-detail-val">
-                    User: {{ $hostingService->username ?: '—' }}<br>
-                    Pass: 
-                    @if($hostingService->password)
-                        <div class="hosting-password-container" data-id="{{ $hostingService->id }}">
-                            <span class="hosting-password-value" data-hidden="true">••••••••</span>
-                            <button type="button" class="hosting-password-toggle" title="Mostra/Nascondi"><i data-lucide="eye" class="u-icon-sm"></i></button>
-                            <button type="button" class="hosting-password-copy" title="Copia"><i data-lucide="copy" class="u-icon-sm"></i></button>
-                        </div>
+                    @can('manageCredentials', $hostingService)
+                        User: {{ $hostingService->username ?: '—' }}<br>
+                        Pass: 
+                        @if($hostingService->password)
+                            <div class="hosting-password-container" data-id="{{ $hostingService->id }}">
+                                <span class="hosting-password-value" data-hidden="true">••••••••</span>
+                                <button type="button" class="hosting-password-toggle" title="Mostra/Nascondi"><i data-lucide="eye" class="u-icon-sm"></i></button>
+                                <button type="button" class="hosting-password-copy" title="Copia"><i data-lucide="copy" class="u-icon-sm"></i></button>
+                            </div>
+                        @else
+                            —
+                        @endif
                     @else
-                        —
-                    @endif
+                        User: ••••••••<br>
+                        Pass: ••••••••
+                    @endcan
                 </div>
             </div>
 
@@ -90,6 +97,7 @@
         </x-panel>
 
         {{-- Spese Associate --}}
+        @if(auth()->user()->canAccessFinance())
         <div class="u-mt-lg">
             <x-panel title="Spese Associate" dot="var(--orange)">
                 @if($hostingService->expenses->isEmpty())
@@ -130,6 +138,7 @@
                 @endif
             </x-panel>
         </div>
+        @endif
 
         {{-- Allegati --}}
         <div class="u-mt-lg">
@@ -152,9 +161,11 @@
                         <x-form-group name="intervention_date">
                             <input type="date" name="intervention_date" class="form-in" value="{{ now()->format('Y-m-d') }}" required>
                         </x-form-group>
+                        @if(auth()->user()->canAccessFinance())
                         <x-form-group name="cost">
                             <input type="number" step="0.01" name="cost" class="form-in" placeholder="Costo € (opzionale)">
                         </x-form-group>
+                        @endif
                     </div>
                     <div class="form-row full">
                         <x-form-group name="description">

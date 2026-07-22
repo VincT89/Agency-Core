@@ -13,16 +13,23 @@ trait ValidatesProjectOwnership
         $projectId = $this->input('project_id');
         $clientId  = $this->input('client_id');
 
-        if (! $projectId || ! $clientId) {
+        if (! $projectId) {
             return;
         }
 
-        $exists = Project::query()
-            ->where('id', $projectId)
-            ->where('client_id', $clientId)
-            ->exists();
+        $project = Project::query()
+            ->whereKey($projectId)
+            ->first();
 
-        if (! $exists) {
+        if (! $project) {
+            $validator->errors()->add(
+                'project_id',
+                'Il progetto selezionato non è valido o non hai i permessi per accedervi.'
+            );
+            return;
+        }
+
+        if ($clientId && $project->client_id != $clientId) {
             $validator->errors()->add(
                 'project_id',
                 'Il progetto selezionato non appartiene al cliente indicato.'

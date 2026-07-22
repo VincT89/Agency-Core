@@ -11,22 +11,22 @@ class HostingServicePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance() || $user->isOperationsManager();
     }
 
     public function view(User $user, HostingService $hostingService): bool
     {
-        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance() || $user->isOperationsManager();
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance() || $user->isOperationsManager();
     }
 
     public function update(User $user, HostingService $hostingService): bool
     {
-        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance();
+        return $user->isAdmin() || $user->isDeveloper() || $user->canAccessFinance() || $user->isOperationsManager();
     }
 
     public function delete(User $user, HostingService $hostingService): bool
@@ -35,6 +35,11 @@ class HostingServicePolicy
     }
 
     public function viewPassword(User $user, HostingService $hostingService): bool
+    {
+        return $this->manageCredentials($user, $hostingService);
+    }
+
+    public function manageCredentials(User $user, ?HostingService $hostingService = null): bool
     {
         return $user->isAdmin() || $user->isDeveloper();
     }

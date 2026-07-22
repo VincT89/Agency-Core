@@ -10,6 +10,8 @@ class HostingServiceInterventionController extends Controller
 {
     public function store(StoreHostingServiceInterventionRequest $request, HostingService $hostingService)
     {
+        $this->authorize('update', $hostingService);
+
         $intervention = $hostingService->interventions()->create([
             ...$request->validated(),
             'user_id' => auth()->id(),
@@ -24,6 +26,7 @@ class HostingServiceInterventionController extends Controller
 
     public function destroy(HostingService $hostingService, HostingServiceIntervention $intervention)
     {
+        $this->authorize('update', $hostingService);
         abort_unless($intervention->hosting_service_id === $hostingService->id, 404);
         $intervention->delete();
         return back()->with('success', 'Intervento eliminato con successo.');

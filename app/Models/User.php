@@ -131,6 +131,11 @@ class User extends Authenticatable
         return $this->role === UserRole::Administration;
     }
 
+    public function isOperationsManager(): bool
+    {
+        return $this->role === UserRole::OperationsManager;
+    }
+
     public function isDeveloper(): bool
     {
         return $this->role === UserRole::Developer;
@@ -163,13 +168,20 @@ class User extends Authenticatable
 
     public function canBypassProjectScope(): bool
     {
-        // Garantisce visibilità globale a profili amministrativi
-        return $this->isAdmin() || $this->isAdministration();
+        // Garantisce visibilità globale a profili amministrativi e operativi trasversali
+        return $this->canAccessAllProjects();
+    }
+
+    public function canAccessAllProjects(): bool
+    {
+        return $this->isAdmin() 
+            || $this->isAdministration() 
+            || $this->isOperationsManager();
     }
 
     public function hasOperationalDashboard(): bool
     {
-        return $this->isOperationalStaff();
+        return $this->isOperationalStaff() || $this->isOperationsManager();
     }
 
     public function isOperationalStaff(): bool

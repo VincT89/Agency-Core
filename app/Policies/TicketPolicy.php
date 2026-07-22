@@ -14,14 +14,16 @@ class TicketPolicy
     {
         return $user->canManageSystem() || in_array($user->role, [
             \App\Enums\UserRole::Developer, 
-            \App\Enums\UserRole::Marketing, 
-            \App\Enums\UserRole::Photographer,
-            \App\Enums\UserRole::GraphicDesigner
+            \App\Enums\UserRole::GraphicDesigner,
+            \App\Enums\UserRole::OperationsManager,
         ], true);
     }
 
     public function view(User $user, Ticket $ticket): bool
     {
+        if (!$this->viewAny($user)) {
+            return false;
+        }
         return $this->canAccessTicket($user, $ticket);
     }
 
@@ -42,6 +44,10 @@ class TicketPolicy
 
     private function canAccessTicket(User $user, Ticket $ticket): bool
     {
+        if ($user->canBypassProjectScope()) {
+            return true;
+        }
+
         // Limita la visibilità al perimetro del progetto
         if ($ticket->project_id && $user->projects()->where('projects.id', $ticket->project_id)->exists()) {
             return true;

@@ -23,6 +23,7 @@ class ClientSocialAccountForm extends Component
 
     public function mount(Client $client): void
     {
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         $this->client = $client->load('socialAccounts');
 
         foreach (SocialPlatform::cases() as $platform) {
@@ -60,7 +61,7 @@ class ClientSocialAccountForm extends Component
 
     public function save(string $platform, CreateOrUpdateClientSocialAccountAction $action)
     {
-        $this->authorize('update', $this->client);
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         
         if (!isset($this->forms[$platform])) {
             return;
@@ -96,6 +97,7 @@ class ClientSocialAccountForm extends Component
 
     public function validateAssetAssignment(string $platform, int $assetId, \App\Domain\Social\Actions\ValidateAgencyAssetAssignmentAction $action)
     {
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         $asset = \App\Models\AgencySocialAsset::find($assetId);
         if ($asset) {
             $result = $action->execute($asset, $this->client->id, $platform);
@@ -112,14 +114,14 @@ class ClientSocialAccountForm extends Component
 
     public function testConnection(string $platform)
     {
-        $this->authorize('update', $this->client);
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         // TODO: Implementare ping su Graph API con AgencyAsset
         session()->flash('success_'.$platform, "Test di connessione (simulato) per {$platform}.");
     }
 
     public function disconnect(string $platform)
     {
-        $this->authorize('update', $this->client);
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
         if ($account) {
             $account->update([
@@ -138,7 +140,7 @@ class ClientSocialAccountForm extends Component
 
     public function disconnectOauth(string $platform)
     {
-        $this->authorize('update', $this->client);
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
         if ($account) {
             if ($platform === 'tiktok' && $account->access_token) {
@@ -168,7 +170,7 @@ class ClientSocialAccountForm extends Component
 
     public function startTikTokOauth(string $platform)
     {
-        $this->authorize('update', $this->client);
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
 
         if (!$account || $platform !== 'tiktok') {

@@ -12,6 +12,7 @@ class ClientSocialOverview extends Component
 
     public function mount(Client $client)
     {
+        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
         $this->client = $client;
     }
 

@@ -100,7 +100,9 @@
             </div>
         </x-panel>
         <div>
-            <livewire:client.client-social-overview :client="$client" />
+            @can('viewAny', \App\Models\ClientSocialAccount::class)
+                <livewire:client.client-social-overview :client="$client" />
+            @endcan
 
             <x-panel title="Ticket Recenti" dot="var(--accent)" padded>
                 @forelse($client->tickets as $t)
@@ -117,9 +119,11 @@
         </div>
     </div>
 
-    <div class="u-mb-lg">
-        <livewire:client.client-social-account-form :client="$client" />
-    </div>
+    @can('viewAny', \App\Models\ClientSocialAccount::class)
+        <div class="u-mb-lg">
+            <livewire:client.client-social-account-form :client="$client" />
+        </div>
+    @endcan
 
     <x-panel title="Commesse Attive ({{ $client->projects->count() }})">
         @if($client->projects->isEmpty())

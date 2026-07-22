@@ -97,7 +97,7 @@
               <i data-lucide="plus" class="u-icon-sm"></i>
               <span class="sidebar-btn-text">Nuovo Task</span>
             </a>
-            @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+            @can('viewAny', \App\Models\Ticket::class)
               @if(isset($newTickets) && $newTickets > 0)
                 <a href="{{ route('tickets.index') }}" wire:navigate class="sidebar-ticket-alarm" x-bind:title="!sidebarOpen ? 'Ticket' : ''">
                   <i data-lucide="bell-ring" class="u-icon-sm sidebar-alarm-icon"></i>
@@ -107,7 +107,7 @@
                   <span class="sidebar-alarm-badge">{{ $newTickets }}</span>
                 </a>
               @endif
-            @endif
+            @endcan
           </div>
           
           <x-nav-item
@@ -128,16 +128,20 @@
         <x-nav-item href="{{ route('dashboard') }}" icon="layout-dashboard" label="Dashboard"
           :active="request()->routeIs('dashboard')" />
 
-        <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
-          :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
+        @can('viewAny', \App\Models\Task::class)
+          <x-nav-item href="{{ route('tasks.index') }}" icon="check-square" label="Task"
+            :active="request()->routeIs('tasks.*')" :badge="$openTasks ?? null" />
+        @endcan
 
-        @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing())
+        @can('viewAny', \App\Models\Ticket::class)
           <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
             :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
-        @endif
+        @endcan
 
-        <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
-          :active="request()->routeIs('calendar-events.*')" />
+        @can('viewAny', \App\Models\CalendarEvent::class)
+          <x-nav-item href="{{ route('calendar-events.index') }}" icon="calendar" label="Calendario"
+            :active="request()->routeIs('calendar-events.*')" />
+        @endcan
 
         @can('viewAny', \App\Models\Team::class)
           @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing() && !auth()->user()->isDeveloper())
@@ -219,7 +223,7 @@
       </div>
 
       {{-- HOSTING E DOMINI --}}
-      @if(auth()->user()->canManageSystem())
+      @can('viewAny', \App\Models\HostingService::class)
         <div class="nav-divider"></div>
         <div class="nav-group">
           <div class="nav-group-label">Hosting e Domini</div>
@@ -228,7 +232,7 @@
           <x-nav-item href="{{ route('hosting-services.index', ['exclude_type' => 'domain']) }}" icon="server"
             label="Hosting" :active="request()->routeIs('hosting-services.*') && request('exclude_type') === 'domain'" />
         </div>
-      @endif
+      @endcan
 
       {{-- ADMIN --}}
       @can('system.admin')

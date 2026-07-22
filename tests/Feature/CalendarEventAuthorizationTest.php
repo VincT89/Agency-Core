@@ -16,7 +16,7 @@ class CalendarEventAuthorizationTest extends TestCase
 
     public function test_manager_cannot_see_unrelated_project_event()
     {
-        $manager = User::factory()->create(['role' => UserRole::Administration, 'password_changed_at' => now()]);
+        $manager = User::factory()->create(['role' => UserRole::Developer, 'password_changed_at' => now()]);
         
         $client = Client::create(['name' => 'Test Client', 'slug' => 'test-client', 'status' => 'active']);
         $project = Project::create(['client_id' => $client->id, 'name' => 'Project A', 'slug' => 'project-a', 'status' => 'active']);
@@ -34,12 +34,12 @@ class CalendarEventAuthorizationTest extends TestCase
         ]);
 
         $response = $this->actingAs($manager)->get(route('calendar-events.show', $event));
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_manager_can_see_project_event_in_their_perimeter()
     {
-        $manager = User::factory()->create(['role' => UserRole::Administration, 'password_changed_at' => now()]);
+        $manager = User::factory()->create(['role' => UserRole::Developer, 'password_changed_at' => now()]);
         $client = Client::create(['name' => 'Test Client', 'slug' => 'test-client-2', 'status' => 'active']);
         $project = Project::create(['client_id' => $client->id, 'name' => 'Project B', 'slug' => 'project-b', 'status' => 'active']);
         
@@ -62,7 +62,7 @@ class CalendarEventAuthorizationTest extends TestCase
 
     public function test_manager_cannot_see_personal_event_of_someone_else()
     {
-        $manager = User::factory()->create(['role' => UserRole::Administration, 'password_changed_at' => now()]);
+        $manager = User::factory()->create(['role' => UserRole::Developer, 'password_changed_at' => now()]);
         
         // Evento Personale (senza progetto e cliente) di un altro utente
         $event = CalendarEvent::create([
@@ -75,7 +75,7 @@ class CalendarEventAuthorizationTest extends TestCase
         ]);
 
         $response = $this->actingAs($manager)->get(route('calendar-events.show', $event));
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_event_without_end_at_gets_normalized_correctly()

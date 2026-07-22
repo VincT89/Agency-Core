@@ -25,12 +25,17 @@ class HostingServiceController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $canManageCredentials = $request->user()->can('manageCredentials', HostingService::class);
+            $query->where(function ($q) use ($search, $canManageCredentials) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('domain', 'like', "%{$search}%")
-                    ->orWhere('provider', 'like', "%{$search}%")
-                    ->orWhere('username', 'like', "%{$search}%")
-                    ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
+                    ->orWhere('provider', 'like', "%{$search}%");
+                
+                if ($canManageCredentials) {
+                    $q->orWhere('username', 'like', "%{$search}%");
+                }
+                
+                $q->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
             });
         }
 

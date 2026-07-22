@@ -31,7 +31,7 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
     {
         // 1. Setup - Mock external image download for n8n staging
         Http::fake([
-            'https://example.com/generated.jpg' => Http::response('fake_image_content', 200, ['Content-Type' => 'image/jpeg']),
+            'https://example.com/generated.jpg' => Http::response(file_get_contents(base_path('tests/Fixtures/valid.jpg')), 200, ['Content-Type' => 'image/jpeg']),
         ]);
 
         $post = MarketingCampaignPost::factory()->create();
@@ -85,6 +85,6 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
         $response = $this->get($relativeUrl);
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'image/jpeg');
-        $this->assertEquals('fake_image_content', $response->streamedContent());
+        $this->assertEquals(file_get_contents(base_path('tests/Fixtures/valid.jpg')), $response->streamedContent());
     }
 }

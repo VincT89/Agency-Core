@@ -36,14 +36,13 @@
                         @endforeach
                     </select>
                 </x-form-group>
-                <x-form-group label="Progetto" name="project_id">
-                    <select name="project_id" id="project_sel" class="form-sel @error('project_id') is-invalid @enderror">
-                        <option value="">Nessun progetto specifico...</option>
+                <x-form-group label="Progetto" name="project_id" required>
+                    <select name="project_id" id="project_sel" class="form-sel @error('project_id') is-invalid @enderror" required>
+                        <option value="">Seleziona progetto (Obbligatorio)...</option>
                         @if($ticket->project)
                             <option value="{{ $ticket->project_id }}" selected>{{ $ticket->project->name }}</option>
                         @endif
                     </select>
-                    <div class="u-text-meta u-mt-xs">Opzionale. Se selezionato, deve appartenere al cliente indicato.</div>
                 </x-form-group>
             </div>
 

@@ -14,14 +14,14 @@ class StoreTicketRequest extends FormRequest
     use ValidatesProjectOwnership;
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', Ticket::class);
     }
 
     public function rules(): array
     {
         return [
             'client_id' => ['required', 'exists:clients,id'],
-            'project_id' => ['nullable', 'exists:projects,id'],
+            'project_id' => ['required', 'exists:projects,id'],
             'assigned_to' => ['nullable', 'exists:users,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

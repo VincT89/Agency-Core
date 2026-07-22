@@ -211,6 +211,7 @@ class TicketAuthorizationTest extends TestCase
         $this->actingAs($this->admin)
             ->patch(route('tickets.update', $this->ticket), [
                 'client_id' => $this->client->id,
+                'project_id'=> $this->project->id,
                 'title'     => 'Titolo aggiornato',
                 'type'      => 'bug',
                 'status'    => 'in_progress',
@@ -224,6 +225,7 @@ class TicketAuthorizationTest extends TestCase
         $this->actingAs($this->operativo)
             ->patch(route('tickets.update', $this->ticket), [
                 'client_id' => $this->client->id,
+                'project_id'=> $this->project->id,
                 'title'     => 'Aggiornato dall\'operativo nel progetto',
                 'type'      => 'bug',
                 'status'    => 'in_progress',
@@ -248,6 +250,7 @@ class TicketAuthorizationTest extends TestCase
         $this->actingAs($this->operativo)
             ->patch(route('tickets.update', $foreignTicket), [
                 'client_id' => $this->client->id,
+                'project_id'=> $this->otherProject->id,
                 'title'     => 'Tentativo di modifica',
                 'type'      => 'support',
                 'status'    => 'open',
@@ -261,6 +264,7 @@ class TicketAuthorizationTest extends TestCase
         $this->actingAs($this->operativo)
             ->patch(route('tickets.update', $this->assignedTicket), [
                 'client_id' => $this->client->id,
+                'project_id'=> $this->project->id,
                 'title'     => 'Aggiornato dall\'operativo',
                 'type'      => 'support',
                 'status'    => 'in_progress',
@@ -274,6 +278,7 @@ class TicketAuthorizationTest extends TestCase
         $this->actingAs($this->otherOperativo)
             ->patch(route('tickets.update', $this->assignedTicket), [
                 'client_id' => $this->client->id,
+                'project_id'=> $this->project->id,
                 'title'     => 'Tentativo non autorizzato',
                 'type'      => 'support',
                 'status'    => 'open',

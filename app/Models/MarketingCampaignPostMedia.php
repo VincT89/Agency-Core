@@ -12,6 +12,13 @@ class MarketingCampaignPostMedia extends Model
 
     protected $guarded = [];
 
+    protected static function booted()
+    {
+        static::deleting(function (MarketingCampaignPostMedia $media) {
+            app(\App\Domain\Social\Services\HistoricalMediaProtectionService::class)->assertDeletable($media);
+        });
+    }
+
     public function post(): BelongsTo
     {
         return $this->belongsTo(MarketingCampaignPost::class, 'marketing_campaign_post_id');

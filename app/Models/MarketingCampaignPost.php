@@ -33,6 +33,15 @@ class MarketingCampaignPost extends Model
         'publishing_platforms' => 'array',
     ];
 
+    protected static function booted()
+    {
+        static::deleting(function (MarketingCampaignPost $post) {
+            if ($post->versions()->exists() || $post->publications()->exists()) {
+                throw \App\Domain\Social\Exceptions\HistoricalPostProtectedException::forPost($post);
+            }
+        });
+    }
+
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(MarketingCampaign::class, 'marketing_campaign_id');

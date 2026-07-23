@@ -2,7 +2,9 @@
 
 namespace App\Domain\Social\Services;
 
-class PreflightResult
+use Livewire\Wireable;
+
+class PreflightResult implements Wireable
 {
     public function __construct(
         public bool $isPass,
@@ -31,5 +33,23 @@ class PreflightResult
             $this->errors[] = $message;
             $this->isPass = false;
         }
+    }
+
+    public function toLivewire()
+    {
+        return [
+            'isPass' => $this->isPass,
+            'checks' => $this->checks,
+            'errors' => $this->errors,
+        ];
+    }
+
+    public static function fromLivewire($value)
+    {
+        return new self(
+            $value['isPass'],
+            $value['checks'],
+            $value['errors']
+        );
     }
 }

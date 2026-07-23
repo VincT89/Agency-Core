@@ -999,12 +999,12 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('delete', $this->post);
 
-        foreach ($this->post->mediaItems as $item) {
-            if ($item->source === 'local' && $item->path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($item->path);
-            }
+        try {
+            app(\App\Domain\Social\Actions\DeleteMarketingCampaignPostAction::class)->execute($this->post);
+        } catch (\Exception $e) {
+            $this->addError('post', 'Impossibile eliminare il post: ' . $e->getMessage());
+            return;
         }
-        $this->post->delete();
 
         return redirect()->route('marketing-campaigns.show', $this->campaign);
     }

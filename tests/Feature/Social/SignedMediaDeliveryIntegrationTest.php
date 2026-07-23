@@ -25,6 +25,15 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
         // Imposta un URL fittizio HTTPS e non locale per bypassare ensureSecureHost
         Config::set('app.url', 'https://test-agency.com');
         \Illuminate\Support\Facades\URL::forceRootUrl('https://test-agency.com');
+        \Illuminate\Support\Facades\URL::forceScheme('https');
+    }
+
+    protected function tearDown(): void
+    {
+        \Illuminate\Support\Facades\URL::forceScheme(null);
+        \Illuminate\Support\Facades\URL::forceRootUrl(null);
+
+        parent::tearDown();
     }
 
     public function test_full_chain_from_n8n_action_to_delivery()

@@ -101,13 +101,70 @@ class ClientController extends Controller
             ->with('success', 'Cliente aggiornato correttamente.');
     }
 
-    public function destroy(Client $client): RedirectResponse
+    public function destroy(Client $client, \App\Domain\Core\Actions\DeleteClientAction $deleteClientAction): RedirectResponse
     {
         $this->authorize('delete', $client);
-        $client->delete();
+        
+        try {
+            $deleteClientAction->execute($client);
+        } catch (\App\Domain\Social\Exceptions\HistoricalPostProtectedException $e) {
+            return redirect()->back()
+                ->with('error', 'Impossibile eliminare il cliente perché contiene dati storici protetti.');
+        } catch (\Exception $e) {
+            if ($e instanceof \Illuminate\Database\QueryException && $this->isHistoricalProtectionViolation($e)) {
+                return redirect()->back()
+                    ->with('error', 'Impossibile eliminare il cliente perché contiene dati storici protetti.');
+            }
+            
+            throw $e;
+        }
 
         return redirect()->route('clients.index')
             ->with('success', 'Cliente eliminato correttamente.');
+    }
+
+    private function isHistoricalProtectionViolation(\Illuminate\Database\QueryException $e): bool
+    {
+        $errorCode = $e->errorInfo[1] ?? $e->getCode();
+        $sqlState = (string) $e->getCode();
+        $message = strtolower($e->getMessage());
+        
+        $isFkError = false;
+
+        if ($errorCode == 1451) {
+            $isFkError = true; // MySQL / MariaDB
+        } elseif ($sqlState === '23503') {
+            $isFkError = true; // PostgreSQL
+        } elseif ($errorCode == 19 && str_contains($message, 'foreign key constraint failed')) {
+            $isFkError = true; // SQLite
+        }
+        
+        if (!$isFkError) {
+            return false;
+        }
+        
+        $constraints = [
+            'marketing_campaign_posts_marketing_campaign_id_foreign',
+            'mcpv_post_id_fk',
+            'fk_mcp_pub_post_id',
+            'marketing_campaign_post_media_marketing_campaign_post_id_foreign',
+            'mcp_version_media_media_id_fk'
+        ];
+
+        foreach ($constraints as $constraint) {
+            if (str_contains($message, strtolower($constraint))) {
+                return true;
+            }
+        }
+        
+        if ($errorCode == 19 && str_contains($message, 'foreign key constraint failed')) {
+            $sql = strtolower($e->getSql());
+            return str_contains($sql, 'delete from "clients"') || str_contains($sql, 'delete from `clients`') 
+                || str_contains($sql, 'delete from "marketing_campaigns"') || str_contains($sql, 'delete from `marketing_campaigns`')
+                || str_contains($sql, 'delete from "marketing_campaign_posts"') || str_contains($sql, 'delete from `marketing_campaign_posts`');
+        }
+
+        return false;
     }
 
     public function search(Request $request, \App\Domain\Core\Queries\ClientQuery $clientQuery): JsonResponse

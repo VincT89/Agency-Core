@@ -17,6 +17,10 @@ use InvalidArgumentException;
 
 class CreateManualMarketingCampaignPostVersionAction
 {
+    public function __construct(
+        private MarketingCampaignPostVersionMediaResolver $resolver
+    ) {}
+
     public function execute(MarketingCampaignPost $post, CreateManualMarketingCampaignPostVersionData $data): CreateManualMarketingCampaignPostVersionResult
     {
         return DB::transaction(function () use ($post, $data) {
@@ -37,13 +41,7 @@ class CreateManualMarketingCampaignPostVersionAction
             $currentVersion = $post->currentVersion;
             
             // Resolve source media via resolver
-            $sourceMedia = collect();
-            if ($currentVersion) {
-                $resolver = app(MarketingCampaignPostVersionMediaResolver::class);
-                $sourceMedia = $resolver->resolveMediaItems($currentVersion);
-            } elseif ($post->mediaItems()->exists()) {
-                $sourceMedia = $post->orderedMediaItems;
-            }
+            $sourceMedia = $this->resolver->resolveForPost($post)->mediaItems;
 
             // Validate requested media
             $requestedMediaIds = array_values(array_unique($data->ordered_media_ids));

@@ -17,7 +17,8 @@ use Throwable;
 class AddMarketingCampaignPostVersionFromN8nAction
 {
     public function __construct(
-        private readonly \App\Domain\Social\Services\ImageStagerService $stager
+        private readonly \App\Domain\Social\Services\ImageStagerService $stager,
+        private readonly \App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver $resolver
     ) {}
 
     public function execute(AddMarketingCampaignPostVersionData $data): AddPostVersionResult
@@ -108,19 +109,12 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 if ($data->regenerationType === MarketingCampaignPostRegenerationType::Caption) {
                     // Rigenerazione solo caption: copia le associazioni pivot della versione precedente.
                     // Se la versione precedente non ha associazioni pivot, usa il fallback legacy.
-                    $sourceMedia = collect();
-                    if ($currentVersion && $currentVersion->mediaItems()->exists()) {
-                        $sourceMedia = $currentVersion->mediaItems;
-                    } elseif ($currentVersion || $post->mediaItems()->exists()) {
-                        // Fallback legacy dal post
-                        $sourceMedia = $post->orderedMediaItems;
-                    }
+                    $resolution = $this->resolver->resolveForPost($post);
+                    $sourceMedia = $resolution->mediaItems;
 
                     $pivotData = [];
                     foreach ($sourceMedia as $index => $media) {
-                        // Se c'era un sort_order sul pivot, in fallback mettiamo $index
-                        $sortOrder = $media->pivot->sort_order ?? $index;
-                        $pivotData[$media->id] = ['sort_order' => $sortOrder];
+                        $pivotData[$media->id] = ['sort_order' => $index];
                     }
                     if (!empty($pivotData)) {
                         $version->mediaItems()->attach($pivotData);

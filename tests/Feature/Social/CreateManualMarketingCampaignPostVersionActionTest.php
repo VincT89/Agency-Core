@@ -229,7 +229,9 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
 
     public function test_zero_media_fallisce_se_richiesto()
     {
+        $media = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id]);
         $v1 = $this->post->versions()->create(['version_number' => 1, 'title' => 'Title 1', 'caption' => 'Caption 1']);
+        $v1->mediaItems()->attach($media->id, ['sort_order' => 0]);
         $this->post->update(['current_version_id' => $v1->id]);
 
         $data = new CreateManualMarketingCampaignPostVersionData(

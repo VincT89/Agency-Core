@@ -51,7 +51,10 @@ class E2EMockSeeder extends Seeder
                 'account_name' => 'Test FB Page',
                 'instagram_business_account_id' => 'ig_fake_123',
                 'username' => 'test_ig_account',
-                'api_status' => 'connected'
+                'api_status' => \App\Enums\Social\SocialApiStatus::Connected->value,
+                'api_provider' => \App\Enums\Social\SocialApiProvider::MetaGraph->value,
+                'access_status' => \App\Enums\Social\SocialAccessStatus::ReadyToPublish->value,
+                'connection_mode' => \App\Enums\Social\SocialConnectionMode::Oauth->value,
             ]
         );
         
@@ -64,7 +67,10 @@ class E2EMockSeeder extends Seeder
                 'refresh_token' => 'fake_tk_refresh_123',
                 'token_expires_at' => now()->addDays(60),
                 'account_name' => 'Test TikTok Account',
-                'api_status' => 'connected'
+                'api_status' => \App\Enums\Social\SocialApiStatus::Connected->value,
+                'api_provider' => \App\Enums\Social\SocialApiProvider::TiktokContentApi->value,
+                'access_status' => \App\Enums\Social\SocialAccessStatus::ReadyToPublish->value,
+                'connection_mode' => \App\Enums\Social\SocialConnectionMode::Oauth->value,
             ]
         );
     }

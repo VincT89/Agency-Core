@@ -39,6 +39,8 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
     {
         $media = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $this->post->id,
+            'source' => 'local',
+            'disk' => 'public',
             'path' => 'test.jpg'
         ]);
 
@@ -88,6 +90,8 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
     {
         $media = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $this->post->id,
+            'source' => 'local',
+            'disk' => 'public',
         ]);
 
         $v1 = $this->post->versions()->create([
@@ -249,7 +253,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
 
     public function test_image_url_and_path_legacy_generated_correctly()
     {
-        $m1 = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'local', 'path' => 'local.jpg']);
+        $m1 = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'local', 'disk' => 'public', 'path' => 'local.jpg']);
         $m2 = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'nextcloud', 'nextcloud_share_url' => 'http://nc']);
         
         $data = new CreateManualMarketingCampaignPostVersionData(
@@ -299,7 +303,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
             'nextcloud_file_id' => '123'
         ])->save();
 
-        $mediaLocal = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'local', 'path' => 'new.jpg']);
+        $mediaLocal = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'local', 'disk' => 'public', 'path' => 'new.jpg']);
         
         $data = new CreateManualMarketingCampaignPostVersionData(
             expected_current_version_id: null,
@@ -326,7 +330,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
             'media_path' => 'old.jpg',
         ])->save();
 
-        $mediaNc = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'nextcloud', 'nextcloud_path' => 'new.jpg']);
+        $mediaNc = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'nextcloud', 'nextcloud_path' => 'new.jpg', 'nextcloud_share_url' => 'http://nc']);
         
         $data = new CreateManualMarketingCampaignPostVersionData(
             expected_current_version_id: null,
@@ -396,6 +400,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
     {
         $media = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id]);
         $v1 = $this->post->versions()->create(['version_number' => 1, 'title' => 'V1']);
+        $v1->mediaItems()->attach($media->id, ['sort_order' => 1]);
         $this->post->update(['current_version_id' => $v1->id]);
 
         // Simula eccezione dopo l'inserimento della versione (durante l'attach del pivot, ad esempio)
@@ -424,5 +429,33 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
 
         $this->assertDatabaseCount('marketing_campaign_post_versions', 1);
         $this->assertEquals($v1->id, $this->post->fresh()->current_version_id);
+    }
+
+    public function test_manual_version_with_only_nextcloud_media_sets_image_path_null()
+    {
+        $m1 = MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $this->post->id, 
+            'source' => 'nextcloud', 
+            'nextcloud_share_url' => 'http://nc',
+            'path' => null,
+            'disk' => null
+        ]);
+        
+        $data = new CreateManualMarketingCampaignPostVersionData(
+            expected_current_version_id: null,
+            title: 'Title',
+            caption: 'Caption',
+            hashtags: null,
+            ordered_media_ids: [$m1->id]
+        );
+
+        $result = $this->action->execute($this->post, $data);
+        $this->assertTrue($result->isCreated());
+        
+        // image_path expects a local public path, so for nextcloud it must be null
+        $this->assertNull($result->version->image_path);
+        
+        // image_url will use the fallback URL resolver which maps to the nextcloud share URL or delivery URL
+        $this->assertNotNull($result->version->image_url);
     }
 }

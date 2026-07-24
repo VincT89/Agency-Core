@@ -44,7 +44,8 @@ class ExtendMetaLongLivedTokens extends Command
                 $this->info("Estensione token per account ID: {$account->id} ({$account->platform->value})");
 
                 try {
-                    $response = \Illuminate\Support\Facades\Http::timeout(15)->get('https://graph.facebook.com/v19.0/oauth/access_token', [
+                    $graphVersion = config('services.meta.graph_version', 'v19.0');
+                    $response = \Illuminate\Support\Facades\Http::timeout(15)->get("https://graph.facebook.com/{$graphVersion}/oauth/access_token", [
                         'grant_type' => 'fb_exchange_token',
                         'client_id' => $clientId,
                         'client_secret' => $clientSecret,

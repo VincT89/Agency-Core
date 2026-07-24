@@ -33,6 +33,7 @@ class MarketingCampaignPostVersionMediaResolver
                 throw MarketingCampaignPostMediaResolutionException::forMissingCurrentVersion($post->id);
             }
 
+            $currentVersion->setRelation('post', $post);
             return $this->resolveForVersion($currentVersion);
         }
 
@@ -156,37 +157,53 @@ class MarketingCampaignPostVersionMediaResolver
         return $matches[0];
     }
 
+    private function normalizePath(string $path): string
+    {
+        return ltrim(
+            preg_replace('#/+#', '/', rawurldecode($path)),
+            '/'
+        );
+    }
+
     private function mediaMatchesReference($media, string $reference): bool
     {
-        $reference = rtrim($reference, '/');
-        $referenceWithoutDownload = preg_replace('/\/download$/', '', $reference);
+        $referencePath = parse_url($reference, PHP_URL_PATH);
+        $referencePath = rawurldecode((string) $referencePath);
+        $referencePathWithoutDownload = preg_replace('#/download$#', '', $referencePath);
+        $normalizedReferencePath = $this->normalizePath($referencePathWithoutDownload);
 
         if ($media->nextcloud_share_url) {
-            $ncUrl = rtrim($media->nextcloud_share_url, '/');
-            $ncUrlWithoutDownload = preg_replace('/\/download$/', '', $ncUrl);
-            if ($ncUrlWithoutDownload === $referenceWithoutDownload) {
+            $ncUrlPath = parse_url($media->nextcloud_share_url, PHP_URL_PATH);
+            $ncUrlPath = rawurldecode((string) $ncUrlPath);
+            $ncUrlPathWithoutDownload = preg_replace('#/download$#', '', $ncUrlPath);
+            $normalizedNcPath = $this->normalizePath($ncUrlPathWithoutDownload);
+            
+            if ($normalizedNcPath !== '' && $normalizedNcPath === $normalizedReferencePath) {
                 return true;
             }
         }
 
         if ($media->disk && $media->path) {
-            if ($reference === $media->path) {
-                return true;
-            }
-            if (Str::endsWith($reference, $media->path)) {
+            $normalizedMediaPath = $this->normalizePath($media->path);
+            
+            if ($normalizedReferencePath !== '' && $normalizedReferencePath === $normalizedMediaPath) {
                 return true;
             }
             
             try {
                 $storageUrl = Storage::disk($media->disk)->url($media->path);
-                if ($reference === $storageUrl || rtrim($reference, '/') === rtrim($storageUrl, '/')) {
+                $storageUrlPath = parse_url($storageUrl, PHP_URL_PATH);
+                $storageUrlPath = rawurldecode((string) $storageUrlPath);
+                $normalizedStoragePath = $this->normalizePath($storageUrlPath);
+                
+                if ($normalizedStoragePath !== '' && $normalizedReferencePath === $normalizedStoragePath) {
                     return true;
                 }
             } catch (\Exception $e) {
                 // Ignore missing disk or misconfiguration
             }
             
-            if (Str::contains($reference, '/delivery/' . $media->id)) {
+            if (preg_match('#/delivery/(\d+)$#', rtrim($referencePath, '/'), $matches) && (int) $matches[1] === $media->id) {
                 return true;
             }
         }
@@ -199,15 +216,21 @@ class MarketingCampaignPostVersionMediaResolver
         $matches = [];
         $allMedia = $post->mediaItems;
         
-        $reference = $post->nextcloud_share_url ?: $post->media_url ?: $post->media_path;
+        $references = array_filter([
+            $post->getRawOriginal('nextcloud_share_url'),
+            $post->getRawOriginal('media_path'),
+        ]);
         
-        if (!$reference) {
+        if (empty($references)) {
             return null;
         }
 
         foreach ($allMedia as $media) {
-            if ($this->mediaMatchesReference($media, $reference)) {
-                $matches[] = $media;
+            foreach ($references as $reference) {
+                if ($this->mediaMatchesReference($media, (string) $reference)) {
+                    $matches[] = $media;
+                    break;
+                }
             }
         }
         

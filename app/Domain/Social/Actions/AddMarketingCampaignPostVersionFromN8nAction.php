@@ -18,7 +18,8 @@ class AddMarketingCampaignPostVersionFromN8nAction
 {
     public function __construct(
         private readonly \App\Domain\Social\Services\ImageStagerService $stager,
-        private readonly \App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver $resolver
+        private readonly \App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver $resolver,
+        private readonly \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver
     ) {}
 
     public function execute(AddMarketingCampaignPostVersionData $data): AddPostVersionResult
@@ -31,6 +32,8 @@ class AddMarketingCampaignPostVersionFromN8nAction
 
         $temporaryFiles = [];
         $promotedFiles = [];
+
+        $committed = false;
 
         try {
             if ($data->regenerationType !== MarketingCampaignPostRegenerationType::Caption) {
@@ -84,34 +87,27 @@ class AddMarketingCampaignPostVersionFromN8nAction
                     $versionData['title'] = $data->title;
                     $versionData['caption'] = $data->caption;
                     $versionData['hashtags'] = $data->hashtags;
-                    $versionData['image_url'] = $currentVersion?->image_url;
-                    $versionData['image_urls'] = $currentVersion?->image_urls;
-                    $versionData['image_path'] = $currentVersion?->image_path;
                 } elseif ($data->regenerationType === MarketingCampaignPostRegenerationType::Image) {
                     $versionData['title'] = $currentVersion?->title;
                     $versionData['caption'] = $currentVersion?->caption;
                     $versionData['hashtags'] = $currentVersion?->hashtags;
-                    $versionData['image_url'] = count($data->imageUrls ?? []) === 1 ? $data->imageUrls[0] : null;
-                    $versionData['image_urls'] = $data->imageUrls;
-                    $versionData['image_path'] = count($promotedFiles) > 0 ? $promotedFiles[0] : null;
                 } else {
                     $versionData['title'] = $data->title;
                     $versionData['caption'] = $data->caption;
                     $versionData['hashtags'] = $data->hashtags;
-                    $versionData['image_url'] = count($data->imageUrls ?? []) === 1 ? $data->imageUrls[0] : null;
-                    $versionData['image_urls'] = $data->imageUrls;
-                    $versionData['image_path'] = count($promotedFiles) > 0 ? $promotedFiles[0] : null;
                 }
+
+                // Placeholder for legacy fields, will update after pivot
+                $versionData['image_url'] = null;
+                $versionData['image_urls'] = [];
+                $versionData['image_path'] = null;
 
                 $version = MarketingCampaignPostVersion::create($versionData);
 
                 // --- GESTIONE MEDIA E PIVOT ---
                 if ($data->regenerationType === MarketingCampaignPostRegenerationType::Caption) {
-                    // Rigenerazione solo caption: copia le associazioni pivot della versione precedente.
-                    // Se la versione precedente non ha associazioni pivot, usa il fallback legacy.
                     $resolution = $this->resolver->resolveForPost($post);
                     $sourceMedia = $resolution->mediaItems;
-
                     $pivotData = [];
                     foreach ($sourceMedia as $index => $media) {
                         $pivotData[$media->id] = ['sort_order' => $index];
@@ -145,6 +141,22 @@ class AddMarketingCampaignPostVersionFromN8nAction
                     }
                 }
 
+                $version->setRelation('post', $post);
+                $finalResolution = $this->resolver->resolveForVersion($version);
+                $finalResolvedUrls = $this->urlResolver->orderedDeliveryUrls($finalResolution->mediaItems);
+                
+                $primaryMedia = $finalResolution->mediaItems->first();
+                $imagePath = null;
+                if ($primaryMedia && $primaryMedia->disk === 'public' && filled($primaryMedia->path)) {
+                    $imagePath = $primaryMedia->path;
+                }
+
+                $version->update([
+                    'image_url' => $finalResolvedUrls[0] ?? null,
+                    'image_urls' => $finalResolvedUrls,
+                    'image_path' => $imagePath,
+                ]);
+
                 $post->current_version_id = $version->id;
                 
                 if (!$post->generated_at) {
@@ -166,8 +178,14 @@ class AddMarketingCampaignPostVersionFromN8nAction
 
                 return new AddPostVersionResult('created', $version);
             });
+            
+            $committed = true;
 
-            $this->stager->deleteTemporary($temporaryFiles);
+            try {
+                $this->stager->deleteTemporary($temporaryFiles);
+            } catch (Throwable $exception) {
+                \Illuminate\Support\Facades\Log::warning('Errore in deleteTemporary dopo commit', ['exception' => $exception->getMessage()]);
+            }
 
             return $result;
         } catch (UniqueConstraintViolationException $exception) {
@@ -175,14 +193,14 @@ class AddMarketingCampaignPostVersionFromN8nAction
             if (!str_contains($msg, 'mcpv_n8n_request_unique') && 
                 !str_contains($msg, 'marketing_campaign_post_versions_external_generation_id_unique')) {
                 // Non è un duplicato del webhook n8n (es. violazione mcpv_post_version_unique)
-                $this->cleanupOnError($temporaryFiles, $promotedFiles);
+                $this->cleanupOnError($temporaryFiles, $promotedFiles, $committed);
                 throw $exception;
             }
 
             // La transazione ha eseguito il rollback. Il recovery query userà la write connection per leggere.
             $result = $this->resolveUniqueViolation($exception, $data);
 
-            $this->cleanupOnError($temporaryFiles, $promotedFiles);
+            $this->cleanupOnError($temporaryFiles, $promotedFiles, $committed);
 
             if ($result !== null) {
                 return $result;
@@ -190,15 +208,22 @@ class AddMarketingCampaignPostVersionFromN8nAction
 
             throw $exception;
         } catch (Throwable $exception) {
-            $this->cleanupOnError($temporaryFiles, $promotedFiles);
+            $this->cleanupOnError($temporaryFiles, $promotedFiles, $committed);
             throw $exception;
         }
     }
 
-    private function cleanupOnError(array $temporaryFiles, array $promotedFiles): void
+    private function cleanupOnError(array $temporaryFiles, array $promotedFiles, bool $committed): void
     {
-        $this->stager->deleteTemporary($temporaryFiles);
-        $this->stager->deletePromoted($promotedFiles);
+        try {
+            $this->stager->deleteTemporary($temporaryFiles);
+        } catch (Throwable $e) {}
+        
+        if (!$committed) {
+            try {
+                $this->stager->deletePromoted($promotedFiles);
+            } catch (Throwable $e) {}
+        }
     }
 
     protected function fastCheckDuplicate(AddMarketingCampaignPostVersionData $data): ?AddPostVersionResult

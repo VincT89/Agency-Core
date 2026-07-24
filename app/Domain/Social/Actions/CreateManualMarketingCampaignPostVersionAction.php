@@ -18,7 +18,8 @@ use InvalidArgumentException;
 class CreateManualMarketingCampaignPostVersionAction
 {
     public function __construct(
-        private MarketingCampaignPostVersionMediaResolver $resolver
+        private MarketingCampaignPostVersionMediaResolver $resolver,
+        private \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver
     ) {}
 
     public function execute(MarketingCampaignPost $post, CreateManualMarketingCampaignPostVersionData $data): CreateManualMarketingCampaignPostVersionResult
@@ -94,20 +95,12 @@ class CreateManualMarketingCampaignPostVersionAction
             $nextVersionNumber = ((int) $post->versions()->max('version_number')) + 1;
 
             // Generate proper image_url, image_urls, and image_path
-            $imageUrls = [];
+            $imageUrls = $this->urlResolver->orderedDeliveryUrls($orderedValidatedMedia);
             $imagePath = null;
-            foreach ($orderedValidatedMedia as $media) {
-                if ($media->source === 'nextcloud') {
-                    $url = $media->nextcloud_share_url ? $media->nextcloud_share_url . '/download' : null;
-                    if ($url) $imageUrls[] = $url;
-                } else {
-                    $url = \Illuminate\Support\Facades\Storage::disk('public')->url($media->path);
-                    $imageUrls[] = $url;
-                    
-                    if ($imagePath === null) {
-                        $imagePath = $media->path;
-                    }
-                }
+            
+            $firstMedia = $orderedValidatedMedia->first();
+            if ($firstMedia && $firstMedia->disk === 'public' && filled($firstMedia->path)) {
+                $imagePath = $firstMedia->path;
             }
 
             $version = $post->versions()->create([

@@ -327,6 +327,45 @@ class NextcloudService
         }
     }
 
+    public function revokePublicShares(string $path): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        $url = $this->baseUrl . '/ocs/v2.php/apps/files_sharing/api/v1/shares';
+        $headers = [
+            'OCS-APIRequest' => 'true',
+            'Accept' => 'application/json',
+        ];
+
+        try {
+            $checkResponse = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+                ->withHeaders($headers)
+                ->get($url, ['path' => $path]);
+
+            if ($checkResponse->successful()) {
+                $data = $checkResponse->json();
+                $shares = $data['ocs']['data'] ?? [];
+
+                if (is_array($shares)) {
+                    foreach ($shares as $share) {
+                        if (is_array($share) && ($share['share_type'] ?? null) == 3 && !empty($share['id'])) {
+                            Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+                                ->withHeaders($headers)
+                                ->delete($url . '/' . $share['id']);
+                        }
+                    }
+                }
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Errore revoca share Nextcloud: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Assicura che una directory esista su Nextcloud, creandola ricorsivamente se necessario.
      * Ritorna true se la directory esiste o è stata creata con successo.

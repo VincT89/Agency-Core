@@ -300,9 +300,6 @@
         
         @if($forms[$platformValue]['api_status'] === 'connected')
             <div class="u-flex u-gap-sm u-mt-md">
-                <button type="button" wire:click="testConnection('{{ $platformValue }}')" class="btn btn-s" wire:loading.attr="disabled">
-                    Test Assegnazione
-                </button>
                 <button type="button" wire:click="disconnect('{{ $platformValue }}')" class="btn btn-error" wire:loading.attr="disabled" onclick="return confirm('Sicuro di voler rimuovere l\'assegnazione di questo asset?')">
                     Rimuovi
                 </button>

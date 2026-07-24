@@ -1,12 +1,5 @@
 @php
-    $versionImages = [];
-    if ($post->currentVersion) {
-        if (is_array($post->currentVersion->image_urls) && count($post->currentVersion->image_urls) > 0) {
-            $versionImages = $post->currentVersion->image_urls;
-        } elseif (! empty($post->currentVersion->image_url)) {
-            $versionImages = [$post->currentVersion->image_url];
-        }
-    }
+    $versionImages = $resolvedReviewMedia ?? [];
 @endphp
 <div class="client-review-page">
     <div class="client-review-header">

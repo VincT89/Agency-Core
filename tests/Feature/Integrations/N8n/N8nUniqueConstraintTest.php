@@ -55,7 +55,11 @@ class N8nUniqueConstraintTest extends TestCase
         // fastCheckDuplicate fa una query reale, troverebbe la riga e bloccherebbe prima del mock DB::transaction.
         // Dobbiamo usare il mock parziale sull'action per testare solo la catch del DB.
 
-        $mockAction = \Mockery::mock(AddMarketingCampaignPostVersionFromN8nAction::class . '[fastCheckDuplicate]', [app(\App\Domain\Social\Services\ImageStagerService::class)]);
+        $mockAction = \Mockery::mock(AddMarketingCampaignPostVersionFromN8nAction::class . '[fastCheckDuplicate]', [
+            app(\App\Domain\Social\Services\ImageStagerService::class),
+            app(\App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver::class),
+            app(\App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver::class)
+        ]);
         $mockAction->shouldAllowMockingProtectedMethods();
         $mockAction->shouldReceive('fastCheckDuplicate')->once()->andReturn(null);
 
@@ -96,7 +100,11 @@ class N8nUniqueConstraintTest extends TestCase
                 new PDOException("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'req-shared' for key 'mcpv_n8n_request_unique'")
             ));
 
-        $mockAction = \Mockery::mock(AddMarketingCampaignPostVersionFromN8nAction::class . '[fastCheckDuplicate]', [app(\App\Domain\Social\Services\ImageStagerService::class)]);
+        $mockAction = \Mockery::mock(AddMarketingCampaignPostVersionFromN8nAction::class . '[fastCheckDuplicate]', [
+            app(\App\Domain\Social\Services\ImageStagerService::class),
+            app(\App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver::class),
+            app(\App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver::class)
+        ]);
         $mockAction->shouldAllowMockingProtectedMethods();
         $mockAction->shouldReceive('fastCheckDuplicate')->once()->andReturn(null);
 
@@ -127,7 +135,11 @@ class N8nUniqueConstraintTest extends TestCase
                 new PDOException("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '1-1' for key 'mcpv_post_version_unique'") // NON mcpv_n8n_request_unique
             ));
 
-        $mockAction = \Mockery::mock(AddMarketingCampaignPostVersionFromN8nAction::class . '[fastCheckDuplicate]', [app(\App\Domain\Social\Services\ImageStagerService::class)]);
+        $mockAction = \Mockery::mock(AddMarketingCampaignPostVersionFromN8nAction::class . '[fastCheckDuplicate]', [
+            app(\App\Domain\Social\Services\ImageStagerService::class),
+            app(\App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver::class),
+            app(\App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver::class)
+        ]);
         $mockAction->shouldAllowMockingProtectedMethods();
         $mockAction->shouldReceive('fastCheckDuplicate')->once()->andReturn(null);
 

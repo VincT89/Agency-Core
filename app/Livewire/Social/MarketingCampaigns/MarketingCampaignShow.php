@@ -6,6 +6,10 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\MarketingCampaign;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
+use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
+use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
+use Illuminate\Support\Facades\Log;
 
 class MarketingCampaignShow extends Component
 {
@@ -13,6 +17,17 @@ class MarketingCampaignShow extends Component
 
     public MarketingCampaign $campaign;
     public string $calendarDate;
+    
+    private MarketingCampaignPostVersionMediaResolver $mediaResolver;
+    private MarketingCampaignPostMediaUrlResolver $urlResolver;
+
+    public function boot(
+        MarketingCampaignPostVersionMediaResolver $mediaResolver,
+        MarketingCampaignPostMediaUrlResolver $urlResolver
+    ): void {
+        $this->mediaResolver = $mediaResolver;
+        $this->urlResolver = $urlResolver;
+    }
 
     public function mount(MarketingCampaign $campaign)
     {
@@ -342,7 +357,7 @@ class MarketingCampaignShow extends Component
         $currentDate = \Carbon\Carbon::parse($this->calendarDate);
 
         $allPosts = $this->campaign->posts()
-            ->with('currentVersion')
+            ->with(['currentVersion', 'currentVersion.mediaItems', 'mediaItems'])
             ->orderByRaw('scheduled_date IS NULL')
             ->orderBy('scheduled_date', 'desc')
             ->orderBy('scheduled_time', 'desc')
@@ -373,8 +388,23 @@ class MarketingCampaignShow extends Component
         $prevMonth = $firstDayOfMonth->copy()->subMonth()->toDateString();
         $nextMonth = $firstDayOfMonth->copy()->addMonth()->toDateString();
 
+        $resolvedPostPreviews = [];
+        foreach ($allPosts as $post) {
+            try {
+                $resolution = $this->mediaResolver->resolveForPost($post);
+                $resolvedPostPreviews[$post->id] = $this->urlResolver->primaryPreviewUrlOrNull($resolution->mediaItems);
+            } catch (MarketingCampaignPostMediaResolutionException $exception) {
+                Log::warning('social.version_media.preview_resolution_failed', [
+                    'marketing_campaign_post_id' => $post->id,
+                    'error' => $exception->getMessage(),
+                ]);
+                $resolvedPostPreviews[$post->id] = null;
+            }
+        }
+
         return view('livewire.social.marketing-campaigns.marketing-campaign-show', [
             'posts' => $allPosts,
+            'resolvedPostPreviews' => $resolvedPostPreviews,
             'totalPostsCount' => $this->campaign->posts()->count(),
             'currentDate' => $currentDate,
             'days' => $days,

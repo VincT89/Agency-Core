@@ -17,10 +17,6 @@ class N8nClient
         );
     }
 
-    public function sendWhatsappReviewLink(array $payload): array
-    {
-        return $this->sendRequest(config('services.n8n.send_whatsapp_review_webhook_url'), 'send_whatsapp_review', $payload);
-    }
 
     public function submitMarketingCampaignPost(array $payload): array
     {

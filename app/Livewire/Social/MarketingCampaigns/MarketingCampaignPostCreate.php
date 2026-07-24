@@ -4,6 +4,7 @@ namespace App\Livewire\Social\MarketingCampaigns;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\Attributes\Computed;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Enums\Social\MarketingCampaignPostStatus;

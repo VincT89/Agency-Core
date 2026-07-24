@@ -5,12 +5,14 @@ namespace App\Domain\Social\Services;
 use App\Models\MarketingCampaignPost;
 use App\Models\ClientSocialAccount;
 use App\Domain\Social\Publishing\MetaPublisher;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
 
 class MetaPreflightService
 {
     public function __construct(
         private MetaPublisher $publisher,
-        private SocialMediaPublicUrlService $mediaUrlService
+        private SocialMediaPublicUrlService $mediaUrlService,
+        private MarketingCampaignPostVersionMediaResolver $mediaResolver
     ) {}
 
     public function runPreflight(MarketingCampaignPost $post, ClientSocialAccount $account): PreflightResult
@@ -29,7 +31,12 @@ class MetaPreflightService
         }
 
         // 2. Controllo Media
-        $mediaItems = $post->orderedMediaItems;
+        try {
+            $mediaItems = $this->mediaResolver->resolveForPost($post)->mediaItems;
+        } catch (\App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException $e) {
+            $result->addCheck('media_resolution', false, "Impossibile risolvere i media per il post: " . $e->getMessage());
+            return $result;
+        }
         
         if ($platform === 'instagram') {
             $hasMedia = $mediaItems->count() > 0;

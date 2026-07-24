@@ -96,4 +96,52 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
         $response->assertHeader('Content-Type', 'image/jpeg');
         $this->assertEquals(file_get_contents(base_path('tests/Fixtures/valid.jpg')), $response->streamedContent());
     }
+
+    public function test_legacy_route_ambiguity_and_traversal()
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('marketing/campaign-posts/test.jpg', 'fake-image');
+
+        // Ambiguity test: both these paths should return 200 because of the str_starts_with fallback
+        $this->get('/media/marketing-campaign-posts/test.jpg')->assertStatus(200);
+        $this->get('/media/marketing-campaign-posts/marketing/campaign-posts/test.jpg')->assertStatus(200);
+
+        // Traversal test: these should return 404
+        $this->get('/media/marketing-campaign-posts/../test.jpg')->assertStatus(404);
+        
+        // Invalid extension
+        Storage::disk('public')->put('marketing/campaign-posts/test.txt', 'text');
+        $this->get('/media/marketing-campaign-posts/test.txt')->assertStatus(404);
+    }
+
+    public function test_signed_route_signature_altered_missing_files_and_range()
+    {
+        Storage::fake('public');
+        $media = \App\Models\MarketingCampaignPostMedia::factory()->create([
+            'source' => 'local',
+            'disk' => 'public',
+            'path' => 'marketing/campaign-posts/video.mp4',
+            'mime_type' => 'video/mp4'
+        ]);
+        Storage::disk('public')->put('marketing/campaign-posts/video.mp4', str_repeat('a', 1000));
+
+        $url = \Illuminate\Support\Facades\URL::signedRoute('social.media.delivery', ['media' => $media->id]);
+        
+        // Convert to relative URL for testing
+        $parsedUrl = parse_url($url);
+        $relativeUrl = $parsedUrl['path'] . '?' . $parsedUrl['query'];
+
+        // Normal request
+        $this->get($relativeUrl)->assertStatus(200);
+
+        // Altered signature -> 403
+        $this->get($relativeUrl . 'x')->assertStatus(403);
+
+        // Range/206 for video
+        $this->get($relativeUrl, ['Range' => 'bytes=0-100'])->assertStatus(206);
+
+        // Missing disk/path -> 404
+        $media->update(['disk' => null, 'path' => null]);
+        $this->get($relativeUrl)->assertStatus(404);
+    }
 }

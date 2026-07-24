@@ -92,6 +92,13 @@ class N8nPostGenerationCharacterizationTest extends TestCase
         $this->assertEquals('public', $media->disk);
         $this->assertNotNull($media->path);
         
+        // Assert image_url, image_urls, image_path are correctly populated
+        $this->assertNotNull($version->image_url);
+        $this->assertIsArray($version->image_urls);
+        $this->assertCount(1, $version->image_urls);
+        $this->assertEquals($version->image_url, $version->image_urls[0]);
+        $this->assertEquals($media->path, $version->image_path);
+        
         // Check current version ID is updated
         $this->assertEquals($version->id, $post->fresh()->current_version_id);
     }

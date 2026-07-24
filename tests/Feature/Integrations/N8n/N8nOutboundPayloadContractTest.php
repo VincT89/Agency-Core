@@ -155,6 +155,14 @@ class N8nOutboundPayloadContractTest extends TestCase
             'image_url' => 'http://test.local/img.jpg',
         ]);
         
+        \App\Models\MarketingCampaignPostMedia::create([
+            'marketing_campaign_post_id' => $post->id,
+            'source' => 'nextcloud',
+            'disk' => null,
+            'path' => null,
+            'nextcloud_share_url' => 'http://test.local/img.jpg',
+        ]);
+        
         $post->update(['current_version_id' => $version->id]);
 
         $payload = [
@@ -181,7 +189,8 @@ class N8nOutboundPayloadContractTest extends TestCase
                    isset($data['current_version']) &&
                    $data['current_version']['id'] === $version->id &&
                    isset($data['callback_url']) &&
-                   isset($data['failed_callback_url']);
+                   isset($data['failed_callback_url']) &&
+                   $data['current_version']['image_url'] === 'http://test.local/img.jpg/download';
         });
     }
 }

@@ -11,11 +11,15 @@ use App\Enums\Social\SocialPlatform;
 use App\Enums\Social\PublicationStatus;
 use App\Domain\Social\Services\MetaPreflightService;
 use App\Domain\Social\Services\TikTokPreflightService;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PublishMarketingCampaignPostAction
 {
+    public function __construct(
+        private MarketingCampaignPostVersionMediaResolver $mediaResolver
+    ) {}
     public function execute(MarketingCampaignPost $post, string $platform, ?string $correlationId = null, ?MarketingCampaignPostPublication $retryPublication = null): MarketingCampaignPostPublication
     {
         $correlationId = $correlationId ?? Str::uuid()->toString();
@@ -86,7 +90,7 @@ class PublishMarketingCampaignPostAction
                     // Build a stable payload snapshot
                     $snapshotMedia = [];
                     if ($currentVersion) {
-                        $mediaItems = app(\App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver::class)->resolveMediaItems($currentVersion);
+                        $mediaItems = $this->mediaResolver->resolveForVersion($currentVersion)->mediaItems;
                         foreach ($mediaItems as $media) {
                             $checksum = null;
                             if ($media->path && \Illuminate\Support\Facades\Storage::disk('public')->exists($media->path)) {

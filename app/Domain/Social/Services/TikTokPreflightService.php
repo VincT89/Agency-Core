@@ -6,13 +6,15 @@ use App\Models\MarketingCampaignPost;
 use App\Models\ClientSocialAccount;
 use App\Domain\Social\Publishing\TikTokPublisher;
 use Illuminate\Support\Facades\Cache;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
 
 class TikTokPreflightService
 {
     public function __construct(
         private TikTokPublisher $publisher,
         private SocialMediaPublicUrlService $mediaUrlService,
-        private TikTokTokenRefreshService $tokenRefreshService
+        private TikTokTokenRefreshService $tokenRefreshService,
+        private MarketingCampaignPostVersionMediaResolver $mediaResolver
     ) {}
 
     public function runPreflight(MarketingCampaignPost $post, ClientSocialAccount $account): PreflightResult
@@ -41,7 +43,12 @@ class TikTokPreflightService
         }
 
         // 3. Controllo Media
-        $mediaItems = $post->orderedMediaItems;
+        try {
+            $mediaItems = $this->mediaResolver->resolveForPost($post)->mediaItems;
+        } catch (\App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException $e) {
+            $result->addCheck('media_resolution', false, "Impossibile risolvere i media per il post: " . $e->getMessage());
+            return $result;
+        }
         $hasMedia = $mediaItems->count() > 0;
         
         $result->addCheck('media_present', $hasMedia, $hasMedia ? null : 'TikTok richiede almeno un file multimediale (Video o Foto).');

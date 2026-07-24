@@ -182,6 +182,9 @@ class MarketingCampaignPostShowTest extends TestCase
             'title' => 'Title',
             'caption' => null,
             'hashtags' => null,
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
         ]);
         
         $media = \App\Models\MarketingCampaignPostMedia::factory()->create([
@@ -228,10 +231,21 @@ class MarketingCampaignPostShowTest extends TestCase
             'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
         ]);
 
+        $media = \App\Models\MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'source' => 'local',
+            'path' => 'fake_path.jpg',
+            'sort_order' => 0
+        ]);
+
         $v1 = $post->versions()->create([
             'version_number' => 1,
             'title' => 'Title',
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
         ]);
+        $v1->mediaItems()->attach($media->id, ['sort_order' => 0]);
         $post->update(['current_version_id' => $v1->id]);
 
         $this->actingAs($user);
@@ -242,7 +256,11 @@ class MarketingCampaignPostShowTest extends TestCase
         $v2 = $post->versions()->create([
             'version_number' => 2,
             'title' => 'Title 2',
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
         ]);
+        $v2->mediaItems()->attach($media->id, ['sort_order' => 0]);
         $post->update(['current_version_id' => $v2->id]);
 
         // Tab A tries to save
@@ -304,7 +322,13 @@ class MarketingCampaignPostShowTest extends TestCase
             'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
         ]);
 
-        $v1 = $post->versions()->create(['version_number' => 1, 'title' => 'Title']);
+        $v1 = $post->versions()->create([
+            'version_number' => 1,
+            'title' => 'Title',
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
+        ]);
         $media = \App\Models\MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'source' => 'local',
@@ -322,7 +346,14 @@ class MarketingCampaignPostShowTest extends TestCase
         $component = Livewire::test(MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post]);
 
         // Simulate Tab B saving and creating V2
-        $v2 = $post->versions()->create(['version_number' => 2, 'title' => 'Title 2']);
+        $v2 = $post->versions()->create([
+            'version_number' => 2,
+            'title' => 'Title 2',
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
+        ]);
+        $v2->mediaItems()->attach($media->id, ['sort_order' => 0]);
         $post->update(['current_version_id' => $v2->id]);
 
         // Tab A tries to save
@@ -407,7 +438,13 @@ class MarketingCampaignPostShowTest extends TestCase
         $component = Livewire::test(MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post]);
 
         // Simulate Tab B saving and creating V1
-        $v1 = $post->versions()->create(['version_number' => 1, 'title' => 'V1']);
+        $v1 = $post->versions()->create([
+            'version_number' => 1,
+            'title' => 'V1',
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
+        ]);
         $v1->mediaItems()->attach($media->id, ['sort_order' => 0]);
         $post->update(['current_version_id' => $v1->id]);
 

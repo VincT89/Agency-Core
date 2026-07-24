@@ -201,11 +201,37 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
             'disk' => 'public',
         ]);
 
+        
         $resolution = $this->resolver->resolveForVersion($version);
 
         $this->assertEquals(MarketingCampaignPostMediaResolutionSource::CURRENT_POST_LEGACY, $resolution->source);
         $this->assertCount(1, $resolution->mediaItems);
         $this->assertEquals($media->id, $resolution->mediaItems[0]->id);
+    }
+
+    public function test_current_version_without_pivot_and_no_legacy_fields_throws_exception()
+    {
+        $post = MarketingCampaignPost::factory()->create([
+            'media_path' => null,
+            'nextcloud_share_url' => null,
+        ]);
+        $version = MarketingCampaignPostVersion::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
+        ]);
+        $post->update(['current_version_id' => $version->id]);
+
+        // Even if there is one media in the post, it should NOT auto-associate if there's no actual string reference
+        MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'path' => 'fallback/path.jpg',
+            'disk' => 'public',
+        ]);
+
+        $this->expectException(MarketingCampaignPostMediaResolutionException::class);
+        $this->resolver->resolveForVersion($version);
     }
 
     public function test_missing_legacy_reference_throws_exception()

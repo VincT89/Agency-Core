@@ -1,13 +1,13 @@
 @php
     $versionImages = [];
-    if ($post->currentVersion) {
-        if (is_array($post->currentVersion->image_urls) && count($post->currentVersion->image_urls) > 0) {
-            $versionImages = $post->currentVersion->image_urls;
-        } elseif (! empty($post->currentVersion->image_url)) {
-            $versionImages = [$post->currentVersion->image_url];
+    if (!empty($existing_media)) {
+        foreach ($existing_media as $media) {
+            if ($media['preview_url']) {
+                $versionImages[] = $media['preview_url'];
+            }
         }
     }
-    
+
     $previewMedia = $this->previewMedia;
     
     if (empty($previewMedia) && count($versionImages) > 0) {

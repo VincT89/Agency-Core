@@ -112,12 +112,6 @@ class ClientSocialAccountForm extends Component
         }
     }
 
-    public function testConnection(string $platform)
-    {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
-        // TODO: Implementare ping su Graph API con AgencyAsset
-        session()->flash('success_'.$platform, "Test di connessione (simulato) per {$platform}.");
-    }
 
     public function disconnect(string $platform)
     {

@@ -9,6 +9,10 @@ use App\Models\MarketingCampaignPost;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostCommentVisibility;
 use App\Enums\Social\MarketingCampaignPostCommentType;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
+use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
+use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class MarketingCampaignPostReview extends Component
@@ -19,6 +23,19 @@ class MarketingCampaignPostReview extends Component
     public $clientName = '';
     public $clientEmail = '';
     public $commentBody = '';
+    public bool $mediaResolutionFailed = false;
+    public array $resolvedReviewMedia = [];
+
+    private MarketingCampaignPostVersionMediaResolver $mediaResolver;
+    private MarketingCampaignPostMediaUrlResolver $urlResolver;
+
+    public function boot(
+        MarketingCampaignPostVersionMediaResolver $mediaResolver,
+        MarketingCampaignPostMediaUrlResolver $urlResolver
+    ): void {
+        $this->mediaResolver = $mediaResolver;
+        $this->urlResolver = $urlResolver;
+    }
 
     public function mount(string $token)
     {
@@ -40,10 +57,26 @@ class MarketingCampaignPostReview extends Component
         $client = $this->post->campaign->client;
         $this->clientName = $client->name;
         $this->clientEmail = $client->email;
+
+        try {
+            $resolution = $this->mediaResolver->resolveForPost($this->post);
+            $this->resolvedReviewMedia = $this->urlResolver->orderedDeliveryUrls($resolution->mediaItems);
+        } catch (MarketingCampaignPostMediaResolutionException | \App\Domain\Social\Exceptions\MarketingCampaignPostMediaDeliveryException $e) {
+            $this->mediaResolutionFailed = true;
+            Log::error('social.public_review.media_resolution_failed', [
+                'post_id' => $this->post->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     public function approve()
     {
+        if ($this->mediaResolutionFailed) {
+            abort(409, 'Impossibile caricare in modo sicuro i media di questa versione. Contatta il team per ricevere un nuovo link.');
+        }
+
+
         $this->validate([
             'clientName' => 'required|string|max:255',
             'clientEmail' => 'required|email|max:255',
@@ -78,6 +111,11 @@ class MarketingCampaignPostReview extends Component
 
     public function requestChanges()
     {
+        if ($this->mediaResolutionFailed) {
+            abort(409, 'Impossibile caricare in modo sicuro i media di questa versione. Contatta il team per ricevere un nuovo link.');
+        }
+
+
         $this->validate([
             'clientName' => 'required|string|max:255',
             'clientEmail' => 'required|email|max:255',
@@ -113,6 +151,12 @@ class MarketingCampaignPostReview extends Component
     #[Layout('layouts.guest')]
     public function render()
     {
-        return view('livewire.public.marketing-campaign-post-review');
+        if ($this->mediaResolutionFailed) {
+            abort(409, 'Impossibile caricare in modo sicuro i media di questa versione. Contatta il team per ricevere un nuovo link.');
+        }
+
+        return view('livewire.public.marketing-campaign-post-review', [
+            'resolvedReviewMedia' => $this->resolvedReviewMedia
+        ]);
     }
 }

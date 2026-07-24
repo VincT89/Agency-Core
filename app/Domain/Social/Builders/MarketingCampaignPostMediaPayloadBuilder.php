@@ -7,19 +7,22 @@ use App\Enums\Social\MarketingCampaignPostType;
 
 class MarketingCampaignPostMediaPayloadBuilder
 {
-    public static function build(MarketingCampaignPost $post): array
+    public function __construct(
+        private readonly \App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver $resolver,
+        private readonly \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver
+    ) {}
+
+    public function build(MarketingCampaignPost $post): array
     {
-        $post->loadMissing('orderedMediaItems');
-        $orderedMediaItems = $post->orderedMediaItems;
+        $resolution = $this->resolver->resolveForPost($post);
+        $orderedMediaItems = $resolution->mediaItems;
         
-        $mediaItemsPayload = $orderedMediaItems->map(function ($item) {
-            $url = null;
-            if ($item->source === 'nextcloud') {
-                $url = $item->nextcloud_share_url ? rtrim($item->nextcloud_share_url, '/') . '/download' : null;
-            } elseif ($item->path) {
-                $url = route('media.marketing-campaign-posts', ['path' => $item->path]);
+        $mediaItemsPayload = $orderedMediaItems->values()->map(function ($item, $index) {
+            $url = $this->urlResolver->deliveryUrl($item);
+            if ($url === null) {
+                throw \App\Domain\Social\Exceptions\MarketingCampaignPostMediaDeliveryException::forMedia($item->id);
             }
-                
+
             return [
                 'id' => $item->id,
                 'source' => $item->source,
@@ -30,36 +33,21 @@ class MarketingCampaignPostMediaPayloadBuilder
                 'nextcloud_path' => $item->nextcloud_path,
                 'nextcloud_share_url' => $item->nextcloud_share_url,
                 'nextcloud_file_id' => $item->nextcloud_file_id,
-                'sort_order' => $item->sort_order,
+                'sort_order' => $index,
             ];
         })->toArray();
         
         $mediaCount = count($mediaItemsPayload);
-        if ($mediaCount === 0) {
-            $mediaCount = ($post->media_source || $post->media_path) ? 1 : 0;
-        }
 
-        $primaryMedia = $orderedMediaItems->first();
-        $primaryMediaUrl = $post->media_url;
-        
-        if ($primaryMedia) {
-            $primaryMediaType = $primaryMedia->media_type;
-        } else {
-            // Fallback for legacy
-            $primaryMediaType = null;
-            if ($mediaCount > 0) {
-                $mime = $post->media_mime ?? 'image/jpeg';
-                $primaryMediaType = \App\Models\MarketingCampaignPostMedia::detectMediaType($mime);
-            }
-        }
+        $primaryMediaUrl = null;
+        $primaryMediaType = null;
+        $firstMediaAlias = null;
 
-        $firstMediaAlias = !empty($mediaItemsPayload) ? $mediaItemsPayload[0] : [
-            'source' => $post->media_source,
-            'url' => $post->media_url,
-            'nextcloud_path' => $post->nextcloud_path,
-            'nextcloud_share_url' => $post->nextcloud_share_url,
-            'nextcloud_file_id' => $post->nextcloud_file_id,
-        ];
+        if (!empty($mediaItemsPayload)) {
+            $firstMediaAlias = $mediaItemsPayload[0];
+            $primaryMediaUrl = $firstMediaAlias['url'];
+            $primaryMediaType = $firstMediaAlias['media_type'];
+        }
 
         return [
             'media_count' => $mediaCount,

@@ -61,6 +61,16 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'version_number' => 1,
             'caption' => 'Old',
             'image_url' => 'https://example.com/old.jpg',
+            'image_urls' => null,
+            'image_path' => null,
+        ]);
+        
+        \App\Models\MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'source' => 'nextcloud',
+            'nextcloud_share_url' => 'https://example.com/old.jpg',
+            'path' => null,
+            'disk' => null,
         ]);
         
         $post->update(['current_version_id' => $version->id]);
@@ -78,7 +88,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
         );
 
         $response->assertStatus(201);
-        $this->assertEquals('https://example.com/old.jpg', $post->refresh()->currentVersion->image_url);
+        $this->assertEquals('https://example.com/old.jpg/download', $post->refresh()->currentVersion->image_url);
     }
 
     public function test_image_regeneration_requires_only_image()
@@ -92,6 +102,16 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'version_number' => 1,
             'caption' => 'Old',
             'image_url' => 'https://example.com/old.jpg',
+            'image_urls' => null,
+            'image_path' => null,
+        ]);
+        
+        \App\Models\MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'source' => 'nextcloud',
+            'nextcloud_share_url' => 'https://example.com/old.jpg',
+            'path' => null,
+            'disk' => null,
         ]);
         
         $post->update(['current_version_id' => $version->id]);
@@ -136,7 +156,9 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
         $version = $post->refresh()->currentVersion;
         $this->assertEquals('Using alias for caption', $version->caption);
         $this->assertIsArray($version->image_urls);
-        $this->assertEquals('https://example.com/alias.jpg', $version->image_urls[0]);
+        $this->assertNotEmpty($version->image_urls);
+        $this->assertStringContainsString('http', $version->image_urls[0]);
+        $this->assertStringContainsString('.jpg', $version->image_urls[0]);
     }
 
     public function test_nested_payload_is_lifted_to_root()

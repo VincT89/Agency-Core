@@ -19,7 +19,8 @@ class MarketingCampaignPostReviewMail extends Mailable
      */
     public function __construct(
         public \App\Models\MarketingCampaignPost $post,
-        public \App\Models\ClientReviewToken $token
+        public \App\Models\ClientReviewToken $token,
+        public array $previewUrls = []
     ) {
     }
 
@@ -33,13 +34,13 @@ class MarketingCampaignPostReviewMail extends Mailable
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
             markdown: 'emails.social.marketing-campaign-post-review',
+            with: [
+                'resolvedMedia' => $this->previewUrls,
+            ],
         );
     }
 

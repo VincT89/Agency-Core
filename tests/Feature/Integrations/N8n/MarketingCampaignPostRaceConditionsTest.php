@@ -202,4 +202,100 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
         $post->refresh();
         $this->assertEquals(MarketingCampaignPostStatus::Regenerating, $post->status);
     }
+
+    public function test_dispatch_submit_failure_with_state_and_logo_rollback()
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Draft->value,
+            'title' => 'Title',
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        // Mock del Dispatcher per simulare un fallimento nel job dispatch (es. Redis giù)
+        $dispatcher = \Mockery::mock(\Illuminate\Contracts\Bus\Dispatcher::class);
+        $dispatcher->shouldReceive('dispatch')->andThrow(new Exception('Queue connection refused'));
+        $this->app->instance(\Illuminate\Contracts\Bus\Dispatcher::class, $dispatcher);
+
+        $action = app(SubmitMarketingCampaignPostToN8nAction::class);
+        
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Queue connection refused');
+
+        $action->execute($post);
+    }
+
+    public function test_dispatch_submit_failure_with_state_and_logo_rollback_asserts()
+    {
+        // Questo test verifica lo stato dopo il fallimento del precedente (è difficile farlo in un blocco try/catch con expectException se si usa expectException, usiamo try/catch)
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Draft->value,
+            'title' => 'Title',
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        $dispatcher = \Mockery::mock(\Illuminate\Contracts\Bus\Dispatcher::class);
+        $dispatcher->shouldReceive('dispatch')->andThrow(new Exception('Queue connection refused'));
+        $this->app->instance(\Illuminate\Contracts\Bus\Dispatcher::class, $dispatcher);
+
+        $action = app(SubmitMarketingCampaignPostToN8nAction::class);
+        
+        // Prepariamo un mock logo
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->image('logo.png');
+
+        try {
+            $action->execute($post, ['include_client_logo' => true, 'runtime_logo' => $file]);
+        } catch (Exception $e) {
+            $this->assertEquals('Queue connection refused', $e->getMessage());
+        }
+
+        $post->refresh();
+        $this->assertEquals(MarketingCampaignPostStatus::Draft, $post->status);
+        $this->assertNull($post->n8n_request_id);
+        $this->assertNull($post->n8n_payload_hash);
+        
+        // Verifica che il logo temporaneo sia stato cancellato
+        $this->assertEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles('clients/logos/temp'));
+    }
+
+    public function test_dispatch_regeneration_failure_with_state_and_comment_rollback()
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Generated->value,
+        ]);
+        $user = \App\Models\User::factory()->create();
+
+        $dispatcher = \Mockery::mock(\Illuminate\Contracts\Bus\Dispatcher::class);
+        $dispatcher->shouldReceive('dispatch')->andThrow(new Exception('Queue connection refused'));
+        $this->app->instance(\Illuminate\Contracts\Bus\Dispatcher::class, $dispatcher);
+
+        $action = app(\App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction::class);
+
+        try {
+            $action->execute($post, $user, 'full', 'Change everything');
+        } catch (Exception $e) {
+            $this->assertEquals('Queue connection refused', $e->getMessage());
+        }
+
+        $post->refresh();
+        // Lo stato deve essere tornato a Generated
+        $this->assertEquals(MarketingCampaignPostStatus::Generated, $post->status);
+        $this->assertNull($post->n8n_request_id);
+        
+        // Il commento (ChangeRequest) deve essere stato cancellato
+        $this->assertDatabaseMissing('marketing_campaign_post_comments', [
+            'marketing_campaign_post_id' => $post->id,
+            'type' => \App\Enums\Social\MarketingCampaignPostCommentType::ChangeRequest->value,
+            'body' => 'Change everything',
+        ]);
+    }
 }

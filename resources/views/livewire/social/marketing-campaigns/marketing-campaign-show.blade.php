@@ -65,22 +65,14 @@
                 <td><span class="cmp-post-type-badge">{{ $post->content_type->label() }}</span></td>
                 <td>
                   @php
-                      $vImg = null;
-                      if ($post->currentVersion) {
-                          if (!empty($post->currentVersion->image_urls) && is_array($post->currentVersion->image_urls)) {
-                              $vImg = $post->currentVersion->image_urls[0];
-                          } else {
-                              $vImg = $post->currentVersion->image_url;
-                          }
-                      }
+                      $previewUrl = $resolvedPostPreviews[$post->id] ?? null;
                   @endphp
-                  @if($vImg)
-                        <img src="{{ $vImg }}" class="cmp-post-thumb" loading="eager" decoding="async" alt="Anteprima media post">
-                  @elseif($post->preview_url)
+                  
+                  @if($previewUrl)
                     @if($post->media_mime && \Illuminate\Support\Str::startsWith($post->media_mime, 'video/'))
-                        <video src="{{ $post->preview_url }}" class="cmp-post-thumb" muted playsinline></video>
+                        <video src="{{ $previewUrl }}" class="cmp-post-thumb" muted playsinline></video>
                     @else
-                        <img src="{{ $post->preview_url }}" class="cmp-post-thumb" loading="eager" decoding="async" alt="Anteprima media post">
+                        <img src="{{ $previewUrl }}" class="cmp-post-thumb" loading="eager" decoding="async" alt="Anteprima media post">
                     @endif
                   @else
                     <div class="cmp-post-thumb-empty"><i data-lucide="image" class="w-5 h-5"></i></div>

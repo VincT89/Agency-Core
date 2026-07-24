@@ -889,9 +889,11 @@ class MarketingCampaignPostShow extends Component
 
         $this->validate();
 
-        $metadataToUpdate = $this->form;
-        unset($metadataToUpdate['status']);
-        $this->post->update($metadataToUpdate);
+        $metadataToUpdate = [
+            'title' => $this->form['title'] ?? null,
+            'description' => $this->form['description'] ?? null,
+        ];
+        $this->post->update(array_filter($metadataToUpdate, fn($val) => !is_null($val)));
 
         try {
             $this->showCancelRegenerationButton = false;

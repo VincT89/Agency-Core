@@ -50,6 +50,22 @@ class E2EMockSeeder extends Seeder
                 'token_expires_at' => now()->addDays(60),
                 'account_name' => 'Test FB Page',
                 'instagram_business_account_id' => 'ig_fake_123',
+                'username' => 'test_fb_account',
+                'api_status' => \App\Enums\Social\SocialApiStatus::Connected->value,
+                'api_provider' => \App\Enums\Social\SocialApiProvider::MetaGraph->value,
+                'access_status' => \App\Enums\Social\SocialAccessStatus::ReadyToPublish->value,
+                'connection_mode' => \App\Enums\Social\SocialConnectionMode::Oauth->value,
+            ]
+        );
+        
+        ClientSocialAccount::updateOrCreate(
+            ['client_id' => $client->id, 'platform' => 'instagram'],
+            [
+                'provider_account_id' => 'ig_fake_123',
+                'access_token' => 'fake_fb_token_123',
+                'refresh_token' => null,
+                'token_expires_at' => now()->addDays(60),
+                'account_name' => 'Test IG Account',
                 'username' => 'test_ig_account',
                 'api_status' => \App\Enums\Social\SocialApiStatus::Connected->value,
                 'api_provider' => \App\Enums\Social\SocialApiProvider::MetaGraph->value,

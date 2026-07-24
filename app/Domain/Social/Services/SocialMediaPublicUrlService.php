@@ -91,7 +91,7 @@ class SocialMediaPublicUrlService
      */
     private function ensureSecureHost(string $url): void
     {
-        if (app()->environment('local', 'testing') || config('social.publishing.dry_run', env('SOCIAL_PUBLISHING_DRY_RUN', false))) {
+        if (config('social.url_validation') === false) {
             return;
         }
 
@@ -120,7 +120,9 @@ class SocialMediaPublicUrlService
      */
     private function performPreflightValidation(string $url, MarketingCampaignPostMedia $media, ?string $correlationId = null): array
     {
-        if (app()->environment('local', 'testing') || config('social.publishing.dry_run', env('SOCIAL_PUBLISHING_DRY_RUN', false))) {
+        $correlationId ??= Str::uuid()->toString();
+
+        if (config('social.url_validation') === false) {
             return [
                 'host' => 'localhost',
                 'path_hash' => md5(parse_url($url, PHP_URL_PATH) ?? ''),
@@ -131,11 +133,9 @@ class SocialMediaPublicUrlService
                 'latency_ms' => 0,
                 'validation_method' => 'BYPASSED',
                 'expires_at' => now()->addMinutes(1440)->toIso8601String(),
-                'correlation_id' => Str::uuid()->toString(),
+                'correlation_id' => $correlationId,
             ];
         }
-
-        $correlationId = Str::uuid()->toString();
         
         try {
             $startTime = microtime(true);

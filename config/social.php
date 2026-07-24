@@ -20,4 +20,6 @@ return [
     'publishing' => [
         'dry_run' => env('SOCIAL_PUBLISHING_DRY_RUN', false),
     ],
+
+    'url_validation' => env('SOCIAL_URL_VALIDATION_ENABLED', true),
 ];

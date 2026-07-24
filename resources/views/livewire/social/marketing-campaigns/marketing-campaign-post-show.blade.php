@@ -309,13 +309,9 @@
                                 <div class="form-g mb-0 u-flex-1">
                                     <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
                                     <select class="form-sel" wire:model="form.status" required {{ $post->currentVersion ? 'disabled' : '' }}>
-                                        <option value="draft">Bozza</option>
-                                        <option value="pending_n8n">In Coda Sody</option>
-                                        <option value="submitted_to_n8n">In Elaborazione Sody</option>
-                                        <option value="generated">Generato</option>
-                                        <option value="approved">Approvato</option>
-                                        <option value="published">Pubblicato</option>
-                                        <option value="cancelled">Annullato</option>
+                                        @foreach(\App\Enums\Social\MarketingCampaignPostStatus::cases() as $statusEnum)
+                                            <option value="{{ $statusEnum->value }}">{{ $statusEnum->label() }}</option>
+                                        @endforeach
                                     </select>
                                     @error('form.status') <span class="form-err">{{ $message }}</span> @enderror
                                 </div>
@@ -747,7 +743,7 @@
                                 @endif
 
                                 {{-- Blocco Azioni Workflow (Sempre visibile per versioni create) --}}
-                                @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested']) || ($generatedReviewLink && !in_array($post->status->value, ['approved', 'published', 'cancelled'])))
+                                @if(in_array($post->status->value, ['generated', 'ready_for_client', 'client_changes_requested', 'client_approved']) || ($generatedReviewLink && !in_array($post->status->value, ['approved', 'published', 'cancelled'])))
                                     <div class="panel cmp-version-box u-mt-md">
                                         <div class="cmp-version-hd">
                                             <h4 class="mkt-fw600-fs15-m0-flex-gap8">

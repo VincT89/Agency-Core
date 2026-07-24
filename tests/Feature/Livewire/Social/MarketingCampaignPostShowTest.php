@@ -101,6 +101,46 @@ class MarketingCampaignPostShowTest extends TestCase
         });
     }
 
+    public function test_regenerate_post_saves_metadata_before_submitting()
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Draft->value,
+            'title' => 'Old Title',
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        $this->actingAs($user);
+
+        // We mock the Action to ensure it's called
+        $this->mock(\App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')
+                 ->once()
+                 ->andReturnUsing(function ($post, $user, $type) {
+                     $post->status = MarketingCampaignPostStatus::Regenerating->value;
+                     $post->save();
+                 });
+        });
+
+        Livewire::test(MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post])
+            ->set('form.title', 'Regenerated Title')
+            ->set('form.description', 'Regenerated Description')
+            ->set('form.content_type', 'post')
+            ->set('form.status', 'draft') // Intentionally setting draft
+            ->set('form.ai_analysis_enabled', false)
+            ->set('form.media_source', 'local')
+            ->call('regeneratePost', 'full')
+            ->assertDispatched('post-regenerating');
+
+        $post->refresh();
+        $this->assertEquals(MarketingCampaignPostStatus::Regenerating, $post->status);
+        $this->assertEquals('Regenerated Title', $post->title);
+    }
+
     public function test_remove_media_item_only_affects_livewire_state()
     {
         $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);

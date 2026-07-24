@@ -887,6 +887,12 @@ class MarketingCampaignPostShow extends Component
             return;
         }
 
+        $this->validate();
+
+        $metadataToUpdate = $this->form;
+        unset($metadataToUpdate['status']);
+        $this->post->update($metadataToUpdate);
+
         try {
             $this->showCancelRegenerationButton = false;
             $this->regeneration_timeout = false;

@@ -45,6 +45,41 @@ class MarketingCampaignPostShowOwnershipTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_cannot_retry_publication_belonging_to_another_post()
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create(['role' => \App\Enums\UserRole::Marketing->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        
+        $postA = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+        
+        $postB = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        $publicationOnPostB = MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $postB->id,
+            'platform' => SocialPlatform::Facebook->value,
+            'status' => PublicationStatus::Failed->value,
+        ]);
+
+        // Access Post A but pass Publication ID from Post B
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $postA])
+            ->call('retryPublication', $publicationOnPostB->id)
+            ->assertHasNoErrors(); // Safely returns because it's not found in $postA's publications
+
+        $publicationOnPostB->refresh();
+        $this->assertEquals(PublicationStatus::Failed, $publicationOnPostB->status);
+        Queue::assertNothingPushed();
+    }
+
     public function test_instagram_cancellation_branch_on_retry()
     {
         Queue::fake();

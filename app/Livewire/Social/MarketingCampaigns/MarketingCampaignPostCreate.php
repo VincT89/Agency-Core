@@ -435,103 +435,142 @@ class MarketingCampaignPostCreate extends Component
             ->contains(fn ($item) => ($item['source'] ?? null) === 'local_pending');
     }
 
-    public function save()
+    private function executePostCreation(\Closure $onSuccess)
     {
         if ($this->hasPendingLocalMedia()) {
             $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
-            return;
+            return null;
         }
 
         $this->validate();
-
 
         $data = $this->form;
         $data['marketing_campaign_id'] = $this->campaign->id;
         $data['created_by'] = auth()->id();
 
-        $storedMedia = [];
+        $service = null;
+        $locks = [];
+        $createdShareIds = [];
+        $newlyCreatedMediaPaths = [];
+        $mediaCommitted = false;
+        
+        $newlyCreatedClientIdentityPaths = [];
 
-        if (!$this->buildPostDataAndStoredMedia($data, $storedMedia)) {
-            return;
-        }
-
-        if (!$this->validateReelMedia($storedMedia)) {
-            return;
-        }
-
-        $this->processClientIdentity();
-
-        $post = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $storedMedia) {
-            $post = MarketingCampaignPost::create($data);
-
-            if (!empty($storedMedia)) {
-                $post->mediaItems()->createMany($storedMedia);
+        try {
+            $storedMedia = [];
+            $hasNextcloud = collect($this->selected_media_items)->contains('source', 'nextcloud');
+            if ($hasNextcloud) {
+                $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+                $paths = collect($this->selected_media_items)
+                    ->where('source', 'nextcloud')
+                    ->pluck('nextcloud_path')
+                    ->all();
+                $locks = $service->acquireLocksForPaths($paths);
             }
 
-            return $post;
+            if (!$this->buildPostDataAndStoredMedia($data, $storedMedia, $createdShareIds, $newlyCreatedMediaPaths, $service)) {
+                return null;
+            }
+
+            if (!$this->validateReelMedia($storedMedia)) {
+                return null;
+            }
+
+            $oldLogoPathToClean = null;
+            $logoUpdated = false;
+            $activityUpdated = false;
+
+            $post = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $storedMedia, &$newlyCreatedClientIdentityPaths, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
+                $client = $this->campaign->client()->lockForUpdate()->first();
+                $clientUpdates = $this->prepareClientIdentity($newlyCreatedClientIdentityPaths);
+                
+                if (!empty($clientUpdates)) {
+                    if (isset($clientUpdates['logo_path'])) {
+                        $oldLogoPathToClean = $client->logo_path;
+                        $logoUpdated = true;
+                    }
+                    if (isset($clientUpdates['activity_description'])) {
+                        $activityUpdated = true;
+                    }
+                    $client->fill($clientUpdates);
+                    $client->save();
+                }
+
+                $post = MarketingCampaignPost::create($data);
+                if (!empty($storedMedia)) {
+                    $post->mediaItems()->createMany($storedMedia);
+                }
+                return $post;
+            });
+
+            $this->commitClientIdentityUpdates($logoUpdated, $activityUpdated, $oldLogoPathToClean);
+
+            $mediaCommitted = true;
+            return $onSuccess($post);
+        } finally {
+            if (!$mediaCommitted && $service) {
+                foreach ($createdShareIds as $shareId) {
+                    try {
+                        $service->revokePublicShareById($shareId);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error("Errore pulizia public share {$shareId}: " . $e->getMessage());
+                    }
+                }
+            }
+            if (!$mediaCommitted) {
+                foreach ($newlyCreatedMediaPaths as $filePath) {
+                    try {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($filePath);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error("Errore pulizia file locale orfano {$filePath}: " . $e->getMessage());
+                    }
+                }
+                foreach ($newlyCreatedClientIdentityPaths as $filePath) {
+                    try {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($filePath);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error("Errore pulizia file locale orfano client identity {$filePath}: " . $e->getMessage());
+                    }
+                }
+            }
+            if ($service && !empty($locks)) {
+                $service->releaseLocks($locks);
+            }
+        }
+    }
+
+    public function save()
+    {
+        return $this->executePostCreation(function ($post) {
+            return redirect()->route('marketing-campaigns.posts.show', [
+                'campaign' => $this->campaign->id,
+                'post' => $post->id
+            ]);
         });
-
-
-
-        return redirect()->route('marketing-campaigns.posts.show', [
-            'campaign' => $this->campaign->id,
-            'post' => $post->id
-        ]);
     }
 
     public function saveAndSubmitToN8n(string $generationType = 'full')
     {
-        $submitAction = app(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction::class);
-        if ($this->hasPendingLocalMedia()) {
-            $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
-            return;
-        }
+        return $this->executePostCreation(function ($post) use ($generationType) {
+            $submitAction = app(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction::class);
+            
+            $runtimeClientData = [
+                'include_client_logo' => $this->include_client_logo,
+                'include_client_header' => $this->include_client_header,
+                'runtime_logo' => $this->runtime_logo,
+                'runtime_activity_description' => $this->runtime_activity_description,
+                'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
+                'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
+                'generation_type' => $generationType,
+            ];
 
-        $this->validate();
-        
+            $submitAction->execute($post, $runtimeClientData);
 
-        $data = $this->form;
-        $data['marketing_campaign_id'] = $this->campaign->id;
-        $data['created_by'] = auth()->id();
-
-        $storedMedia = [];
-
-        if (!$this->buildPostDataAndStoredMedia($data, $storedMedia)) {
-            return;
-        }
-
-        if (!$this->validateReelMedia($storedMedia)) {
-            return;
-        }
-
-        $this->processClientIdentity();
-
-        $post = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $storedMedia) {
-            $post = MarketingCampaignPost::create($data);
-
-            if (!empty($storedMedia)) {
-                $post->mediaItems()->createMany($storedMedia);
-            }
-
-            return $post;
+            return redirect()->route('marketing-campaigns.posts.show', [
+                'campaign' => $this->campaign->id,
+                'post' => $post->id
+            ]);
         });
-
-        $runtimeClientData = [
-            'include_client_logo' => $this->include_client_logo,
-            'include_client_header' => $this->include_client_header,
-            'runtime_logo' => $this->runtime_logo,
-            'runtime_activity_description' => $this->runtime_activity_description,
-            'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
-            'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
-            'generation_type' => $generationType,
-        ];
-
-        $submitAction->execute($post, $runtimeClientData);
-
-        return redirect()->route('marketing-campaigns.posts.show', [
-            'campaign' => $this->campaign->id,
-            'post' => $post->id
-        ]);
     }
 
     public function getPendingMediaCountProperty(): int
@@ -575,14 +614,13 @@ class MarketingCampaignPostCreate extends Component
         return true;
     }
 
-    private function buildPostDataAndStoredMedia(array &$data, array &$storedMedia): bool
+    private function buildPostDataAndStoredMedia(array &$data, array &$storedMedia, array &$createdShareIds, array &$newlyCreatedMediaPaths, ?\App\Services\Integrations\Nextcloud\NextcloudService $service): bool
     {
         $data['nextcloud_path'] = null;
         $data['nextcloud_share_url'] = null;
         $data['nextcloud_file_id'] = null;
         $data['media_path'] = null;
 
-        $service = null;
         $hasNextcloud = collect($this->selected_media_items)->contains('source', 'nextcloud');
         if ($hasNextcloud) {
             $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
@@ -601,9 +639,10 @@ class MarketingCampaignPostCreate extends Component
                 $uploadedFile = $this->all_local_media[$item['local_index']] ?? null;
                 if (!$uploadedFile) continue;
 
-                $filename = Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME)) 
-                            . '_' . time() . '_' . $index . '.' . $uploadedFile->getClientOriginalExtension();
+                $filename = \Illuminate\Support\Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME)) 
+                            . '_' . \Illuminate\Support\Str::uuid()->toString() . '.' . $uploadedFile->getClientOriginalExtension();
                 $path = $uploadedFile->storeAs('marketing/campaign-posts', $filename, 'public');
+                $newlyCreatedMediaPaths[] = $path;
 
                 $storedMedia[] = [
                     'source' => 'local',
@@ -622,11 +661,13 @@ class MarketingCampaignPostCreate extends Component
                     $legacyLocalFilled = true;
                 }
             } elseif ($item['source'] === 'nextcloud') {
-                $shareUrl = $service->createPublicShare($item['nextcloud_path']);
-                if (!$shareUrl) {
-                    $this->addError('form.nextcloud_path', "Impossibile creare il link pubblico Nextcloud per {$item['name']}.");
-                    return false;
+                $result = $service->ensurePublicShare($item['nextcloud_path']);
+                
+                if ($result->created) {
+                    $createdShareIds[] = $result->shareId;
                 }
+
+                $shareUrl = $result->url;
 
                 $storedMedia[] = [
                     'source' => 'nextcloud',
@@ -653,31 +694,43 @@ class MarketingCampaignPostCreate extends Component
         return true;
     }
 
-    private function processClientIdentity()
+    private function prepareClientIdentity(&$newlyCreatedClientIdentityPaths)
     {
-        $client = $this->campaign->client;
-        $updated = false;
-
+        $updates = [];
+        
         if ($this->include_client_logo && $this->runtime_logo && ($this->save_runtime_logo_to_client || !$this->form['ai_analysis_enabled'])) {
             if ($this->runtime_logo instanceof \Illuminate\Http\UploadedFile) {
-                $filename = 'logo_' . time() . '.' . $this->runtime_logo->getClientOriginalExtension();
-                $path = $this->runtime_logo->storeAs('clients/logos', $filename, 'public');
-                $client->logo_path = $path;
-                $this->runtime_logo = null;
-                $this->save_runtime_logo_to_client = false;
-                $updated = true;
+                $filename = 'logo_' . \Illuminate\Support\Str::uuid()->toString() . '.' . $this->runtime_logo->getClientOriginalExtension();
+                $newLogoPath = $this->runtime_logo->storeAs('clients/logos', $filename, 'public');
+                $newlyCreatedClientIdentityPaths[] = $newLogoPath;
+                
+                $updates['logo_path'] = $newLogoPath;
             }
         }
 
         if ($this->include_client_header && $this->runtime_activity_description && ($this->save_runtime_activity_to_client || !$this->form['ai_analysis_enabled'])) {
-            $client->activity_description = $this->runtime_activity_description;
-            $this->runtime_activity_description = null;
-            $this->save_runtime_activity_to_client = false;
-            $updated = true;
+            $updates['activity_description'] = $this->runtime_activity_description;
         }
 
-        if ($updated) {
-            $client->save();
+        return $updates;
+    }
+
+    private function commitClientIdentityUpdates(bool $logoUpdated, bool $activityUpdated, ?string $oldLogoPath)
+    {
+        if ($logoUpdated) {
+            $this->runtime_logo = null;
+            $this->save_runtime_logo_to_client = false;
+        }
+        if ($activityUpdated) {
+            $this->runtime_activity_description = null;
+            $this->save_runtime_activity_to_client = false;
+        }
+        if ($oldLogoPath) {
+            try {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldLogoPath);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to delete old client logo', ['path' => $oldLogoPath, 'error' => $e->getMessage()]);
+            }
         }
     }
 

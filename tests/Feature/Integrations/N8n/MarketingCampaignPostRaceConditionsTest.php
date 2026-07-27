@@ -97,6 +97,34 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
         $this->assertNull($post->n8n_error);
     }
 
+    public function test_failed_job_ignores_temp_file_cleanup_if_request_id_changed()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('temp_logo.png', 'fake image content');
+
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::PendingN8n->value,
+            'n8n_request_id' => 'req-new', // request_id has changed
+            'n8n_internal_context' => ['_internal_temp_logo_path' => 'temp_logo.png'],
+        ]);
+
+        $payload = ['request_id' => 'req-old'];
+        $job = new SendMarketingCampaignPostToN8nJob($post, $payload, 'temp_logo.png', false);
+
+        $job->failed(new Exception('Network Error'));
+
+        // The file should NOT be deleted because request_id changed
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists('temp_logo.png');
+
+        $post->refresh();
+        $this->assertEquals(MarketingCampaignPostStatus::PendingN8n, $post->status);
+        $this->assertNull($post->n8n_error);
+        $this->assertEquals('temp_logo.png', $post->n8n_internal_context['_internal_temp_logo_path']);
+    }
+
     public function test_effective_reconstruction_of_snapshot_with_modified_data()
     {
         Http::fake([
@@ -192,8 +220,9 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'n8n_request_id' => 'req-new',
         ]);
 
-        $payload = ['request_id' => 'req-old'];
-        $job = new \App\Jobs\RequestMarketingCampaignPostRegenerationJob($post, $payload, MarketingCampaignPostStatus::Draft->value);
+        $job = new \App\Jobs\RequestMarketingCampaignPostRegenerationJob($post, [
+            'request_id' => 'old_req_id'
+        ], \App\Enums\Social\MarketingCampaignPostStatus::Draft->value, 0);
 
         $job->handle(app(N8nClient::class)); // concludes without sending
 
@@ -297,5 +326,40 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'type' => \App\Enums\Social\MarketingCampaignPostCommentType::ChangeRequest->value,
             'body' => 'Change everything',
         ]);
+    }
+
+    public function test_concurrent_local_media_uploads_do_not_collide()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        // Simuliamo due upload con stesso nome
+        $file1 = \Illuminate\Http\UploadedFile::fake()->image('photo.jpg');
+        $file2 = \Illuminate\Http\UploadedFile::fake()->image('photo.jpg');
+
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $user = \App\Models\User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+
+        \Livewire\Livewire::actingAs($user)
+            ->test(\App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate::class, ['campaign' => $campaign])
+            ->set('form.title', 'Test Title')
+            ->set('form.description', 'Desc')
+            ->set('form.content_type', 'post')
+            ->set('form.status', 'draft')
+            ->set('form.ai_analysis_enabled', false)
+            ->set('form.media_source', 'local')
+            ->set('media', [$file1, $file2])
+            ->call('save');
+
+        $post = MarketingCampaignPost::where('marketing_campaign_id', $campaign->id)->first();
+        $this->assertNotNull($post);
+
+        $media = $post->mediaItems;
+        $this->assertCount(2, $media);
+
+        $this->assertNotEquals($media[0]->path, $media[1]->path, 'I path dei media devono essere univoci anche se caricati nello stesso momento con lo stesso nome');
+        
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($media[0]->path);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($media[1]->path);
     }
 }

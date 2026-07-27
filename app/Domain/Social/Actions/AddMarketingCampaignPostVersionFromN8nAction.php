@@ -50,8 +50,8 @@ class AddMarketingCampaignPostVersionFromN8nAction
                     return new AddPostVersionResult('ignored', null, 'request_cancelled');
                 }
 
-                // request ID non più atteso perché sostituito da una nuova richiesta (per lo stesso post)
-                if ($data->requestId !== null && $post->n8n_request_id !== null && $post->n8n_request_id !== $data->requestId) {
+                // request ID non più atteso perché sostituito da una nuova richiesta (per lo stesso post) o compensato a null
+                if ($data->requestId !== null && $post->n8n_request_id !== $data->requestId) {
                     return new AddPostVersionResult('conflict', null, 'request_id_outdated');
                 }
 

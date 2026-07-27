@@ -56,7 +56,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
 
     public function test_it_creates_version_media_and_pivot_on_initial_callback()
     {
-        $post = MarketingCampaignPost::factory()->create();
+        $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-123']);
         
         $data = new AddMarketingCampaignPostVersionData(
             postId: $post->id,
@@ -105,7 +105,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
 
     public function test_it_reuses_media_on_caption_only_regeneration()
     {
-        $post = MarketingCampaignPost::factory()->create();
+        $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-1']);
         
         // Prima versione (Full)
         $data1 = new AddMarketingCampaignPostVersionData(
@@ -124,6 +124,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
         $media1 = $version1->mediaItems->first();
 
         // Seconda versione (Caption only)
+        $post->update(['n8n_request_id' => 'req-2']);
         $data2 = new AddMarketingCampaignPostVersionData(
             postId: $post->id,
             regenerationType: MarketingCampaignPostRegenerationType::Caption,
@@ -151,7 +152,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
 
     public function test_it_creates_new_media_and_preserves_old_on_image_only_regeneration()
     {
-        $post = MarketingCampaignPost::factory()->create();
+        $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-1']);
         
         // Prima versione
         $data1 = new AddMarketingCampaignPostVersionData(
@@ -170,6 +171,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
         $media1 = $version1->mediaItems->first();
 
         // Seconda versione (Image only)
+        $post->update(['n8n_request_id' => 'req-2']);
         $data2 = new AddMarketingCampaignPostVersionData(
             postId: $post->id,
             regenerationType: MarketingCampaignPostRegenerationType::Image,
@@ -196,5 +198,32 @@ class N8nPostGenerationCharacterizationTest extends TestCase
         // Verifica conservazione vecchio media e pivot
         $this->assertCount(1, $version1->fresh()->mediaItems);
         $this->assertEquals($media1->id, $version1->fresh()->mediaItems->first()->id);
+    }
+
+    public function test_late_callback_with_failed_request_is_ignored()
+    {
+        $post = MarketingCampaignPost::factory()->create([
+            'status' => \App\Enums\Social\MarketingCampaignPostStatus::Draft->value,
+            'n8n_request_id' => null, // compensated state
+        ]);
+
+        $data = new AddMarketingCampaignPostVersionData(
+            postId: $post->id,
+            regenerationType: MarketingCampaignPostRegenerationType::Full,
+            title: 'Late Title',
+            caption: 'Late Caption',
+            hashtags: ['#late'],
+            imageUrls: ['https://example.com/late.jpg'],
+            externalGenerationId: 'ext-late',
+            requestId: 'req-failed-123',
+            promptUsed: 'A prompt',
+            rawPayload: []
+        );
+
+        $result = $this->action->execute($data);
+
+        $this->assertEquals('conflict', $result->outcome);
+        $this->assertEquals('request_id_outdated', $result->reason);
+        $this->assertEquals(0, MarketingCampaignPostVersion::count());
     }
 }

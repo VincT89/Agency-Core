@@ -262,42 +262,104 @@ class NextcloudService
         };
     }
 
-    public function createPublicShare(string $path): ?string
+    public function acquireLocksForPaths(array $paths, ?int $seconds = null): array
     {
-        if (!$this->isConfigured()) {
-            return null;
+        if ($seconds === null) {
+            $seconds = max(120, count($paths) * 60);
         }
 
+        $normalized = array_map(fn($p) => $this->normalizePath($p), $paths);
+        $unique = array_unique($normalized);
+        sort($unique);
+        
+        $locks = [];
+        try {
+            foreach ($unique as $path) {
+                $lockKey = 'nextcloud_share_lock_' . md5($path);
+                $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, $seconds);
+                $lock->block(10);
+                $locks[] = $lock;
+            }
+
+            return $locks;
+        } catch (\Throwable $e) {
+            $this->releaseLocks($locks);
+            throw new \App\Exceptions\NextcloudShareException("Timeout acquisizione lock sui path");
+        }
+    }
+
+    public function releaseLocks(array $locks): void
+    {
+        foreach (array_reverse($locks) as $lock) {
+            try {
+                $lock?->release();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to release lock', ['error' => $e->getMessage()]);
+            }
+        }
+    }
+
+    public function ensurePublicShare(string $path): \App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult
+    {
+        if (!$this->isConfigured()) {
+            throw new \App\Exceptions\NextcloudShareException("Nextcloud non è configurato.");
+        }
+
+        $path = $this->normalizePath($path);
         $url = $this->baseUrl . '/ocs/v2.php/apps/files_sharing/api/v1/shares';
         $headers = [
             'OCS-APIRequest' => 'true',
             'Accept' => 'application/json',
         ];
-
         try {
-            $checkResponse = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
-                ->withHeaders($headers)
-                ->get($url, ['path' => $path]);
-
-            if ($checkResponse->successful()) {
-                $data = $checkResponse->json();
-                $shares = $data['ocs']['data'] ?? [];
-
-                // ocs.data potrebbe essere un singolo oggetto o un array di oggetti,
-                // gestiamo il caso in cui ci sono shares. Nextcloud solitamente ritorna un array di shares.
-                if (is_array($shares)) {
-                    // A volte Nextcloud ritorna ocs.data vuoto stringa/array se non ci sono shares
-                    foreach ($shares as $share) {
-                        if (is_array($share) && ($share['share_type'] ?? null) == 3 && !empty($share['url'])) {
-                            $expiration = $share['expiration'] ?? null;
-                            if (!$expiration || \Carbon\Carbon::parse($expiration)->isFuture()) {
-                                return $share['url'];
-                            }
-                        }
-                    }
+            // 1. GET (lookup)
+            $checkResponse = null;
+            try {
+                $checkResponse = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+                    ->withHeaders($headers)
+                    ->get($url, ['path' => $path]);
+            } catch (\Illuminate\Http\Client\RequestException $e) {
+                if ($e->response && $e->response->status() === 404) {
+                    $checkResponse = $e->response;
+                } else {
+                    throw new \App\Exceptions\NextcloudShareException("Impossibile connettersi a Nextcloud per lookup share. HTTP: " . ($e->response ? $e->response->status() : 'Unknown'));
                 }
             }
 
+            if ($checkResponse && ($checkResponse->successful() || $checkResponse->status() === 404)) {
+                if ($checkResponse->successful()) {
+                    $data = $checkResponse->json();
+                    $statusCode = $data['ocs']['meta']['statuscode'] ?? 500;
+                    
+                    if ($statusCode === 100 || $statusCode === 200) {
+                        $shares = $data['ocs']['data'] ?? [];
+                        if (is_array($shares)) {
+                            if (isset($shares['id'])) {
+                                $shares = [$shares];
+                            }
+                            
+                            foreach ($shares as $share) {
+                                if (is_array($share) && isset($share['share_type'], $share['url'], $share['id']) && (int)$share['share_type'] === 3 && !empty($share['url'])) {
+                                    $expiration = $share['expiration'] ?? null;
+                                    if (!$expiration || \Carbon\Carbon::parse($expiration)->isFuture()) {
+                                        return new \App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult(
+                                            $share['url'],
+                                            $share['id'],
+                                            false
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    } elseif ($statusCode !== 404) {
+                        throw new \App\Exceptions\NextcloudShareException("Errore OCS in lookup share. Status: " . $statusCode);
+                    }
+                }
+            } else {
+                throw new \App\Exceptions\NextcloudShareException("Impossibile connettersi a Nextcloud per lookup share. HTTP: " . ($checkResponse ? $checkResponse->status() : 'Unknown'));
+            }
+
+            // 2. POST (creazione)
             $payload = [
                 'path' => $path,
                 'shareType' => 3, // public link
@@ -316,53 +378,82 @@ class NextcloudService
 
             if ($response->successful()) {
                 $data = $response->json();
-                return $data['ocs']['data']['url'] ?? null;
+                $statusCode = $data['ocs']['meta']['statuscode'] ?? 500;
+                
+                if (($statusCode === 100 || $statusCode === 200) && isset($data['ocs']['data']['url'], $data['ocs']['data']['id'])) {
+                    return new \App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult(
+                        $data['ocs']['data']['url'],
+                        $data['ocs']['data']['id'],
+                        true
+                    );
+                }
+                throw new \App\Exceptions\NextcloudShareException("Errore OCS in creazione share. Status: " . $statusCode);
             }
 
-            Log::error('Errore creazione share Nextcloud: ' . $response->body());
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Errore Nextcloud Share API: ' . $e->getMessage());
-            return null;
+            throw new \App\Exceptions\NextcloudShareException("Impossibile connettersi a Nextcloud per creazione share. HTTP: " . $response->status());
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \App\Exceptions\NextcloudShareException("Errore di connessione a Nextcloud: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            if ($e instanceof \App\Exceptions\NextcloudShareException) {
+                throw $e;
+            }
+            throw new \App\Exceptions\NextcloudShareException("Errore inatteso durante la gestione della share Nextcloud: " . $e->getMessage());
         }
     }
 
-    public function revokePublicShares(string $path): bool
+    public function revokePublicShareById(string|int $shareId): bool
     {
         if (!$this->isConfigured()) {
             return false;
         }
 
-        $url = $this->baseUrl . '/ocs/v2.php/apps/files_sharing/api/v1/shares';
+        $url = $this->baseUrl . '/ocs/v2.php/apps/files_sharing/api/v1/shares/' . $shareId;
         $headers = [
             'OCS-APIRequest' => 'true',
             'Accept' => 'application/json',
         ];
 
         try {
-            $checkResponse = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
-                ->withHeaders($headers)
-                ->get($url, ['path' => $path]);
-
-            if ($checkResponse->successful()) {
-                $data = $checkResponse->json();
-                $shares = $data['ocs']['data'] ?? [];
-
-                if (is_array($shares)) {
-                    foreach ($shares as $share) {
-                        if (is_array($share) && ($share['share_type'] ?? null) == 3 && !empty($share['id'])) {
-                            Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
-                                ->withHeaders($headers)
-                                ->delete($url . '/' . $share['id']);
-                        }
-                    }
+            $response = null;
+            try {
+                $response = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+                    ->withHeaders($headers)
+                    ->delete($url);
+            } catch (\Illuminate\Http\Client\RequestException $e) {
+                if ($e->response && $e->response->status() === 404) {
+                    return true;
                 }
+                throw $e;
             }
 
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Errore revoca share Nextcloud: ' . $e->getMessage());
+            if ($response && $response->status() === 404) {
+                return true;
+            }
+
+            if ($response && $response->successful()) {
+                $data = $response->json();
+                if (!is_array($data)) {
+                    \Illuminate\Support\Facades\Log::error("Nextcloud revoca fallita: la risposta non è un array JSON valido", [
+                        'share_id' => $shareId,
+                        'body' => $response->body()
+                    ]);
+                    return false;
+                }
+                $statusCode = $data['ocs']['meta']['statuscode'] ?? 500;
+                
+                if ($statusCode === 100 || $statusCode === 200 || $statusCode === 404) {
+                    return true;
+                }
+                
+                Log::error('Errore OCS revoca share Nextcloud: ' . $statusCode);
+                return false;
+            }
+
+            Log::error('Errore HTTP revoca share Nextcloud: ' . ($response ? $response->status() : 'Unknown'));
             return false;
+        } catch (\Throwable $e) {
+            Log::error("Nextcloud share revocation error per shareId {$shareId}: " . $e->getMessage());
+            throw new \App\Exceptions\NextcloudShareException("Errore di revoca share Nextcloud: " . $e->getMessage(), 0, $e);
         }
     }
 

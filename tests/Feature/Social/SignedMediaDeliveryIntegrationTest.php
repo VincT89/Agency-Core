@@ -43,7 +43,7 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
             'https://example.com/generated.jpg' => Http::response(file_get_contents(base_path('tests/Fixtures/valid.jpg')), 200, ['Content-Type' => 'image/jpeg']),
         ]);
 
-        $post = MarketingCampaignPost::factory()->create();
+        $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-123']);
 
         // 2. Eseguiamo l'azione n8n
         $data = new AddMarketingCampaignPostVersionData(

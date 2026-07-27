@@ -27,6 +27,7 @@ class RequestMarketingCampaignPostRegenerationAction
                 throw new Exception("Non è possibile rigenerare un post in stato: {$post->status->label()}");
             }
 
+            $oldRequestId = $post->n8n_request_id;
             $requestId = 'cmp_regen_' . Str::uuid()->toString();
 
             $post->loadMissing(['campaign.client', 'currentVersion']);
@@ -41,7 +42,7 @@ class RequestMarketingCampaignPostRegenerationAction
             $resolvedUrls = array_column($mediaPayload['media_items'], 'url');
 
             // Salva il commento interno
-            $post->comments()->create([
+            $comment = $post->comments()->create([
                 'marketing_campaign_post_version_id' => $post->current_version_id,
                 'user_id' => $user->id,
                 'body' => $prompt ?? "Richiesta di rigenerazione ($regenerationType)",
@@ -90,48 +91,75 @@ class RequestMarketingCampaignPostRegenerationAction
                 'failed_callback_url' => route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
             ];
 
+            $previousState = [
+                'n8n_request_id' => $oldRequestId,
+                'status' => $post->status->value,
+                'n8n_previous_status' => $post->n8n_previous_status,
+                'n8n_error' => $post->n8n_error,
+                'submitted_to_n8n_at' => $post->submitted_to_n8n_at,
+                'n8n_completed_at' => $post->n8n_completed_at,
+                'approved_payload_snapshot' => $post->approved_payload_snapshot,
+                'n8n_payload_hash' => $post->n8n_payload_hash,
+                'n8n_internal_context' => $post->n8n_internal_context,
+            ];
+
             $post->update([
-                'n8n_previous_status' => $previousStatus,
-                'status' => MarketingCampaignPostStatus::Regenerating->value,
+                'n8n_previous_status' => $previousState['status'],
+                'status' => \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value,
                 'n8n_request_id' => $requestId,
+                'approved_payload_snapshot' => $payload,
+                'n8n_payload_hash' => hash('sha256', json_encode($payload)),
                 'n8n_error' => null,
                 'submitted_to_n8n_at' => null,
                 'n8n_completed_at' => null,
-                'approved_payload_snapshot' => $payload,
-                'n8n_payload_hash' => hash('sha256', json_encode($payload)),
             ]);
 
             return [
                 'payload' => $payload,
-                'previousStatus' => $previousStatus
+                'comment_id' => $comment->id,
+                'previousState' => $previousState,
             ];
         });
 
         try {
             RequestMarketingCampaignPostRegenerationJob::dispatch(
-                $post,
-                $jobData['payload'],
-                $jobData['previousStatus']
+                $post, 
+                $jobData['payload'], 
+                $jobData['previousState']['status'], 
+                $jobData['comment_id'],
+                $jobData['previousState']
             );
-        } catch (\Throwable $exception) {
-            $post->refresh();
-            if ($post->n8n_request_id === $jobData['payload']['request_id']) {
-                $post->update([
-                    'status' => $jobData['previousStatus'],
-                    'n8n_request_id' => null,
-                    'n8n_payload_hash' => null,
-                    'approved_payload_snapshot' => null,
+        } catch (\Throwable $dispatchException) {
+            try {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($post, $jobData) {
+                    $lockedPost = MarketingCampaignPost::lockForUpdate()->findOrFail($post->id);
+                    
+                    if ($lockedPost->n8n_request_id === $jobData['payload']['request_id']
+                        && $lockedPost->status->value === \App\Enums\Social\MarketingCampaignPostStatus::Regenerating->value
+                    ) {
+                        $lockedPost->update([
+                            'status' => $jobData['previousState']['status'],
+                            'n8n_previous_status' => $jobData['previousState']['n8n_previous_status'],
+                            'n8n_request_id' => $jobData['previousState']['n8n_request_id'],
+                            'approved_payload_snapshot' => $jobData['previousState']['approved_payload_snapshot'],
+                            'n8n_payload_hash' => $jobData['previousState']['n8n_payload_hash'],
+                            'n8n_internal_context' => $jobData['previousState']['n8n_internal_context'],
+                            'n8n_error' => $jobData['previousState']['n8n_error'],
+                            'submitted_to_n8n_at' => $jobData['previousState']['submitted_to_n8n_at'],
+                            'n8n_completed_at' => $jobData['previousState']['n8n_completed_at'],
+                        ]);
+                        
+                        $lockedPost->comments()->where('id', $jobData['comment_id'])->delete();
+                    }
+                });
+            } catch (\Throwable $compensationException) {
+                \Illuminate\Support\Facades\Log::error('Impossibile ripristinare il DB dopo il dispatch fallito della rigenerazione', [
+                    'post_id' => $post->id,
+                    'error' => $compensationException->getMessage()
                 ]);
-
-                $post->comments()
-                    ->where('user_id', $user->id)
-                    ->where('type', MarketingCampaignPostCommentType::ChangeRequest->value)
-                    ->where('body', $prompt ?? "Richiesta di rigenerazione ($regenerationType)")
-                    ->latest()
-                    ->first()
-                    ?->delete();
             }
-            throw $exception;
+            
+            throw $dispatchException;
         }
     }
 }

@@ -59,7 +59,7 @@ class SubmitMarketingCampaignPostToN8nAction
                         $runtimeLogoFile = $runtimeClientData['runtime_logo'];
                         
                         if ($runtimeLogoFile instanceof \Illuminate\Http\UploadedFile) {
-                            $filename = 'temp_logo_' . time() . '.' . $runtimeLogoFile->getClientOriginalExtension();
+                            $filename = 'temp_logo_' . Str::uuid()->toString() . '.' . $runtimeLogoFile->getClientOriginalExtension();
                             
                             if (!empty($runtimeClientData['save_runtime_logo_to_client'])) {
                                 $runtimeLogoFile->storeAs('clients/logos', $filename, 'public');
@@ -102,6 +102,7 @@ class SubmitMarketingCampaignPostToN8nAction
                 }
 
                 // Genera Request ID nuovo per ogni invio
+                $oldRequestId = $post->n8n_request_id;
                 $post->n8n_request_id = 'cmp_' . Str::uuid()->toString();
 
                 $clientPayload = [
@@ -146,9 +147,20 @@ class SubmitMarketingCampaignPostToN8nAction
                 ];
 
                 // Salva stato, payload e contesto interno
-                $previousStatus = $post->status;
+                $previousState = [
+                    'n8n_request_id' => $oldRequestId,
+                    'status' => $post->status->value,
+                    'n8n_previous_status' => $post->n8n_previous_status,
+                    'n8n_error' => $post->n8n_error,
+                    'submitted_to_n8n_at' => $post->submitted_to_n8n_at,
+                    'n8n_completed_at' => $post->n8n_completed_at,
+                    'approved_payload_snapshot' => $post->approved_payload_snapshot,
+                    'n8n_payload_hash' => $post->n8n_payload_hash,
+                    'n8n_internal_context' => $post->n8n_internal_context,
+                ];
+
                 $post->update([
-                    'n8n_previous_status' => $previousStatus->value,
+                    'n8n_previous_status' => $previousState['status'],
                     'status' => \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value,
                     'approved_payload_snapshot' => $payload,
                     'n8n_payload_hash' => hash('sha256', json_encode($payload)),
@@ -162,6 +174,7 @@ class SubmitMarketingCampaignPostToN8nAction
                     'payload' => $payload,
                     'tempPathToDelete' => $tempPathToDelete,
                     'savedToClientLogo' => $savedToClientLogo,
+                    'previousState' => $previousState,
                 ];
             });
         } catch (\Throwable $exception) {
@@ -174,27 +187,53 @@ class SubmitMarketingCampaignPostToN8nAction
         // 3. Dispatch del Job fuori dalla transazione DB
         if ($jobData) {
             try {
-                SendMarketingCampaignPostToN8nJob::dispatch($post, $jobData['payload'], $jobData['tempPathToDelete'], $jobData['savedToClientLogo']);
-            } catch (\Throwable $exception) {
-                if (!empty($jobData['tempPathToDelete'])) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($jobData['tempPathToDelete']);
-                }
+                SendMarketingCampaignPostToN8nJob::dispatch($post, $jobData['payload'], $jobData['tempPathToDelete'], $jobData['savedToClientLogo'], $jobData['previousState']);
+            } catch (\Throwable $dispatchException) {
+                $fileToDelete = null;
 
-                $post->refresh();
-                if ($post->n8n_request_id === $jobData['payload']['request_id']) {
-                    $n8nInternalContext = $post->n8n_internal_context ?? [];
-                    unset($n8nInternalContext['_internal_temp_logo_path']);
+                try {
+                    \Illuminate\Support\Facades\DB::transaction(function () use ($post, $jobData, &$fileToDelete) {
+                        $lockedPost = MarketingCampaignPost::lockForUpdate()->findOrFail($post->id);
 
-                    $post->update([
-                        'status' => $post->n8n_previous_status ?? \App\Enums\Social\MarketingCampaignPostStatus::Generated->value,
-                        'n8n_request_id' => null,
-                        'approved_payload_snapshot' => null,
-                        'n8n_payload_hash' => null,
-                        'n8n_internal_context' => $n8nInternalContext,
+                        if ($lockedPost->n8n_request_id === $jobData['payload']['request_id'] 
+                            && $lockedPost->status->value === \App\Enums\Social\MarketingCampaignPostStatus::PendingN8n->value
+                        ) {
+                            $lockedPost->update([
+                                'status' => $jobData['previousState']['status'],
+                                'n8n_previous_status' => $jobData['previousState']['n8n_previous_status'],
+                                'n8n_request_id' => $jobData['previousState']['n8n_request_id'],
+                                'approved_payload_snapshot' => $jobData['previousState']['approved_payload_snapshot'],
+                                'n8n_payload_hash' => $jobData['previousState']['n8n_payload_hash'],
+                                'n8n_internal_context' => $jobData['previousState']['n8n_internal_context'],
+                                'n8n_error' => $jobData['previousState']['n8n_error'],
+                                'submitted_to_n8n_at' => $jobData['previousState']['submitted_to_n8n_at'],
+                                'n8n_completed_at' => $jobData['previousState']['n8n_completed_at'],
+                            ]);
+
+                            if (!empty($jobData['tempPathToDelete'])) {
+                                $fileToDelete = $jobData['tempPathToDelete'];
+                            }
+                        }
+                    });
+                } catch (\Throwable $compensationException) {
+                    \Illuminate\Support\Facades\Log::error('Impossibile ripristinare il DB dopo il dispatch fallito di n8n', [
+                        'post_id' => $post->id,
+                        'error' => $compensationException->getMessage()
                     ]);
                 }
 
-                throw $exception;
+                try {
+                    if ($fileToDelete) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($fileToDelete);
+                    }
+                } catch (\Throwable $cleanupException) {
+                    \Illuminate\Support\Facades\Log::error('Impossibile rimuovere il file locale temporaneo dopo il dispatch fallito', [
+                        'path' => $fileToDelete,
+                        'error' => $cleanupException->getMessage()
+                    ]);
+                }
+
+                throw $dispatchException;
             }
         }
     }

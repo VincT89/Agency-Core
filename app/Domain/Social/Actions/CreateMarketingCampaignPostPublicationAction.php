@@ -71,10 +71,42 @@ class CreateMarketingCampaignPostPublicationAction
 
                 if ($storageSource === 'local' && $media->path) {
                     try {
-                        $metadata['size_bytes'] = Storage::disk($media->disk)->size($media->path);
-                        $metadata['sha256'] = hash_file('sha256', Storage::disk($media->disk)->path($media->path));
+                        $integrity = app(
+                            \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
+                        )->readLocal($media->disk ?: 'public', $media->path);
+                        $metadata['size_bytes'] = $integrity['source_size_bytes'];
+                        $metadata['sha256'] = $integrity['sha256'];
+
+                        if (
+                            $media->source_size_bytes !== null
+                            && $media->source_size_bytes !== $integrity['source_size_bytes']
+                        ) {
+                            throw new \Exception(
+                                "Dimensione del media locale {$media->id} cambiata dopo l'acquisizione."
+                            );
+                        }
+                        if (
+                            filled($media->sha256)
+                            && !hash_equals($media->sha256, $integrity['sha256'])
+                        ) {
+                            throw new \Exception(
+                                "Contenuto del media locale {$media->id} cambiato dopo l'acquisizione."
+                            );
+                        }
+                        if (
+                            filled($media->mime_type)
+                            && $media->mime_type !== $integrity['mime_type']
+                        ) {
+                            throw new \Exception(
+                                "MIME type del media locale {$media->id} cambiato dopo l'acquisizione."
+                            );
+                        }
                     } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::warning("Impossibile leggere file locale per snapshot", ['media_id' => $media->id, 'error' => $e->getMessage()]);
+                        throw new \Exception(
+                            "Impossibile verificare l'integrità del media locale {$media->id}: {$e->getMessage()}",
+                            0,
+                            $e
+                        );
                     }
                 } elseif ($storageSource === 'nextcloud' && $media->nextcloud_path) {
                     try {
@@ -82,11 +114,17 @@ class CreateMarketingCampaignPostPublicationAction
                         $metadata['size_bytes'] = $propfind->sizeBytes;
                         $metadata['etag'] = $propfind->etag;
 
-                        if ($media->size_bytes && $media->size_bytes !== $propfind->sizeBytes) {
-                            throw new \Exception("Dimensione file Nextcloud cambiata per il media {$media->id}. Prevista: {$media->size_bytes}, Trovata: {$propfind->sizeBytes}");
+                        if (
+                            $media->source_size_bytes !== null
+                            && $media->source_size_bytes !== $propfind->sizeBytes
+                        ) {
+                            throw new \Exception("Dimensione file Nextcloud cambiata per il media {$media->id}. Prevista: {$media->source_size_bytes}, Trovata: {$propfind->sizeBytes}");
                         }
                         if ($media->nextcloud_file_id && $media->nextcloud_file_id !== $propfind->fileId) {
                             throw new \Exception("File ID Nextcloud cambiato per il media {$media->id}.");
+                        }
+                        if ($media->nextcloud_etag && $media->nextcloud_etag !== $propfind->etag) {
+                            throw new \Exception("ETag Nextcloud cambiato per il media {$media->id}.");
                         }
                         if ($media->mime_type && $media->mime_type !== $propfind->mimeType) {
                             throw new \Exception("MIME type Nextcloud cambiato per il media {$media->id}.");

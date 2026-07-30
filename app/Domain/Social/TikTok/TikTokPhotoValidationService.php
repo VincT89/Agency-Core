@@ -58,7 +58,7 @@ class TikTokPhotoValidationService
             }
 
             // 4. Controllo dimensione file
-            $size = $media->file_size ?? ($metadata['size'] ?? 0);
+            $size = $media->source_size_bytes ?? ($metadata['size'] ?? 0);
             if ($size > $maxSizeBytes) {
                 return [
                     'isValid' => false,

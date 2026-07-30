@@ -317,6 +317,19 @@
             </select>
           </div>
           <div class="form-g">
+            <label class="form-lbl">Modalità di pubblicazione</label>
+            <select class="form-sel" wire:model="campaignForm.publication_mode">
+              <option value="manual">Manuale</option>
+              <option value="automatic">Automatica alla data programmata</option>
+            </select>
+          </div>
+          <div class="form-g">
+            <label>
+              <input type="checkbox" wire:model="campaignForm.client_review_required">
+              Richiedi approvazione del cliente
+            </label>
+          </div>
+          <div class="form-g">
             <label class="form-lbl">Budget Mensile (€)</label>
             <input type="number" step="0.01" class="form-in" wire:model="campaignForm.monthly_fee">
           </div>

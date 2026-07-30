@@ -76,7 +76,7 @@ class TikTokPreflightService
                 $result->addCheck('video_format', $isValidVideoFormat, $isValidVideoFormat ? null : "Formato video non supportato da TikTok. Richiesto MP4 o WebM.");
                 
                 // Limite peso 500MB (pratico per PullFromUrl)
-                $sizeMB = $media->size / 1024 / 1024;
+                $sizeMB = ($media->source_size_bytes ?? 0) / 1024 / 1024;
                 $isUnderVideoLimit = $sizeMB <= 500;
                 $result->addCheck('video_size', $isUnderVideoLimit, $isUnderVideoLimit ? null : "Il video supera il limite dimensionale supportato per l'upload (500MB).");
 

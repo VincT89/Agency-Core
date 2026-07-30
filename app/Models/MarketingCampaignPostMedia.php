@@ -12,7 +12,15 @@ class MarketingCampaignPostMedia extends Model
 
     protected $guarded = [];
 
-    protected static function booted()
+    protected function casts(): array
+    {
+        return [
+            'source_size_bytes' => 'integer',
+            'sort_order' => 'integer',
+        ];
+    }
+
+    protected static function booted(): void
     {
         static::deleting(function (MarketingCampaignPostMedia $media) {
             app(\App\Domain\Social\Services\HistoricalMediaProtectionService::class)->assertDeletable($media);

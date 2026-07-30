@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\Social;
 
+use App\Domain\Social\TikTok\TikTokCreatorInfoService;
+use App\Enums\Social\SocialPlatform;
 use App\Http\Controllers\Controller;
 use App\Models\ClientSocialAccount;
 use Illuminate\Http\Request;
@@ -17,31 +19,31 @@ class TikTokOAuthController extends Controller
         $clientId = session('tiktok_oauth_client_id');
         $expectedPlatform = session('tiktok_oauth_expected_platform');
 
-        if (!$accountId || !$clientId || $expectedPlatform !== \App\Enums\Social\SocialPlatform::Tiktok->value) {
+        if (! $accountId || ! $clientId || $expectedPlatform !== SocialPlatform::Tiktok->value) {
             return redirect()->route('clients.index')->with('error', 'Sessione OAuth non inizializzata o contesto invalido. Riprova dal pannello del cliente.');
         }
 
         $account = ClientSocialAccount::findOrFail($accountId);
 
         // Blocco sicurezza tenant/platform
-        if ($account->client_id !== $clientId || $account->platform !== \App\Enums\Social\SocialPlatform::Tiktok) {
+        if ($account->client_id !== $clientId || $account->platform !== SocialPlatform::Tiktok) {
             return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Incoerenza tenant/platform rilevata. Azione annullata.');
         }
 
         $clientKey = config('services.tiktok.client_key');
         $redirectUri = config('services.tiktok.redirect_uri');
-        
+
         $state = Str::random(40);
         session(['tiktok_oauth_state' => $state]);
 
         $scopes = ['user.info.basic'];
         $publishMode = config('services.tiktok.delivery_mode', 'disabled');
-        
+
         if ($publishMode === 'draft') {
             $scopes[] = 'video.upload';
         } elseif ($publishMode === 'direct') {
-            if (!config('services.tiktok.direct_publish_enabled', false)) {
+            if (! config('services.tiktok.direct_publish_enabled', false)) {
                 return redirect()->route('clients.show', $account->client_id)
                     ->with('error', 'La modalità direct publish (video.publish) è disabilitata temporaneamente. Impostare delivery_mode=draft.');
             }
@@ -71,37 +73,38 @@ class TikTokOAuthController extends Controller
         $clientId = session()->pull('tiktok_oauth_client_id');
         $expectedPlatform = session()->pull('tiktok_oauth_expected_platform');
 
-        if (!$accountId || !$clientId || $expectedPlatform !== \App\Enums\Social\SocialPlatform::Tiktok->value) {
+        if (! $accountId || ! $clientId || $expectedPlatform !== SocialPlatform::Tiktok->value) {
             return redirect()->route('clients.index')->with('error', 'Sessione OAuth scaduta o già utilizzata (possibile doppio click o multi-tab).');
         }
 
         $account = ClientSocialAccount::findOrFail($accountId);
 
         // Validazione cross-tab del tenant e platform
-        if ($account->client_id !== $clientId || $account->platform !== \App\Enums\Social\SocialPlatform::Tiktok) {
+        if ($account->client_id !== $clientId || $account->platform !== SocialPlatform::Tiktok) {
             return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Incoerenza tenant/platform rilevata nel callback. Connessione annullata.');
         }
 
         if ($error) {
             Log::warning('TikTok OAuth Error', ['error' => $error, 'description' => $errorDescription]);
+
             return redirect()->route('clients.show', $account->client_id)
                 ->with('error', "Errore durante il collegamento TikTok: {$errorDescription}");
         }
 
-        if (!$state || $state !== $sessionState) {
+        if (! $state || $state !== $sessionState) {
             return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Stato OAuth non valido o scaduto. Riprova.');
         }
 
-        if (!$code) {
+        if (! $code) {
             return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Codice di autorizzazione non ricevuto da TikTok.');
         }
 
         // Scambio del codice per l'access token
         $apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
-        
+
         $response = Http::asForm()->post("{$apiBase}/v2/oauth/token/", [
             'client_key' => config('services.tiktok.client_key'),
             'client_secret' => config('services.tiktok.client_secret'),
@@ -113,8 +116,9 @@ class TikTokOAuthController extends Controller
         if ($response->failed()) {
             Log::error('TikTok Token Exchange Error', [
                 'status' => $response->status(),
-                'body' => $response->body()
+                'body' => $response->body(),
             ]);
+
             return redirect()->route('clients.show', $account->client_id)
                 ->with('error', 'Impossibile completare lo scambio del token con TikTok.');
         }
@@ -128,6 +132,8 @@ class TikTokOAuthController extends Controller
             'token_expires_at' => isset($data['expires_in']) ? now()->addSeconds($data['expires_in']) : null,
             'refresh_token_expires_at' => isset($data['refresh_expires_in']) ? now()->addSeconds($data['refresh_expires_in']) : null,
             'tiktok_open_id' => $data['open_id'] ?? null,
+            'provider_account_id' => $data['open_id']
+                ?? $account->provider_account_id,
             'scopes' => array_values(array_filter(explode(',', $data['scope'] ?? ''))),
             'api_status' => 'connected',
             'connected_at' => now(),
@@ -136,11 +142,10 @@ class TikTokOAuthController extends Controller
 
         // Qui chiameremo il TikTokCreatorInfoService per completare il profilo
         // Per la FASE 1, è sufficiente memorizzare i token.
-        $creatorInfoService = new \App\Domain\Social\TikTok\TikTokCreatorInfoService();
+        $creatorInfoService = new TikTokCreatorInfoService;
         $creatorInfoService->updateCreatorInfo($account);
 
         return redirect()->route('clients.show', $account->client_id)
             ->with('success', 'Account TikTok collegato con successo e capabilities aggiornate.');
     }
 }
-

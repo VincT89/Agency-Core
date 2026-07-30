@@ -63,6 +63,36 @@ class NextcloudFileInfoTest extends TestCase
         $this->assertSame(1024, $info->sizeBytes);
     }
 
+    public function test_propfind_cannot_escape_the_configured_user_root(): void
+    {
+        $xml = str_replace(
+            '/remote.php/dav/files/agency/video.mp4',
+            '/remote.php/dav/files/another-user/video.mp4',
+            $this->validPropfindXml()
+        );
+        Http::fake(['*' => Http::response($xml, 207)]);
+
+        $this->expectException(NextcloudPermanentFailureException::class);
+        $this->expectExceptionMessage('outside the configured user root');
+
+        app(NextcloudService::class)->getFileInfo('/video.mp4');
+    }
+
+    public function test_propfind_must_describe_the_exact_requested_path(): void
+    {
+        $xml = str_replace(
+            '/remote.php/dav/files/agency/video.mp4',
+            '/remote.php/dav/files/agency/other.mp4',
+            $this->validPropfindXml()
+        );
+        Http::fake(['*' => Http::response($xml, 207)]);
+
+        $this->expectException(NextcloudPermanentFailureException::class);
+        $this->expectExceptionMessage('unexpected path');
+
+        app(NextcloudService::class)->getFileInfo('/video.mp4');
+    }
+
     private function validPropfindXml(): string
     {
         return <<<'XML'

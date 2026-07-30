@@ -36,7 +36,7 @@ class TikTokVideoValidationService
         }
 
         // Verifica dimensione file (es. massimo 4GB, ma teniamo un limite ragionevole di 500MB per draft)
-        $size = $media->file_size ?? ($metadata['size'] ?? 0);
+        $size = $media->source_size_bytes ?? ($metadata['size'] ?? 0);
         $maxSizeBytes = 500 * 1024 * 1024; // 500MB
         if ($size > $maxSizeBytes) {
             return [

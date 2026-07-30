@@ -35,6 +35,25 @@
 
       <div class="mkt-flex-gap16">
         <div class="form-g mb-0 mkt-flex-1">
+          <label class="form-lbl">Modalità di pubblicazione</label>
+          <select class="form-sel" wire:model.live="publication_mode">
+            <option value="manual">Manuale</option>
+            <option value="automatic">Automatica alla data programmata</option>
+          </select>
+          @error('publication_mode') <span class="form-err">{{ $message }}</span> @enderror
+        </div>
+        <div class="form-g mb-0 mkt-flex-1">
+          <label class="form-lbl">Revisione cliente</label>
+          <label>
+            <input type="checkbox" wire:model="client_review_required">
+            Richiedi approvazione prima della pubblicazione
+          </label>
+          @error('client_review_required') <span class="form-err">{{ $message }}</span> @enderror
+        </div>
+      </div>
+
+      <div class="mkt-flex-gap16">
+        <div class="form-g mb-0 mkt-flex-1">
           <label class="form-lbl">Data Inizio</label>
           <input type="date" class="form-in" wire:model="starts_at">
           @error('starts_at') <span class="form-err">{{ $message }}</span> @enderror

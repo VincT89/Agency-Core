@@ -2,12 +2,13 @@
 
 namespace Tests\Feature\Social;
 
-use Tests\TestCase;
+use App\Enums\Social\SocialApiStatus;
+use App\Enums\Social\SocialPlatform;
 use App\Models\ClientSocialAccount;
 use App\Models\User;
-use App\Enums\Social\SocialPlatform;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 class TikTokOAuthTest extends TestCase
 {
@@ -19,9 +20,8 @@ class TikTokOAuthTest extends TestCase
     {
         parent::setUp();
         // Presupponiamo un utente admin autenticato per accedere alle rotte admin.
-        $this->admin = User::factory()->create(['role' => 'admin'] ?? []); 
+        $this->admin = User::factory()->create(['role' => 'admin'] ?? []);
         $this->actingAs($this->admin);
-
 
     }
 
@@ -100,8 +100,8 @@ class TikTokOAuthTest extends TestCase
                 'data' => [
                     'creator_avatar_url' => 'https://example.com/avatar.jpg',
                     'creator_nickname' => 'TestUser',
-                ]
-            ], 200)
+                ],
+            ], 200),
         ]);
 
         $response = $this->get(route('admin.social.tiktok.callback', [
@@ -114,7 +114,8 @@ class TikTokOAuthTest extends TestCase
 
         $account->refresh();
         $this->assertEquals('new_access_token', $account->access_token);
-        $this->assertEquals(\App\Enums\Social\SocialApiStatus::Connected, $account->api_status);
+        $this->assertEquals('dummy_open_id', $account->provider_account_id);
+        $this->assertEquals(SocialApiStatus::Connected, $account->api_status);
         $this->assertContains('video.upload', $account->scopes ?? []);
     }
 }

@@ -19,7 +19,8 @@ class AddMarketingCampaignPostVersionFromN8nAction
     public function __construct(
         private readonly \App\Domain\Social\Services\ImageStagerService $stager,
         private readonly \App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver $resolver,
-        private readonly \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver
+        private readonly \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver,
+        private readonly ?EvaluateMarketingCampaignPostAutomationAction $automation = null
     ) {}
 
     public function execute(AddMarketingCampaignPostVersionData $data): AddPostVersionResult
@@ -119,10 +120,10 @@ class AddMarketingCampaignPostVersionFromN8nAction
                     // Rigenerazione image o full: crea nuovi media e associazioni pivot.
                     $pivotData = [];
                     foreach ($promotedFiles as $index => $promotedPath) {
-                        $mime = 'unknown';
-                        if (Storage::disk('public')->exists($promotedPath)) {
-                            $mime = Storage::disk('public')->mimeType($promotedPath);
-                        }
+                        $integrity = app(
+                            \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
+                        )->readLocal('public', $promotedPath);
+                        $mime = $integrity['mime_type'];
 
                         $media = \App\Models\MarketingCampaignPostMedia::create([
                             'marketing_campaign_post_id' => $post->id,
@@ -130,6 +131,8 @@ class AddMarketingCampaignPostVersionFromN8nAction
                             'disk' => 'public',
                             'source' => 'n8n',
                             'mime_type' => $mime,
+                            'source_size_bytes' => $integrity['source_size_bytes'],
+                            'sha256' => $integrity['sha256'],
                             'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($mime),
                             'sort_order' => $index, // Fallback order per il post
                         ]);
@@ -185,6 +188,26 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 $this->stager->deleteTemporary($temporaryFiles);
             } catch (Throwable $exception) {
                 \Illuminate\Support\Facades\Log::warning('Errore in deleteTemporary dopo commit', ['exception' => $exception->getMessage()]);
+            }
+
+            if ($result->wasCreated() && $result->version) {
+                try {
+                    ($this->automation ?? app(EvaluateMarketingCampaignPostAutomationAction::class))
+                        ->execute(
+                            MarketingCampaignPost::query()
+                                ->with('campaign')
+                                ->findOrFail($result->version->marketing_campaign_post_id)
+                        );
+                } catch (Throwable $exception) {
+                    \Illuminate\Support\Facades\Log::error(
+                        'social.automation.callback_evaluation_failed',
+                        [
+                            'post_id' => $result->version->marketing_campaign_post_id,
+                            'version_id' => $result->version->id,
+                            'error' => $exception->getMessage(),
+                        ]
+                    );
+                }
             }
 
             return $result;

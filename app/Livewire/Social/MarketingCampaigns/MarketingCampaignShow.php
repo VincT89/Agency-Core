@@ -135,6 +135,8 @@ class MarketingCampaignShow extends Component
             'ends_at' => $this->campaign->ends_at ? $this->campaign->ends_at->format('Y-m-d') : null,
             'monthly_fee' => $this->campaign->monthly_fee,
             'notes' => $this->campaign->notes,
+            'publication_mode' => $this->campaign->publication_mode->value,
+            'client_review_required' => $this->campaign->client_review_required,
         ];
         $this->showCampaignModal = true;
     }
@@ -151,6 +153,8 @@ class MarketingCampaignShow extends Component
         $this->validate([
             'campaignForm.name' => 'required|string|max:255',
             'campaignForm.monthly_fee' => 'nullable|numeric|min:0',
+            'campaignForm.publication_mode' => 'required|in:manual,automatic',
+            'campaignForm.client_review_required' => 'required|boolean',
         ]);
 
         $action->execute($this->campaign, $this->campaignForm);

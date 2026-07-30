@@ -3,8 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use App\Models\{Ticket, Invoice, Payment, CalendarEvent, Client, Project, Task, Attachment, MarketingCampaign, MarketingCampaignPost};
-use App\Observers\{TicketObserver, InvoiceObserver, PaymentObserver, CalendarEventObserver, ClientObserver, ProjectObserver, TaskObserver, AttachmentObserver, UserObserver, MarketingCampaignObserver, MarketingCampaignPostObserver};
+use App\Models\{Ticket, Invoice, Payment, CalendarEvent, Client, Project, Task, Attachment, MarketingCampaign, MarketingCampaignPost, MarketingCampaignPostPublication};
+use App\Observers\{TicketObserver, InvoiceObserver, PaymentObserver, CalendarEventObserver, ClientObserver, ProjectObserver, TaskObserver, AttachmentObserver, UserObserver, MarketingCampaignObserver, MarketingCampaignPostObserver, MarketingCampaignPostPublicationObserver};
 
 class ObserverServiceProvider extends ServiceProvider
 {
@@ -27,5 +27,6 @@ class ObserverServiceProvider extends ServiceProvider
         \App\Models\Shooting\Shoot::observe(\App\Observers\ShootObserver::class);
         MarketingCampaign::observe(MarketingCampaignObserver::class);
         MarketingCampaignPost::observe(MarketingCampaignPostObserver::class);
+        MarketingCampaignPostPublication::observe(MarketingCampaignPostPublicationObserver::class);
     }
 }

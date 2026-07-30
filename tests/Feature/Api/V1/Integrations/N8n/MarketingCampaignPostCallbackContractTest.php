@@ -5,8 +5,11 @@ namespace Tests\Feature\Api\V1\Integrations\N8n;
 use App\Models\Client;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostMedia;
 use App\Models\MarketingCampaignPostVersion;
+use App\Support\Network\HostResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class MarketingCampaignPostCallbackContractTest extends TestCase
@@ -17,7 +20,17 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
     {
         parent::setUp();
         config(['services.n8n.token' => 'secret-testing-token']);
-        \Illuminate\Support\Facades\Http::fake();
+        Http::fake([
+            'https://example.com/*' => Http::response(
+                file_get_contents(base_path('tests/Fixtures/valid.jpg')),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+        $this->mock(HostResolver::class)
+            ->shouldReceive('resolveAndValidatePublicHost')
+            ->zeroOrMoreTimes()
+            ->andReturn('example.com');
     }
 
     protected function getHeaders(): array
@@ -54,7 +67,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
         $post = MarketingCampaignPost::factory()->create(['marketing_campaign_id' => $campaign->id, 'n8n_request_id' => 'test-req-id', 'status' => 'submitted_to_n8n']);
-        
+
         // Simula la versione esistente per ereditare l'immagine
         $version = MarketingCampaignPostVersion::create([
             'marketing_campaign_post_id' => $post->id,
@@ -64,15 +77,15 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'image_urls' => null,
             'image_path' => null,
         ]);
-        
-        \App\Models\MarketingCampaignPostMedia::factory()->create([
+
+        MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'source' => 'nextcloud',
             'nextcloud_share_url' => 'https://example.com/old.jpg',
             'path' => null,
             'disk' => null,
         ]);
-        
+
         $post->update(['current_version_id' => $version->id]);
 
         $payload = [
@@ -105,15 +118,15 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'image_urls' => null,
             'image_path' => null,
         ]);
-        
-        \App\Models\MarketingCampaignPostMedia::factory()->create([
+
+        MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'source' => 'nextcloud',
             'nextcloud_share_url' => 'https://example.com/old.jpg',
             'path' => null,
             'disk' => null,
         ]);
-        
+
         $post->update(['current_version_id' => $version->id]);
 
         $payload = [
@@ -152,7 +165,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
         );
 
         $response->assertStatus(201);
-        
+
         $version = $post->refresh()->currentVersion;
         $this->assertEquals('Using alias for caption', $version->caption);
         $this->assertIsArray($version->image_urls);
@@ -173,7 +186,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
                 'regeneration_type' => 'full',
                 'caption' => 'Nested data',
                 'image_url' => 'https://example.com/nested.jpg',
-            ]
+            ],
         ];
 
         $response = $this->postJson(
@@ -294,6 +307,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             $this->getHeaders()
         )->assertStatus(422);
     }
+
     public function test_failed_callback_when_already_approved_returns_ignored()
     {
         $client = Client::factory()->create();

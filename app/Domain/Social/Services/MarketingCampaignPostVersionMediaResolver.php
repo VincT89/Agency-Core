@@ -9,11 +9,18 @@ use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostVersion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class MarketingCampaignPostVersionMediaResolver
 {
+    private readonly LegacyMarketingCampaignPostMediaMatcher $legacyMatcher;
+
+    public function __construct(
+        ?LegacyMarketingCampaignPostMediaMatcher $legacyMatcher = null
+    ) {
+        $this->legacyMatcher = $legacyMatcher
+            ?? new LegacyMarketingCampaignPostMediaMatcher;
+    }
+
     /**
      * @deprecated Use resolveForVersion() or resolveForPost() instead.
      */
@@ -28,12 +35,13 @@ class MarketingCampaignPostVersionMediaResolver
 
         if ($post->current_version_id) {
             $currentVersion = $post->currentVersion;
-            
-            if (!$currentVersion || $currentVersion->marketing_campaign_post_id !== $post->id) {
+
+            if (! $currentVersion || $currentVersion->marketing_campaign_post_id !== $post->id) {
                 throw MarketingCampaignPostMediaResolutionException::forMissingCurrentVersion($post->id);
             }
 
             $currentVersion->setRelation('post', $post);
+
             return $this->resolveForVersion($currentVersion);
         }
 
@@ -55,8 +63,8 @@ class MarketingCampaignPostVersionMediaResolver
             foreach ($version->mediaItems as $media) {
                 if ($media->marketing_campaign_post_id !== $version->marketing_campaign_post_id) {
                     throw MarketingCampaignPostMediaResolutionException::forForeignMedia(
-                        $media->id, 
-                        $media->marketing_campaign_post_id, 
+                        $media->id,
+                        $media->marketing_campaign_post_id,
                         $version->marketing_campaign_post_id
                     );
                 }
@@ -73,29 +81,29 @@ class MarketingCampaignPostVersionMediaResolver
         // Passo 2 — Riferimenti legacy della versione
         $legacyMediaIds = [];
         $resolvedMedia = collect();
-        $legacyReferences = collect();
-
-        if (is_array($version->image_urls)) {
-            $legacyReferences = $legacyReferences->merge($version->image_urls);
-        }
-        if ($version->image_url) {
-            $legacyReferences->push($version->image_url);
-        }
-        if ($version->image_path) {
-            $legacyReferences->push($version->image_path);
-        }
-
-        $legacyReferences = $legacyReferences->unique()->values();
+        $legacyReferences = $this->legacyMatcher->referencesForVersion($version);
 
         if ($legacyReferences->isNotEmpty()) {
             foreach ($legacyReferences as $reference) {
-                $media = $this->resolveLegacyReferenceToMedia($reference, $post);
-                
-                if (!$media) {
-                    throw MarketingCampaignPostMediaResolutionException::forMissingLegacyReference((string)$reference, $version->id);
+                $matches = $this->legacyMatcher->matchingMedia(
+                    $reference,
+                    $post->mediaItems
+                );
+
+                if ($matches->isEmpty()) {
+                    throw MarketingCampaignPostMediaResolutionException::forMissingLegacyReference((string) $reference, $version->id);
                 }
 
-                if (!in_array($media->id, $legacyMediaIds)) {
+                if ($matches->count() > 1) {
+                    throw MarketingCampaignPostMediaResolutionException::forAmbiguousLegacyReference(
+                        (string) $reference,
+                        $version->id
+                    );
+                }
+
+                $media = $matches->first();
+
+                if (! in_array($media->id, $legacyMediaIds)) {
                     $legacyMediaIds[] = $media->id;
                     $resolvedMedia->push($media);
                 }
@@ -134,114 +142,26 @@ class MarketingCampaignPostVersionMediaResolver
         throw MarketingCampaignPostMediaResolutionException::forUnresolvableVersion($version->id);
     }
 
-    private function resolveLegacyReferenceToMedia(string $reference, MarketingCampaignPost $post)
-    {
-        $matches = [];
-        $allMedia = $post->mediaItems;
-        $reference = trim($reference);
-
-        foreach ($allMedia as $media) {
-            if ($this->mediaMatchesReference($media, $reference)) {
-                $matches[] = $media;
-            }
-        }
-
-        if (count($matches) === 0) {
-            return null;
-        }
-
-        if (count($matches) > 1) {
-            throw MarketingCampaignPostMediaResolutionException::forAmbiguousLegacyReference($reference, $post->current_version_id ?? 0);
-        }
-
-        return $matches[0];
-    }
-
-    private function normalizePath(string $path): string
-    {
-        return ltrim(
-            preg_replace('#/+#', '/', rawurldecode($path)),
-            '/'
-        );
-    }
-
-    private function mediaMatchesReference($media, string $reference): bool
-    {
-        $referencePath = parse_url($reference, PHP_URL_PATH);
-        $referencePath = rawurldecode((string) $referencePath);
-        $referencePathWithoutDownload = preg_replace('#/download$#', '', $referencePath);
-        $normalizedReferencePath = $this->normalizePath($referencePathWithoutDownload);
-
-        if ($media->nextcloud_share_url) {
-            $ncUrlPath = parse_url($media->nextcloud_share_url, PHP_URL_PATH);
-            $ncUrlPath = rawurldecode((string) $ncUrlPath);
-            $ncUrlPathWithoutDownload = preg_replace('#/download$#', '', $ncUrlPath);
-            $normalizedNcPath = $this->normalizePath($ncUrlPathWithoutDownload);
-            
-            if ($normalizedNcPath !== '' && $normalizedNcPath === $normalizedReferencePath) {
-                return true;
-            }
-        }
-
-        if ($media->disk && $media->path) {
-            $normalizedMediaPath = $this->normalizePath($media->path);
-            
-            if ($normalizedReferencePath !== '' && $normalizedReferencePath === $normalizedMediaPath) {
-                return true;
-            }
-            
-            try {
-                $storageUrl = Storage::disk($media->disk)->url($media->path);
-                $storageUrlPath = parse_url($storageUrl, PHP_URL_PATH);
-                $storageUrlPath = rawurldecode((string) $storageUrlPath);
-                $normalizedStoragePath = $this->normalizePath($storageUrlPath);
-                
-                if ($normalizedStoragePath !== '' && $normalizedReferencePath === $normalizedStoragePath) {
-                    return true;
-                }
-            } catch (\Exception $e) {
-                // Ignore missing disk or misconfiguration
-            }
-            
-            if (preg_match('#/delivery/(\d+)$#', rtrim($referencePath, '/'), $matches) && (int) $matches[1] === $media->id) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
     private function resolveLegacyPostFieldsToMedia(MarketingCampaignPost $post)
     {
-        $matches = [];
         $allMedia = $post->mediaItems;
-        
-        $references = array_filter([
-            $post->getRawOriginal('nextcloud_share_url'),
-            $post->getRawOriginal('media_path'),
-        ]);
-        
-        if (empty($references)) {
+
+        $references = $this->legacyMatcher->referencesForPost($post);
+
+        if ($references->isEmpty()) {
             return null;
         }
 
-        foreach ($allMedia as $media) {
-            foreach ($references as $reference) {
-                if ($this->mediaMatchesReference($media, (string) $reference)) {
-                    $matches[] = $media;
-                    break;
-                }
+        if ($allMedia->count() !== 1) {
+            return null;
+        }
+
+        $matchedMedia = $allMedia->first();
+
+        foreach ($references as $reference) {
+            if (! $this->legacyMatcher->mediaMatchesReference($matchedMedia, $reference)) {
+                return null;
             }
-        }
-        
-        if (count($matches) !== 1) {
-            return null;
-        }
-        
-        $matchedMedia = $matches[0];
-        
-        if ($allMedia->count() > 1) {
-            return null;
         }
 
         return $matchedMedia;

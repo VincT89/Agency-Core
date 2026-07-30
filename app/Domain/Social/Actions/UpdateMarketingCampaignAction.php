@@ -22,6 +22,12 @@ class UpdateMarketingCampaignAction
             'ends_at' => isset($data['ends_at']) && $data['ends_at'] ? Carbon::parse($data['ends_at']) : null,
             'monthly_fee' => $data['monthly_fee'] ?? $campaign->monthly_fee,
             'notes' => $data['notes'] ?? $campaign->notes,
+            'publication_mode' => isset($data['publication_mode'])
+                ? \App\Enums\Social\PublicationMode::from($data['publication_mode'])
+                : $campaign->publication_mode,
+            'client_review_required' => array_key_exists('client_review_required', $data)
+                ? (bool) $data['client_review_required']
+                : $campaign->client_review_required,
         ]);
 
         return $campaign->fresh();

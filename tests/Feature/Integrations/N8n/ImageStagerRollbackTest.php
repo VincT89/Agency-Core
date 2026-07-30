@@ -22,7 +22,11 @@ class ImageStagerRollbackTest extends TestCase
     public function test_temporary_files_are_deleted_on_database_transaction_failure()
     {
         Http::fake([
-            '*' => Http::response('fake-image-content', 200),
+            '*' => Http::response(
+                file_get_contents(base_path('tests/Fixtures/valid.jpg')),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
         ]);
 
         $this->mock(\App\Support\Network\HostResolver::class, function ($mock) {
@@ -72,7 +76,11 @@ class ImageStagerRollbackTest extends TestCase
     public function test_deleteTemporary_failure_after_commit_preserves_promoted_files()
     {
         Http::fake([
-            '*' => Http::response('fake-image-content', 200),
+            '*' => Http::response(
+                file_get_contents(base_path('tests/Fixtures/valid.jpg')),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
         ]);
 
         $this->mock(\App\Support\Network\HostResolver::class, function ($mock) {

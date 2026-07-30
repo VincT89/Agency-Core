@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Social;
 
+use App\Exceptions\Social\NextcloudFileNotFoundException;
+use App\Exceptions\Social\NextcloudPermanentFailureException;
+use App\Exceptions\Social\NextcloudTemporaryUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Models\MarketingCampaignPostPublication;
 use App\Services\Integrations\Nextcloud\NextcloudService;
@@ -98,6 +101,13 @@ class SocialPublicationMediaDeliveryController extends Controller
             404,
             'Local media descriptor is incomplete.'
         );
+        $expectedHash = $media['sha256'] ?? null;
+        abort_unless(
+            is_string($expectedHash)
+            && preg_match('/^[a-f0-9]{64}$/', $expectedHash) === 1,
+            400,
+            'Local media checksum is missing or malformed.'
+        );
 
         try {
             abort_unless(
@@ -110,6 +120,27 @@ class SocialPublicationMediaDeliveryController extends Controller
                 Storage::disk($disk)->size($path) === $size,
                 409,
                 'Local media size no longer matches the frozen snapshot.'
+            );
+
+            $integrityStream = Storage::disk($disk)->readStream($path);
+            abort_unless(
+                is_resource($integrityStream),
+                503,
+                'Local media integrity stream is temporarily unavailable.'
+            );
+
+            try {
+                $hashContext = hash_init('sha256');
+                hash_update_stream($hashContext, $integrityStream);
+                $actualHash = hash_final($hashContext);
+            } finally {
+                fclose($integrityStream);
+            }
+
+            abort_unless(
+                hash_equals($expectedHash, $actualHash),
+                409,
+                'Local media checksum no longer matches the frozen snapshot.'
             );
 
             $stream = Storage::disk($disk)->readStream($path);
@@ -133,13 +164,44 @@ class SocialPublicationMediaDeliveryController extends Controller
     private function deliverNextcloud(Request $request, array $media): Response
     {
         $path = $media['nextcloud_path'] ?? null;
+        $fileId = $media['nextcloud_file_id'] ?? null;
+        $etag = $media['nextcloud_etag'] ?? null;
+        $size = $media['size_bytes'] ?? null;
+        $mimeType = $media['mime_type'] ?? null;
         abort_unless(
-            is_string($path) && $path !== '',
+            is_string($path) && $path !== ''
+            && is_string($fileId) && $fileId !== ''
+            && is_string($etag) && $etag !== '',
             404,
             'Nextcloud media descriptor is incomplete.'
         );
 
-        return app(NextcloudService::class)->streamFileResponse($path, $request);
+        $nextcloud = app(NextcloudService::class);
+
+        try {
+            $fileInfo = $nextcloud->getFileInfo($path);
+        } catch (NextcloudFileNotFoundException) {
+            abort(404, 'Nextcloud media file not found.');
+        } catch (NextcloudTemporaryUnavailableException) {
+            abort(503, 'Nextcloud is temporarily unavailable.');
+        } catch (NextcloudPermanentFailureException) {
+            abort(409, 'Nextcloud media metadata is no longer valid.');
+        }
+
+        abort_unless(
+            $fileInfo->fileId === $fileId
+            && $fileInfo->etag === $etag
+            && $fileInfo->sizeBytes === $size
+            && $fileInfo->mimeType === $mimeType,
+            409,
+            'Nextcloud media no longer matches the frozen snapshot.'
+        );
+
+        return $nextcloud->streamFileResponse(
+            $path,
+            $request,
+            $etag
+        );
     }
 
     private function streamWithRange(

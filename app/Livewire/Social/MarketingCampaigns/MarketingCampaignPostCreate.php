@@ -643,13 +643,18 @@ class MarketingCampaignPostCreate extends Component
                             . '_' . \Illuminate\Support\Str::uuid()->toString() . '.' . $uploadedFile->getClientOriginalExtension();
                 $path = $uploadedFile->storeAs('marketing/campaign-posts', $filename, 'public');
                 $newlyCreatedMediaPaths[] = $path;
+                $integrity = app(
+                    \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
+                )->readLocal('public', $path);
 
                 $storedMedia[] = [
                     'source' => 'local',
-                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()),
+                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($integrity['mime_type']),
                     'disk' => 'public',
                     'path' => $path,
-                    'mime_type' => $uploadedFile->getMimeType(),
+                    'mime_type' => $integrity['mime_type'],
+                    'source_size_bytes' => $integrity['source_size_bytes'],
+                    'sha256' => $integrity['sha256'],
                     'original_name' => $uploadedFile->getClientOriginalName(),
                     'sort_order' => $index,
                 ];
@@ -657,10 +662,11 @@ class MarketingCampaignPostCreate extends Component
                 if (!$legacyLocalFilled) {
                     $data['media_path'] = $path;
                     $data['media_original_name'] = $uploadedFile->getClientOriginalName();
-                    $data['media_mime'] = $uploadedFile->getMimeType();
+                    $data['media_mime'] = $integrity['mime_type'];
                     $legacyLocalFilled = true;
                 }
             } elseif ($item['source'] === 'nextcloud') {
+                $fileInfo = $service->getFileInfo($item['nextcloud_path']);
                 $result = $service->ensurePublicShare($item['nextcloud_path']);
                 
                 if ($result->created) {
@@ -671,21 +677,24 @@ class MarketingCampaignPostCreate extends Component
 
                 $storedMedia[] = [
                     'source' => 'nextcloud',
-                    'media_type' => $item['type'] === 'video' ? 'video' : 'image',
+                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($fileInfo->mimeType),
                     'disk' => null,
                     'path' => null,
-                    'mime_type' => null,
+                    'mime_type' => $fileInfo->mimeType,
+                    'source_size_bytes' => $fileInfo->sizeBytes,
+                    'sha256' => null,
                     'original_name' => $item['name'],
-                    'nextcloud_path' => $item['nextcloud_path'],
+                    'nextcloud_path' => $fileInfo->path,
                     'nextcloud_share_url' => $shareUrl,
-                    'nextcloud_file_id' => null,
+                    'nextcloud_file_id' => $fileInfo->fileId,
+                    'nextcloud_etag' => $fileInfo->etag,
                     'sort_order' => $index,
                 ];
 
                 if (!$legacyNextcloudFilled) {
-                    $data['nextcloud_path'] = $item['nextcloud_path'];
+                    $data['nextcloud_path'] = $fileInfo->path;
                     $data['nextcloud_share_url'] = $shareUrl;
-                    $data['nextcloud_file_id'] = null;
+                    $data['nextcloud_file_id'] = $fileInfo->fileId;
                     $legacyNextcloudFilled = true;
                 }
             }

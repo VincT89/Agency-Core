@@ -71,6 +71,7 @@ return [
         'enable_photo_mode' => env('TIKTOK_ENABLE_PHOTO_MODE', false),
         'mock_publishing' => env('TIKTOK_MOCK_PUBLISHING', true),
         'direct_publish_enabled' => env('TIKTOK_DIRECT_PUBLISH_ENABLED', false),
+        'creator_info_ttl_seconds' => env('TIKTOK_CREATOR_INFO_TTL_SECONDS', 300),
     ],
 
     'nextcloud' => [
@@ -84,4 +85,3 @@ return [
     ],
 
 ];
-

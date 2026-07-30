@@ -47,11 +47,15 @@ class ResolveFrozenPublicationTargetAction
             $target['external_id'] = (string) $externalId;
             $target['profile_id'] = (string) $externalId;
         } else {
-            if (blank($account->provider_account_id)) {
+            $externalId = $account->provider_account_id
+                ?: $account->tiktok_open_id
+                ?: $account->tiktok_account_id;
+
+            if (blank($externalId)) {
                 throw new InvalidArgumentException('Impossibile determinare il profilo TikTok dal conto social congelato.');
             }
 
-            $target['external_id'] = (string) $account->provider_account_id;
+            $target['external_id'] = (string) $externalId;
         }
 
         return $target;

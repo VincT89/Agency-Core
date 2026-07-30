@@ -21,6 +21,8 @@ class MarketingCampaign extends Model
         'ends_at' => 'date',
         'monthly_fee' => 'decimal:2',
         'status' => MarketingCampaignStatus::class,
+        'publication_mode' => \App\Enums\Social\PublicationMode::class,
+        'client_review_required' => 'boolean',
     ];
 
     public function client(): BelongsTo

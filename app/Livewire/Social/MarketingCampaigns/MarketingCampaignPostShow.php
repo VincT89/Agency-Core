@@ -621,15 +621,20 @@ class MarketingCampaignPostShow extends Component
                 
                 $path = $uploadedFile->storeAs('marketing/campaign-posts', $filename, 'public');
                 $newlyCreatedFilePaths[] = $path;
+                $integrity = app(
+                    \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
+                )->readLocal('public', $path);
 
                 $newRecord = \App\Models\MarketingCampaignPostMedia::create([
                     'marketing_campaign_post_id' => $this->post->id,
                     'source' => 'local',
                     'disk' => 'public',
-                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($uploadedFile->getMimeType()),
+                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($integrity['mime_type']),
                     'path' => $path,
                     'original_name' => $uploadedFile->getClientOriginalName(),
-                    'mime_type' => $uploadedFile->getMimeType(),
+                    'mime_type' => $integrity['mime_type'],
+                    'source_size_bytes' => $integrity['source_size_bytes'],
+                    'sha256' => $integrity['sha256'],
                     'sort_order' => $index,
                 ]);
                 $orderedMediaIds[] = $newRecord->id;
@@ -637,6 +642,7 @@ class MarketingCampaignPostShow extends Component
 
             } elseif ($item['source'] === 'nextcloud') {
                 try {
+                    $fileInfo = $service->getFileInfo($item['nextcloud_path']);
                     $shareResult = $service->ensurePublicShare($item['nextcloud_path']);
                     if ($shareResult->created) {
                         $newlyCreatedNextcloudShares[] = $shareResult->shareId;
@@ -645,11 +651,13 @@ class MarketingCampaignPostShow extends Component
                     $newRecord = \App\Models\MarketingCampaignPostMedia::create([
                         'marketing_campaign_post_id' => $this->post->id,
                         'source' => 'nextcloud',
-                        'media_type' => $item['type'] === 'video' ? 'video' : 'image',
-                        'nextcloud_path' => $item['nextcloud_path'],
+                        'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($fileInfo->mimeType),
+                        'nextcloud_path' => $fileInfo->path,
                         'original_name' => $item['name'] ?? basename($item['nextcloud_path']),
-                        'mime_type' => null,
-                        'nextcloud_file_id' => null,
+                        'mime_type' => $fileInfo->mimeType,
+                        'source_size_bytes' => $fileInfo->sizeBytes,
+                        'nextcloud_file_id' => $fileInfo->fileId,
+                        'nextcloud_etag' => $fileInfo->etag,
                         'nextcloud_share_url' => $shareResult->url,
                         'sort_order' => $index,
                     ]);

@@ -6,7 +6,6 @@ use Illuminate\Console\Command;
 use App\Models\MarketingCampaignPostPublication;
 use App\Enums\Social\PublicationStatus;
 use App\Enums\Social\SocialPlatform;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Support\Monitoring\TracksSystemCommandRuns;
 
@@ -54,7 +53,6 @@ class FailStalePublicationsCommand extends Command
                             }
 
                             $oldStatus = $lockedPub->status->value;
-                            $platform = $lockedPub->platform->value;
 
                             // Facebook è sincrono, se è bloccato da 5 minuti è fallito e basta.
                             // TikTok e Instagram (container) sono asincroni, un blocco potrebbe significare timeout 
@@ -71,14 +69,12 @@ class FailStalePublicationsCommand extends Command
                                 'error_message' => $errorMessage
                             ]);
 
-                            Log::channel('social-runtime')->warning("Stale Publication Intercepted", [
-                                'publication_id' => $lockedPub->id,
-                                'correlation_id' => $lockedPub->correlation_id,
-                                'provider' => $platform,
-                                'previous_status' => $oldStatus,
-                                'new_status' => $newStatus->value,
-                                'stale_deadline_at' => $lockedPub->stale_deadline_at,
-                            ]);
+                            app(\App\Domain\Social\Services\SocialPublicationTelemetry::class)
+                                ->record(
+                                    $lockedPub,
+                                    'publication.stale_intercepted',
+                                    $oldStatus
+                                );
 
                             // Sincronizza lo stato master del Post
                             app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($lockedPub->post);

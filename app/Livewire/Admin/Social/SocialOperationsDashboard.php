@@ -117,7 +117,7 @@ class SocialOperationsDashboard extends Component
         ->orderBy('updated_at', 'desc');
 
         if ($this->filter === 'needs_manual_review') {
-            $query->where('status', PublicationStatus::Failed->value); // Mappato su failed per compatibilità
+            $query->where('status', PublicationStatus::NeedsManualReview->value);
         } elseif ($this->filter === 'failed') {
             $query->where('status', PublicationStatus::Failed->value);
         } elseif ($this->filter === 'stale_publishing') {
@@ -130,6 +130,7 @@ class SocialOperationsDashboard extends Component
             
             $query->where(function($q) use ($maxLifecycle) {
                 $q->where('status', PublicationStatus::Failed->value)
+                  ->orWhere('status', PublicationStatus::NeedsManualReview->value)
                   ->orWhere(function($staleQ) use ($maxLifecycle) {
                       $staleQ->whereIn('status', [PublicationStatus::Publishing->value, PublicationStatus::Pending->value])
                              ->where('updated_at', '<', now()->subMinutes($maxLifecycle));

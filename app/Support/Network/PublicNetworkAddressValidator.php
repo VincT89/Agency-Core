@@ -27,7 +27,6 @@ class PublicNetworkAddressValidator
         $blockedPrefixes = [
             '169.254.', // Cloud metadata (AWS, GCP, Azure)
             '0.',       // "This host on this network"
-            '100.',     // Carrier-grade NAT (100.64.0.0/10) - filter_var in alcune versioni PHP potrebbe non bloccarlo
             '192.0.0.', // IETF Protocol Assignments
             '198.18.',  // Network Interconnect Device Benchmark Testing
             '198.19.',
@@ -43,11 +42,32 @@ class PublicNetworkAddressValidator
             }
         }
 
+        // Carrier-grade NAT is 100.64.0.0/10, not the entire public 100.0.0.0/8 range.
+        if ($this->isIpv4InCidr($ip, '100.64.0.0', 10)) {
+            return false;
+        }
+
         // IPv6 extra checks: Unique-Local (fc00::/7) non coperto perfettamente da vecchie versioni PHP
         if (str_starts_with(strtolower($ip), 'fc') || str_starts_with(strtolower($ip), 'fd')) {
             return false;
         }
 
         return true;
+    }
+
+    private function isIpv4InCidr(string $ip, string $network, int $prefixLength): bool
+    {
+        if (
+            filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false
+            || filter_var($network, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false
+        ) {
+            return false;
+        }
+
+        $ipLong = ip2long($ip);
+        $networkLong = ip2long($network);
+        $mask = -1 << (32 - $prefixLength);
+
+        return ($ipLong & $mask) === ($networkLong & $mask);
     }
 }

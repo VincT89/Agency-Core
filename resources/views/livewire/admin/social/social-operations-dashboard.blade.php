@@ -74,14 +74,14 @@
                                 <div class="u-text-sm u-text-red u-text-truncate" title="{{ $pub->error_message }}">
                                     {{ $pub->error_message ?: 'Nessun messaggio di errore esplicito' }}
                                 </div>
-                                @if($pub->external_container_id || $pub->platform_post_id)
+                                @if($pub->external_container_id || $pub->external_post_id || $pub->external_task_id)
                                     <div class="u-text-meta muted u-mt-xs">
                                         @if($pub->platform === \App\Enums\Social\SocialPlatform::Instagram && $pub->external_container_id)
                                             Container: {{ $pub->external_container_id }}
-                                        @elseif($pub->platform === \App\Enums\Social\SocialPlatform::Tiktok && $pub->platform_post_id)
-                                            Publish ID: {{ $pub->platform_post_id }}
-                                        @elseif(!in_array($pub->platform, [\App\Enums\Social\SocialPlatform::Instagram, \App\Enums\Social\SocialPlatform::Tiktok]) && $pub->platform_post_id)
-                                            Post ID: {{ $pub->platform_post_id }}
+                                        @elseif($pub->platform === \App\Enums\Social\SocialPlatform::Tiktok && $pub->external_task_id)
+                                            Publish ID: {{ $pub->external_task_id }}
+                                        @elseif(!in_array($pub->platform, [\App\Enums\Social\SocialPlatform::Instagram, \App\Enums\Social\SocialPlatform::Tiktok]) && $pub->external_post_id)
+                                            Post ID: {{ $pub->external_post_id }}
                                         @endif
                                     </div>
                                 @endif
@@ -93,26 +93,21 @@
                                             <i class="fas fa-sync-alt"></i> Check Sync
                                         </button>
                                     @endif
-                                    @if($pub->status === \App\Enums\Social\PublicationStatus::Failed && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
-                                        <button wire:click="forceFailPublication({{ $pub->id }})" class="btn-xs btn-outline-danger" title="Forza fallimento definitivo">
-                                            <i class="fas fa-times-circle"></i> Mark Failed
-                                        </button>
-                                    @endif
-                                    @if($pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
+                                    @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
                                         <button 
                                             wire:confirm="ATTENZIONE: Questo creerà un NUOVO container scartando l'attuale. Se Meta stava ancora processando il vecchio, potresti causare un doppio post. Vuoi procedere da zero?"
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
                                             Riprova IG da zero
                                         </button>
-                                    @elseif($pub->platform === \App\Enums\Social\SocialPlatform::Tiktok)
+                                    @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Tiktok)
                                         <button 
                                             wire:confirm="Verrà creato un nuovo tentativo di pubblicazione e il precedente sarà archiviato come superato. Procedere?"
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
                                             Riprova TikTok
                                         </button>
-                                    @else
+                                    @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true))
                                         <button 
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
@@ -120,12 +115,14 @@
                                         </button>
                                     @endif
 
+                                    @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Pending, \App\Enums\Social\PublicationStatus::Publishing], true))
                                     <button 
                                         wire:confirm="Sei sicuro di voler forzare il fallimento definitivo di questa pubblicazione?"
                                         wire:click="forceFailPublication({{ $pub->id }})" 
                                         class="btn btn-red btn-xs">
                                         <i data-lucide="x" class="u-icon-sm"></i> Segna fallita
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

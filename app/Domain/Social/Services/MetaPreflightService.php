@@ -50,9 +50,6 @@ class MetaPreflightService
                     $hasVideo = $mediaItems->contains(fn($m) => strtolower($m->media_type ?? '') === 'video' || in_array(strtolower(pathinfo($m->path ?? '', PATHINFO_EXTENSION)), ['mp4', 'mov', 'webm']));
                     $hasPhoto = $mediaItems->contains(fn($m) => strtolower($m->media_type ?? '') !== 'video' && !in_array(strtolower(pathinfo($m->path ?? '', PATHINFO_EXTENSION)), ['mp4', 'mov', 'webm']));
 
-                    if ($hasVideo && $hasPhoto || ($hasVideo && $mediaItems->count() > 1)) {
-                        $result->addCheck('carousel_mixed_format', false, 'Supporto carousel immagini-only per ora. Non sono ammessi formati misti o video multipli in questa versione.');
-                    }
                 }
 
                 // Check Media Specs (Immagini: JPEG, max 8MB) (Video: max limit)
@@ -64,11 +61,11 @@ class MetaPreflightService
                         $isJpegOrPng = in_array($ext, ['jpg', 'jpeg', 'png']);
                         $result->addCheck("media_format_{$media->id}", $isJpegOrPng, $isJpegOrPng ? null : "Il file '{$media->original_name}' ha un formato ($ext) non supportato per le immagini IG (richiesto JPG o PNG).");
                         
-                        $sizeMB = $media->size / 1024 / 1024;
+                        $sizeMB = ($media->source_size_bytes ?? 0) / 1024 / 1024;
                         $isUnderLimit = $sizeMB <= 8; // Instagram photo limit is 8MB
                         $result->addCheck("media_size_{$media->id}", $isUnderLimit, $isUnderLimit ? null : "Il file '{$media->original_name}' supera il limite di 8 MB per le immagini Instagram.");
                     } else {
-                        $sizeMB = $media->size / 1024 / 1024;
+                        $sizeMB = ($media->source_size_bytes ?? 0) / 1024 / 1024;
                         $isUnderVideoLimit = $sizeMB <= 100; // Realistic practical limit for short videos
                         $result->addCheck("media_video_size_{$media->id}", $isUnderVideoLimit, $isUnderVideoLimit ? null : "Il video '{$media->original_name}' supera il limite dimensionale supportato.");
                     }

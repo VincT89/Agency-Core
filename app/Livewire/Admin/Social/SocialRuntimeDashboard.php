@@ -2,13 +2,17 @@
 
 namespace App\Livewire\Admin\Social;
 
-use Livewire\Component;
-use App\Models\MarketingCampaignPostPublication;
 use App\Enums\Social\PublicationStatus;
-use Carbon\Carbon;
+use App\Models\MarketingCampaignPostPublication;
+use Livewire\Component;
 
 class SocialRuntimeDashboard extends Component
 {
+    public function mount(): void
+    {
+        $this->authorize('manage_social_operations');
+    }
+
     public function render()
     {
         $pendingAndPublishing = MarketingCampaignPostPublication::with('post', 'socialAccount')
@@ -23,7 +27,7 @@ class SocialRuntimeDashboard extends Component
             ->get();
 
         $needsManualReview = MarketingCampaignPostPublication::with('post', 'socialAccount')
-            ->where('status', PublicationStatus::Failed)
+            ->where('status', PublicationStatus::NeedsManualReview)
             ->latest()
             ->take(10)
             ->get();

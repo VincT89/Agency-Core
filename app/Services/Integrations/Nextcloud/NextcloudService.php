@@ -2,20 +2,30 @@
 
 namespace App\Services\Integrations\Nextcloud;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use App\Domain\Social\DTOs\NextcloudFileInfo;
+use App\Exceptions\NextcloudShareException;
 use App\Exceptions\Social\NextcloudFileNotFoundException;
 use App\Exceptions\Social\NextcloudPermanentFailureException;
 use App\Exceptions\Social\NextcloudTemporaryUnavailableException;
+use App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult;
+use Carbon\Carbon;
+use GuzzleHttp\Client;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class NextcloudService
 {
     private string $baseUrl;
+
     private string $username;
+
     private string $password;
+
     private string $webdavPath;
 
     public function __construct()
@@ -28,7 +38,7 @@ class NextcloudService
 
     public function isConfigured(): bool
     {
-        return !empty($this->baseUrl) && !empty($this->username) && !empty($this->password);
+        return ! empty($this->baseUrl) && ! empty($this->username) && ! empty($this->password);
     }
 
     /**
@@ -37,12 +47,12 @@ class NextcloudService
      */
     public function listFiles(string $path = '/', string $mediaKind = 'photo'): ?array
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             return [];
         }
 
         // Nextcloud (SabreDAV) richiede che le cartelle terminino sempre con '/' se si fa PROPFIND su una dir
-        $url = rtrim($this->buildWebdavUrl($path), '/') . '/';
+        $url = rtrim($this->buildWebdavUrl($path), '/').'/';
 
         logger()->debug('NEXTCLOUD URL', [
             'path' => $path,
@@ -56,11 +66,12 @@ class NextcloudService
                     'Content-Type' => 'application/xml',
                 ])
                 ->send('PROPFIND', $url, [
-                    'body' => '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><oc:fileid/></d:prop></d:propfind>'
+                    'body' => '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><oc:fileid/></d:prop></d:propfind>',
                 ]);
 
-            if (!$response->successful()) {
-                Log::error("Nextcloud PROPFIND fallito per URL: {$url}. Status: " . $response->status() . " Body: " . $response->body());
+            if (! $response->successful()) {
+                Log::error("Nextcloud PROPFIND fallito per URL: {$url}. Status: ".$response->status().' Body: '.$response->body());
+
                 return null;
             }
 
@@ -68,6 +79,7 @@ class NextcloudService
             $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NOCDATA);
             if ($xml === false) {
                 Log::warning("Nextcloud PROPFIND returned malformed XML per URL: {$url}");
+
                 return null;
             }
             $results = [];
@@ -82,14 +94,13 @@ class NextcloudService
                 foreach ($responses as $res) {
                     if ($isFirst) {
                         $isFirst = false;
+
                         continue; // salta la directory corrente
                     }
 
                     $responseDav = $res->children('DAV:');
                     $href = (string) $responseDav->href;
-                    // decodifica %20 ecc.
-                    $href = urldecode($href);
-                    $hrefPath = \Illuminate\Support\Str::after($href, $this->webdavPath . '/' . $this->username);
+                    $hrefPath = $this->ownedPathFromHref($href);
 
                     $propstat = null;
                     foreach ($responseDav->propstat as $p) {
@@ -100,12 +111,14 @@ class NextcloudService
                         }
                     }
 
-                    if (!$propstat)
+                    if (! $propstat) {
                         continue;
+                    }
 
                     $prop = $propstat->children('DAV:')->prop;
-                    if (!$prop)
+                    if (! $prop) {
                         continue;
+                    }
 
                     $resourceType = $prop->resourcetype->children('DAV:');
                     $isDir = isset($resourceType->collection);
@@ -116,7 +129,7 @@ class NextcloudService
                     $name = basename($href);
 
                     // Filtro: mostriamo le cartelle, ma per i file mostriamo solo quelli del tipo scelto
-                    if (!$isDir) {
+                    if (! $isDir) {
                         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                         $allowedExts = match ($mediaKind) {
                             'video' => ['mp4', 'mov', 'webm', 'm4v'],
@@ -124,14 +137,14 @@ class NextcloudService
                         };
 
                         // Fallback affidabile sull'estensione per prevenire bug di Nextcloud sui MIME types
-                        if (!in_array($ext, $allowedExts)) {
+                        if (! in_array($ext, $allowedExts)) {
                             continue;
                         }
                     }
 
                     $isImage = false;
                     $isVideo = false;
-                    if (!$isDir) {
+                    if (! $isDir) {
                         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                         $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp']);
                         $isVideo = in_array($ext, ['mp4', 'mov', 'webm', 'm4v']);
@@ -156,7 +169,8 @@ class NextcloudService
             return $results;
 
         } catch (\Exception $e) {
-            Log::error('Errore connessione Nextcloud: ' . $e->getMessage());
+            Log::error('Errore connessione Nextcloud: '.$e->getMessage());
+
             return null;
         }
     }
@@ -164,12 +178,13 @@ class NextcloudService
     /**
      * Recupera le info dettagliate di un singolo file (depth 0).
      */
-    public function getFileInfo(string $path): \App\Domain\Social\DTOs\NextcloudFileInfo
+    public function getFileInfo(string $path): NextcloudFileInfo
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             throw new NextcloudPermanentFailureException('Nextcloud non è configurato.');
         }
 
+        $path = $this->normalizePath($path);
         $url = rtrim($this->buildWebdavUrl($path), '/');
 
         try {
@@ -200,17 +215,17 @@ class NextcloudService
                     'Content-Type' => 'application/xml',
                 ])
                 ->send('PROPFIND', $url, [
-                    'body' => '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/><oc:fileid/></d:prop></d:propfind>'
+                    'body' => '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/><oc:fileid/></d:prop></d:propfind>',
                 ]);
         } catch (ConnectionException $e) {
             throw new NextcloudTemporaryUnavailableException(
-                'Nextcloud connection failed: ' . $e->getMessage(),
+                'Nextcloud connection failed: '.$e->getMessage(),
                 0,
                 $e
             );
         } catch (\Throwable $e) {
             throw new NextcloudTemporaryUnavailableException(
-                'Nextcloud request failed: ' . $e->getMessage(),
+                'Nextcloud request failed: '.$e->getMessage(),
                 0,
                 $e
             );
@@ -220,7 +235,7 @@ class NextcloudService
             throw new NextcloudFileNotFoundException("File not found on Nextcloud: {$path}");
         }
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             if (in_array($response->status(), [408, 425, 429], true) || $response->serverError()) {
                 throw new NextcloudTemporaryUnavailableException(
                     "Nextcloud API returned {$response->status()}"
@@ -241,13 +256,19 @@ class NextcloudService
         $dav = $xml->children('DAV:');
         $res = $dav->response[0] ?? null;
 
-        if (!$res) {
+        if (! $res) {
             throw new NextcloudTemporaryUnavailableException("Nextcloud invalid DAV response for {$path}");
         }
 
         $responseDav = $res->children('DAV:');
-        $href = urldecode((string) $responseDav->href);
-        $hrefPath = \Illuminate\Support\Str::after($href, $this->webdavPath . '/' . $this->username);
+        $href = (string) $responseDav->href;
+        $hrefPath = $this->ownedPathFromHref($href);
+
+        if ($hrefPath !== $path) {
+            throw new NextcloudPermanentFailureException(
+                "Nextcloud returned metadata for an unexpected path. Requested: {$path}; returned: {$hrefPath}"
+            );
+        }
 
         $propstat = null;
         foreach ($responseDav->propstat as $p) {
@@ -258,18 +279,18 @@ class NextcloudService
             }
         }
 
-        if (!$propstat) {
-             throw new NextcloudTemporaryUnavailableException("Nextcloud missing 200 OK propstat for {$path}");
+        if (! $propstat) {
+            throw new NextcloudTemporaryUnavailableException("Nextcloud missing 200 OK propstat for {$path}");
         }
 
         $prop = $propstat->children('DAV:')->prop;
-        if (!$prop) {
+        if (! $prop) {
             throw new NextcloudTemporaryUnavailableException("Nextcloud missing prop in response for {$path}");
         }
 
         $resourceType = $prop->resourcetype->children('DAV:');
         $isDir = isset($resourceType->collection);
-        
+
         if ($isDir) {
             throw new NextcloudFileNotFoundException("Requested Nextcloud path is a directory: {$path}");
         }
@@ -283,7 +304,7 @@ class NextcloudService
         $fileId = isset($ocProp->fileid) ? (string) $ocProp->fileid : '';
 
         try {
-            return new \App\Domain\Social\DTOs\NextcloudFileInfo(
+            return new NextcloudFileInfo(
                 path: $hrefPath,
                 fileId: $fileId,
                 etag: $etag,
@@ -304,7 +325,7 @@ class NextcloudService
      */
     public function downloadFile(string $remotePath): ?string
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             return null;
         }
 
@@ -318,11 +339,13 @@ class NextcloudService
                 return $response->body();
             }
 
-            Log::error('Errore download file Nextcloud: ' . $response->status() . ' - ' . $response->body());
+            Log::error('Errore download file Nextcloud: '.$response->status().' - '.$response->body());
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Errore download Nextcloud: ' . $e->getMessage());
+            Log::error('Errore download Nextcloud: '.$e->getMessage());
+
             return null;
         }
     }
@@ -330,9 +353,12 @@ class NextcloudService
     /**
      * Scarica un file in streaming da Nextcloud (utile per video con Range).
      */
-    public function streamFileResponse(string $remotePath, \Illuminate\Http\Request $request)
-    {
-        if (!$this->isConfigured()) {
+    public function streamFileResponse(
+        string $remotePath,
+        Request $request,
+        ?string $expectedEtag = null
+    ) {
+        if (! $this->isConfigured()) {
             abort(404);
         }
 
@@ -342,9 +368,12 @@ class NextcloudService
         if ($request->hasHeader('Range')) {
             $headers['Range'] = $request->header('Range');
         }
+        if (filled($expectedEtag)) {
+            $headers['If-Match'] = '"'.trim($expectedEtag, '"').'"';
+        }
 
-        $client = new \GuzzleHttp\Client();
-        
+        $client = new Client;
+
         $options = [
             'auth' => [$this->username, $this->password],
             'stream' => true,
@@ -358,7 +387,11 @@ class NextcloudService
             $statusCode = $response->getStatusCode();
 
             if ($statusCode !== 200 && $statusCode !== 206) {
-                abort($statusCode === 404 ? 404 : 500);
+                abort(match ($statusCode) {
+                    404 => 404,
+                    412 => 409,
+                    default => 500,
+                });
             }
 
             $responseHeaders = [
@@ -375,24 +408,32 @@ class NextcloudService
             // Aggiusto mime type per QuickTime e simili se non fornito da Nextcloud (spesso è octet-stream)
             $mime = $responseHeaders['Content-Type'];
             if ($mime === 'application/octet-stream' || empty($mime)) {
-                if (str_ends_with(strtolower($remotePath), 'mp4')) $mime = 'video/mp4';
-                if (str_ends_with(strtolower($remotePath), 'webm')) $mime = 'video/webm';
-                if (str_ends_with(strtolower($remotePath), 'mov')) $mime = 'video/quicktime';
+                if (str_ends_with(strtolower($remotePath), 'mp4')) {
+                    $mime = 'video/mp4';
+                }
+                if (str_ends_with(strtolower($remotePath), 'webm')) {
+                    $mime = 'video/webm';
+                }
+                if (str_ends_with(strtolower($remotePath), 'mov')) {
+                    $mime = 'video/quicktime';
+                }
                 $responseHeaders['Content-Type'] = $mime;
             }
 
             $body = $response->getBody();
 
             return response()->stream(function () use ($body) {
-                while (!$body->eof()) {
+                while (! $body->eof()) {
                     echo $body->read(8192);
                     flush();
                 }
                 $body->close();
             }, $statusCode, $responseHeaders);
-            
+
+        } catch (HttpExceptionInterface $e) {
+            throw $e;
         } catch (\Exception $e) {
-            Log::error('Errore stream Nextcloud: ' . $e->getMessage());
+            Log::error('Errore stream Nextcloud: '.$e->getMessage());
             abort(500, 'Impossibile completare lo stream dal server Nextcloud.');
         }
     }
@@ -411,15 +452,15 @@ class NextcloudService
             $seconds = max(120, count($paths) * 60);
         }
 
-        $normalized = array_map(fn($p) => $this->normalizePath($p), $paths);
+        $normalized = array_map(fn ($p) => $this->normalizePath($p), $paths);
         $unique = array_unique($normalized);
         sort($unique);
-        
+
         $locks = [];
         try {
             foreach ($unique as $path) {
-                $lockKey = 'nextcloud_share_lock_' . md5($path);
-                $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, $seconds);
+                $lockKey = 'nextcloud_share_lock_'.md5($path);
+                $lock = Cache::lock($lockKey, $seconds);
                 $lock->block(10);
                 $locks[] = $lock;
             }
@@ -427,7 +468,7 @@ class NextcloudService
             return $locks;
         } catch (\Throwable $e) {
             $this->releaseLocks($locks);
-            throw new \App\Exceptions\NextcloudShareException("Timeout acquisizione lock sui path");
+            throw new NextcloudShareException('Timeout acquisizione lock sui path');
         }
     }
 
@@ -437,19 +478,19 @@ class NextcloudService
             try {
                 $lock?->release();
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Failed to release lock', ['error' => $e->getMessage()]);
+                Log::warning('Failed to release lock', ['error' => $e->getMessage()]);
             }
         }
     }
 
-    public function ensurePublicShare(string $path): \App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult
+    public function ensurePublicShare(string $path): NextcloudPublicShareResult
     {
-        if (!$this->isConfigured()) {
-            throw new \App\Exceptions\NextcloudShareException("Nextcloud non è configurato.");
+        if (! $this->isConfigured()) {
+            throw new NextcloudShareException('Nextcloud non è configurato.');
         }
 
         $path = $this->normalizePath($path);
-        $url = $this->baseUrl . '/ocs/v2.php/apps/files_sharing/api/v1/shares';
+        $url = $this->baseUrl.'/ocs/v2.php/apps/files_sharing/api/v1/shares';
         $headers = [
             'OCS-APIRequest' => 'true',
             'Accept' => 'application/json',
@@ -461,11 +502,11 @@ class NextcloudService
                 $checkResponse = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
                     ->withHeaders($headers)
                     ->get($url, ['path' => $path]);
-            } catch (\Illuminate\Http\Client\RequestException $e) {
+            } catch (RequestException $e) {
                 if ($e->response && $e->response->status() === 404) {
                     $checkResponse = $e->response;
                 } else {
-                    throw new \App\Exceptions\NextcloudShareException("Impossibile connettersi a Nextcloud per lookup share. HTTP: " . ($e->response ? $e->response->status() : 'Unknown'));
+                    throw new NextcloudShareException('Impossibile connettersi a Nextcloud per lookup share. HTTP: '.($e->response ? $e->response->status() : 'Unknown'));
                 }
             }
 
@@ -473,19 +514,19 @@ class NextcloudService
                 if ($checkResponse->successful()) {
                     $data = $checkResponse->json();
                     $statusCode = $data['ocs']['meta']['statuscode'] ?? 500;
-                    
+
                     if ($statusCode === 100 || $statusCode === 200) {
                         $shares = $data['ocs']['data'] ?? [];
                         if (is_array($shares)) {
                             if (isset($shares['id'])) {
                                 $shares = [$shares];
                             }
-                            
+
                             foreach ($shares as $share) {
-                                if (is_array($share) && isset($share['share_type'], $share['url'], $share['id']) && (int)$share['share_type'] === 3 && !empty($share['url'])) {
+                                if (is_array($share) && isset($share['share_type'], $share['url'], $share['id']) && (int) $share['share_type'] === 3 && ! empty($share['url'])) {
                                     $expiration = $share['expiration'] ?? null;
-                                    if (!$expiration || \Carbon\Carbon::parse($expiration)->isFuture()) {
-                                        return new \App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult(
+                                    if (! $expiration || Carbon::parse($expiration)->isFuture()) {
+                                        return new NextcloudPublicShareResult(
                                             $share['url'],
                                             $share['id'],
                                             false
@@ -495,11 +536,11 @@ class NextcloudService
                             }
                         }
                     } elseif ($statusCode !== 404) {
-                        throw new \App\Exceptions\NextcloudShareException("Errore OCS in lookup share. Status: " . $statusCode);
+                        throw new NextcloudShareException('Errore OCS in lookup share. Status: '.$statusCode);
                     }
                 }
             } else {
-                throw new \App\Exceptions\NextcloudShareException("Impossibile connettersi a Nextcloud per lookup share. HTTP: " . ($checkResponse ? $checkResponse->status() : 'Unknown'));
+                throw new NextcloudShareException('Impossibile connettersi a Nextcloud per lookup share. HTTP: '.($checkResponse ? $checkResponse->status() : 'Unknown'));
             }
 
             // 2. POST (creazione)
@@ -508,7 +549,7 @@ class NextcloudService
                 'shareType' => 3, // public link
                 'permissions' => 1, // read
             ];
-            
+
             $expireDays = config('services.nextcloud.share_expire_days', 7);
             if ($expireDays > 0) {
                 $payload['expireDate'] = now()->addDays($expireDays)->toDateString();
@@ -522,35 +563,35 @@ class NextcloudService
             if ($response->successful()) {
                 $data = $response->json();
                 $statusCode = $data['ocs']['meta']['statuscode'] ?? 500;
-                
+
                 if (($statusCode === 100 || $statusCode === 200) && isset($data['ocs']['data']['url'], $data['ocs']['data']['id'])) {
-                    return new \App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult(
+                    return new NextcloudPublicShareResult(
                         $data['ocs']['data']['url'],
                         $data['ocs']['data']['id'],
                         true
                     );
                 }
-                throw new \App\Exceptions\NextcloudShareException("Errore OCS in creazione share. Status: " . $statusCode);
+                throw new NextcloudShareException('Errore OCS in creazione share. Status: '.$statusCode);
             }
 
-            throw new \App\Exceptions\NextcloudShareException("Impossibile connettersi a Nextcloud per creazione share. HTTP: " . $response->status());
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            throw new \App\Exceptions\NextcloudShareException("Errore di connessione a Nextcloud: " . $e->getMessage());
+            throw new NextcloudShareException('Impossibile connettersi a Nextcloud per creazione share. HTTP: '.$response->status());
+        } catch (ConnectionException $e) {
+            throw new NextcloudShareException('Errore di connessione a Nextcloud: '.$e->getMessage());
         } catch (\Throwable $e) {
-            if ($e instanceof \App\Exceptions\NextcloudShareException) {
+            if ($e instanceof NextcloudShareException) {
                 throw $e;
             }
-            throw new \App\Exceptions\NextcloudShareException("Errore inatteso durante la gestione della share Nextcloud: " . $e->getMessage());
+            throw new NextcloudShareException('Errore inatteso durante la gestione della share Nextcloud: '.$e->getMessage());
         }
     }
 
     public function revokePublicShareById(string|int $shareId): bool
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             return false;
         }
 
-        $url = $this->baseUrl . '/ocs/v2.php/apps/files_sharing/api/v1/shares/' . $shareId;
+        $url = $this->baseUrl.'/ocs/v2.php/apps/files_sharing/api/v1/shares/'.$shareId;
         $headers = [
             'OCS-APIRequest' => 'true',
             'Accept' => 'application/json',
@@ -562,7 +603,7 @@ class NextcloudService
                 $response = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
                     ->withHeaders($headers)
                     ->delete($url);
-            } catch (\Illuminate\Http\Client\RequestException $e) {
+            } catch (RequestException $e) {
                 if ($e->response && $e->response->status() === 404) {
                     return true;
                 }
@@ -575,28 +616,31 @@ class NextcloudService
 
             if ($response && $response->successful()) {
                 $data = $response->json();
-                if (!is_array($data)) {
-                    \Illuminate\Support\Facades\Log::error("Nextcloud revoca fallita: la risposta non è un array JSON valido", [
+                if (! is_array($data)) {
+                    Log::error('Nextcloud revoca fallita: la risposta non è un array JSON valido', [
                         'share_id' => $shareId,
-                        'body' => $response->body()
+                        'body' => $response->body(),
                     ]);
+
                     return false;
                 }
                 $statusCode = $data['ocs']['meta']['statuscode'] ?? 500;
-                
+
                 if ($statusCode === 100 || $statusCode === 200 || $statusCode === 404) {
                     return true;
                 }
-                
-                Log::error('Errore OCS revoca share Nextcloud: ' . $statusCode);
+
+                Log::error('Errore OCS revoca share Nextcloud: '.$statusCode);
+
                 return false;
             }
 
-            Log::error('Errore HTTP revoca share Nextcloud: ' . ($response ? $response->status() : 'Unknown'));
+            Log::error('Errore HTTP revoca share Nextcloud: '.($response ? $response->status() : 'Unknown'));
+
             return false;
         } catch (\Throwable $e) {
-            Log::error("Nextcloud share revocation error per shareId {$shareId}: " . $e->getMessage());
-            throw new \App\Exceptions\NextcloudShareException("Errore di revoca share Nextcloud: " . $e->getMessage(), 0, $e);
+            Log::error("Nextcloud share revocation error per shareId {$shareId}: ".$e->getMessage());
+            throw new NextcloudShareException('Errore di revoca share Nextcloud: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -606,26 +650,26 @@ class NextcloudService
      */
     public function ensureDirectoryExists(string $path): bool
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             return false;
         }
 
         $path = $this->normalizePath($path);
         $segments = array_filter(explode('/', trim($path, '/')));
-        
+
         $currentPath = '';
         foreach ($segments as $segment) {
-            $currentPath .= '/' . $segment;
-            $url = rtrim($this->buildWebdavUrl($currentPath), '/') . '/';
-            
+            $currentPath .= '/'.$segment;
+            $url = rtrim($this->buildWebdavUrl($currentPath), '/').'/';
+
             try {
                 // Verifica se esiste già
                 $check = Http::timeout(10)->retry(2, 300)
                     ->withBasicAuth($this->username, $this->password)
                     ->send('PROPFIND', $url, [
-                        'headers' => ['Depth' => '0']
+                        'headers' => ['Depth' => '0'],
                     ]);
-                
+
                 if ($check->status() === 207) {
                     continue; // Esiste già
                 }
@@ -635,13 +679,15 @@ class NextcloudService
                     ->send('MKCOL', $url);
 
                 $status = $response->status();
-                
+
                 if ($status !== 201 && $status !== 405) {
-                    Log::error("Nextcloud MKCOL fallito per URL: {$url}. Status: {$status} Body: " . $response->body());
+                    Log::error("Nextcloud MKCOL fallito per URL: {$url}. Status: {$status} Body: ".$response->body());
+
                     return false;
                 }
             } catch (\Exception $e) {
-                Log::error("Errore Nextcloud WebDAV su {$url}: " . $e->getMessage());
+                Log::error("Errore Nextcloud WebDAV su {$url}: ".$e->getMessage());
+
                 return false;
             }
         }
@@ -671,18 +717,18 @@ class NextcloudService
             ->implode('/');
 
         return $baseUrl
-            . '/'
-            . $webdavPath
-            . '/'
-            . rawurlencode($username)
-            . ($encodedPath ? '/' . $encodedPath : '');
+            .'/'
+            .$webdavPath
+            .'/'
+            .rawurlencode($username)
+            .($encodedPath ? '/'.$encodedPath : '');
     }
 
     public function normalizePath(?string $path): string
     {
         $path = $path ?: '/';
         $decoded = rawurldecode($path);
-        
+
         // Optional: Reject multiple encoded or paths containing % after decode
         if ($decoded !== $path && str_contains($decoded, '%')) {
             abort(400, 'Invalid path encoding');
@@ -700,10 +746,41 @@ class NextcloudService
             }
         }
 
-        $path = '/' . ltrim($path, '/');
+        $path = '/'.ltrim($path, '/');
         // rimuove slash multipli
         $path = preg_replace('#/+#', '/', $path);
+
         return $path === '' ? '/' : $path;
+    }
+
+    /**
+     * Extract a path only when the DAV href belongs to the configured user root.
+     */
+    private function ownedPathFromHref(string $href): string
+    {
+        $hrefPath = parse_url($href, PHP_URL_PATH);
+        if (! is_string($hrefPath) || $hrefPath === '') {
+            $hrefPath = $href;
+        }
+
+        $decodedHrefPath = rawurldecode($hrefPath);
+        $ownershipRoot = '/'
+            .trim($this->webdavPath, '/')
+            .'/'
+            .trim(rawurldecode($this->username), '/');
+
+        if (
+            $decodedHrefPath !== $ownershipRoot
+            && ! str_starts_with($decodedHrefPath, $ownershipRoot.'/')
+        ) {
+            throw new NextcloudPermanentFailureException(
+                'Nextcloud DAV response is outside the configured user root.'
+            );
+        }
+
+        $relativePath = substr($decodedHrefPath, strlen($ownershipRoot));
+
+        return $this->normalizePath($relativePath === '' ? '/' : $relativePath);
     }
 
     public function previewResponse(string $path, int $width = 900, int $height = 900)
@@ -712,7 +789,7 @@ class NextcloudService
 
         // 1. Prova preview nativa Nextcloud
         $previewUrl = rtrim(config('services.nextcloud.base_url'), '/')
-            . '/index.php/core/preview.png';
+            .'/index.php/core/preview.png';
 
         try {
             $preview = Http::timeout(8)

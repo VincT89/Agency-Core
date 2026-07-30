@@ -16,6 +16,8 @@ class MarketingCampaignCreate extends Component
     public $ends_at = '';
     public $monthly_fee = '';
     public $notes = '';
+    public string $publication_mode = 'manual';
+    public bool $client_review_required = true;
 
     protected function rules()
     {
@@ -27,6 +29,8 @@ class MarketingCampaignCreate extends Component
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'monthly_fee' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
+            'publication_mode' => 'required|in:manual,automatic',
+            'client_review_required' => 'required|boolean',
         ];
     }
 
@@ -53,6 +57,8 @@ class MarketingCampaignCreate extends Component
             'ends_at' => $this->ends_at ?: null,
             'monthly_fee' => $this->monthly_fee ?: null,
             'notes' => $this->notes,
+            'publication_mode' => $this->publication_mode,
+            'client_review_required' => $this->client_review_required,
         ]);
 
         return redirect()->route('marketing-campaigns.show', $campaign->id);

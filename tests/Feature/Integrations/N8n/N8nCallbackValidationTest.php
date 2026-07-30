@@ -14,7 +14,13 @@ class N8nCallbackValidationTest extends TestCase
 
     public function test_n8n_callback_fails_with_invalid_request_id()
     {
-        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response('fake-image-content', 200)]);
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => \Illuminate\Support\Facades\Http::response(
+                file_get_contents(base_path('tests/Fixtures/valid.jpg')),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
         $this->mock(\App\Support\Network\HostResolver::class, function ($mock) {
             $mock->shouldReceive('resolveAndValidatePublicHost')->andReturn('example.com');
         });

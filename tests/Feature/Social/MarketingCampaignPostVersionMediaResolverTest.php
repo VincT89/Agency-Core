@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Social;
 
-use App\Domain\Social\DTOs\MarketingCampaignPostMediaResolution;
 use App\Domain\Social\Enums\MarketingCampaignPostMediaResolutionSource;
 use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
 use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
@@ -21,7 +20,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->resolver = new MarketingCampaignPostVersionMediaResolver();
+        $this->resolver = new MarketingCampaignPostVersionMediaResolver;
     }
 
     public function test_authoritative_pivot_only_returns_pivot_media()
@@ -50,7 +49,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
         $this->assertEquals(MarketingCampaignPostMediaResolutionSource::VERSION_PIVOT, $resolution->source);
         $this->assertFalse($resolution->usesLegacyFallback);
         $this->assertCount(2, $resolution->mediaItems);
-        
+
         // Check order
         $this->assertEquals($media2->id, $resolution->mediaItems[0]->id);
         $this->assertEquals($media1->id, $resolution->mediaItems[1]->id);
@@ -65,7 +64,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
             'image_url' => null,
             'image_path' => null,
         ]);
-        
+
         $post2 = MarketingCampaignPost::factory()->create();
         $mediaForeign = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $post2->id]);
 
@@ -86,7 +85,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
             'image_urls' => null,
             'image_url' => null,
         ]);
-        
+
         $media = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'path' => 'some/local/path.jpg',
@@ -104,13 +103,13 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
     public function test_multiple_legacy_urls_resolves_multiple_media_in_order()
     {
         $post = MarketingCampaignPost::factory()->create();
-        
+
         $mediaA = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'path' => 'path/a.jpg',
             'disk' => 'public',
         ]);
-        
+
         $mediaB = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'path' => 'path/b.jpg',
@@ -201,12 +200,37 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
             'disk' => 'public',
         ]);
 
-        
         $resolution = $this->resolver->resolveForVersion($version);
 
         $this->assertEquals(MarketingCampaignPostMediaResolutionSource::CURRENT_POST_LEGACY, $resolution->source);
         $this->assertCount(1, $resolution->mediaItems);
         $this->assertEquals($media->id, $resolution->mediaItems[0]->id);
+    }
+
+    public function test_current_post_legacy_fallback_rejects_contradictory_references()
+    {
+        $post = MarketingCampaignPost::factory()->create([
+            'nextcloud_share_url' => 'https://nc.example.com/s/matching',
+            'media_path' => 'legacy/contradictory.jpg',
+        ]);
+        $version = MarketingCampaignPostVersion::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'image_urls' => null,
+            'image_url' => null,
+            'image_path' => null,
+        ]);
+        $post->update(['current_version_id' => $version->id]);
+        MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'nextcloud_share_url' => 'https://nc.example.com/s/matching',
+            'path' => 'actual/media.jpg',
+        ]);
+
+        $this->expectException(
+            MarketingCampaignPostMediaResolutionException::class
+        );
+
+        $this->resolver->resolveForVersion($version);
     }
 
     public function test_current_version_without_pivot_and_no_legacy_fields_throws_exception()
@@ -245,7 +269,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
         ]);
 
         $this->expectException(MarketingCampaignPostMediaResolutionException::class);
-        $this->expectExceptionMessage("could not be resolved");
+        $this->expectExceptionMessage('could not be resolved');
         $this->resolver->resolveForVersion($version);
     }
 
@@ -272,7 +296,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
         ]);
 
         $this->expectException(MarketingCampaignPostMediaResolutionException::class);
-        $this->expectExceptionMessage("ambiguous and matches multiple");
+        $this->expectExceptionMessage('ambiguous and matches multiple');
         $this->resolver->resolveForVersion($version);
     }
 
@@ -286,18 +310,18 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
             'image_url' => null,
             'image_path' => null,
         ]);
-        
+
         $post->update(['current_version_id' => $version->id]);
 
         $this->expectException(MarketingCampaignPostMediaResolutionException::class);
-        $this->expectExceptionMessage("missing or invalid");
+        $this->expectExceptionMessage('missing or invalid');
         $this->resolver->resolveForPost($post);
     }
 
     public function test_draft_post_resolves_to_ordered_media_items()
     {
         $post = MarketingCampaignPost::factory()->create(['current_version_id' => null]);
-        
+
         $media1 = MarketingCampaignPostMedia::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'sort_order' => 1,
@@ -320,7 +344,7 @@ class MarketingCampaignPostVersionMediaResolverTest extends TestCase
     public function test_empty_draft_resolves_to_empty_collection()
     {
         $post = MarketingCampaignPost::factory()->create(['current_version_id' => null]);
-        
+
         $resolution = $this->resolver->resolveForPost($post);
 
         $this->assertEquals(MarketingCampaignPostMediaResolutionSource::DRAFT_POST, $resolution->source);

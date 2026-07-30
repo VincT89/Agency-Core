@@ -79,6 +79,14 @@ class TikTokCreatorInfoService
                 : $canDirectPublishVideo,
             'max_video_duration' => $contentInfo['max_video_post_duration_sec'] ?? null, 
             'privacy_levels_supported' => $contentInfo['privacy_level_options'] ?? null,
+            'can_publish_photo' => config('services.tiktok.enable_photo_mode', false)
+                && (
+                    $publishMode === 'draft'
+                        ? $canUploadVideoDraft
+                        : $canDirectPublishVideo
+                ),
+            'supports_photo_mode' => config('services.tiktok.enable_photo_mode', false),
+            'max_photo_count' => (int) config('services.tiktok.max_photo_count', 10),
             'commercial_content_allowed' => null,
             'delivery_mode' => $publishMode, 
         ];
@@ -93,4 +101,3 @@ class TikTokCreatorInfoService
         return true;
     }
 }
-

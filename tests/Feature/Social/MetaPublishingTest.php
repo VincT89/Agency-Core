@@ -51,7 +51,7 @@ class MetaPublishingTest extends TestCase
         $this->assertContains("Instagram richiede almeno un file multimediale (Immagine o Video).", $result->errors);
     }
 
-    public function test_preflight_blocks_mixed_carousel()
+    public function test_preflight_allows_supported_mixed_instagram_carousel()
     {
         // Add one image and one video
         MarketingCampaignPostMedia::factory()->create([
@@ -80,9 +80,10 @@ class MetaPublishingTest extends TestCase
         $preflightService = app(MetaPreflightService::class);
         $result = $preflightService->runPreflight($this->post->fresh(), $this->account);
         
-        $this->assertFalse($result->isPass);
-
-        $this->assertContains("Supporto carousel immagini-only per ora. Non sono ammessi formati misti o video multipli in questa versione.", $result->errors);
+        $this->assertTrue(
+            $result->isPass,
+            'Preflight failed: ' . implode(', ', $result->errors)
+        );
     }
 
     public function test_preflight_allows_image_carousel()

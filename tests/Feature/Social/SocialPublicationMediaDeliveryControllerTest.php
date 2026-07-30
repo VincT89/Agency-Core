@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Social;
 
+use App\Domain\Social\DTOs\NextcloudFileInfo;
 use App\Models\MarketingCampaignPostPublication;
+use App\Services\Integrations\Nextcloud\NextcloudService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -31,6 +33,50 @@ class SocialPublicationMediaDeliveryControllerTest extends TestCase
         $response->assertHeader('Content-Type', 'image/jpeg');
         $response->assertHeader('Content-Length', '18');
         $this->assertSame('fake-image-content', $response->streamedContent());
+    }
+
+    public function test_rejects_same_size_local_content_that_changed_after_snapshot(): void
+    {
+        [, $url] = $this->localPublication('original');
+        Storage::disk('local')->put('test.jpg', 'mutated!');
+
+        $this->get($url)
+            ->assertStatus(409)
+            ->assertSee('checksum no longer matches');
+    }
+
+    public function test_rejects_nextcloud_content_that_changed_after_snapshot(): void
+    {
+        $hash = str_repeat('a', 64);
+        $publication = MarketingCampaignPostPublication::factory()->create([
+            'snapshot_hash' => $hash,
+            'payload_snapshot' => [
+                'media' => [[
+                    'storage_source' => 'nextcloud',
+                    'nextcloud_path' => '/social/photo.jpg',
+                    'nextcloud_file_id' => 'file-123',
+                    'nextcloud_etag' => 'etag-frozen',
+                    'mime_type' => 'image/jpeg',
+                    'size_bytes' => 128,
+                ]],
+            ],
+        ]);
+        $nextcloud = $this->mock(NextcloudService::class);
+        $nextcloud->shouldReceive('getFileInfo')
+            ->once()
+            ->with('/social/photo.jpg')
+            ->andReturn(new NextcloudFileInfo(
+                path: '/social/photo.jpg',
+                fileId: 'file-123',
+                etag: 'etag-changed',
+                mimeType: 'image/jpeg',
+                sizeBytes: 128
+            ));
+        $nextcloud->shouldNotReceive('streamFileResponse');
+
+        $this->get($this->signedUrl($publication, 0))
+            ->assertStatus(409)
+            ->assertSee('no longer matches');
     }
 
     public function test_head_returns_headers_without_a_body(): void
@@ -150,6 +196,7 @@ class SocialPublicationMediaDeliveryControllerTest extends TestCase
                     'path' => 'test.jpg',
                     'mime_type' => 'image/jpeg',
                     'size_bytes' => strlen($contents),
+                    'sha256' => hash('sha256', $contents),
                 ]],
             ],
         ]);

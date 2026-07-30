@@ -209,6 +209,9 @@
         });
 
         window.marketingGlobalCalendar.render();
+        const refreshCalendarSize = () => window.marketingGlobalCalendar?.updateSize();
+        requestAnimationFrame(refreshCalendarSize);
+        setTimeout(refreshCalendarSize, 350);
 
         window.marketingGlobalUnsubscribers.push(
             Livewire.on('marketing-global-calendar-filters-updated', () => {

@@ -664,6 +664,9 @@
         });
 
         window.marketingCampaignDetailCalendar.render();
+        const refreshCalendarSize = () => window.marketingCampaignDetailCalendar?.updateSize();
+        requestAnimationFrame(refreshCalendarSize);
+        setTimeout(refreshCalendarSize, 350);
 
         window.marketingCampaignDetailUnsubscribers.push(
             Livewire.on('marketing-campaign-detail-calendar-date-changed', (payload) => {

@@ -224,6 +224,7 @@
         const financialEl = document.getElementById('financial-chart');
         if (financialEl) {
             const rect = financialEl.getBoundingClientRect();
+            const isCompactChart = rect.width < 520;
             if (rect.width < 100) {
                 requestAnimationFrame(() => initDashboardCharts());
                 return;
@@ -237,7 +238,7 @@
             const options = {
                 chart: { 
                     type: 'bar', 
-                    height: 300, 
+                    height: isCompactChart ? 270 : 300,
                     width: '100%',
                     toolbar: { show: false }, 
                     zoom: { enabled: false },
@@ -248,14 +249,35 @@
                     parentHeightOffset: 0
                 },
                 series: data.series,
-                xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
+                xaxis: {
+                    categories: data.labels,
+                    tickPlacement: 'on',
+                    tickAmount: isCompactChart ? 6 : undefined,
+                    labels: {
+                        trim: true,
+                        hideOverlappingLabels: true,
+                        rotate: isCompactChart ? -45 : 0,
+                        rotateAlways: isCompactChart,
+                        style: {
+                            colors: 'var(--text3)',
+                            fontFamily: 'var(--sans)',
+                            fontSize: isCompactChart ? '9px' : '11px'
+                        },
+                        formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                    }
+                },
                 yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' } },
                 colors: ['var(--purple)', '#14b8a6', 'var(--orange)'],
                 plotOptions: { bar: { columnWidth: '55%', borderRadius: 6, borderRadiusApplication: 'end' } },
                 dataLabels: { enabled: false },
                 stroke: { show: true, width: 2, colors: ['transparent'] },
                 tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } },
-                grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 8, right: 100 } }
+                grid: {
+                    borderColor: 'var(--line)',
+                    strokeDashArray: 4,
+                    opacity: 0.5,
+                    padding: { left: isCompactChart ? 0 : 8, right: isCompactChart ? 8 : 28 }
+                }
             };
             window.financialChartInstance = new ApexCharts(financialEl, options);
             window.financialChartInstance.render();
@@ -268,6 +290,7 @@
         const operationalEl = document.getElementById('operational-chart');
         if (operationalEl) {
             const rect = operationalEl.getBoundingClientRect();
+            const isCompactChart = rect.width < 520;
             if (rect.width < 100) {
                 requestAnimationFrame(() => initDashboardCharts());
                 return;
@@ -280,7 +303,7 @@
             const options = {
                 chart: { 
                     type: 'area', 
-                    height: 300, 
+                    height: isCompactChart ? 270 : 300,
                     width: '100%',
                     toolbar: { show: false }, 
                     zoom: { enabled: false },
@@ -291,7 +314,23 @@
                     parentHeightOffset: 0
                 },
                 series: data.series,
-                xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
+                xaxis: {
+                    categories: data.labels,
+                    tickPlacement: 'on',
+                    tickAmount: isCompactChart ? 6 : undefined,
+                    labels: {
+                        trim: true,
+                        hideOverlappingLabels: true,
+                        rotate: isCompactChart ? -45 : 0,
+                        rotateAlways: isCompactChart,
+                        style: {
+                            colors: 'var(--text3)',
+                            fontFamily: 'var(--sans)',
+                            fontSize: isCompactChart ? '9px' : '11px'
+                        },
+                        formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                    }
+                },
                 yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k' : value }, min: 0, forceNiceScale: true },
                 colors: ['var(--purple)', '#ec4899'],
                 fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
@@ -299,7 +338,12 @@
                 markers: { size: 4, colors: ['var(--purple)', '#ec4899'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                 dataLabels: { enabled: false },
                 tooltip: { theme: 'dark' },
-                grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 8, right: 120 } }
+                grid: {
+                    borderColor: 'var(--line)',
+                    strokeDashArray: 4,
+                    opacity: 0.5,
+                    padding: { left: isCompactChart ? 0 : 8, right: isCompactChart ? 8 : 28 }
+                }
             };
             window.operationalChartInstance = new ApexCharts(operationalEl, options);
             window.operationalChartInstance.render();

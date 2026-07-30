@@ -26,11 +26,27 @@
   <div class="shell" id="shell" 
        x-data="{ sidebarOpen: window.innerWidth >= 1024 }" 
        @resize.window="sidebarOpen = window.innerWidth >= 1024"
+       @keydown.escape.window="if (window.innerWidth < 1024) sidebarOpen = false"
        :class="sidebarOpen ? 'expanded' : ''">
 
     {{-- TOPBAR --}}
     <div class="topbar">
       <div class="topbar-left">
+        <button
+          type="button"
+          class="mobile-menu-toggle"
+          @click="sidebarOpen = !sidebarOpen; setTimeout(() => window.refreshAppLayout(), 350)"
+          :aria-expanded="sidebarOpen.toString()"
+          aria-controls="app-sidebar"
+          :aria-label="sidebarOpen ? 'Chiudi menu di navigazione' : 'Apri menu di navigazione'"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         <div class="logo-mark">
           <img src="{{ asset('images/logo.png') }}" alt="Sodano Consulting">
         </div>
@@ -76,9 +92,32 @@
       </div>
     </div>
 
+    <button
+      type="button"
+      class="sidebar-backdrop"
+      x-show="sidebarOpen"
+      x-transition.opacity
+      x-cloak
+      @click="sidebarOpen = false"
+      aria-label="Chiudi menu di navigazione"
+    ></button>
+
     {{-- SIDEBAR --}}
-    <div class="sidebar">
-      <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
+    <div
+      class="sidebar"
+      id="app-sidebar"
+      :aria-hidden="(!sidebarOpen && window.innerWidth < 1024).toString()"
+      :inert="!sidebarOpen && window.innerWidth < 1024"
+      @click="if ($event.target.closest('a') && window.innerWidth < 1024) sidebarOpen = false"
+    >
+      <button
+        type="button"
+        class="sidebar-toggle"
+        @click="sidebarOpen = !sidebarOpen; setTimeout(() => window.refreshAppLayout(), 350)"
+        :aria-expanded="sidebarOpen.toString()"
+        aria-controls="app-sidebar"
+        :aria-label="sidebarOpen ? 'Chiudi menu di navigazione' : 'Apri menu di navigazione'"
+      >
         <svg x-show="sidebarOpen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-cloak>
           <path d="m15 18-6-6 6-6" />
@@ -284,6 +323,15 @@
   </div>
 
   <script>
+    window.refreshAppLayout = function () {
+      window.calendarEventsInstance?.updateSize();
+      window.marketingGlobalCalendar?.updateSize();
+      window.marketingCampaignDetailCalendar?.updateSize();
+      window.financialChartInstance?.resize();
+      window.operationalChartInstance?.resize();
+      window.dispatchEvent(new CustomEvent('app:layout-resized'));
+    };
+
     // Flash → toast automatico
     @if(session('success'))
       document.addEventListener('DOMContentLoaded', () => toast("{{ session('success') }}", 'success'));

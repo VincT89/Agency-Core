@@ -64,24 +64,38 @@
                 initChart() {
                     const data = {{ $sparklineData }};
                     if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
+                    const chartEl = this.$refs.fatturato;
+                    const isCompactChart = chartEl.getBoundingClientRect().width < 520;
                     
                     const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt0 = {
-                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent' },
+                        chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
                         series: [{ name: 'Fatturato', data: data.invoiced }],
-                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
+                        xaxis: {
+                            categories: data.labels,
+                            tickPlacement: 'on',
+                            tickAmount: isCompactChart ? 6 : undefined,
+                            labels: {
+                                trim: true,
+                                hideOverlappingLabels: true,
+                                rotate: isCompactChart ? -45 : 0,
+                                rotateAlways: isCompactChart,
+                                style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
+                                formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                            }
+                        },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--purple)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                         markers: { size: 4, colors: ['var(--purple)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 15, right: 80 } },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: isCompactChart ? 0 : 15, right: isCompactChart ? 8 : 28 } },
                         tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
-                    new window.ApexCharts(this.$refs.fatturato, opt0).render();
+                    new window.ApexCharts(chartEl, opt0).render();
                 }
             }" x-init="initChart()">
                 <div x-ref="fatturato" class="u-min-h-250"></div>
@@ -93,24 +107,38 @@
                 initChart() {
                     const data = {{ $sparklineData }};
                     if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
+                    const chartEl = this.$refs.spark1;
+                    const isCompactChart = chartEl.getBoundingClientRect().width < 520;
                     
                     const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt1 = {
-                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent' },
+                        chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
                         series: [{ name: 'Incassato', data: data.collected }],
-                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
+                        xaxis: {
+                            categories: data.labels,
+                            tickPlacement: 'on',
+                            tickAmount: isCompactChart ? 6 : undefined,
+                            labels: {
+                                trim: true,
+                                hideOverlappingLabels: true,
+                                rotate: isCompactChart ? -45 : 0,
+                                rotateAlways: isCompactChart,
+                                style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
+                                formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                            }
+                        },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--teal)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                         markers: { size: 4, colors: ['var(--teal)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 15, right: 80 } },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: isCompactChart ? 0 : 15, right: isCompactChart ? 8 : 28 } },
                         tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
-                    new window.ApexCharts(this.$refs.spark1, opt1).render();
+                    new window.ApexCharts(chartEl, opt1).render();
                 }
             }" x-init="initChart()">
                 <div x-ref="spark1" class="u-min-h-250"></div>
@@ -122,24 +150,38 @@
                 initChart() {
                     const data = {{ $sparklineData }};
                     if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
+                    const chartEl = this.$refs.spark2;
+                    const isCompactChart = chartEl.getBoundingClientRect().width < 520;
                     
                     const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
                     const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
                     
                     const opt2 = {
-                        chart: { type: 'area', height: 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent' },
+                        chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
                         series: [{ name: 'Da Incassare', data: data.pending }],
-                        xaxis: { categories: data.labels, tickPlacement: 'on', labels: { trim: false, hideOverlappingLabels: false, style: { colors: 'var(--text3)', fontFamily: 'var(--sans)' }, formatter: (val) => val ? val.split(' ')[0] : val } },
+                        xaxis: {
+                            categories: data.labels,
+                            tickPlacement: 'on',
+                            tickAmount: isCompactChart ? 6 : undefined,
+                            labels: {
+                                trim: true,
+                                hideOverlappingLabels: true,
+                                rotate: isCompactChart ? -45 : 0,
+                                rotateAlways: isCompactChart,
+                                style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
+                                formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                            }
+                        },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
                         colors: ['var(--orange)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                         markers: { size: 4, colors: ['var(--orange)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: 15, right: 80 } },
+                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: isCompactChart ? 0 : 15, right: isCompactChart ? 8 : 28 } },
                         tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
                     };
-                    new window.ApexCharts(this.$refs.spark2, opt2).render();
+                    new window.ApexCharts(chartEl, opt2).render();
                 }
             }" x-init="initChart()">
                 <div x-ref="spark2" class="u-min-h-250"></div>

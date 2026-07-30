@@ -290,6 +290,9 @@
                     });
 
                     window.calendarEventsInstance.render();
+                    const refreshCalendarSize = () => window.calendarEventsInstance?.updateSize();
+                    requestAnimationFrame(refreshCalendarSize);
+                    setTimeout(refreshCalendarSize, 350);
 
                     // La sincronizzazione tramite JS (gotoDate) è stata rimossa per permettere a wire:navigate
                     // di aggiornare correttamente sia la vista FullCalendar che la vista Kanban (che è renderizzata via Blade).

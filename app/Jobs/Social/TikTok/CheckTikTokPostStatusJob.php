@@ -25,6 +25,10 @@ class CheckTikTokPostStatusJob implements ShouldQueue
 
     public int $tries = 10;
 
+    public int $timeout = 60;
+
+    public bool $failOnTimeout = true;
+
     public function __construct(
         private readonly int $publicationId
     ) {

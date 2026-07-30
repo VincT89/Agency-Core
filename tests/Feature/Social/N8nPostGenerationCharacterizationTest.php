@@ -6,6 +6,7 @@ use App\Domain\Social\Actions\AddMarketingCampaignPostVersionFromN8nAction;
 use App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData;
 use App\Domain\Social\Services\ImageStagerService;
 use App\Enums\Social\MarketingCampaignPostRegenerationType;
+use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostMedia;
 use App\Models\MarketingCampaignPostVersion;
@@ -22,32 +23,35 @@ class N8nPostGenerationCharacterizationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         Storage::fake('public');
+        Storage::fake('social_media');
 
         // Mock the ImageStagerService to avoid real HTTP requests and return mock files
         $mockStager = $this->mock(ImageStagerService::class);
-        
+
         $mockStager->shouldReceive('downloadAndValidate')
             ->andReturnUsing(function ($urls) {
                 $temps = [];
                 foreach ($urls ?? [] as $i => $url) {
                     $temps[] = "temp/downloaded_{$i}.jpg";
                 }
+
                 return $temps;
             });
-            
+
         $mockStager->shouldReceive('promote')
             ->andReturnUsing(function ($temps) {
                 $promoted = [];
                 foreach ($temps as $i => $temp) {
-                    $path = "marketing_campaigns/posts/promoted_{$i}_" . uniqid() . ".jpg";
-                    Storage::disk('public')->put($path, 'fake image content');
+                    $path = "marketing_campaigns/posts/promoted_{$i}_".uniqid().'.jpg';
+                    Storage::disk('social_media')->put($path, 'fake image content');
                     $promoted[] = $path;
                 }
+
                 return $promoted;
             });
-            
+
         $mockStager->shouldReceive('deleteTemporary')->andReturnNull();
         $mockStager->shouldReceive('deletePromoted')->andReturnNull();
 
@@ -57,7 +61,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
     public function test_it_creates_version_media_and_pivot_on_initial_callback()
     {
         $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-123']);
-        
+
         $data = new AddMarketingCampaignPostVersionData(
             postId: $post->id,
             regenerationType: MarketingCampaignPostRegenerationType::Full,
@@ -75,30 +79,30 @@ class N8nPostGenerationCharacterizationTest extends TestCase
 
         $this->assertEquals('created', $result->outcome);
         $this->assertNotNull($result->version);
-        
+
         // Assert version was created
         $this->assertDatabaseHas('marketing_campaign_post_versions', [
             'marketing_campaign_post_id' => $post->id,
             'caption' => 'Initial Caption',
             'version_number' => 1,
         ]);
-        
+
         $version = $result->version;
 
         // Assert media was created and pivoted
         $this->assertCount(1, $version->mediaItems);
         $media = $version->mediaItems->first();
         $this->assertEquals('n8n', $media->source);
-        $this->assertEquals('public', $media->disk);
+        $this->assertEquals('social_media', $media->disk);
         $this->assertNotNull($media->path);
-        
+
         // Assert image_url, image_urls, image_path are correctly populated
         $this->assertNotNull($version->image_url);
         $this->assertIsArray($version->image_urls);
         $this->assertCount(1, $version->image_urls);
         $this->assertEquals($version->image_url, $version->image_urls[0]);
         $this->assertEquals($media->path, $version->image_path);
-        
+
         // Check current version ID is updated
         $this->assertEquals($version->id, $post->fresh()->current_version_id);
     }
@@ -106,7 +110,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
     public function test_it_reuses_media_on_caption_only_regeneration()
     {
         $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-1']);
-        
+
         // Prima versione (Full)
         $data1 = new AddMarketingCampaignPostVersionData(
             postId: $post->id,
@@ -141,11 +145,11 @@ class N8nPostGenerationCharacterizationTest extends TestCase
 
         $this->assertEquals(2, $version2->version_number);
         $this->assertEquals('C2', $version2->caption);
-        
+
         // Verifica riuso media
         $this->assertCount(1, $version2->mediaItems);
         $media2 = $version2->mediaItems->first();
-        
+
         $this->assertEquals($media1->id, $media2->id); // Identità preservata
         $this->assertEquals(1, MarketingCampaignPostMedia::count()); // Nessun nuovo media creato
     }
@@ -153,7 +157,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
     public function test_it_creates_new_media_and_preserves_old_on_image_only_regeneration()
     {
         $post = MarketingCampaignPost::factory()->create(['n8n_request_id' => 'req-1']);
-        
+
         // Prima versione
         $data1 = new AddMarketingCampaignPostVersionData(
             postId: $post->id,
@@ -176,7 +180,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
             postId: $post->id,
             regenerationType: MarketingCampaignPostRegenerationType::Image,
             title: '', // Image only regeneration might have empty title/caption in payload, Action copies from current
-            caption: '', 
+            caption: '',
             hashtags: [],
             imageUrls: ['https://example.com/img2.jpg'],
             externalGenerationId: 'ext-2',
@@ -188,13 +192,13 @@ class N8nPostGenerationCharacterizationTest extends TestCase
 
         $this->assertEquals(2, $version2->version_number);
         $this->assertEquals('C1', $version2->caption); // Copiato dalla versione 1
-        
+
         $this->assertCount(1, $version2->mediaItems);
         $media2 = $version2->mediaItems->first();
-        
+
         $this->assertNotEquals($media1->id, $media2->id); // Nuovo media
         $this->assertEquals(2, MarketingCampaignPostMedia::count()); // Entrambi i media esistono
-        
+
         // Verifica conservazione vecchio media e pivot
         $this->assertCount(1, $version1->fresh()->mediaItems);
         $this->assertEquals($media1->id, $version1->fresh()->mediaItems->first()->id);
@@ -203,7 +207,7 @@ class N8nPostGenerationCharacterizationTest extends TestCase
     public function test_late_callback_with_failed_request_is_ignored()
     {
         $post = MarketingCampaignPost::factory()->create([
-            'status' => \App\Enums\Social\MarketingCampaignPostStatus::Draft->value,
+            'status' => MarketingCampaignPostStatus::Draft->value,
             'n8n_request_id' => null, // compensated state
         ]);
 

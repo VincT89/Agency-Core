@@ -1,18 +1,59 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\TicketController;
+use App\Http\Controllers\Admin\Social\AgencyMetaOAuthController;
+use App\Http\Controllers\Admin\Social\TikTokOAuthController;
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\Auth\FirstAccessController;
 use App\Http\Controllers\CalendarEventController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EconomicSummaryController;
+use App\Http\Controllers\HostingServiceController;
+use App\Http\Controllers\HostingServiceInterventionController;
+use App\Http\Controllers\HostingServicePasswordController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceItemController;
+use App\Http\Controllers\NextcloudDownloadController;
+use App\Http\Controllers\NextcloudPreviewController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\EconomicSummaryController;
-use App\Http\Controllers\AttachmentController;
-use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ShootRedirectController;
+use App\Http\Controllers\Social\SocialPublicationMediaDeliveryController;
+use App\Http\Controllers\SocialMedia\TemporaryVideoPreviewController;
+use App\Http\Controllers\SocialMediaDeliveryController;
 use App\Http\Controllers\TaskChecklistItemController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TicketChecklistItemController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UserController;
+use App\Livewire\Admin\Shooting\ShootShow;
+use App\Livewire\Admin\Shooting\ShootsIndex;
+use App\Livewire\Admin\Social\AgencySocialConnections;
+use App\Livewire\Admin\Social\SocialOperationsDashboard;
+use App\Livewire\Dashboard\UserDailyNotes;
+use App\Livewire\Expenses\ExpenseForm;
+use App\Livewire\Expenses\ExpenseShow;
+use App\Livewire\Expenses\ExpensesIndex;
+use App\Livewire\Photography\Shooting\MyShootShow;
+use App\Livewire\Photography\Shooting\MyShootsIndex;
+use App\Livewire\Public\MarketingCampaignPostReview;
+use App\Livewire\Social\MarketingCampaignCalendar;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignCreate;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostShow;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignShow;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignsIndex;
+use App\Livewire\Social\Shooting\CreateRequest;
+use App\Livewire\Social\Shooting\RequestShow;
+use App\Livewire\Social\Shooting\RequestsIndex;
+use App\Models\Client;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     return auth()->check()
@@ -21,69 +62,61 @@ Route::get('/', function () {
 });
 
 // Route pubbliche per Clienti
-Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\MarketingCampaignPostReview::class)
+Route::get('/client/marketing-campaign-posts/{token}', MarketingCampaignPostReview::class)
     ->name('public.marketing-campaign-posts.review')
     ->middleware('throttle:30,1');
 
-Route::get('/publication/{publication}/media/{mediaIndex}/deliver', [\App\Http\Controllers\Social\SocialPublicationMediaDeliveryController::class, 'deliver'])
+Route::get('/publication/{publication}/media/{mediaIndex}/deliver', [SocialPublicationMediaDeliveryController::class, 'deliver'])
     ->name('public.social.publication-media.deliver')->middleware('throttle:social-media-delivery');
-
 
 Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
-    
-    $fullPath = str_starts_with($path, 'marketing/campaign-posts/') 
-        ? $path 
-        : 'marketing/campaign-posts/' . $path;
-    abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($fullPath), 404);
+
+    $fullPath = str_starts_with($path, 'marketing/campaign-posts/')
+        ? $path
+        : 'marketing/campaign-posts/'.$path;
+    abort_unless(Storage::disk('public')->exists($fullPath), 404);
 
     $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
     abort_unless(in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm', 'm4v']), 404);
 
-    $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($fullPath);
+    $mime = Storage::disk('public')->mimeType($fullPath);
     abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime']), 404);
 
-    return \Illuminate\Support\Facades\Storage::disk('public')->response($fullPath);
-})->where('path', '.*')->name('media.marketing-campaign-posts');
+    return Storage::disk('public')->response($fullPath);
+})->where('path', '.*')
+    ->middleware(['signed', 'throttle:social-media-delivery'])
+    ->name('media.marketing-campaign-posts');
 
 Route::get('/media/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);
     abort_unless(str_starts_with($path, 'clients/logos/'), 404);
-    abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($path), 404);
+    abort_unless(Storage::disk('public')->exists($path), 404);
 
-    $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($path);
+    $mime = Storage::disk('public')->mimeType($path);
     abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp']), 404);
 
-    return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
-})->where('path', '.*')->name('media.public');
+    return Storage::disk('public')->response($path);
+})->where('path', '.*')
+    ->middleware(['signed', 'throttle:social-media-delivery'])
+    ->name('media.public');
 
-Route::get('/nextcloud/preview', \App\Http\Controllers\NextcloudPreviewController::class)
+Route::get('/nextcloud/preview', NextcloudPreviewController::class)
     ->middleware(['auth', 'throttle:nextcloud-preview'])
     ->name('nextcloud.preview');
 
-Route::get('/nextcloud/download', function (\Illuminate\Http\Request $request, \App\Services\Integrations\Nextcloud\NextcloudService $nextcloud) {
-    $path = $request->query('path');
-    abort_unless($path, 404);
-    $path = $nextcloud->normalizePath($path);
+Route::get('/nextcloud/download', NextcloudDownloadController::class)
+    ->middleware(['auth', 'throttle:nextcloud-preview'])
+    ->name('nextcloud.download');
 
-    $photosRoot = rtrim(config('services.nextcloud.photos_root', '/FotoClienti'), '/');
-    $videosRoot = rtrim(config('services.nextcloud.videos_root', '/VideoClienti'), '/');
-    
-    $isAllowed = $path === $photosRoot || str_starts_with($path, $photosRoot . '/')
-              || $path === $videosRoot || str_starts_with($path, $videosRoot . '/');
-    abort_unless($isAllowed, 403, 'Percorso non autorizzato.');
-
-    return $nextcloud->streamFileResponse($path, $request);
-})->middleware(['auth', 'throttle:nextcloud-preview'])->name('nextcloud.download');
-
-Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
+Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'force.password.change'])->name('dashboard');
 
 // Route di setup iniziale protette solo da auth
 Route::middleware('auth')->group(function () {
-    Route::get('/password/setup', [\App\Http\Controllers\Auth\FirstAccessController::class, 'show'])
+    Route::get('/password/setup', [FirstAccessController::class, 'show'])
         ->name('password.setup');
-    Route::post('/password/setup', [\App\Http\Controllers\Auth\FirstAccessController::class, 'update'])
+    Route::post('/password/setup', [FirstAccessController::class, 'update'])
         ->name('password.setup.update');
 });
 
@@ -105,10 +138,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         ->name('ticket-checklist-items.toggle');
     Route::delete('ticket-checklist-items/{item}', [TicketChecklistItemController::class, 'destroy'])
         ->name('ticket-checklist-items.destroy');
-    
+
     // Task
-    Route::resource('tasks', \App\Http\Controllers\TaskController::class);
-    Route::patch('tasks/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])
+    Route::resource('tasks', TaskController::class);
+    Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])
         ->name('tasks.update-status');
 
     Route::post('tasks/{task}/checklist-items', [TaskChecklistItemController::class, 'store'])
@@ -122,72 +155,68 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::delete('task-checklist-items/{item}', [TaskChecklistItemController::class, 'destroy'])
         ->name('task-checklist-items.destroy');
-        
+
     // Team
-    Route::resource('teams', \App\Http\Controllers\TeamController::class);
+    Route::resource('teams', TeamController::class);
 
     // Shooting (Redirect Legacy)
-    Route::get('/shoots', [\App\Http\Controllers\ShootRedirectController::class, 'index'])->name('shoots.index');
-    Route::get('/shoots/{shoot}', [\App\Http\Controllers\ShootRedirectController::class, 'show'])->name('shoots.show');
+    Route::get('/shoots', [ShootRedirectController::class, 'index'])->name('shoots.index');
+    Route::get('/shoots/{shoot}', [ShootRedirectController::class, 'show'])->name('shoots.show');
 
     // SOCIAL (Marketing)
-    Route::get('social/calendar', \App\Livewire\Social\MarketingCampaignCalendar::class)->name('social.calendar');
-
-
+    Route::get('social/calendar', MarketingCampaignCalendar::class)->name('social.calendar');
 
     Route::prefix('social/campaigns')->name('marketing-campaigns.')->group(function () {
-        Route::get('/', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignsIndex::class)->name('index');
-        Route::get('/create', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignCreate::class)->name('create');
-        Route::get('/{campaign}', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignShow::class)->name('show');
-        Route::get('/{campaign}/posts/create', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate::class)->name('posts.create');
-        Route::get('/{campaign}/posts/{post}', \App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostShow::class)->name('posts.show');
+        Route::get('/', MarketingCampaignsIndex::class)->name('index');
+        Route::get('/create', MarketingCampaignCreate::class)->name('create');
+        Route::get('/{campaign}', MarketingCampaignShow::class)->name('show');
+        Route::get('/{campaign}/posts/create', MarketingCampaignPostCreate::class)->name('posts.create');
+        Route::get('/{campaign}/posts/{post}', MarketingCampaignPostShow::class)->name('posts.show');
     });
 
     Route::prefix('social/shooting')->name('social.shooting.')->group(function () {
-        Route::get('/', \App\Livewire\Social\Shooting\RequestsIndex::class)->name('index');
-        Route::get('/create', \App\Livewire\Social\Shooting\CreateRequest::class)->name('create');
-        Route::get('/{shoot}', \App\Livewire\Social\Shooting\RequestShow::class)->name('show');
+        Route::get('/', RequestsIndex::class)->name('index');
+        Route::get('/create', CreateRequest::class)->name('create');
+        Route::get('/{shoot}', RequestShow::class)->name('show');
     });
-
-
 
     // FOTOGRAFIA
     Route::prefix('fotografia/shooting')->name('photography.shooting.')->group(function () {
-        Route::get('/', \App\Livewire\Photography\Shooting\MyShootsIndex::class)->name('index');
-        Route::get('/{shoot}', \App\Livewire\Photography\Shooting\MyShootShow::class)->name('show');
+        Route::get('/', MyShootsIndex::class)->name('index');
+        Route::get('/{shoot}', MyShootShow::class)->name('show');
     });
 
     // ADMIN
     Route::prefix('admin/shooting')->name('admin.shooting.')->group(function () {
-        Route::get('/', \App\Livewire\Admin\Shooting\ShootsIndex::class)->name('index');
-        Route::get('/{shoot}', \App\Livewire\Admin\Shooting\ShootShow::class)->name('show');
+        Route::get('/', ShootsIndex::class)->name('index');
+        Route::get('/{shoot}', ShootShow::class)->name('show');
     });
-    
+
     // ADMIN - SOCIAL CONNECTIONS
     Route::prefix('admin/social/connections')->name('admin.social.connections.')->middleware('can:manage_social_connections')->group(function () {
         // Il Livewire Index verrà aggiunto qui successivamente
-        Route::get('/', \App\Livewire\Admin\Social\AgencySocialConnections::class)->name('index');
-        
-        Route::get('/meta/redirect', [\App\Http\Controllers\Admin\Social\AgencyMetaOAuthController::class, 'redirect'])->name('meta.redirect');
-        Route::get('/meta/callback', [\App\Http\Controllers\Admin\Social\AgencyMetaOAuthController::class, 'callback'])->name('meta.callback');
+        Route::get('/', AgencySocialConnections::class)->name('index');
+
+        Route::get('/meta/redirect', [AgencyMetaOAuthController::class, 'redirect'])->name('meta.redirect');
+        Route::get('/meta/callback', [AgencyMetaOAuthController::class, 'callback'])->name('meta.callback');
     });
 
     // ADMIN - TIKTOK CONNECTIONS (Client Specific)
     Route::prefix('admin/social/tiktok')->name('admin.social.tiktok.')->middleware('can:manage_social_connections')->group(function () {
-        Route::get('/redirect', [\App\Http\Controllers\Admin\Social\TikTokOAuthController::class, 'redirect'])->name('redirect');
-        Route::get('/callback', [\App\Http\Controllers\Admin\Social\TikTokOAuthController::class, 'callback'])->name('callback');
+        Route::get('/redirect', [TikTokOAuthController::class, 'redirect'])->name('redirect');
+        Route::get('/callback', [TikTokOAuthController::class, 'callback'])->name('callback');
     });
 
     // ADMIN - SOCIAL OPERATIONS
     Route::prefix('admin/social/operations')->name('admin.social.operations.')->middleware('can:manage_social_operations')->group(function () {
-        Route::get('/', \App\Livewire\Admin\Social\SocialOperationsDashboard::class)->name('index');
+        Route::get('/', SocialOperationsDashboard::class)->name('index');
     });
     // AMMINISTRAZIONE - SPESE
-    Route::get('/expenses', \App\Livewire\Expenses\ExpensesIndex::class)->name('expenses.index');
-    Route::get('/expenses/create', \App\Livewire\Expenses\ExpenseForm::class)->name('expenses.create');
-    Route::get('/expenses/{expense}', \App\Livewire\Expenses\ExpenseShow::class)->name('expenses.show');
-    Route::get('/expenses/{expense}/edit', \App\Livewire\Expenses\ExpenseForm::class)->name('expenses.edit');
-        
+    Route::get('/expenses', ExpensesIndex::class)->name('expenses.index');
+    Route::get('/expenses/create', ExpenseForm::class)->name('expenses.create');
+    Route::get('/expenses/{expense}', ExpenseShow::class)->name('expenses.show');
+    Route::get('/expenses/{expense}/edit', ExpenseForm::class)->name('expenses.edit');
+
     Route::resource('calendar-events', CalendarEventController::class);
     Route::patch('calendar-events/{calendar_event}/date', [CalendarEventController::class, 'updateDate'])->name('calendar-events.update-date');
     Route::resource('invoices', InvoiceController::class);
@@ -206,34 +235,35 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         ->name('attachments.destroy');
 
     // Hosting e Manutenzioni
-    Route::get('hosting-services/{hosting_service}/password', [\App\Http\Controllers\HostingServicePasswordController::class, 'show'])
+    Route::get('hosting-services/{hosting_service}/password', [HostingServicePasswordController::class, 'show'])
         ->name('hosting-services.password.show');
-    Route::resource('hosting-services', \App\Http\Controllers\HostingServiceController::class);
-    Route::post('hosting-services/{hosting_service}/interventions', [\App\Http\Controllers\HostingServiceInterventionController::class, 'store'])
+    Route::resource('hosting-services', HostingServiceController::class);
+    Route::post('hosting-services/{hosting_service}/interventions', [HostingServiceInterventionController::class, 'store'])
         ->name('hosting-services.interventions.store');
-    Route::delete('hosting-services/{hosting_service}/interventions/{intervention}', [\App\Http\Controllers\HostingServiceInterventionController::class, 'destroy'])
+    Route::delete('hosting-services/{hosting_service}/interventions/{intervention}', [HostingServiceInterventionController::class, 'destroy'])
         ->name('hosting-services.interventions.destroy');
 
-    Route::resource('users', \App\Http\Controllers\UserController::class)->except(['show']);
-    Route::post('users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])
+    Route::resource('users', UserController::class)->except(['show']);
+    Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])
         ->name('users.reset-password');
-    Route::post('users/{user}/toggle-status', [\App\Http\Controllers\UserController::class, 'toggleStatus'])
+    Route::post('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])
         ->name('users.toggle-status');
 
     // Audit logs (solo admin)
-    Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
     // Notifiche
-    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
         ->name('notifications.readAll');
-    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsReadAndRedirect'])
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsReadAndRedirect'])
         ->name('notifications.read');
-    Route::delete('/notifications/{id}', [\App\Http\Controllers\NotificationController::class, 'destroy'])
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])
         ->name('notifications.destroy');
 
     // API interna: progetti per cliente (usata dai form JS)
-    Route::get('/api/clients/{client}/projects', function (\App\Models\Client $client) {
-        \Illuminate\Support\Facades\Gate::authorize('view', $client);
+    Route::get('/api/clients/{client}/projects', function (Client $client) {
+        Gate::authorize('view', $client);
+
         return response()->json(
             $client->projects()->where('status', 'active')->get(['id', 'name'])
         );
@@ -244,17 +274,17 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::post('/api/clients/quick-store', [ClientController::class, 'quickStore'])->name('api.clients.quick-store');
 
     // Note Operative
-    Route::get('/daily-notes', \App\Livewire\Dashboard\UserDailyNotes::class)->name('daily-notes.index');
+    Route::get('/daily-notes', UserDailyNotes::class)->name('daily-notes.index');
 });
 
 // Route pubblica protetta da firma e throttling (usata per erogazione asincrona ai provider Social)
-Route::get('/social/media/{media}', \App\Http\Controllers\SocialMediaDeliveryController::class)
+Route::get('/social/media/{media}', SocialMediaDeliveryController::class)
     ->name('social.media.delivery')
     ->middleware(['signed', 'throttle:social-media-delivery']);
 
 // Route per la preview dei video temporanei di Livewire con supporto HTTP 206 Partial Content
-Route::get('/social/temporary-video-preview/{filename}', \App\Http\Controllers\SocialMedia\TemporaryVideoPreviewController::class)
+Route::get('/social/temporary-video-preview/{filename}', TemporaryVideoPreviewController::class)
     ->name('social.temporary-video-preview')
     ->middleware(['web', 'signed', 'auth']);
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

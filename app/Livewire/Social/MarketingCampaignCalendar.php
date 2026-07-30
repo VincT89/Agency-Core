@@ -2,17 +2,23 @@
 
 namespace App\Livewire\Social;
 
-use App\Models\MarketingCampaignPost;
-use App\Models\MarketingCampaign;
-use App\Models\Client;
+use App\Enums\Shooting\ShootStatus;
 use App\Enums\Social\MarketingCampaignPostStatus;
+use App\Models\Client;
+use App\Models\MarketingCampaign;
+use App\Models\MarketingCampaignPost;
+use App\Models\Shooting\Shoot;
+use Carbon\Carbon;
 use Livewire\Component;
 
 class MarketingCampaignCalendar extends Component
 {
     public $clientFilter = '';
+
     public $campaignFilter = '';
+
     public $platformFilter = '';
+
     public string $calendarDate;
 
     public function mount()
@@ -23,7 +29,7 @@ class MarketingCampaignCalendar extends Component
     public function setCalendarDate(string $date): void
     {
         try {
-            $this->calendarDate = \Carbon\Carbon::parse($date)->toDateString();
+            $this->calendarDate = Carbon::parse($date)->toDateString();
         } catch (\Throwable) {
             $this->calendarDate = now()->toDateString();
         }
@@ -32,13 +38,13 @@ class MarketingCampaignCalendar extends Component
 
     public function goToPreviousCalendarMonth(): void
     {
-        $this->calendarDate = \Carbon\Carbon::parse($this->calendarDate)->subMonth()->toDateString();
+        $this->calendarDate = Carbon::parse($this->calendarDate)->subMonth()->toDateString();
         $this->dispatch('marketing-global-calendar-date-changed', date: $this->calendarDate);
     }
 
     public function goToNextCalendarMonth(): void
     {
-        $this->calendarDate = \Carbon\Carbon::parse($this->calendarDate)->addMonth()->toDateString();
+        $this->calendarDate = Carbon::parse($this->calendarDate)->addMonth()->toDateString();
         $this->dispatch('marketing-global-calendar-date-changed', date: $this->calendarDate);
     }
 
@@ -65,7 +71,7 @@ class MarketingCampaignCalendar extends Component
 
         // Applica i filtri impostati dall'utente
         if ($this->clientFilter) {
-            $query->whereHas('campaign', function($q) {
+            $query->whereHas('campaign', function ($q) {
                 $q->where('client_id', $this->clientFilter);
             });
         }
@@ -75,11 +81,9 @@ class MarketingCampaignCalendar extends Component
         }
 
         // Applica le policy di sicurezza basate sui clienti visibili
-        if (!auth()->user()->canManageSystem() && !auth()->user()->isMarketing()) {
-            $query->whereHas('campaign.client', function($q) {
-                $q->whereHas('users', function($q2) {
-                    $q2->where('user_id', auth()->id());
-                });
+        if (! auth()->user()->canManageSystem() && ! auth()->user()->isMarketing()) {
+            $query->whereHas('campaign', function ($query) {
+                $query->visibleTo(auth()->user());
             });
         }
 
@@ -95,14 +99,14 @@ class MarketingCampaignCalendar extends Component
         $events = $posts->map(function ($post) {
             $date = $post->scheduled_date->format('Y-m-d');
             $time = $post->scheduled_time ? date('H:i:s', strtotime($post->scheduled_time)) : '12:00:00';
-            
+
             return [
-                'id' => 'post_' . $post->id,
+                'id' => 'post_'.$post->id,
                 'title' => $post->title ?? 'Post senza titolo',
-                'start' => $date . 'T' . $time,
+                'start' => $date.'T'.$time,
                 'url' => route('marketing-campaigns.posts.show', [
                     'campaign' => $post->marketing_campaign_id,
-                    'post' => $post->id
+                    'post' => $post->id,
                 ]),
                 'backgroundColor' => $post->status->color(),
                 'borderColor' => $post->status->color(),
@@ -112,18 +116,18 @@ class MarketingCampaignCalendar extends Component
                     'campaign' => $post->campaign->name ?? '',
                     'client' => $post->campaign->client->name ?? '',
                     'status' => $post->status->label(),
-                ]
+                ],
             ];
         })->toArray();
 
         // Fetch Shoots
-        $shootsQuery = \App\Models\Shooting\Shoot::query()
+        $shootsQuery = Shoot::query()
             ->whereNotNull('marketing_campaign_id')
-            ->where('status', '!=', \App\Enums\Shooting\ShootStatus::Cancelled)
+            ->where('status', '!=', ShootStatus::Cancelled)
             ->with(['marketingCampaign.client', 'slots']);
 
         if ($this->clientFilter) {
-            $shootsQuery->whereHas('marketingCampaign', function($q) {
+            $shootsQuery->whereHas('marketingCampaign', function ($q) {
                 $q->where('client_id', $this->clientFilter);
             });
         }
@@ -132,11 +136,9 @@ class MarketingCampaignCalendar extends Component
             $shootsQuery->where('marketing_campaign_id', $this->campaignFilter);
         }
 
-        if (!auth()->user()->canManageSystem() && !auth()->user()->isMarketing()) {
-            $shootsQuery->whereHas('marketingCampaign.client', function($q) {
-                $q->whereHas('users', function($q2) {
-                    $q2->where('user_id', auth()->id());
-                });
+        if (! auth()->user()->canManageSystem() && ! auth()->user()->isMarketing()) {
+            $shootsQuery->whereHas('marketingCampaign', function ($query) {
+                $query->visibleTo(auth()->user());
             });
         }
 
@@ -146,7 +148,7 @@ class MarketingCampaignCalendar extends Component
             // Find a date from slots or calendar event
             $date = null;
             $time = '09:00:00';
-            
+
             if ($shoot->selected_slot_id && $shoot->selectedSlot) {
                 $date = $shoot->selectedSlot->date->format('Y-m-d');
                 $time = $shoot->selectedSlot->starts_at ? $shoot->selectedSlot->starts_at->format('H:i:s') : '09:00:00';
@@ -161,9 +163,9 @@ class MarketingCampaignCalendar extends Component
 
             if ($date) {
                 $events[] = [
-                    'id' => 'shoot_' . $shoot->id,
-                    'title' => '📷 ' . ($shoot->title ?? 'Shooting'),
-                    'start' => $date . 'T' . $time,
+                    'id' => 'shoot_'.$shoot->id,
+                    'title' => '📷 '.($shoot->title ?? 'Shooting'),
+                    'start' => $date.'T'.$time,
                     'url' => route('social.shooting.show', $shoot->id),
                     'backgroundColor' => '#ec4899', // Pink-500 for shooting
                     'borderColor' => '#db2777',
@@ -173,7 +175,7 @@ class MarketingCampaignCalendar extends Component
                         'campaign' => $shoot->marketingCampaign->name ?? '',
                         'client' => $shoot->marketingCampaign->client->name ?? '',
                         'status' => $shoot->status->label(),
-                    ]
+                    ],
                 ];
             }
         }
@@ -184,11 +186,9 @@ class MarketingCampaignCalendar extends Component
     public function render()
     {
         // Carica i dati per le select di filtraggio in base ai permessi
-        $campaigns = MarketingCampaign::when(!auth()->user()->canManageSystem() && !auth()->user()->isMarketing(), function ($q) {
-            $q->whereHas('client.users', function ($q2) {
-                $q2->where('user_id', auth()->id());
-            });
-        })->get();
+        $campaigns = MarketingCampaign::query()
+            ->visibleTo(auth()->user())
+            ->get();
 
         $platforms = []; // Rimuoviamo SocialPlatform momentaneamente
 

@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\MarketingCampaign;
 use App\Models\Shooting\Shoot;
 use App\Models\User;
 use App\Policies\Concerns\HandlesRoleAuthorization;
@@ -31,7 +32,7 @@ class ShootPolicy
         if ($user->isMarketing() || $user->isDeveloper()) {
             return $this->canAccessShoot($user, $shoot);
         }
-        
+
         if ($user->isPhotographer() && $shoot->photographer_id === $user->id) {
             return true;
         }
@@ -59,7 +60,10 @@ class ShootPolicy
         }
 
         if ($shoot->marketing_campaign_id) {
-            return $user->clients()->where('clients.id', $shoot->marketingCampaign->client_id)->exists();
+            return MarketingCampaign::query()
+                ->visibleTo($user)
+                ->whereKey($shoot->marketing_campaign_id)
+                ->exists();
         }
 
         return false;

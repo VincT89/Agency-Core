@@ -3,8 +3,9 @@
 namespace App\Domain\Social\Services;
 
 use App\Domain\Social\DTOs\MarketingCampaignPostPublicationSnapshot;
-use App\Models\MarketingCampaignPostVersion;
 use App\Enums\Social\SocialPlatform;
+use App\Models\MarketingCampaignPostVersion;
+use Carbon\Carbon;
 
 class MarketingCampaignPostPublicationSnapshotBuilder
 {
@@ -18,43 +19,43 @@ class MarketingCampaignPostPublicationSnapshotBuilder
         array $platformOptions = []
     ): MarketingCampaignPostPublicationSnapshot {
         foreach (['social_account_id', 'external_id', 'page_id', 'profile_id'] as $key) {
-            if (!array_key_exists($key, $target)) {
+            if (! array_key_exists($key, $target)) {
                 throw new \InvalidArgumentException("Missing {$key} in target");
             }
         }
 
-        if (!is_int($target['social_account_id']) || $target['social_account_id'] <= 0) {
+        if (! is_int($target['social_account_id']) || $target['social_account_id'] <= 0) {
             throw new \InvalidArgumentException('Invalid social_account_id in target');
         }
 
-        if (!is_string($target['external_id']) || $target['external_id'] === '') {
+        if (! is_string($target['external_id']) || $target['external_id'] === '') {
             throw new \InvalidArgumentException('Invalid external_id in target');
         }
 
         foreach (['page_id', 'profile_id'] as $nullableId) {
-            if ($target[$nullableId] !== null && (!is_string($target[$nullableId]) || $target[$nullableId] === '')) {
+            if ($target[$nullableId] !== null && (! is_string($target[$nullableId]) || $target[$nullableId] === '')) {
                 throw new \InvalidArgumentException("Invalid {$nullableId} in target");
             }
         }
-        
+
         $post = $version->post;
-        
+
         // Risolvi media (ma non gli url temporanei)
         $mediaData = [];
-        $mediaItems = $version->mediaItems()->orderBy('pivot_sort_order')->get();
-        
+        $mediaItems = $version->mediaItems()->get();
+
         foreach ($mediaItems as $media) {
             $cache = $mediaMetadataCache[$media->id] ?? [];
-            
+
             $storageSource = in_array($media->source, ['nextcloud']) ? 'nextcloud' : 'local';
 
-            if (!isset($media->mime_type)) {
+            if (! isset($media->mime_type)) {
                 throw new \InvalidArgumentException("Missing mandatory mime_type for media {$media->id}");
             }
-            if (!isset($media->media_type)) { 
+            if (! isset($media->media_type)) {
                 throw new \InvalidArgumentException("Missing mandatory media_type for media {$media->id}");
             }
-            if (!isset($media->pivot->sort_order)) {
+            if (! isset($media->pivot->sort_order)) {
                 throw new \InvalidArgumentException("Missing mandatory sort_order for media {$media->id}");
             }
 
@@ -62,7 +63,7 @@ class MarketingCampaignPostPublicationSnapshotBuilder
                 if (empty($media->disk) || empty($media->path)) {
                     throw new \InvalidArgumentException("Missing mandatory disk or path for local media {$media->id}");
                 }
-                if (!isset($cache['size_bytes']) || !is_int($cache['size_bytes']) || $cache['size_bytes'] <= 0) {
+                if (! isset($cache['size_bytes']) || ! is_int($cache['size_bytes']) || $cache['size_bytes'] <= 0) {
                     throw new \InvalidArgumentException("Invalid mandatory size_bytes for local media {$media->id}");
                 }
                 if (empty($cache['sha256'])) {
@@ -89,7 +90,7 @@ class MarketingCampaignPostPublicationSnapshotBuilder
                 if (empty($cache['etag'])) {
                     throw new \InvalidArgumentException("Missing mandatory nextcloud_etag for nextcloud media {$media->id}");
                 }
-                if (!isset($cache['size_bytes']) || !is_int($cache['size_bytes']) || $cache['size_bytes'] <= 0) {
+                if (! isset($cache['size_bytes']) || ! is_int($cache['size_bytes']) || $cache['size_bytes'] <= 0) {
                     throw new \InvalidArgumentException("Invalid mandatory size_bytes for nextcloud media {$media->id}");
                 }
 
@@ -108,14 +109,14 @@ class MarketingCampaignPostPublicationSnapshotBuilder
             }
         }
 
-        if (!isset($post->content_type)) {
+        if (! isset($post->content_type)) {
             throw new \InvalidArgumentException("Missing mandatory content_type for post {$post->id}");
         }
 
         $scheduledTimeStr = null;
         if ($post->scheduled_time) {
-            $scheduledTimeStr = $post->scheduled_time instanceof \Carbon\Carbon 
-                ? $post->scheduled_time->toTimeString() 
+            $scheduledTimeStr = $post->scheduled_time instanceof Carbon
+                ? $post->scheduled_time->toTimeString()
                 : (is_string($post->scheduled_time) ? $post->scheduled_time : null);
         }
 

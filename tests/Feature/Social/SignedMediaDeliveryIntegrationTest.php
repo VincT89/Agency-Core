@@ -7,10 +7,12 @@ use App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData;
 use App\Domain\Social\Services\SocialMediaPublicUrlService;
 use App\Enums\Social\MarketingCampaignPostRegenerationType;
 use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostMedia;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class SignedMediaDeliveryIntegrationTest extends TestCase
@@ -21,17 +23,18 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
-        
+        Storage::fake('social_media');
+
         // Imposta un URL fittizio HTTPS e non locale per bypassare ensureSecureHost
         Config::set('app.url', 'https://test-agency.com');
-        \Illuminate\Support\Facades\URL::forceRootUrl('https://test-agency.com');
-        \Illuminate\Support\Facades\URL::forceScheme('https');
+        URL::forceRootUrl('https://test-agency.com');
+        URL::forceScheme('https');
     }
 
     protected function tearDown(): void
     {
-        \Illuminate\Support\Facades\URL::forceScheme(null);
-        \Illuminate\Support\Facades\URL::forceRootUrl(null);
+        URL::forceScheme(null);
+        URL::forceRootUrl(null);
 
         parent::tearDown();
     }
@@ -67,7 +70,7 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
         $media = $result->version->mediaItems->first();
 
         $this->assertEquals('n8n', $media->source);
-        $this->assertEquals('public', $media->disk);
+        $this->assertEquals('social_media', $media->disk);
 
         // Mock preflight validation from URL Service
         Http::fake([
@@ -89,7 +92,7 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
         // 6. Eseguiamo GET (delivery) sul controller
         // Convertiamo in url relativo per fare la chiamata di test al controller locale
         $parsedUrl = parse_url($url);
-        $relativeUrl = $parsedUrl['path'] . '?' . $parsedUrl['query'];
+        $relativeUrl = $parsedUrl['path'].'?'.$parsedUrl['query'];
 
         $response = $this->get($relativeUrl);
         $response->assertStatus(200);
@@ -102,40 +105,55 @@ class SignedMediaDeliveryIntegrationTest extends TestCase
         Storage::fake('public');
         Storage::disk('public')->put('marketing/campaign-posts/test.jpg', 'fake-image');
 
-        // Ambiguity test: both these paths should return 200 because of the str_starts_with fallback
-        $this->get('/media/marketing-campaign-posts/test.jpg')->assertStatus(200);
-        $this->get('/media/marketing-campaign-posts/marketing/campaign-posts/test.jpg')->assertStatus(200);
+        $shortUrl = URL::signedRoute(
+            'media.marketing-campaign-posts',
+            ['path' => 'test.jpg']
+        );
+        $fullUrl = URL::signedRoute(
+            'media.marketing-campaign-posts',
+            ['path' => 'marketing/campaign-posts/test.jpg']
+        );
 
-        // Traversal test: these should return 404
-        $this->get('/media/marketing-campaign-posts/../test.jpg')->assertStatus(404);
-        
+        $this->get($shortUrl)->assertStatus(200);
+        $this->get($fullUrl)->assertStatus(200);
+        $this->get('/media/marketing-campaign-posts/test.jpg')
+            ->assertForbidden();
+
+        // Unsigned traversal attempts are rejected before file resolution.
+        $this->get('/media/marketing-campaign-posts/../test.jpg')
+            ->assertForbidden();
+
         // Invalid extension
         Storage::disk('public')->put('marketing/campaign-posts/test.txt', 'text');
-        $this->get('/media/marketing-campaign-posts/test.txt')->assertStatus(404);
+        $invalidUrl = URL::signedRoute(
+            'media.marketing-campaign-posts',
+            ['path' => 'test.txt']
+        );
+        $this->get($invalidUrl)->assertStatus(404);
     }
 
     public function test_signed_route_signature_altered_missing_files_and_range()
     {
         Storage::fake('public');
-        $media = \App\Models\MarketingCampaignPostMedia::factory()->create([
+        $media = MarketingCampaignPostMedia::factory()->create([
             'source' => 'local',
             'disk' => 'public',
             'path' => 'marketing/campaign-posts/video.mp4',
-            'mime_type' => 'video/mp4'
+            'mime_type' => 'video/mp4',
         ]);
         Storage::disk('public')->put('marketing/campaign-posts/video.mp4', str_repeat('a', 1000));
 
-        $url = \Illuminate\Support\Facades\URL::signedRoute('social.media.delivery', ['media' => $media->id]);
-        
+        $url = URL::signedRoute('social.media.delivery', ['media' => $media->id]);
+
         // Convert to relative URL for testing
         $parsedUrl = parse_url($url);
-        $relativeUrl = $parsedUrl['path'] . '?' . $parsedUrl['query'];
+        $relativeUrl = $parsedUrl['path'].'?'.$parsedUrl['query'];
 
         // Normal request
         $this->get($relativeUrl)->assertStatus(200);
 
         // Altered signature -> 403
-        $this->get($relativeUrl . 'x')->assertStatus(403);
+        $this->get($relativeUrl.'x')->assertStatus(403);
 
         // Range/206 for video
         $this->get($relativeUrl, ['Range' => 'bytes=0-100'])->assertStatus(206);

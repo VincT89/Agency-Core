@@ -3,7 +3,8 @@
 namespace App\Domain\Social\Services;
 
 use App\Models\ClientSocialAccount;
-use Illuminate\Support\Facades\Http;
+use App\Support\Http\ProviderErrorSanitizer;
+use App\Support\Http\SocialProviderHttp;
 use Illuminate\Support\Facades\Log;
 
 class TikTokTokenRefreshService
@@ -19,7 +20,7 @@ class TikTokTokenRefreshService
         }
 
         // Se non abbiamo l'token_expires_at, lo consideriamo "a rischio" o proviamo a usarlo
-        if (!$account->token_expires_at) {
+        if (! $account->token_expires_at) {
             return true;
         }
 
@@ -33,8 +34,9 @@ class TikTokTokenRefreshService
 
     private function refreshToken(ClientSocialAccount $account): bool
     {
-        if (!$account->refresh_token) {
-            Log::warning("TikTokTokenRefreshService: impossibile fare refresh, refresh_token mancante.", ['account_id' => $account->id]);
+        if (! $account->refresh_token) {
+            Log::warning('TikTokTokenRefreshService: impossibile fare refresh, refresh_token mancante.', ['account_id' => $account->id]);
+
             return false;
         }
 
@@ -43,7 +45,7 @@ class TikTokTokenRefreshService
         $apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
 
         try {
-            $response = Http::asForm()->post("{$apiBase}/v2/oauth/token/", [
+            $response = SocialProviderHttp::tiktok()->asForm()->post("{$apiBase}/v2/oauth/token/", [
                 'client_key' => $clientKey,
                 'client_secret' => $clientSecret,
                 'grant_type' => 'refresh_token',
@@ -52,30 +54,40 @@ class TikTokTokenRefreshService
 
             if ($response->successful()) {
                 $data = $response->json();
-                
+                $newAccessToken = $data['access_token'] ?? null;
+
+                if (! is_string($newAccessToken) || $newAccessToken === '') {
+                    Log::error(
+                        'TikTokTokenRefreshService: risposta priva di access token.',
+                        ['account_id' => $account->id]
+                    );
+
+                    return false;
+                }
+
                 $account->update([
-                    'access_token' => $data['access_token'] ?? $account->access_token,
+                    'access_token' => $newAccessToken,
                     'refresh_token' => $data['refresh_token'] ?? $account->refresh_token,
                     'token_expires_at' => isset($data['expires_in']) ? now()->addSeconds($data['expires_in']) : $account->token_expires_at,
                     'refresh_token_expires_at' => isset($data['refresh_expires_in']) ? now()->addSeconds($data['refresh_expires_in']) : null,
                 ]);
 
-                Log::info("TikTokTokenRefreshService: Token aggiornato con successo.", ['account_id' => $account->id]);
+                Log::info('TikTokTokenRefreshService: Token aggiornato con successo.', ['account_id' => $account->id]);
+
                 return true;
             }
 
-            Log::error("TikTokTokenRefreshService: Fallito refresh token", [
+            Log::error('TikTokTokenRefreshService: Fallito refresh token', [
                 'account_id' => $account->id,
-                'status' => $response->status(),
-                'body' => $response->body()
+                ...ProviderErrorSanitizer::context($response),
             ]);
 
             return false;
 
-        } catch (\Exception $e) {
-            Log::error("TikTokTokenRefreshService: Eccezione durante refresh token", [
+        } catch (\Throwable $e) {
+            Log::error('TikTokTokenRefreshService: Eccezione durante refresh token', [
                 'account_id' => $account->id,
-                'error' => $e->getMessage()
+                'exception' => $e::class,
             ]);
 
             return false;

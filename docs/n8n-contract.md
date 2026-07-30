@@ -4,11 +4,42 @@ Questo documento descrive il contratto API e i payload scambiati tra Laravel (Ag
 
 ## 1. Auth inbound n8n → Laravel
 
-Tutte le API in ingresso (da n8n verso Laravel) richiedono autenticazione tramite header:
-`Authorization: Bearer <N8N_API_TOKEN>`
+Tutte le API in ingresso da n8n verso Laravel richiedono:
+
+- `Authorization: Bearer <N8N_API_TOKEN>`
+- `X-N8N-Timestamp: <unix timestamp>`
+- `X-N8N-Signature: sha256=<hex digest>`
+- `Idempotency-Key: <identificatore stabile del tentativo>` per tutte le
+  richieste mutative.
+
+`N8N_API_TOKEN` e `N8N_SIGNING_SECRET` devono essere valori distinti di almeno
+32 byte. La firma è l'HMAC SHA-256, calcolato con `N8N_SIGNING_SECRET`, dei
+seguenti byte canonici:
+
+```text
+<timestamp>\n<METHOD>\n<request-target>\n<raw request body>
+```
+
+`METHOD` è il verbo HTTP maiuscolo. `request-target` comprende path e query
+string esattamente come inviati, per esempio
+`/api/v1/integrations/n8n/health?probe=ready`. Il body deve essere firmato
+esattamente come viene trasmesso, senza ri-serializzarlo dopo il calcolo.
+Timestamp oltre la finestra configurata e firme già usate vengono rifiutati.
+
+Una `Idempotency-Key` deve contenere da 8 a 255 caratteri ASCII visibili. Se
+viene riutilizzata per metodo, endpoint, query o payload differenti, Laravel
+restituisce `409`; se identifica la stessa richiesta già completata, restituisce
+la risposta memorizzata senza ripetere gli effetti. Nei retry la chiave di
+idempotenza resta uguale, mentre timestamp e firma devono essere rigenerati.
 
 - **Configurazione Reale:** `services.n8n.token`
 - **Variabile d'ambiente:** `N8N_API_TOKEN`
+- **Signing secret:** `N8N_SIGNING_SECRET`
+- **Finestra temporale:** `N8N_SIGNATURE_MAX_CLOCK_SKEW_SECONDS`
+- **Durata idempotenza:** `N8N_IDEMPOTENCY_TTL_HOURS`
+- **Durata lock idempotenza:** `N8N_IDEMPOTENCY_LOCK_SECONDS`
+- **Attesa lock idempotenza:** `N8N_IDEMPOTENCY_LOCK_WAIT_SECONDS`
+- **Recupero richieste interrotte:** `N8N_IDEMPOTENCY_IN_PROGRESS_TIMEOUT_MINUTES`
 
 ## 2. Laravel → n8n: Generazione post marketing (Outbound)
 

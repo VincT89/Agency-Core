@@ -2,24 +2,30 @@
 
 namespace App\Domain\Social\Actions;
 
-use App\Models\MarketingCampaignPost;
-use App\Models\MarketingCampaignPostVersion;
-use App\Enums\Social\MarketingCampaignPostStatus;
-use App\Enums\Social\MarketingCampaignPostRegenerationType;
-use App\Enums\Social\MarketingCampaignPostVersionSource;
 use App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData;
 use App\Domain\Social\DTOs\AddPostVersionResult;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use App\Domain\Social\Services\ImageStagerService;
+use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
+use App\Domain\Social\Services\MediaIntegrityMetadataReader;
+use App\Enums\Social\MarketingCampaignPostRegenerationType;
+use App\Enums\Social\MarketingCampaignPostStatus;
+use App\Enums\Social\MarketingCampaignPostVersionSource;
+use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostMedia;
+use App\Models\MarketingCampaignPostVersion;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class AddMarketingCampaignPostVersionFromN8nAction
 {
     public function __construct(
-        private readonly \App\Domain\Social\Services\ImageStagerService $stager,
-        private readonly \App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver $resolver,
-        private readonly \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver,
+        private readonly ImageStagerService $stager,
+        private readonly MarketingCampaignPostVersionMediaResolver $resolver,
+        private readonly MarketingCampaignPostMediaUrlResolver $urlResolver,
         private readonly ?EvaluateMarketingCampaignPostAutomationAction $automation = null
     ) {}
 
@@ -113,7 +119,7 @@ class AddMarketingCampaignPostVersionFromN8nAction
                     foreach ($sourceMedia as $index => $media) {
                         $pivotData[$media->id] = ['sort_order' => $index];
                     }
-                    if (!empty($pivotData)) {
+                    if (! empty($pivotData)) {
                         $version->mediaItems()->attach($pivotData);
                     }
                 } else {
@@ -121,25 +127,25 @@ class AddMarketingCampaignPostVersionFromN8nAction
                     $pivotData = [];
                     foreach ($promotedFiles as $index => $promotedPath) {
                         $integrity = app(
-                            \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
-                        )->readLocal('public', $promotedPath);
+                            MediaIntegrityMetadataReader::class
+                        )->readLocal('social_media', $promotedPath);
                         $mime = $integrity['mime_type'];
 
-                        $media = \App\Models\MarketingCampaignPostMedia::create([
+                        $media = MarketingCampaignPostMedia::create([
                             'marketing_campaign_post_id' => $post->id,
                             'path' => $promotedPath,
-                            'disk' => 'public',
+                            'disk' => 'social_media',
                             'source' => 'n8n',
                             'mime_type' => $mime,
                             'source_size_bytes' => $integrity['source_size_bytes'],
                             'sha256' => $integrity['sha256'],
-                            'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($mime),
+                            'media_type' => MarketingCampaignPostMedia::detectMediaType($mime),
                             'sort_order' => $index, // Fallback order per il post
                         ]);
 
                         $pivotData[$media->id] = ['sort_order' => $index];
                     }
-                    if (!empty($pivotData)) {
+                    if (! empty($pivotData)) {
                         $version->mediaItems()->attach($pivotData);
                     }
                 }
@@ -147,10 +153,12 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 $version->setRelation('post', $post);
                 $finalResolution = $this->resolver->resolveForVersion($version);
                 $finalResolvedUrls = $this->urlResolver->orderedDeliveryUrls($finalResolution->mediaItems);
-                
+
                 $primaryMedia = $finalResolution->mediaItems->first();
                 $imagePath = null;
-                if ($primaryMedia && $primaryMedia->disk === 'public' && filled($primaryMedia->path)) {
+                if ($primaryMedia
+                    && in_array($primaryMedia->disk, ['public', 'social_media'], true)
+                    && filled($primaryMedia->path)) {
                     $imagePath = $primaryMedia->path;
                 }
 
@@ -161,17 +169,17 @@ class AddMarketingCampaignPostVersionFromN8nAction
                 ]);
 
                 $post->current_version_id = $version->id;
-                
-                if (!$post->generated_at) {
+
+                if (! $post->generated_at) {
                     $post->generated_at = now();
                 }
-                
+
                 $post->n8n_completed_at = now();
                 $post->n8n_error = null;
                 $post->status = MarketingCampaignPostStatus::Generated;
-                
+
                 $n8nInternalContext = $post->n8n_internal_context ?? [];
-                if (!empty($n8nInternalContext['_internal_temp_logo_path'])) {
+                if (! empty($n8nInternalContext['_internal_temp_logo_path'])) {
                     Storage::disk('public')->delete($n8nInternalContext['_internal_temp_logo_path']);
                     unset($n8nInternalContext['_internal_temp_logo_path']);
                     $post->n8n_internal_context = $n8nInternalContext;
@@ -181,13 +189,13 @@ class AddMarketingCampaignPostVersionFromN8nAction
 
                 return new AddPostVersionResult('created', $version);
             });
-            
+
             $committed = true;
 
             try {
                 $this->stager->deleteTemporary($temporaryFiles);
             } catch (Throwable $exception) {
-                \Illuminate\Support\Facades\Log::warning('Errore in deleteTemporary dopo commit', ['exception' => $exception->getMessage()]);
+                Log::warning('Errore in deleteTemporary dopo commit', ['exception' => $exception->getMessage()]);
             }
 
             if ($result->wasCreated() && $result->version) {
@@ -199,7 +207,7 @@ class AddMarketingCampaignPostVersionFromN8nAction
                                 ->findOrFail($result->version->marketing_campaign_post_id)
                         );
                 } catch (Throwable $exception) {
-                    \Illuminate\Support\Facades\Log::error(
+                    Log::error(
                         'social.automation.callback_evaluation_failed',
                         [
                             'post_id' => $result->version->marketing_campaign_post_id,
@@ -213,8 +221,8 @@ class AddMarketingCampaignPostVersionFromN8nAction
             return $result;
         } catch (UniqueConstraintViolationException $exception) {
             $msg = $exception->getMessage();
-            if (!str_contains($msg, 'mcpv_n8n_request_unique') && 
-                !str_contains($msg, 'marketing_campaign_post_versions_external_generation_id_unique')) {
+            if (! str_contains($msg, 'mcpv_n8n_request_unique') &&
+                ! str_contains($msg, 'marketing_campaign_post_versions_external_generation_id_unique')) {
                 // Non è un duplicato del webhook n8n (es. violazione mcpv_post_version_unique)
                 $this->cleanupOnError($temporaryFiles, $promotedFiles, $committed);
                 throw $exception;
@@ -240,12 +248,14 @@ class AddMarketingCampaignPostVersionFromN8nAction
     {
         try {
             $this->stager->deleteTemporary($temporaryFiles);
-        } catch (Throwable $e) {}
-        
-        if (!$committed) {
+        } catch (Throwable $e) {
+        }
+
+        if (! $committed) {
             try {
                 $this->stager->deletePromoted($promotedFiles);
-            } catch (Throwable $e) {}
+            } catch (Throwable $e) {
+            }
         }
     }
 

@@ -170,8 +170,22 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
         $this->assertEquals('Using alias for caption', $version->caption);
         $this->assertIsArray($version->image_urls);
         $this->assertNotEmpty($version->image_urls);
-        $this->assertStringContainsString('http', $version->image_urls[0]);
-        $this->assertStringContainsString('.jpg', $version->image_urls[0]);
+
+        $media = $post->mediaItems()->sole();
+
+        $this->assertSame('n8n', $media->source);
+        $this->assertSame('social_media', $media->disk);
+        $this->assertSame('image/jpeg', $media->mime_type);
+        $this->assertStringEndsWith('.jpg', $media->path);
+        $this->assertStringContainsString('/social/media/'.$media->id, $version->image_urls[0]);
+
+        $query = [];
+        parse_str((string) parse_url($version->image_urls[0], PHP_URL_QUERY), $query);
+        $this->assertArrayHasKey('signature', $query);
+
+        $this->get($version->image_urls[0])
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg');
     }
 
     public function test_nested_payload_is_lifted_to_root()

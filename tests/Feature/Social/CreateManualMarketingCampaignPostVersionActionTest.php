@@ -4,13 +4,13 @@ namespace Tests\Feature\Social;
 
 use App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction;
 use App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData;
+use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Exceptions\Social\StaleMarketingCampaignPostVersionException;
 use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostMedia;
-use App\Models\MarketingCampaignPostVersion;
 use App\Models\User;
-use App\Enums\Social\MarketingCampaignPostStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -19,7 +19,9 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
     use RefreshDatabase;
 
     private CreateManualMarketingCampaignPostVersionAction $action;
+
     private User $user;
+
     private MarketingCampaignPost $post;
 
     protected function setUp(): void
@@ -27,7 +29,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         parent::setUp();
         $this->action = app(CreateManualMarketingCampaignPostVersionAction::class);
         $this->user = User::factory()->create();
-        
+
         $this->post = MarketingCampaignPost::factory()->create([
             'status' => MarketingCampaignPostStatus::Draft,
             'title' => 'Original Title',
@@ -41,7 +43,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
             'marketing_campaign_post_id' => $this->post->id,
             'source' => 'local',
             'disk' => 'public',
-            'path' => 'test.jpg'
+            'path' => 'test.jpg',
         ]);
 
         $data = new CreateManualMarketingCampaignPostVersionData(
@@ -146,10 +148,10 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
 
         $this->assertTrue($result->isCreated());
         $this->assertNotEquals($v1->id, $result->version->id);
-        
+
         $pivot2 = $result->version->mediaItems()->where('marketing_campaign_post_media_id', $m2->id)->first()->pivot;
         $pivot1 = $result->version->mediaItems()->where('marketing_campaign_post_media_id', $m1->id)->first()->pivot;
-        
+
         $this->assertEquals(0, $pivot2->sort_order);
         $this->assertEquals(1, $pivot1->sort_order);
     }
@@ -167,7 +169,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         );
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("ID media duplicati nella selezione.");
+        $this->expectExceptionMessage('ID media duplicati nella selezione.');
         $this->action->execute($this->post, $data);
     }
 
@@ -185,7 +187,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         );
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("Uno o più media richiesti non esistono o non appartengono a questo post.");
+        $this->expectExceptionMessage('Uno o più media richiesti non esistono o non appartengono a questo post.');
         $this->action->execute($this->post, $data);
     }
 
@@ -247,7 +249,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         );
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("È richiesto almeno un media per creare la versione.");
+        $this->expectExceptionMessage('È richiesto almeno un media per creare la versione.');
         $this->action->execute($this->post, $data);
     }
 
@@ -255,7 +257,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
     {
         $m1 = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'local', 'disk' => 'public', 'path' => 'local.jpg']);
         $m2 = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'nextcloud', 'nextcloud_share_url' => 'http://nc']);
-        
+
         $data = new CreateManualMarketingCampaignPostVersionData(
             expected_current_version_id: null,
             title: 'T',
@@ -267,7 +269,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         $result = $this->action->execute($this->post, $data);
         $this->assertTrue($result->isCreated());
         $this->assertEquals('local.jpg', $result->version->image_path);
-        
+
         // Assert dual write
         $this->post->refresh();
         $this->assertEquals('local.jpg', $this->post->media_path);
@@ -294,17 +296,18 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         $result = $this->action->execute($this->post, $data);
         $this->assertTrue($result->isUnchanged());
     }
+
     public function test_passaggio_nextcloud_locale_pulisce_campi_legacy()
     {
         $this->post->forceFill([
             'media_source' => 'nextcloud',
             'nextcloud_path' => 'old.jpg',
             'nextcloud_share_url' => 'http://nc',
-            'nextcloud_file_id' => '123'
+            'nextcloud_file_id' => '123',
         ])->save();
 
         $mediaLocal = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'local', 'disk' => 'public', 'path' => 'new.jpg']);
-        
+
         $data = new CreateManualMarketingCampaignPostVersionData(
             expected_current_version_id: null,
             title: 'T',
@@ -314,7 +317,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         );
 
         $this->action->execute($this->post, $data);
-        
+
         $this->post->refresh();
         $this->assertEquals('local', $this->post->media_source);
         $this->assertEquals('new.jpg', $this->post->media_path);
@@ -331,7 +334,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         ])->save();
 
         $mediaNc = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $this->post->id, 'source' => 'nextcloud', 'nextcloud_path' => 'new.jpg', 'nextcloud_share_url' => 'http://nc']);
-        
+
         $data = new CreateManualMarketingCampaignPostVersionData(
             expected_current_version_id: null,
             title: 'T',
@@ -341,7 +344,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         );
 
         $this->action->execute($this->post, $data);
-        
+
         $this->post->refresh();
         $this->assertEquals('nextcloud', $this->post->media_source);
         $this->assertNull($this->post->media_path);
@@ -357,7 +360,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         $v3 = $this->post->versions()->create(['version_number' => 3, 'title' => 'V3']);
         $v3->mediaItems()->attach([
             $b1->id => ['sort_order' => 0],
-            $b2->id => ['sort_order' => 1]
+            $b2->id => ['sort_order' => 1],
         ]);
         $this->post->update(['current_version_id' => $v3->id]);
 
@@ -372,8 +375,8 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         $result = $this->action->execute($this->post, $data);
         $v4 = $result->version;
 
-        $this->assertEquals([$b1->id, $b2->id], $v3->mediaItems()->orderBy('pivot_sort_order')->pluck('marketing_campaign_post_media_id')->toArray());
-        $this->assertEquals([$b2->id, $b3->id], $v4->mediaItems()->orderBy('pivot_sort_order')->pluck('marketing_campaign_post_media_id')->toArray());
+        $this->assertEquals([$b1->id, $b2->id], $v3->mediaItems()->pluck('marketing_campaign_post_media_id')->toArray());
+        $this->assertEquals([$b2->id, $b3->id], $v4->mediaItems()->pluck('marketing_campaign_post_media_id')->toArray());
     }
 
     public function test_secondo_save_dopo_v4_crea_v5()
@@ -419,7 +422,7 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
         );
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            DB::transaction(function () use ($data) {
                 $this->action->execute($this->post, $data);
             });
             $this->fail('Exception was not thrown');
@@ -434,13 +437,13 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
     public function test_manual_version_with_only_nextcloud_media_sets_image_path_null()
     {
         $m1 = MarketingCampaignPostMedia::factory()->create([
-            'marketing_campaign_post_id' => $this->post->id, 
-            'source' => 'nextcloud', 
+            'marketing_campaign_post_id' => $this->post->id,
+            'source' => 'nextcloud',
             'nextcloud_share_url' => 'http://nc',
             'path' => null,
-            'disk' => null
+            'disk' => null,
         ]);
-        
+
         $data = new CreateManualMarketingCampaignPostVersionData(
             expected_current_version_id: null,
             title: 'Title',
@@ -451,10 +454,10 @@ class CreateManualMarketingCampaignPostVersionActionTest extends TestCase
 
         $result = $this->action->execute($this->post, $data);
         $this->assertTrue($result->isCreated());
-        
+
         // image_path expects a local public path, so for nextcloud it must be null
         $this->assertNull($result->version->image_path);
-        
+
         // image_url will use the fallback URL resolver which maps to the nextcloud share URL or delivery URL
         $this->assertNotNull($result->version->image_url);
     }

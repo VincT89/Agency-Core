@@ -2,25 +2,34 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Models\User;
+use App\Enums\Shooting\ShootSlotPeriod;
+use App\Enums\Shooting\ShootSlotStatus;
+use App\Enums\Shooting\ShootStatus;
+use App\Livewire\Admin\Shooting\ShootShow;
+use App\Livewire\Photography\Shooting\MyShootShow;
+use App\Livewire\Social\Shooting\CreateRequest;
+use App\Models\Client;
+use App\Models\MarketingCampaign;
+use App\Models\Project;
 use App\Models\Shooting\Shoot;
 use App\Models\Shooting\ShootSlot;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use App\Livewire\Photography\Shooting\MyShootShow;
-use App\Livewire\Admin\Shooting\ShootShow;
-use App\Enums\Shooting\ShootStatus;
-use App\Enums\Shooting\ShootSlotStatus;
+use Tests\TestCase;
 
 class ShootingLivewireAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $admin;
+
     private User $photographer1;
+
     private User $photographer2;
+
     private Shoot $shoot;
+
     private ShootSlot $slot;
 
     protected function setUp(): void
@@ -31,7 +40,7 @@ class ShootingLivewireAuthorizationTest extends TestCase
         $this->photographer1 = User::factory()->create(['role' => 'photographer']);
         $this->photographer2 = User::factory()->create(['role' => 'photographer']);
 
-        $project = \App\Models\Project::factory()->create();
+        $project = Project::factory()->create();
         $project->users()->attach([
             $this->admin->id => ['role' => 'owner'],
             $this->photographer1->id => ['role' => 'contributor'],
@@ -42,11 +51,11 @@ class ShootingLivewireAuthorizationTest extends TestCase
             'status' => ShootStatus::WaitingPhotographer,
             'project_id' => $project->id,
         ]);
-        
+
         $this->slot = ShootSlot::create([
             'shoot_id' => $this->shoot->id,
             'date' => now()->addDays(5),
-            'period' => \App\Enums\Shooting\ShootSlotPeriod::Morning,
+            'period' => ShootSlotPeriod::Morning,
             'starts_at' => '09:00:00',
             'ends_at' => '13:00:00',
             'status' => ShootSlotStatus::Proposed,
@@ -60,7 +69,7 @@ class ShootingLivewireAuthorizationTest extends TestCase
         Livewire::actingAs($this->photographer2)
             ->test(MyShootShow::class, ['shoot' => $this->shoot])
             ->assertForbidden();
-            
+
         // Let's test the specific method if view is somehow bypassed
         // actually test() runs mount, so it fails there.
     }
@@ -71,22 +80,81 @@ class ShootingLivewireAuthorizationTest extends TestCase
             ->test(MyShootShow::class, ['shoot' => $this->shoot])
             ->call('acceptSlot', $this->slot->id)
             ->assertHasNoErrors();
-            
+
         $this->assertEquals(ShootStatus::WaitingClient, $this->shoot->fresh()->status);
     }
-    
+
     public function test_admin_can_confirm_for_client()
     {
         $this->shoot->update([
-            'status' => ShootStatus::WaitingClient, 
-            'selected_slot_id' => $this->slot->id
+            'status' => ShootStatus::WaitingClient,
+            'selected_slot_id' => $this->slot->id,
         ]);
-        
+
         Livewire::actingAs($this->admin)
             ->test(ShootShow::class, ['shoot' => $this->shoot])
             ->call('confirmForClient')
             ->assertHasNoErrors();
-            
+
         $this->assertEquals(ShootStatus::Scheduled, $this->shoot->fresh()->status);
+    }
+
+    public function test_developer_cannot_create_shoot_for_unassigned_campaign(): void
+    {
+        $developer = User::factory()->create(['role' => 'developer']);
+        $foreignCampaign = MarketingCampaign::factory()->create();
+
+        Livewire::actingAs($developer)
+            ->test(CreateRequest::class)
+            ->set('marketing_campaign_id', $foreignCampaign->id)
+            ->set('proposedSlots', [[
+                'date' => now()->addWeek()->toDateString(),
+                'period' => 'morning',
+            ]])
+            ->call('save')
+            ->assertForbidden();
+    }
+
+    public function test_project_and_campaign_must_belong_to_same_client(): void
+    {
+        $developer = User::factory()->create(['role' => 'developer']);
+        $projectClient = Client::factory()->create();
+        $campaignClient = Client::factory()->create();
+        $selectedProject = Project::factory()->create(['client_id' => $projectClient->id]);
+        $campaignAccessProject = Project::factory()->create(['client_id' => $campaignClient->id]);
+        $selectedProject->users()->attach($developer->id, ['role' => 'contributor']);
+        $campaignAccessProject->users()->attach($developer->id, ['role' => 'contributor']);
+        $foreignCampaign = MarketingCampaign::factory()->create([
+            'client_id' => $campaignClient->id,
+        ]);
+        $shootCount = Shoot::withoutGlobalScopes()->count();
+
+        Livewire::actingAs($developer)
+            ->test(CreateRequest::class)
+            ->set('project_id', $selectedProject->id)
+            ->set('marketing_campaign_id', $foreignCampaign->id)
+            ->set('proposedSlots', [[
+                'date' => now()->addWeek()->toDateString(),
+                'period' => 'morning',
+            ]])
+            ->call('save')
+            ->assertHasErrors(['marketing_campaign_id']);
+
+        $this->assertSame($shootCount, Shoot::withoutGlobalScopes()->count());
+    }
+
+    public function test_developer_can_view_campaign_shoot_for_assigned_client(): void
+    {
+        $developer = User::factory()->create(['role' => 'developer']);
+        $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+        $project->users()->attach($developer->id, ['role' => 'contributor']);
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $shoot = Shoot::factory()->create([
+            'project_id' => null,
+            'marketing_campaign_id' => $campaign->id,
+        ]);
+
+        $this->assertTrue($developer->can('view', $shoot));
     }
 }

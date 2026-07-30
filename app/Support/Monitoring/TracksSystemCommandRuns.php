@@ -3,6 +3,8 @@
 namespace App\Support\Monitoring;
 
 use App\Models\SystemCommandRun;
+use App\Support\Http\ProviderErrorSanitizer;
+use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -11,10 +13,10 @@ trait TracksSystemCommandRuns
     /**
      * Executes a command callback and tracks its execution.
      *
-     * @param string $command The signature or name of the command
-     * @param callable $callback The actual execution logic returning an integer exit code
-     * @param array $metadata Safe metadata to store
-     * @return int
+     * @param  string  $command  The signature or name of the command
+     * @param  callable  $callback  The actual execution logic returning an integer exit code
+     * @param  array  $metadata  Safe metadata to store
+     *
      * @throws Throwable
      */
     protected function runTracked(
@@ -34,7 +36,7 @@ trait TracksSystemCommandRuns
             $exitCode = $callback();
 
             $run->update([
-                'status' => $exitCode === \Illuminate\Console\Command::SUCCESS
+                'status' => $exitCode === Command::SUCCESS
                     ? 'succeeded'
                     : 'failed',
                 'exit_code' => $exitCode,
@@ -45,9 +47,11 @@ trait TracksSystemCommandRuns
         } catch (Throwable $exception) {
             $run->update([
                 'status' => 'failed',
-                'exit_code' => \Illuminate\Console\Command::FAILURE,
+                'exit_code' => Command::FAILURE,
                 'error_message' => Str::limit(
-                    $exception->getMessage(),
+                    ProviderErrorSanitizer::safeText(
+                        $exception->getMessage()
+                    ),
                     1000
                 ),
                 'finished_at' => now(),

@@ -7,12 +7,12 @@
         <p>Campagna: <strong class="cr-page-accent">{{ $post->campaign->name }}</strong></p>
     </div>
 
-    @if(session('success'))
+    @if($successMessage)
         <div class="cr-card cr-success-card">
             <div class="cr-success-icon-wrap">
                 <i data-lucide="check-circle" class="cr-success-icon"></i>
             </div>
-            <h3 class="cr-success-title">{{ session('success') }}</h3>
+            <h3 class="cr-success-title">{{ $successMessage }}</h3>
             <p class="cr-success-desc">Puoi chiudere questa finestra in modo sicuro. Il nostro team è stato avvisato e procederà con gli step successivi.</p>
         </div>
     @else

@@ -2,109 +2,188 @@
 
 namespace Tests\Feature\Livewire;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Enums\UserRole;
+use App\Models\ClientReviewToken;
+use App\Models\Expense;
+use App\Models\MarketingCampaign;
+use App\Models\MarketingCampaignPost;
+use App\Models\Shooting\Shoot;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class FrontendComponentsTest extends TestCase
 {
+    use RefreshDatabase;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->admin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+        $this->actingAs($this->admin);
+    }
+
     public function test_marketing_campaign_calendar_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('social.calendar');
     }
 
     public function test_marketing_campaigns_index_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('marketing-campaigns.index');
     }
 
     public function test_marketing_campaign_create_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('marketing-campaigns.create');
     }
 
     public function test_marketing_campaign_show_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $campaign = MarketingCampaign::factory()->create();
+
+        $this->assertRouteRenders('marketing-campaigns.show', $campaign);
     }
 
     public function test_marketing_campaign_post_create_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $campaign = MarketingCampaign::factory()->create();
+
+        $this->assertRouteRenders(
+            'marketing-campaigns.posts.create',
+            $campaign
+        );
     }
 
     public function test_marketing_campaign_post_show_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        [$campaign, $post] = $this->campaignAndPost();
+
+        $this->assertRouteRenders(
+            'marketing-campaigns.posts.show',
+            ['campaign' => $campaign, 'post' => $post]
+        );
     }
 
     public function test_public_marketing_campaign_post_review_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        [, $post] = $this->campaignAndPost();
+        $token = ClientReviewToken::factory()->create([
+            'reviewable_id' => $post->id,
+            'reviewable_type' => MarketingCampaignPost::class,
+            'marketing_campaign_post_version_id' => null,
+        ]);
+
+        $this->assertRouteRenders(
+            'public.marketing-campaign-posts.review',
+            ['token' => $token->token]
+        );
     }
 
     public function test_social_shooting_requests_index_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('social.shooting.index');
     }
 
     public function test_social_shooting_create_request_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('social.shooting.create');
     }
 
     public function test_social_shooting_request_show_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders(
+            'social.shooting.show',
+            Shoot::factory()->create()
+        );
     }
 
     public function test_photography_shooting_my_shoots_index_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('photography.shooting.index');
     }
 
     public function test_photography_shooting_my_shoot_show_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders(
+            'photography.shooting.show',
+            Shoot::factory()->create()
+        );
     }
 
     public function test_admin_shooting_shoots_index_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('admin.shooting.index');
     }
 
     public function test_admin_shooting_shoot_show_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders(
+            'admin.shooting.show',
+            Shoot::factory()->create()
+        );
     }
 
     public function test_admin_social_agency_social_connections_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('admin.social.connections.index');
     }
 
     public function test_admin_social_social_operations_dashboard_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('admin.social.operations.index');
     }
 
     public function test_expenses_expenses_index_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('expenses.index');
     }
 
     public function test_expenses_expense_form_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('expenses.create');
     }
 
     public function test_expenses_expense_show_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $expense = Expense::create([
+            'user_id' => $this->admin->id,
+            'title' => 'Test expense',
+            'amount' => 10,
+            'expense_date' => now()->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->assertRouteRenders('expenses.show', $expense);
     }
 
     public function test_dashboard_user_daily_notes_renders_successfully(): void
     {
-        $this->markTestIncomplete('TODO: implement livewire rendering test');
+        $this->assertRouteRenders('daily-notes.index');
+    }
+
+    private function assertRouteRenders(
+        string $routeName,
+        mixed $parameters = []
+    ): void {
+        $this->get(route($routeName, $parameters))->assertOk();
+    }
+
+    /**
+     * @return array{MarketingCampaign, MarketingCampaignPost}
+     */
+    private function campaignAndPost(): array
+    {
+        $campaign = MarketingCampaign::factory()->create();
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+        ]);
+
+        return [$campaign, $post];
     }
 }

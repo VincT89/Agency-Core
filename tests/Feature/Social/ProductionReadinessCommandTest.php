@@ -10,6 +10,7 @@ use App\Enums\Social\SocialPlatform;
 use App\Models\ClientSocialAccount;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostMedia;
 use App\Models\MarketingCampaignPostVersion;
 use App\Models\SystemHeartbeat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -199,6 +200,45 @@ class ProductionReadinessCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_it_rejects_local_social_media_on_public_disk(): void
+    {
+        $this->configureReadyEnvironment();
+        SystemHeartbeat::create([
+            'name' => 'scheduler',
+            'last_seen_at' => now(),
+        ]);
+        MarketingCampaignPostMedia::factory()->create([
+            'source' => 'local',
+            'disk' => 'public',
+            'path' => 'marketing/campaign-posts/exposed.jpg',
+        ]);
+
+        $this->artisan('social:production-readiness')
+            ->expectsOutputToContain(
+                'media social devono essere migrati sul disco privato'
+            )
+            ->assertFailed();
+    }
+
+    public function test_it_rejects_weak_n8n_secrets(): void
+    {
+        $this->configureReadyEnvironment();
+        config([
+            'services.n8n.token' => 'short-token',
+            'services.n8n.signing_secret' => 'short-secret',
+        ]);
+        SystemHeartbeat::create([
+            'name' => 'scheduler',
+            'last_seen_at' => now(),
+        ]);
+
+        $this->artisan('social:production-readiness')
+            ->expectsOutputToContain(
+                'token e signing secret n8n di almeno 32 byte'
+            )
+            ->assertFailed();
+    }
+
     private function configureReadyEnvironment(): void
     {
         config([
@@ -208,6 +248,17 @@ class ProductionReadinessCommandTest extends TestCase
             'queue.connections.database.table' => 'jobs',
             'social.publishing.dry_run' => false,
             'social.auto_publish_enabled' => true,
+            'services.n8n.token' => str_repeat('t', 32),
+            'services.n8n.signing_secret' => str_repeat('s', 32),
+            'services.n8n.require_signature' => true,
+            'services.n8n.require_idempotency_key' => true,
         ]);
+
+        foreach (config('system-monitoring.queues', []) as $queue) {
+            SystemHeartbeat::updateOrCreate(
+                ['name' => 'queue:'.$queue],
+                ['last_seen_at' => now(), 'metadata' => ['status' => 'ok']]
+            );
+        }
     }
 }

@@ -7,38 +7,59 @@ use Illuminate\Support\Facades\Cache;
 class SocialCircuitBreaker
 {
     public const STATE_CLOSED = 'closed';     // Funzionamento normale
+
     public const STATE_OPEN = 'open';         // Troppi errori, richieste bloccate
+
     public const STATE_HALF_OPEN = 'half_open'; // Periodo di test dopo blocco
 
     protected string $provider;
+
+    protected string $scope;
+
     protected int $failureThreshold;
+
     protected int $resetTimeout; // secondi
 
-    public function __construct(string $provider = 'meta', int $failureThreshold = 10, int $resetTimeout = 300)
-    {
+    public function __construct(
+        string $provider = 'social',
+        int $failureThreshold = 10,
+        int $resetTimeout = 300,
+        string $scope = 'global'
+    ) {
         $this->provider = $provider;
         $this->failureThreshold = $failureThreshold;
         $this->resetTimeout = $resetTimeout;
+        $this->scope = hash('sha256', $scope);
+    }
+
+    public function scoped(string $provider, string $scope): self
+    {
+        return new self(
+            provider: $provider,
+            failureThreshold: $this->failureThreshold,
+            resetTimeout: $this->resetTimeout,
+            scope: $scope
+        );
     }
 
     protected function getStateKey(): string
     {
-        return "circuit_breaker:{$this->provider}:state";
+        return "circuit_breaker:{$this->provider}:{$this->scope}:state";
     }
 
     protected function getFailureCountKey(): string
     {
-        return "circuit_breaker:{$this->provider}:failures";
+        return "circuit_breaker:{$this->provider}:{$this->scope}:failures";
     }
 
     public function getState(): string
     {
         $state = Cache::get($this->getStateKey());
-        
+
         if ($state === self::STATE_OPEN) {
             return self::STATE_OPEN;
         }
-        
+
         if ($state === self::STATE_HALF_OPEN) {
             return self::STATE_HALF_OPEN;
         }
@@ -49,6 +70,7 @@ class SocialCircuitBreaker
         if ($count >= $this->failureThreshold) {
             // Aggiorniamo esplicitamente lo stato a half_open per questa finestra
             Cache::put($this->getStateKey(), self::STATE_HALF_OPEN);
+
             return self::STATE_HALF_OPEN;
         }
 
@@ -66,7 +88,7 @@ class SocialCircuitBreaker
         if ($state === self::STATE_HALF_OPEN) {
             // Permettiamo 1 chiamata per testare se è tornato online
             // Il lock copre il tempo di una richiesta API lenta per evitare falsi storm
-            return Cache::add("circuit_breaker:{$this->provider}:probe_lock", true, 30);
+            return Cache::add($this->getProbeLockKey(), true, 30);
         }
 
         return false;
@@ -76,16 +98,24 @@ class SocialCircuitBreaker
     {
         Cache::forget($this->getFailureCountKey());
         Cache::forget($this->getStateKey());
+        Cache::forget($this->getProbeLockKey());
     }
 
     public function recordFailure(): void
     {
         $count = Cache::increment($this->getFailureCountKey());
 
-        // Se abbiamo raggiunto/superato la soglia O eravamo in half-open, 
+        // Se abbiamo raggiunto/superato la soglia O eravamo in half-open,
         // riapriamo il circuito resettando il timeout.
         if ($count >= $this->failureThreshold) {
             Cache::put($this->getStateKey(), self::STATE_OPEN, $this->resetTimeout);
         }
+
+        Cache::forget($this->getProbeLockKey());
+    }
+
+    protected function getProbeLockKey(): string
+    {
+        return "circuit_breaker:{$this->provider}:{$this->scope}:probe_lock";
     }
 }

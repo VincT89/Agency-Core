@@ -8,8 +8,9 @@ use App\Enums\Social\PublicationFailureClassification;
 use App\Enums\Social\SocialPlatform;
 use App\Models\ClientSocialAccount;
 use App\Models\MarketingCampaignPostPublication;
+use App\Support\Http\ProviderErrorSanitizer;
+use App\Support\Http\SocialProviderHttp;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MetaPublisher implements SocialPublisherInterface
@@ -215,7 +216,7 @@ class MetaPublisher implements SocialPublisherInterface
         $graphVersion = config('services.meta.graph_version', 'v19.0');
         $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$providerAccountId}";
 
-        $client = Http::withHeaders([
+        $client = SocialProviderHttp::meta()->withHeaders([
             'X-Correlation-Id' => $correlationId ?? 'none',
         ]);
 
@@ -240,9 +241,9 @@ class MetaPublisher implements SocialPublisherInterface
                 if (! $uploadResponse->successful()) {
                     return PublishResult::failure(
                         "Errore API Facebook durante l’upload dell’immagine {$index}: ".
-                            $uploadResponse->body(),
+                            ProviderErrorSanitizer::message($uploadResponse),
                         $this->classifyErrorResponse($uploadResponse),
-                        $uploadResponse->json()
+                        ProviderErrorSanitizer::payload($uploadResponse)
                     );
                 }
 
@@ -287,7 +288,11 @@ class MetaPublisher implements SocialPublisherInterface
         $response = $client->post($endpoint, $payload);
 
         if (! $response->successful()) {
-            return PublishResult::failure('Errore API Facebook: '.$response->body(), $this->classifyErrorResponse($response), $response->json());
+            return PublishResult::failure(
+                ProviderErrorSanitizer::message($response, 'Errore API Facebook'),
+                $this->classifyErrorResponse($response),
+                ProviderErrorSanitizer::payload($response)
+            );
         }
 
         $data = $response->json();
@@ -316,7 +321,7 @@ class MetaPublisher implements SocialPublisherInterface
         $graphVersion = config('services.meta.graph_version', 'v19.0');
         $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}";
 
-        $client = Http::withHeaders([
+        $client = SocialProviderHttp::meta()->withHeaders([
             'X-Correlation-Id' => $correlationId ?? 'none',
         ]);
 
@@ -340,7 +345,14 @@ class MetaPublisher implements SocialPublisherInterface
                 $itemResponse = $client->post("{$baseEndpoint}/media", $itemPayload);
 
                 if (! $itemResponse->successful()) {
-                    return PublishResult::failure("Errore IG Carousel Item Container (Indice {$index}): ".$itemResponse->body(), $this->classifyErrorResponse($itemResponse), $itemResponse->json());
+                    return PublishResult::failure(
+                        ProviderErrorSanitizer::message(
+                            $itemResponse,
+                            "Errore IG Carousel Item Container (indice {$index})"
+                        ),
+                        $this->classifyErrorResponse($itemResponse),
+                        ProviderErrorSanitizer::payload($itemResponse)
+                    );
                 }
 
                 $childId = $this->providerIdentifier(
@@ -383,7 +395,14 @@ class MetaPublisher implements SocialPublisherInterface
             $containerResponse = $client->post("{$baseEndpoint}/media", $containerPayload);
 
             if (! $containerResponse->successful()) {
-                return PublishResult::failure('Errore IG Single Container: '.$containerResponse->body(), $this->classifyErrorResponse($containerResponse), $containerResponse->json());
+                return PublishResult::failure(
+                    ProviderErrorSanitizer::message(
+                        $containerResponse,
+                        'Errore IG Single Container'
+                    ),
+                    $this->classifyErrorResponse($containerResponse),
+                    ProviderErrorSanitizer::payload($containerResponse)
+                );
             }
 
             $containerData = $containerResponse->json();

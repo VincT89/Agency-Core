@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers\Admin\Social;
 
+use App\Domain\Social\Actions\SyncMetaAssetsAction;
+use App\Enums\Social\AgencyConnectionStatus;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Laravel\Socialite\Facades\Socialite;
 use App\Models\AgencySocialConnection;
+use GuzzleHttp\Client as HttpClient;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Laravel\Socialite\Facades\Socialite;
 
 class AgencyMetaOAuthController extends Controller
 {
     public function redirect()
     {
-        return Socialite::driver('facebook')
+        return $this->provider()
             ->scopes([
                 'pages_manage_posts',
                 'pages_read_engagement',
@@ -20,7 +23,7 @@ class AgencyMetaOAuthController extends Controller
                 'pages_manage_metadata',
                 'business_management',
                 'instagram_basic',
-                'instagram_content_publish'
+                'instagram_content_publish',
             ])
             ->redirect();
     }
@@ -28,27 +31,44 @@ class AgencyMetaOAuthController extends Controller
     public function callback(Request $request)
     {
         if ($request->has('error')) {
-            Log::error('Agency Meta OAuth Error', $request->all());
+            Log::warning('Agency Meta OAuth Error', [
+                'error' => (string) $request->query('error'),
+                'user_id' => auth()->id(),
+            ]);
+
             return redirect()->route('admin.social.connections.index')
-                ->with('error', 'Collegamento annullato o non riuscito: ' . $request->get('error_description'));
+                ->with('error', 'Meta ha annullato o rifiutato il collegamento.');
         }
 
         try {
-            $socialUser = Socialite::driver('facebook')->user();
-            
+            $socialUser = $this->provider()->user();
+            $providerUserId = $socialUser->getId();
+            $accessToken = $socialUser->token;
+
+            if (
+                ! is_string($providerUserId)
+                || $providerUserId === ''
+                || ! is_string($accessToken)
+                || $accessToken === ''
+            ) {
+                throw new \UnexpectedValueException(
+                    'Meta ha restituito una risposta OAuth incompleta.'
+                );
+            }
+
             $connection = AgencySocialConnection::updateOrCreate(
                 [
                     'provider' => 'facebook',
-                    'provider_user_id' => $socialUser->getId(),
+                    'provider_user_id' => $providerUserId,
                 ],
                 [
                     'provider_user_name' => $socialUser->getName() ?? $socialUser->getNickname(),
-                    'access_token' => $socialUser->token,
+                    'access_token' => $accessToken,
                     'refresh_token' => $socialUser->refreshToken,
                     'token_expires_at' => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
                     'last_token_refresh_at' => now(),
                     'requires_reauth' => false,
-                    'status' => \App\Enums\Social\AgencyConnectionStatus::Connected,
+                    'status' => AgencyConnectionStatus::Connected,
                     'connected_by' => auth()->id(),
                     'connected_at' => now(),
                     'scopes' => $socialUser->approvedScopes ?? [],
@@ -56,15 +76,42 @@ class AgencyMetaOAuthController extends Controller
             );
 
             // Appena connesso, lanciamo un primo sync degli asset
-            app(\App\Domain\Social\Actions\SyncMetaAssetsAction::class)->execute($connection);
+            $syncResult = app(
+                SyncMetaAssetsAction::class
+            )->execute($connection);
 
             return redirect()->route('admin.social.connections.index')
-                ->with('success', 'Account Meta collegato con successo!');
+                ->with(
+                    $syncResult->errors > 0 ? 'warning' : 'success',
+                    $syncResult->errors > 0
+                        ? 'Account Meta collegato, ma la sincronizzazione iniziale degli asset non è riuscita.'
+                        : 'Account Meta collegato con successo.'
+                );
 
-        } catch (\Exception $e) {
-            Log::error('Agency Meta OAuth Exception', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+        } catch (\Throwable $e) {
+            Log::error('Agency Meta OAuth Exception', [
+                'exception' => $e::class,
+                'user_id' => auth()->id(),
+            ]);
+
             return redirect()->route('admin.social.connections.index')
                 ->with('error', 'Si è verificato un errore durante il collegamento con Meta.');
         }
+    }
+
+    private function provider()
+    {
+        return Socialite::driver('facebook')->setHttpClient(
+            new HttpClient([
+                'connect_timeout' => max(
+                    1,
+                    (int) config('services.meta.connect_timeout', 5)
+                ),
+                'timeout' => max(
+                    1,
+                    (int) config('services.meta.timeout', 15)
+                ),
+            ])
+        );
     }
 }

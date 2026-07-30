@@ -58,7 +58,6 @@ class BackfillPostMediaPivotCommandTest extends TestCase
 
         $pivot = $version->fresh()
             ->mediaItems()
-            ->orderBy('pivot_sort_order')
             ->get();
 
         $this->assertSame([$second->id, $first->id], $pivot->pluck('id')->all());

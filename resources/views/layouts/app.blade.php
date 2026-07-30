@@ -9,6 +9,9 @@
   <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
   @vite(['resources/css/app.css', 'resources/js/app.js'])
+  @if(request()->routeIs('dashboard', 'economic-summary.*'))
+    @vite('resources/js/charts.js')
+  @endif
   @livewireStyles
 </head>
 

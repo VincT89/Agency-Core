@@ -17,6 +17,7 @@ class ImageStagerHardeningTest extends TestCase
 
         Storage::fake('local');
         Storage::fake('public');
+        Storage::fake('social_media');
         Http::preventStrayRequests();
     }
 
@@ -142,7 +143,10 @@ class ImageStagerHardeningTest extends TestCase
         $promoted = $stager->promote(['temp/n8n_images/source.jpg']);
 
         Storage::disk('local')->assertExists('temp/n8n_images/source.jpg');
-        Storage::disk('public')->assertExists($promoted[0]);
-        $this->assertSame('contents', Storage::disk('public')->get($promoted[0]));
+        Storage::disk('social_media')->assertExists($promoted[0]);
+        $this->assertSame(
+            'contents',
+            Storage::disk('social_media')->get($promoted[0])
+        );
     }
 }

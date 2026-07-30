@@ -2,46 +2,44 @@
 
 namespace App\Services\Social;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Exception;
+use App\Domain\Social\Services\ImageStagerService;
+use InvalidArgumentException;
+use RuntimeException;
 
 class SocialImageStorageService
 {
-    // Scarica un'immagine da un URL e la salva nello storage locale
-    public function downloadAndStore(string $url, string $disk = 'public'): string
-    {
-        $response = Http::timeout(15)->get($url);
+    public function __construct(
+        private readonly ImageStagerService $imageStager
+    ) {}
 
-        if (! $response->successful()) {
-            throw new Exception("Impossibile scaricare l'immagine da n8n. Status: " . $response->status());
+    /**
+     * Scarica, valida e archivia un'immagine sul disco social privato.
+     */
+    public function downloadAndStore(
+        string $url,
+        string $disk = 'social_media'
+    ): string {
+        if ($disk !== 'social_media') {
+            throw new InvalidArgumentException(
+                'Le immagini social possono essere archiviate solo sul disco privato.'
+            );
         }
 
-        // Determiniamo l'estensione dal content type
-        $contentType = $response->header('Content-Type');
+        $temporaryPaths = $this->imageStager->downloadAndValidate([$url]);
 
-        if (! str_starts_with((string) $contentType, 'image/')) {
-            abort(422, 'Invalid image content type: ' . $contentType);
+        try {
+            $promotedPaths = $this->imageStager->promote($temporaryPaths);
+            $path = $promotedPaths[0] ?? null;
+
+            if (! is_string($path) || $path === '') {
+                throw new RuntimeException(
+                    'Archiviazione privata dell’immagine non riuscita.'
+                );
+            }
+
+            return $path;
+        } finally {
+            $this->imageStager->deleteTemporary($temporaryPaths);
         }
-
-        $extension = $this->getExtensionFromContentType($contentType);
-
-        $filename = 'social-posts/' . Str::uuid()->toString() . '.' . $extension;
-
-        Storage::disk($disk)->put($filename, $response->body());
-
-        return $filename;
-    }
-
-    // Deduce l'estensione dal Content-Type
-    protected function getExtensionFromContentType(?string $contentType): string
-    {
-        return match ($contentType) {
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-            'image/gif' => 'gif',
-            default => 'jpg', // Fallback standard (jpeg)
-        };
     }
 }

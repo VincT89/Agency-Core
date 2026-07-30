@@ -117,7 +117,15 @@ class RetryMarketingCampaignPostPublicationAction
                     'status' => PublicationStatus::Pending->value,
                     'correlation_id' => Str::uuid()->toString(),
                     'publishing_started_at' => null,
-                    'stale_deadline_at' => null,
+                    'stale_deadline_at' => now()->addMinutes(
+                        max(
+                            1,
+                            (int) config(
+                                'social.production_readiness.pending_stale_minutes',
+                                15
+                            )
+                        )
+                    ),
                     'attempt_count' => $maxAttempt + 1,
                     'poll_count' => 0,
                     'payload_snapshot' => $lockedOriginal->payload_snapshot,

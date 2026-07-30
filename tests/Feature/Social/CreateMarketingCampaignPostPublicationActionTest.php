@@ -3,14 +3,13 @@
 namespace Tests\Feature\Social;
 
 use App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction;
+use App\Enums\Social\SocialPlatform;
+use App\Models\ClientSocialAccount;
 use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostVersion;
-use App\Models\ClientSocialAccount;
-use App\Enums\Social\SocialPlatform;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Illuminate\Support\Facades\Cache;
-use App\Domain\Social\DTOs\MarketingCampaignPostPublicationSnapshot;
+use Tests\TestCase;
 
 class CreateMarketingCampaignPostPublicationActionTest extends TestCase
 {
@@ -46,17 +45,19 @@ class CreateMarketingCampaignPostPublicationActionTest extends TestCase
         $this->assertEquals($post->id, $publication->marketing_campaign_post_id);
         $this->assertEquals('pending', $publication->status->value);
         $this->assertEquals(1, $publication->attempt_count);
+        $this->assertNotNull($publication->stale_deadline_at);
+        $this->assertTrue($publication->stale_deadline_at->isFuture());
     }
 
     public function test_it_fails_if_version_does_not_belong_to_post()
     {
         $post = MarketingCampaignPost::factory()->create();
         $otherPost = MarketingCampaignPost::factory()->create();
-        
+
         $version = MarketingCampaignPostVersion::factory()->create([
             'marketing_campaign_post_id' => $otherPost->id,
         ]);
-        
+
         $account = ClientSocialAccount::factory()->create([
             'client_id' => $post->campaign->client_id,
             'platform' => SocialPlatform::Facebook,
@@ -65,7 +66,7 @@ class CreateMarketingCampaignPostPublicationActionTest extends TestCase
         $action = app(CreateMarketingCampaignPostPublicationAction::class);
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage("La versione non appartiene a questo post.");
+        $this->expectExceptionMessage('La versione non appartiene a questo post.');
 
         $action->execute($post, $version, SocialPlatform::Facebook, $account);
     }
@@ -84,14 +85,14 @@ class CreateMarketingCampaignPostPublicationActionTest extends TestCase
         ]);
 
         $lockKey = "create_pub_{$version->id}_{$account->id}_facebook";
-        
+
         // Simulate lock acquired by another process
         Cache::lock($lockKey, 30)->get();
 
         $action = app(CreateMarketingCampaignPostPublicationAction::class);
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage("Creazione publication già in corso per questa versione e account.");
+        $this->expectExceptionMessage('Creazione publication già in corso per questa versione e account.');
 
         $action->execute($post, $version, SocialPlatform::Facebook, $account);
     }

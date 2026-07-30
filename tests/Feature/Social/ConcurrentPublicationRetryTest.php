@@ -174,12 +174,18 @@ class ConcurrentPublicationRetryTest extends TestCase
         }
 
         $database = (string) config('database.connections.mysql.database');
+        $isExplicitTestDatabase = $database === 'testing'
+            || str_ends_with($database, '_test')
+            || str_starts_with($database, 'test_');
+
         if (
-            $database !== 'agency_core_codex_test_pr8_11' ||
-            preg_match('/^[A-Za-z0-9_]+$/', $database) !== 1
+            ! app()->environment('testing')
+            || ! $isExplicitTestDatabase
+            || $database === ''
+            || preg_match('/^[A-Za-z0-9_]+$/', $database) !== 1
         ) {
             throw new \RuntimeException(
-                'Il test MySQL rifiuta database diversi da agency_core_codex_test_pr8_11.'
+                'Il test concorrente richiede un database MySQL esplicitamente dedicato ai test.'
             );
         }
 

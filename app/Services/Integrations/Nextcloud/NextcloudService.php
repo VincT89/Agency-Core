@@ -11,6 +11,7 @@ use App\Services\Integrations\Nextcloud\DTO\NextcloudPublicShareResult;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -28,17 +29,49 @@ class NextcloudService
 
     private string $webdavPath;
 
+    private int $connectTimeout;
+
+    private int $requestTimeout;
+
+    private int $streamTimeout;
+
+    private int $streamReadTimeout;
+
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('services.nextcloud.base_url', env('NEXTCLOUD_BASE_URL', '')), '/');
-        $this->username = config('services.nextcloud.username', env('NEXTCLOUD_USERNAME', ''));
-        $this->password = config('services.nextcloud.password', env('NEXTCLOUD_PASSWORD', ''));
-        $this->webdavPath = config('services.nextcloud.webdav_path', env('NEXTCLOUD_WEBDAV_PATH', '/remote.php/dav/files'));
+        $this->baseUrl = rtrim((string) config('services.nextcloud.base_url', ''), '/');
+        $this->username = (string) config('services.nextcloud.username', '');
+        $this->password = (string) config('services.nextcloud.password', '');
+        $this->webdavPath = (string) config(
+            'services.nextcloud.webdav_path',
+            '/remote.php/dav/files'
+        );
+        $this->connectTimeout = max(
+            1,
+            (int) config('services.nextcloud.connect_timeout', 5)
+        );
+        $this->requestTimeout = max(
+            $this->connectTimeout,
+            (int) config('services.nextcloud.request_timeout', 15)
+        );
+        $this->streamTimeout = max(
+            $this->requestTimeout,
+            (int) config('services.nextcloud.stream_timeout', 300)
+        );
+        $this->streamReadTimeout = max(
+            1,
+            (int) config('services.nextcloud.stream_read_timeout', 30)
+        );
     }
 
     public function isConfigured(): bool
     {
-        return ! empty($this->baseUrl) && ! empty($this->username) && ! empty($this->password);
+        $scheme = strtolower((string) parse_url($this->baseUrl, PHP_URL_SCHEME));
+
+        return in_array($scheme, ['http', 'https'], true)
+            && (! app()->environment('production') || $scheme === 'https')
+            && $this->username !== ''
+            && $this->password !== '';
     }
 
     /**
@@ -54,13 +87,8 @@ class NextcloudService
         // Nextcloud (SabreDAV) richiede che le cartelle terminino sempre con '/' se si fa PROPFIND su una dir
         $url = rtrim($this->buildWebdavUrl($path), '/').'/';
 
-        logger()->debug('NEXTCLOUD URL', [
-            'path' => $path,
-            'url' => $url,
-        ]);
-
         try {
-            $response = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+            $response = $this->idempotentRequest()
                 ->withHeaders([
                     'Depth' => '1',
                     'Content-Type' => 'application/xml',
@@ -70,7 +98,10 @@ class NextcloudService
                 ]);
 
             if (! $response->successful()) {
-                Log::error("Nextcloud PROPFIND fallito per URL: {$url}. Status: ".$response->status().' Body: '.$response->body());
+                Log::error('Nextcloud PROPFIND fallito', [
+                    ...$this->pathContext($path),
+                    'status' => $response->status(),
+                ]);
 
                 return null;
             }
@@ -78,7 +109,10 @@ class NextcloudService
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NOCDATA);
             if ($xml === false) {
-                Log::warning("Nextcloud PROPFIND returned malformed XML per URL: {$url}");
+                Log::warning('Nextcloud PROPFIND ha restituito XML non valido', [
+                    ...$this->pathContext($path),
+                    'status' => $response->status(),
+                ]);
 
                 return null;
             }
@@ -168,8 +202,11 @@ class NextcloudService
 
             return $results;
 
-        } catch (\Exception $e) {
-            Log::error('Errore connessione Nextcloud: '.$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Errore connessione Nextcloud', [
+                ...$this->pathContext($path),
+                'exception' => $e::class,
+            ]);
 
             return null;
         }
@@ -188,28 +225,7 @@ class NextcloudService
         $url = rtrim($this->buildWebdavUrl($path), '/');
 
         try {
-            $response = Http::timeout(10)
-                ->retry(
-                    3,
-                    300,
-                    function (\Throwable $exception): bool {
-                        if ($exception instanceof ConnectionException) {
-                            return true;
-                        }
-
-                        if ($exception instanceof RequestException && $exception->response) {
-                            return in_array(
-                                $exception->response->status(),
-                                [408, 425, 429],
-                                true
-                            ) || $exception->response->serverError();
-                        }
-
-                        return false;
-                    },
-                    throw: false
-                )
-                ->withBasicAuth($this->username, $this->password)
+            $response = $this->idempotentRequest()
                 ->withHeaders([
                     'Depth' => '0',
                     'Content-Type' => 'application/xml',
@@ -219,13 +235,13 @@ class NextcloudService
                 ]);
         } catch (ConnectionException $e) {
             throw new NextcloudTemporaryUnavailableException(
-                'Nextcloud connection failed: '.$e->getMessage(),
+                'Connessione a Nextcloud non disponibile.',
                 0,
                 $e
             );
         } catch (\Throwable $e) {
             throw new NextcloudTemporaryUnavailableException(
-                'Nextcloud request failed: '.$e->getMessage(),
+                'Richiesta a Nextcloud non riuscita.',
                 0,
                 $e
             );
@@ -332,19 +348,24 @@ class NextcloudService
         $url = $this->buildWebdavUrl($remotePath);
 
         try {
-            $response = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
-                ->get($url);
+            $response = $this->idempotentRequest()->get($url);
 
             if ($response->successful()) {
                 return $response->body();
             }
 
-            Log::error('Errore download file Nextcloud: '.$response->status().' - '.$response->body());
+            Log::error('Errore download file Nextcloud', [
+                ...$this->pathContext($remotePath),
+                'status' => $response->status(),
+            ]);
 
             return null;
 
-        } catch (\Exception $e) {
-            Log::error('Errore download Nextcloud: '.$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Errore download Nextcloud', [
+                ...$this->pathContext($remotePath),
+                'exception' => $e::class,
+            ]);
 
             return null;
         }
@@ -377,7 +398,10 @@ class NextcloudService
         $options = [
             'auth' => [$this->username, $this->password],
             'stream' => true,
-            'timeout' => 0,
+            'connect_timeout' => $this->connectTimeout,
+            'timeout' => $this->streamTimeout,
+            'read_timeout' => $this->streamReadTimeout,
+            'allow_redirects' => false,
             'headers' => $headers,
             'http_errors' => false,
         ];
@@ -432,8 +456,11 @@ class NextcloudService
 
         } catch (HttpExceptionInterface $e) {
             throw $e;
-        } catch (\Exception $e) {
-            Log::error('Errore stream Nextcloud: '.$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Errore stream Nextcloud', [
+                ...$this->pathContext($remotePath),
+                'exception' => $e::class,
+            ]);
             abort(500, 'Impossibile completare lo stream dal server Nextcloud.');
         }
     }
@@ -478,7 +505,9 @@ class NextcloudService
             try {
                 $lock?->release();
             } catch (\Throwable $e) {
-                Log::warning('Failed to release lock', ['error' => $e->getMessage()]);
+                Log::warning('Failed to release lock', [
+                    'exception' => $e::class,
+                ]);
             }
         }
     }
@@ -499,7 +528,7 @@ class NextcloudService
             // 1. GET (lookup)
             $checkResponse = null;
             try {
-                $checkResponse = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+                $checkResponse = $this->idempotentRequest()
                     ->withHeaders($headers)
                     ->get($url, ['path' => $path]);
             } catch (RequestException $e) {
@@ -555,7 +584,10 @@ class NextcloudService
                 $payload['expireDate'] = now()->addDays($expireDays)->toDateString();
             }
 
-            $response = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+            // La creazione non viene ritentata automaticamente: un timeout può
+            // avvenire dopo che Nextcloud ha già creato la share. Il tentativo
+            // applicativo successivo la ritroverà tramite il lookup idempotente.
+            $response = $this->request()
                 ->withHeaders($headers)
                 ->asForm()
                 ->post($url, $payload);
@@ -576,12 +608,20 @@ class NextcloudService
 
             throw new NextcloudShareException('Impossibile connettersi a Nextcloud per creazione share. HTTP: '.$response->status());
         } catch (ConnectionException $e) {
-            throw new NextcloudShareException('Errore di connessione a Nextcloud: '.$e->getMessage());
+            throw new NextcloudShareException(
+                'Errore di connessione a Nextcloud.',
+                0,
+                $e
+            );
         } catch (\Throwable $e) {
             if ($e instanceof NextcloudShareException) {
                 throw $e;
             }
-            throw new NextcloudShareException('Errore inatteso durante la gestione della share Nextcloud: '.$e->getMessage());
+            throw new NextcloudShareException(
+                'Errore inatteso durante la gestione della share Nextcloud.',
+                0,
+                $e
+            );
         }
     }
 
@@ -600,7 +640,7 @@ class NextcloudService
         try {
             $response = null;
             try {
-                $response = Http::timeout(10)->retry(2, 300)->withBasicAuth($this->username, $this->password)
+                $response = $this->idempotentRequest()
                     ->withHeaders($headers)
                     ->delete($url);
             } catch (RequestException $e) {
@@ -618,8 +658,8 @@ class NextcloudService
                 $data = $response->json();
                 if (! is_array($data)) {
                     Log::error('Nextcloud revoca fallita: la risposta non è un array JSON valido', [
-                        'share_id' => $shareId,
-                        'body' => $response->body(),
+                        'share_id_hash' => hash('sha256', (string) $shareId),
+                        'status' => $response->status(),
                     ]);
 
                     return false;
@@ -639,8 +679,15 @@ class NextcloudService
 
             return false;
         } catch (\Throwable $e) {
-            Log::error("Nextcloud share revocation error per shareId {$shareId}: ".$e->getMessage());
-            throw new NextcloudShareException('Errore di revoca share Nextcloud: '.$e->getMessage(), 0, $e);
+            Log::error('Nextcloud share revocation error', [
+                'share_id_hash' => hash('sha256', (string) $shareId),
+                'exception' => $e::class,
+            ]);
+            throw new NextcloudShareException(
+                'Errore di revoca share Nextcloud.',
+                0,
+                $e
+            );
         }
     }
 
@@ -664,8 +711,7 @@ class NextcloudService
 
             try {
                 // Verifica se esiste già
-                $check = Http::timeout(10)->retry(2, 300)
-                    ->withBasicAuth($this->username, $this->password)
+                $check = $this->idempotentRequest()
                     ->send('PROPFIND', $url, [
                         'headers' => ['Depth' => '0'],
                     ]);
@@ -674,19 +720,24 @@ class NextcloudService
                     continue; // Esiste già
                 }
 
-                $response = Http::timeout(10)->retry(2, 300)
-                    ->withBasicAuth($this->username, $this->password)
+                $response = $this->idempotentRequest()
                     ->send('MKCOL', $url);
 
                 $status = $response->status();
 
                 if ($status !== 201 && $status !== 405) {
-                    Log::error("Nextcloud MKCOL fallito per URL: {$url}. Status: {$status} Body: ".$response->body());
+                    Log::error('Nextcloud MKCOL fallito', [
+                        ...$this->pathContext($currentPath),
+                        'status' => $status,
+                    ]);
 
                     return false;
                 }
-            } catch (\Exception $e) {
-                Log::error("Errore Nextcloud WebDAV su {$url}: ".$e->getMessage());
+            } catch (\Throwable $e) {
+                Log::error('Errore Nextcloud WebDAV', [
+                    ...$this->pathContext($currentPath),
+                    'exception' => $e::class,
+                ]);
 
                 return false;
             }
@@ -697,18 +748,6 @@ class NextcloudService
 
     private function buildWebdavUrl(string $path = '/'): string
     {
-        $baseUrl = rtrim(config('services.nextcloud.base_url'), '/');
-
-        $webdavPath = trim(
-            config('services.nextcloud.webdav_path', '/remote.php/dav/files'),
-            '/'
-        );
-
-        $username = trim(
-            config('services.nextcloud.username'),
-            '/'
-        );
-
         $path = $this->normalizePath($path);
 
         $encodedPath = collect(explode('/', trim($path, '/')))
@@ -716,11 +755,11 @@ class NextcloudService
             ->map(fn ($segment) => rawurlencode($segment))
             ->implode('/');
 
-        return $baseUrl
+        return $this->baseUrl
             .'/'
-            .$webdavPath
+            .trim($this->webdavPath, '/')
             .'/'
-            .rawurlencode($username)
+            .rawurlencode(trim($this->username, '/'))
             .($encodedPath ? '/'.$encodedPath : '');
     }
 
@@ -788,12 +827,10 @@ class NextcloudService
         $path = $this->normalizePath($path);
 
         // 1. Prova preview nativa Nextcloud
-        $previewUrl = rtrim(config('services.nextcloud.base_url'), '/')
-            .'/index.php/core/preview.png';
+        $previewUrl = $this->baseUrl.'/index.php/core/preview.png';
 
         try {
-            $preview = Http::timeout(8)
-                ->withBasicAuth($this->username, $this->password)
+            $preview = $this->idempotentRequest()
                 ->get($previewUrl, [
                     'file' => $path,
                     'x' => $width,
@@ -814,14 +851,13 @@ class NextcloudService
             }
         } catch (\Throwable $e) {
             logger()->warning('Nextcloud preview endpoint failed', [
-                'path' => $path,
-                'error' => $e->getMessage(),
+                ...$this->pathContext($path),
+                'exception' => $e::class,
             ]);
         }
 
         // 2. Fallback sicuro: scarica il file via WebDAV
-        $download = Http::timeout(12)
-            ->withBasicAuth($this->username, $this->password)
+        $download = $this->idempotentRequest()
             ->get($this->buildWebdavUrl($path));
 
         abort_unless($download->successful(), 404);
@@ -833,5 +869,44 @@ class NextcloudService
         return response($download->body(), 200)
             ->header('Content-Type', $contentType)
             ->header('Cache-Control', 'private, max-age=600');
+    }
+
+    private function request(): PendingRequest
+    {
+        return Http::connectTimeout($this->connectTimeout)
+            ->timeout($this->requestTimeout)
+            ->withOptions(['allow_redirects' => false])
+            ->withBasicAuth($this->username, $this->password);
+    }
+
+    private function idempotentRequest(): PendingRequest
+    {
+        return $this->request()->retry(
+            3,
+            300,
+            function (\Throwable $exception): bool {
+                if ($exception instanceof ConnectionException) {
+                    return true;
+                }
+
+                if ($exception instanceof RequestException && $exception->response) {
+                    return in_array(
+                        $exception->response->status(),
+                        [408, 425, 429],
+                        true
+                    ) || $exception->response->serverError();
+                }
+
+                return false;
+            },
+            throw: false
+        );
+    }
+
+    private function pathContext(string $path): array
+    {
+        return [
+            'path_hash' => hash('sha256', $path),
+        ];
     }
 }

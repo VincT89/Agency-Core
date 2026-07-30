@@ -23,6 +23,10 @@ class CheckInstagramContainerStatusJob implements ShouldQueue
 
     public $tries = 10;
 
+    public int $timeout = 60;
+
+    public bool $failOnTimeout = true;
+
     public function middleware(): array
     {
         return [(new WithoutOverlapping((string) $this->publicationId))->dontRelease()->expireAfter(600)];

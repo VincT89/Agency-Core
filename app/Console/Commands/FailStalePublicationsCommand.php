@@ -2,16 +2,19 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\MarketingCampaignPostPublication;
+use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
+use App\Domain\Social\Services\SocialPublicationTelemetry;
+use App\Enums\Social\PublicationFailureClassification;
 use App\Enums\Social\PublicationStatus;
-use App\Enums\Social\SocialPlatform;
-use Illuminate\Support\Facades\DB;
+use App\Models\MarketingCampaignPostPublication;
 use App\Support\Monitoring\TracksSystemCommandRuns;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class FailStalePublicationsCommand extends Command
 {
     use TracksSystemCommandRuns;
+
     /**
      * The name and signature of the console command.
      *
@@ -32,7 +35,7 @@ class FailStalePublicationsCommand extends Command
     public function handle()
     {
         return $this->runTracked($this->getName(), function () {
-            $this->info("Inizio scansione delle pubblicazioni stale...");
+            $this->info('Inizio scansione delle pubblicazioni stale...');
 
             $processedCount = 0;
 
@@ -48,28 +51,28 @@ class FailStalePublicationsCommand extends Command
                                 ->lockForUpdate()
                                 ->first();
 
-                            if (!$lockedPub) {
+                            if (! $lockedPub) {
                                 return; // Già risolta
                             }
 
                             $oldStatus = $lockedPub->status->value;
 
-                            // Facebook è sincrono, se è bloccato da 5 minuti è fallito e basta.
-                            // TikTok e Instagram (container) sono asincroni, un blocco potrebbe significare timeout 
-                            // dell'API senza risposta d'errore, o worker morto.
-                            $newStatus = PublicationStatus::Failed;
                             $errorMessage = "Timeout: elaborazione bloccata o interrotta oltre il limite previsto ({$lockedPub->stale_deadline_at}).";
-
-                            if ($lockedPub->platform === SocialPlatform::Facebook) {
-                                $newStatus = PublicationStatus::Failed;
-                            }
+                            $wasDispatchedToProvider = $lockedPub->status ===
+                                PublicationStatus::Publishing;
+                            $newStatus = $wasDispatchedToProvider
+                                ? PublicationStatus::NeedsManualReview
+                                : PublicationStatus::Failed;
 
                             $lockedPub->update([
                                 'status' => $newStatus,
-                                'error_message' => $errorMessage
+                                'error_message' => $errorMessage,
+                                'failure_classification' => $wasDispatchedToProvider
+                                    ? PublicationFailureClassification::ManualReview->value
+                                    : PublicationFailureClassification::Temporary->value,
                             ]);
 
-                            app(\App\Domain\Social\Services\SocialPublicationTelemetry::class)
+                            app(SocialPublicationTelemetry::class)
                                 ->record(
                                     $lockedPub,
                                     'publication.stale_intercepted',
@@ -77,7 +80,7 @@ class FailStalePublicationsCommand extends Command
                                 );
 
                             // Sincronizza lo stato master del Post
-                            app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($lockedPub->post);
+                            app(SyncMarketingCampaignPostPublicationStatusAction::class)->execute($lockedPub->post);
 
                             $processedCount++;
                         });
@@ -85,7 +88,7 @@ class FailStalePublicationsCommand extends Command
                 });
 
             $this->info("Scansione completata. Pubblicazioni stale recuperate: {$processedCount}");
-            
+
             return self::SUCCESS;
         });
     }

@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\Social\MarketingCampaignPeriodStatus;
 use App\Enums\Social\MarketingCampaignStatus;
+use App\Enums\Social\PublicationMode;
+use App\Models\Scopes\ProjectSupremacyScope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
-use App\Models\User;
 
 class MarketingCampaign extends Model
 {
@@ -21,7 +23,7 @@ class MarketingCampaign extends Model
         'ends_at' => 'date',
         'monthly_fee' => 'decimal:2',
         'status' => MarketingCampaignStatus::class,
-        'publication_mode' => \App\Enums\Social\PublicationMode::class,
+        'publication_mode' => PublicationMode::class,
         'client_review_required' => 'boolean',
     ];
 
@@ -58,13 +60,14 @@ class MarketingCampaign extends Model
     public function isActive(): bool
     {
         $activeStatuses = [
-            \App\Enums\Social\MarketingCampaignPeriodStatus::Active->value,
-            \App\Enums\Social\MarketingCampaignPeriodStatus::Planned->value,
+            MarketingCampaignPeriodStatus::Active->value,
+            MarketingCampaignPeriodStatus::Planned->value,
         ];
 
         if ($this->relationLoaded('periods')) {
             return $this->periods->contains(function ($period) use ($activeStatuses) {
                 $statusValue = $period->status instanceof \BackedEnum ? $period->status->value : $period->status;
+
                 return in_array($statusValue, $activeStatuses);
             });
         }
@@ -80,8 +83,12 @@ class MarketingCampaign extends Model
             return $query;
         }
 
-        return $query->whereHas('client.projects.users', function ($q) use ($user) {
-            $q->where('users.id', $user->id);
+        return $query->whereHas('client.projects', function ($projects) use ($user) {
+            $projects
+                ->withoutGlobalScope(ProjectSupremacyScope::class)
+                ->whereHas('users', function ($users) use ($user) {
+                    $users->where('users.id', $user->id);
+                });
         });
     }
 }

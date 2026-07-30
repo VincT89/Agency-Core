@@ -2,11 +2,20 @@
 
 namespace Tests\Feature\Social;
 
-use App\Domain\Social\Publishing\MetaPublisher;
-use App\Models\MarketingCampaignPostPublication;
-use App\Models\MarketingCampaignPost;
-use App\Models\ClientSocialAccount;
+use App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\ExecuteMarketingCampaignPostPublicationAction;
+use App\Domain\Social\DTOs\PublicationMediaDeliveryResult;
+use App\Domain\Social\Services\PublicationMediaDeliveryService;
+use App\Enums\Social\AgencyConnectionStatus;
+use App\Enums\Social\PublicationStatus;
+use App\Enums\Social\SocialConnectionStrategy;
 use App\Enums\Social\SocialPlatform;
+use App\Models\AgencySocialAsset;
+use App\Models\AgencySocialConnection;
+use App\Models\ClientSocialAccount;
+use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostVersion;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -18,29 +27,44 @@ class PublisherUsesSnapshotTest extends TestCase
     public function test_publisher_uses_snapshot_after_post_changes()
     {
         $post = MarketingCampaignPost::factory()->create([
-            'content_type' => 'post'
+            'content_type' => 'post',
         ]);
-        
-        $version = \App\Models\MarketingCampaignPostVersion::factory()->create([
+
+        $version = MarketingCampaignPostVersion::factory()->create([
             'marketing_campaign_post_id' => $post->id,
-            'caption' => 'Test caption'
+            'caption' => 'Test caption',
         ]);
-        
+
         $post->update(['current_version_id' => $version->id]);
-        
+
         $account = ClientSocialAccount::factory()->create(['platform' => SocialPlatform::Facebook, 'api_status' => 'connected', 'access_token' => 'fake', 'provider_account_id' => 'fake_post_id_123']);
         $post->campaign->update(['client_id' => $account->client_id]);
-        
-        \App\Models\AgencySocialConnection::create(['id' => 1, 'provider' => 'meta', 'status' => \App\Enums\Social\AgencyConnectionStatus::Connected, 'access_token' => 'dummy', 'connected_by' => 1]);
-        
-        $asset = \App\Models\AgencySocialAsset::create(['platform' => SocialPlatform::Facebook->value, 'agency_social_connection_id' => 1, 'provider' => 'meta', 'asset_type' => 'facebook_page', 'provider_asset_id' => 'fake_post_id_123']);
-        $account->update(['agency_social_asset_id' => $asset->id, 'connection_strategy' => \App\Enums\Social\SocialConnectionStrategy::ManualTokenConfig]);
-        
+
+        $user = User::factory()->create();
+        $connection = AgencySocialConnection::create([
+            'provider' => 'meta',
+            'status' => AgencyConnectionStatus::Connected,
+            'access_token' => 'dummy',
+            'connected_by' => $user->id,
+        ]);
+
+        $asset = AgencySocialAsset::create([
+            'platform' => SocialPlatform::Facebook->value,
+            'agency_social_connection_id' => $connection->id,
+            'provider' => 'meta',
+            'asset_type' => 'facebook_page',
+            'provider_asset_id' => 'fake_post_id_123',
+        ]);
+        $account->update([
+            'agency_social_asset_id' => $asset->id,
+            'connection_strategy' => SocialConnectionStrategy::ManualTokenConfig,
+        ]);
+
         config(['services.meta.delivery_mode' => 'enabled']);
         config(['services.meta.mock_publishing' => false]);
         config(['social.publishing.dry_run' => false]);
-        
-        $createAction = app(\App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction::class);
+
+        $createAction = app(CreateMarketingCampaignPostPublicationAction::class);
         $publication = $createAction->execute(
             $post,
             $post->currentVersion,
@@ -50,34 +74,32 @@ class PublisherUsesSnapshotTest extends TestCase
 
         // Modifico post live per testare che non viene letto
         $post->update([
-            'content_type' => 'reel'
+            'content_type' => 'reel',
         ]);
         $post->currentVersion->update([
-            'caption' => 'New Caption Live'
+            'caption' => 'New Caption Live',
         ]);
 
-        $mockDelivery = $this->createMock(\App\Domain\Social\Services\PublicationMediaDeliveryService::class);
+        $mockDelivery = $this->createMock(PublicationMediaDeliveryService::class);
         $mockDelivery->method('deliver')->willReturn([
-            new \App\Domain\Social\DTOs\PublicationMediaDeliveryResult(true, 'http://fake.com/img.jpg', [], 'image')
+            new PublicationMediaDeliveryResult(true, 'http://fake.com/img.jpg', [], 'image'),
         ]);
-        $this->app->instance(\App\Domain\Social\Services\PublicationMediaDeliveryService::class, $mockDelivery);
+        $this->app->instance(PublicationMediaDeliveryService::class, $mockDelivery);
 
         Http::fake([
-            '*' => Http::response(['id' => 'fake_post_id_123'], 200)
+            '*' => Http::response(['id' => 'fake_post_id_123'], 200),
         ]);
-        
-        $executeAction = app(\App\Domain\Social\Actions\ExecuteMarketingCampaignPostPublicationAction::class);
-        $result = $executeAction->execute($publication->id);
-        
+
+        $executeAction = app(ExecuteMarketingCampaignPostPublicationAction::class);
+        $executeAction->execute($publication->id);
+
         $publication->refresh();
-        $this->assertEquals(\App\Enums\Social\PublicationStatus::Published, $publication->status, 'Publication failed: ' . $publication->error_message);
-        
-        \Illuminate\Support\Facades\Log::info("PublishResult: ", ['res' => $result]);
+        $this->assertEquals(PublicationStatus::Published, $publication->status, 'Publication failed: '.$publication->error_message);
 
         Http::assertSent(function ($request) {
             $data = $request->data();
-            \Illuminate\Support\Facades\Log::info("Request sent: ", $data);
-            return isset($data['message']) && str_contains($data['message'], 'Test caption'); 
+
+            return isset($data['message']) && str_contains($data['message'], 'Test caption');
         });
     }
 }

@@ -2,18 +2,30 @@
 
 namespace Tests\Feature\Integrations\N8n;
 
+use App\Domain\Social\Actions\AddMarketingCampaignPostVersionFromN8nAction;
+use App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction;
+use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
+use App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData;
+use App\Enums\Social\MarketingCampaignPostCommentType;
 use App\Enums\Social\MarketingCampaignPostStatus;
+use App\Enums\Social\MarketingCampaignPostType;
+use App\Enums\UserRole;
+use App\Jobs\RequestMarketingCampaignPostRegenerationJob;
+use App\Jobs\SendMarketingCampaignPostToN8nJob;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate;
 use App\Models\Client;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Jobs\SendMarketingCampaignPostToN8nJob;
+use App\Models\User;
 use App\Services\Integrations\N8n\N8nClient;
-use Illuminate\Support\Facades\Http;
-use App\Domain\Social\Actions\AddMarketingCampaignPostVersionFromN8nAction;
-use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
 use Exception;
+use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
+use Tests\TestCase;
 
 class MarketingCampaignPostRaceConditionsTest extends TestCase
 {
@@ -99,8 +111,8 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
 
     public function test_failed_job_ignores_temp_file_cleanup_if_request_id_changed()
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
-        \Illuminate\Support\Facades\Storage::disk('public')->put('temp_logo.png', 'fake image content');
+        Storage::fake('public');
+        Storage::disk('public')->put('temp_logo.png', 'fake image content');
 
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
@@ -117,7 +129,7 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
         $job->failed(new Exception('Network Error'));
 
         // The file should NOT be deleted because request_id changed
-        \Illuminate\Support\Facades\Storage::disk('public')->assertExists('temp_logo.png');
+        Storage::disk('public')->assertExists('temp_logo.png');
 
         $post->refresh();
         $this->assertEquals(MarketingCampaignPostStatus::PendingN8n, $post->status);
@@ -137,7 +149,7 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'marketing_campaign_id' => $campaign->id,
             'status' => MarketingCampaignPostStatus::Draft->value,
             'title' => 'Old Title',
-            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+            'content_type' => MarketingCampaignPostType::Post->value,
         ]);
 
         $action = app(SubmitMarketingCampaignPostToN8nAction::class);
@@ -179,7 +191,7 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'raw_payload' => [],
         ];
 
-        $data = \App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData::fromArray($post->id, $payload);
+        $data = AddMarketingCampaignPostVersionData::fromArray($post->id, $payload);
         $result = $action->execute($data);
 
         $this->assertEquals('conflict', $result->outcome);
@@ -220,9 +232,9 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'n8n_request_id' => 'req-new',
         ]);
 
-        $job = new \App\Jobs\RequestMarketingCampaignPostRegenerationJob($post, [
-            'request_id' => 'old_req_id'
-        ], \App\Enums\Social\MarketingCampaignPostStatus::Draft->value, 0);
+        $job = new RequestMarketingCampaignPostRegenerationJob($post, [
+            'request_id' => 'old_req_id',
+        ], MarketingCampaignPostStatus::Draft->value, 0);
 
         $job->handle(app(N8nClient::class)); // concludes without sending
 
@@ -240,16 +252,16 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'marketing_campaign_id' => $campaign->id,
             'status' => MarketingCampaignPostStatus::Draft->value,
             'title' => 'Title',
-            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+            'content_type' => MarketingCampaignPostType::Post->value,
         ]);
 
         // Mock del Dispatcher per simulare un fallimento nel job dispatch (es. Redis giù)
-        $dispatcher = \Mockery::mock(\Illuminate\Contracts\Bus\Dispatcher::class);
+        $dispatcher = \Mockery::mock(Dispatcher::class);
         $dispatcher->shouldReceive('dispatch')->andThrow(new Exception('Queue connection refused'));
-        $this->app->instance(\Illuminate\Contracts\Bus\Dispatcher::class, $dispatcher);
+        $this->app->instance(Dispatcher::class, $dispatcher);
 
         $action = app(SubmitMarketingCampaignPostToN8nAction::class);
-        
+
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Queue connection refused');
 
@@ -265,18 +277,18 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'marketing_campaign_id' => $campaign->id,
             'status' => MarketingCampaignPostStatus::Draft->value,
             'title' => 'Title',
-            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+            'content_type' => MarketingCampaignPostType::Post->value,
         ]);
 
-        $dispatcher = \Mockery::mock(\Illuminate\Contracts\Bus\Dispatcher::class);
+        $dispatcher = \Mockery::mock(Dispatcher::class);
         $dispatcher->shouldReceive('dispatch')->andThrow(new Exception('Queue connection refused'));
-        $this->app->instance(\Illuminate\Contracts\Bus\Dispatcher::class, $dispatcher);
+        $this->app->instance(Dispatcher::class, $dispatcher);
 
         $action = app(SubmitMarketingCampaignPostToN8nAction::class);
-        
+
         // Prepariamo un mock logo
-        \Illuminate\Support\Facades\Storage::fake('public');
-        $file = \Illuminate\Http\UploadedFile::fake()->image('logo.png');
+        Storage::fake('public');
+        $file = UploadedFile::fake()->image('logo.png');
 
         try {
             $action->execute($post, ['include_client_logo' => true, 'runtime_logo' => $file]);
@@ -288,9 +300,9 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
         $this->assertEquals(MarketingCampaignPostStatus::Draft, $post->status);
         $this->assertNull($post->n8n_request_id);
         $this->assertNull($post->n8n_payload_hash);
-        
+
         // Verifica che il logo temporaneo sia stato cancellato
-        $this->assertEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles('clients/logos/temp'));
+        $this->assertEmpty(Storage::disk('public')->allFiles('clients/logos/temp'));
     }
 
     public function test_dispatch_regeneration_failure_with_state_and_comment_rollback()
@@ -301,13 +313,13 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
             'marketing_campaign_id' => $campaign->id,
             'status' => MarketingCampaignPostStatus::Generated->value,
         ]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
 
-        $dispatcher = \Mockery::mock(\Illuminate\Contracts\Bus\Dispatcher::class);
+        $dispatcher = \Mockery::mock(Dispatcher::class);
         $dispatcher->shouldReceive('dispatch')->andThrow(new Exception('Queue connection refused'));
-        $this->app->instance(\Illuminate\Contracts\Bus\Dispatcher::class, $dispatcher);
+        $this->app->instance(Dispatcher::class, $dispatcher);
 
-        $action = app(\App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction::class);
+        $action = app(RequestMarketingCampaignPostRegenerationAction::class);
 
         try {
             $action->execute($post, $user, 'full', 'Change everything');
@@ -319,29 +331,30 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
         // Lo stato deve essere tornato a Generated
         $this->assertEquals(MarketingCampaignPostStatus::Generated, $post->status);
         $this->assertNull($post->n8n_request_id);
-        
+
         // Il commento (ChangeRequest) deve essere stato cancellato
         $this->assertDatabaseMissing('marketing_campaign_post_comments', [
             'marketing_campaign_post_id' => $post->id,
-            'type' => \App\Enums\Social\MarketingCampaignPostCommentType::ChangeRequest->value,
+            'type' => MarketingCampaignPostCommentType::ChangeRequest->value,
             'body' => 'Change everything',
         ]);
     }
 
     public function test_concurrent_local_media_uploads_do_not_collide()
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
+        Storage::fake('social_media');
 
         // Simuliamo due upload con stesso nome
-        $file1 = \Illuminate\Http\UploadedFile::fake()->image('photo.jpg');
-        $file2 = \Illuminate\Http\UploadedFile::fake()->image('photo.jpg');
+        $file1 = UploadedFile::fake()->image('photo.jpg');
+        $file2 = UploadedFile::fake()->image('photo.jpg');
 
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
-        $user = \App\Models\User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $user = User::factory()->create(['role' => UserRole::Admin->value]);
 
-        \Livewire\Livewire::actingAs($user)
-            ->test(\App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate::class, ['campaign' => $campaign])
+        Livewire::actingAs($user)
+            ->test(MarketingCampaignPostCreate::class, ['campaign' => $campaign])
             ->set('form.title', 'Test Title')
             ->set('form.description', 'Desc')
             ->set('form.content_type', 'post')
@@ -358,8 +371,8 @@ class MarketingCampaignPostRaceConditionsTest extends TestCase
         $this->assertCount(2, $media);
 
         $this->assertNotEquals($media[0]->path, $media[1]->path, 'I path dei media devono essere univoci anche se caricati nello stesso momento con lo stesso nome');
-        
-        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($media[0]->path);
-        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($media[1]->path);
+
+        Storage::disk('social_media')->assertExists($media[0]->path);
+        Storage::disk('social_media')->assertExists($media[1]->path);
     }
 }

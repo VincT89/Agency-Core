@@ -3,15 +3,23 @@
 namespace App\Domain\Social\Services;
 
 use App\Models\MarketingCampaignPostMedia;
-
+use App\Support\Http\ProviderErrorSanitizer;
+use App\Support\Network\HostResolver;
 use Exception;
+use GuzzleHttp\Psr7\Uri;
+use GuzzleHttp\Psr7\UriResolver;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class SocialMediaPublicUrlService
 {
+    public function __construct(
+        private readonly HostResolver $hostResolver
+    ) {}
+
     /**
      * Risolve un MarketingCampaignPostMedia in un DTO/array contenente
      * l'URL pubblico validato e lo snapshot diagnostico.
@@ -19,13 +27,13 @@ class SocialMediaPublicUrlService
     public function getValidatedPublicUrl(MarketingCampaignPostMedia $media, ?string $correlationId = null): array
     {
         $url = $this->generateUrl($media, $correlationId);
-        
+
         $this->ensureSecureHost($url);
-        
+
         $this->enforceExtensionWhitelist($media);
-        
+
         $diagnostic = $this->performPreflightValidation($url, $media, $correlationId);
-        
+
         return [
             'url' => $url,
             'diagnostic' => $diagnostic,
@@ -41,6 +49,7 @@ class SocialMediaPublicUrlService
         foreach ($mediaCollection as $media) {
             $results[] = $this->getValidatedPublicUrl($media, $correlationId);
         }
+
         return $results;
     }
 
@@ -54,18 +63,22 @@ class SocialMediaPublicUrlService
         $source = $media->source ?? 'local';
 
         // 1. Nextcloud Share URL
-        if ($source === 'nextcloud' && !empty($media->nextcloud_share_url)) {
+        if ($source === 'nextcloud' && ! empty($media->nextcloud_share_url)) {
             $url = $media->nextcloud_share_url;
-            if (!str_ends_with($url, '/download')) {
-                $url = rtrim($url, '/') . '/download';
+            if (! str_ends_with($url, '/download')) {
+                $url = rtrim($url, '/').'/download';
             }
+
             return $url;
         }
 
         // 2. Link dedicato esistente (Local/Public disk route)
-        if (($source === 'local' || $disk === 'public') && !empty($path)) {
+        if (in_array($source, ['local', 'n8n'], true)
+            && in_array($disk, ['public', 'social_media'], true)
+            && ! empty($path)) {
             $ttlMinutes = config('services.tiktok.media_url_ttl', 1440); // 24 ore
-            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+
+            return URL::temporarySignedRoute(
                 'social.media.delivery',
                 now()->addMinutes($ttlMinutes),
                 ['media' => $media->id]
@@ -73,13 +86,14 @@ class SocialMediaPublicUrlService
         }
 
         // 3. Cloud Storage (S3) Temporary URL
-        if ($disk === 's3' && !empty($path)) {
+        if ($disk === 's3' && ! empty($path)) {
             $ttlMinutes = config('services.tiktok.media_url_ttl', 1440); // 24 ore
+
             return Storage::disk($disk)->temporaryUrl($path, now()->addMinutes($ttlMinutes));
         }
 
         // 4. Fallback esistente per URL già esplicito non coperto dai precedenti
-        if (empty($path) && !empty($media->url)) {
+        if (empty($path) && ! empty($media->url)) {
             return $media->url;
         }
 
@@ -89,30 +103,36 @@ class SocialMediaPublicUrlService
     /**
      * Controlla lo scheme e l'host
      */
-    private function ensureSecureHost(string $url): void
+    private function ensureSecureHost(string $url): string
     {
         if (config('social.url_validation') === false) {
-            return;
+            return '';
         }
 
         $parsed = parse_url($url);
-        
+
         if (($parsed['scheme'] ?? '') !== 'https') {
-            throw new Exception("L'URL generato non utilizza HTTPS. Il provider rifiuterà la connessione. URL Scheme: " . ($parsed['scheme'] ?? 'none'));
+            throw new Exception("L'URL generato non utilizza HTTPS. Il provider rifiuterà la connessione. URL Scheme: ".($parsed['scheme'] ?? 'none'));
         }
 
         $host = $parsed['host'] ?? '';
-        
-        $isLocalIPv4 = in_array($host, ['localhost', '127.0.0.1']) 
-            || str_starts_with($host, '192.168.') 
+
+        $isLocalIPv4 = in_array($host, ['localhost', '127.0.0.1'])
+            || str_starts_with($host, '192.168.')
             || str_starts_with($host, '10.')
             || str_starts_with($host, '169.254.')
             || preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $host);
         $isLocalIPv6 = in_array($host, ['::1']) || str_starts_with(strtolower($host), 'fc') || str_starts_with(strtolower($host), 'fd') || str_starts_with(strtolower($host), 'fe80');
-        
+
         if ($isLocalIPv4 || $isLocalIPv6) {
             throw new Exception("L'URL generato punta a un host privato locale ($host).");
         }
+
+        if ($host === '') {
+            throw new Exception("L'URL generato non contiene un host valido.");
+        }
+
+        return $this->hostResolver->resolveAndValidatePublicHost($host);
     }
 
     /**
@@ -136,35 +156,28 @@ class SocialMediaPublicUrlService
                 'correlation_id' => $correlationId,
             ];
         }
-        
+
         try {
             $startTime = microtime(true);
-            
-            $response = Http::withHeaders(['X-Correlation-ID' => $correlationId])
-                ->withOptions([
-                    'allow_redirects' => [
-                        'max' => 1,
-                        'strict' => true,
-                        'track_redirects' => true
-                    ],
-                'connect_timeout' => 5,
-                'timeout' => 15,
-            ])->head($url);
+
+            [$response, $finalUrl, $redirectCount] = $this->requestWithOneRedirect(
+                'HEAD',
+                $url,
+                ['X-Correlation-ID' => $correlationId]
+            );
 
             $method = 'HEAD';
-            
+
             if ($response->status() === 405 || $response->status() === 403) {
-                $response = Http::withHeaders(['Range' => 'bytes=0-0'])
-                    ->withOptions([
-                        'allow_redirects' => [
-                            'max' => 1,
-                            'strict' => true,
-                            'track_redirects' => true
-                        ],
-                        'connect_timeout' => 5,
-                        'timeout' => 15,
-                        'stream' => true, // Essenziale: evita la saturazione della RAM se il server ignora il Range e risponde con 200 e tutto il file
-                    ])->get($url);
+                [$response, $finalUrl, $redirectCount] = $this->requestWithOneRedirect(
+                    'GET',
+                    $url,
+                    [
+                        'Range' => 'bytes=0-0',
+                        'X-Correlation-ID' => $correlationId,
+                    ],
+                    stream: true
+                );
                 $method = 'GET_RANGE';
 
                 // Chiudiamo subito lo stream, ci interessano solo gli header e lo status
@@ -172,24 +185,11 @@ class SocialMediaPublicUrlService
                     $response->toPsrResponse()->getBody()->close();
                 }
             }
-            
+
             $latencyMs = round((microtime(true) - $startTime) * 1000);
-            
-            if ($response->transferStats && $response->transferStats->getHandlerStats()) {
-                $stats = $response->transferStats->getHandlerStats();
-                $redirectCount = $stats['redirect_count'] ?? 0;
-                $finalUrl = $stats['url'] ?? $url;
-            } else {
-                $redirectCount = 0;
-                $finalUrl = $url;
-            }
 
-            if ($redirectCount > 0) {
-                $this->ensureSecureHost($finalUrl);
-            }
-
-            if (!$response->successful() && $response->status() !== 206) {
-                throw new Exception("Pre-flight fallito con status " . $response->status() . " ($method)");
+            if (! $response->successful() && $response->status() !== 206) {
+                throw new Exception('Pre-flight fallito con status '.$response->status()." ($method)");
             }
 
             $contentType = $response->header('Content-Type');
@@ -218,31 +218,115 @@ class SocialMediaPublicUrlService
                 'correlation_id' => $correlationId,
             ];
 
-            Log::info("MediaDeliveryGateway validation success", $diagnostic);
+            Log::info('MediaDeliveryGateway validation success', $diagnostic);
+
             return $diagnostic;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
+            $safeError = ProviderErrorSanitizer::safeText($e->getMessage());
             $errorDiagnostic = [
                 'correlation_id' => $correlationId,
-                'error' => $e->getMessage(),
-                'latency_ms' => round((microtime(true) - $startTime) * 1000)
+                'error' => $safeError,
+                'latency_ms' => round((microtime(true) - $startTime) * 1000),
             ];
-            Log::error("MediaDeliveryGateway Validation Error", $errorDiagnostic);
-            throw new Exception("MediaDeliveryGateway Validation Error: " . $e->getMessage());
+            Log::error('MediaDeliveryGateway Validation Error', $errorDiagnostic);
+            throw new Exception(
+                "MediaDeliveryGateway Validation Error: {$safeError}"
+            );
         }
+    }
+
+    private function requestWithOneRedirect(
+        string $method,
+        string $url,
+        array $headers,
+        bool $stream = false
+    ): array {
+        $response = $this->sendPinnedRequest($method, $url, $headers, $stream);
+
+        if (! $this->isRedirectStatus($response->status())) {
+            return [$response, $url, 0];
+        }
+
+        $location = $response->header('Location');
+        if (! is_string($location) || $location === '') {
+            throw new Exception('Il provider ha restituito un redirect privo di destinazione.');
+        }
+
+        $redirectUrl = (string) UriResolver::resolve(
+            new Uri($url),
+            new Uri($location)
+        );
+        $redirectResponse = $this->sendPinnedRequest(
+            $method,
+            $redirectUrl,
+            $headers,
+            $stream
+        );
+
+        if ($this->isRedirectStatus($redirectResponse->status())) {
+            throw new Exception('Il provider ha superato il limite di un redirect.');
+        }
+
+        return [$redirectResponse, $redirectUrl, 1];
+    }
+
+    private function sendPinnedRequest(
+        string $method,
+        string $url,
+        array $headers,
+        bool $stream
+    ) {
+        $resolvedAddress = $this->ensureSecureHost($url);
+        $parsed = parse_url($url);
+        $host = strtolower((string) ($parsed['host'] ?? ''));
+        $port = (int) ($parsed['port'] ?? 443);
+
+        if (! defined('CURLOPT_RESOLVE')) {
+            throw new Exception(
+                'La verifica SSRF richiede il supporto cURL CURLOPT_RESOLVE.'
+            );
+        }
+
+        $options = [
+            'allow_redirects' => false,
+            'connect_timeout' => 5,
+            'timeout' => 15,
+            'stream' => $stream,
+        ];
+
+        if (filter_var($resolvedAddress, FILTER_VALIDATE_IP) !== false) {
+            $curlAddress = str_contains($resolvedAddress, ':')
+                ? "[{$resolvedAddress}]"
+                : $resolvedAddress;
+            $options['curl'] = [
+                CURLOPT_RESOLVE => ["{$host}:{$port}:{$curlAddress}"],
+            ];
+        } elseif (! app()->environment('testing')) {
+            throw new Exception('La risoluzione DNS non ha restituito un indirizzo IP valido.');
+        }
+
+        return Http::withHeaders($headers)
+            ->withOptions($options)
+            ->send($method, $url);
+    }
+
+    private function isRedirectStatus(int $status): bool
+    {
+        return $status >= 300 && $status < 400;
     }
 
     private function validateMimeSemantic(?string $mime, MarketingCampaignPostMedia $media): void
     {
-        if (!$mime) {
+        if (! $mime) {
             return;
         }
-        
+
         $mimeLower = strtolower(trim(explode(';', $mime)[0]));
-        
+
         $allowedPrefixes = ['image/', 'video/'];
         $allowedExact = ['application/octet-stream', 'binary/octet-stream'];
-        
+
         $isAllowed = false;
         foreach ($allowedPrefixes as $prefix) {
             if (str_starts_with($mimeLower, $prefix)) {
@@ -250,13 +334,13 @@ class SocialMediaPublicUrlService
                 break;
             }
         }
-        
+
         // Se è octet-stream, accettiamolo solo se il nostro media è dichiaratamente un video o immagine
-        if (!$isAllowed && in_array($mimeLower, $allowedExact)) {
+        if (! $isAllowed && in_array($mimeLower, $allowedExact)) {
             $isAllowed = $media->isVideo() || ($media->media_type === 'image');
         }
-        
-        if (!$isAllowed) {
+
+        if (! $isAllowed) {
             throw new Exception("Il content-type restituito ($mime) non è supportato per i media di questo publisher o non corrisponde all'estensione/media-type atteso.");
         }
     }
@@ -282,10 +366,10 @@ class SocialMediaPublicUrlService
 
         $whitelist = [
             'jpg', 'jpeg', 'png', 'gif', 'webp', // images
-            'mp4', 'mov', 'webm'                 // videos
+            'mp4', 'mov', 'webm',                 // videos
         ];
 
-        if (!in_array($extension, $whitelist)) {
+        if (! in_array($extension, $whitelist)) {
             throw new Exception("Media abortito (Hardening): estensione file '.{$extension}' non autorizzata per la pubblicazione social.");
         }
     }

@@ -2,14 +2,15 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\MarketingCampaignPost;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
+use App\Models\MarketingCampaignPost;
 use App\Support\Monitoring\TracksSystemCommandRuns;
+use Illuminate\Console\Command;
 
 class SyncPostPublicationStatusesCommand extends Command
 {
     use TracksSystemCommandRuns;
+
     /**
      * The name and signature of the console command.
      *
@@ -32,23 +33,31 @@ class SyncPostPublicationStatusesCommand extends Command
         return $this->runTracked($this->getName(), function () use ($action) {
             $this->info('Inizio sincronizzazione stati dei Post in base alle Publication...');
 
-            $posts = MarketingCampaignPost::whereHas('publications')->get();
-            
             $count = 0;
-            foreach ($posts as $post) {
-                $oldStatus = $post->status;
-                $action->execute($post);
-                
-                // Re-fetch per vedere se è cambiato
-                $newStatus = $post->refresh()->status;
-                
-                if ($oldStatus !== $newStatus) {
-                    $this->line("Aggiornato Post ID {$post->id}: {$oldStatus->value} -> {$newStatus->value}");
-                    $count++;
+            MarketingCampaignPost::query()
+                ->whereHas('publications')
+                ->select(['id', 'status'])
+                ->chunkById(200, function ($posts) use ($action, &$count) {
+                    foreach ($posts as $post) {
+                        $oldStatus = $post->status;
+                        $action->execute($post);
+
+                        // Re-fetch per vedere se è cambiato
+                        $newStatus = $post->refresh()->status;
+
+                        if ($oldStatus !== $newStatus) {
+                            $this->line(
+                                "Aggiornato Post ID {$post->id}: ".
+                                "{$oldStatus->value} -> {$newStatus->value}"
+                            );
+                            $count++;
+                        }
+                    }
                 }
-            }
+                );
 
             $this->info("Sincronizzazione completata. Post aggiornati: {$count}.");
+
             return self::SUCCESS;
         });
     }

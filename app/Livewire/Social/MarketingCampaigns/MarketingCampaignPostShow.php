@@ -2,26 +2,56 @@
 
 namespace App\Livewire\Social\MarketingCampaigns;
 
-use Livewire\Component;
-use Livewire\WithFileUploads;
-use Livewire\Attributes\On;
-use Livewire\Attributes\Computed;
-use App\Models\MarketingCampaign;
-use App\Models\MarketingCampaignPost;
+use App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction;
+use App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\DeleteMarketingCampaignPostAction;
+use App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction;
+use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\SendMarketingCampaignPostToClientAction;
+use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
+use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
+use App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData;
+use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
+use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
+use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
+use App\Domain\Social\Services\MediaIntegrityMetadataReader;
+use App\Domain\Social\Services\MetaPreflightService;
+use App\Domain\Social\Services\PreflightResult;
+use App\Domain\Social\Services\TikTokPreflightService;
+use App\Enums\Social\MarketingCampaignPostCommentType;
+use App\Enums\Social\MarketingCampaignPostCommentVisibility;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostType;
+use App\Enums\Social\PublicationStatus;
+use App\Enums\Social\SocialPlatform;
+use App\Exceptions\NextcloudShareException;
+use App\Exceptions\Social\MediaPreparationException;
+use App\Exceptions\Social\StaleMarketingCampaignPostVersionException;
+use App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob;
+use App\Models\MarketingCampaign;
+use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostMedia;
+use App\Services\Integrations\Nextcloud\NextcloudService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
-use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 class MarketingCampaignPostShow extends Component
 {
-    use WithFileUploads, AuthorizesRequests;
+    use AuthorizesRequests, WithFileUploads;
 
     public MarketingCampaign $campaign;
+
     public MarketingCampaignPost $post;
 
     // Form state strutturato
@@ -39,47 +69,67 @@ class MarketingCampaignPostShow extends Component
     ];
 
     public $newInternalComment = '';
+
     public ?string $generatedReviewLink = null;
 
     // Client Identity for N8N Runtime
     public $include_client_logo = true;
+
     public $include_client_header = true;
+
     public $runtime_logo;
+
     public $runtime_activity_description;
+
     public $save_runtime_logo_to_client = false;
+
     public $save_runtime_activity_to_client = false;
 
     public $media = []; // Uploaded file(s)
-    public $all_local_media = []; 
-    public array $selected_media_items = []; 
+
+    public $all_local_media = [];
+
+    public array $selected_media_items = [];
+
     public array $existing_media = []; // Legacy / reference
 
     // Nextcloud State
     public $nextcloud_media_kind = 'photo';
+
     public $nextcloud_browse_path = '/';
+
     public $nextcloud_files = [];
+
     public array $selected_nextcloud_files = [];
+
     public array $pending_nextcloud_files = [];
+
     public ?array $preview_nextcloud_file = null;
+
     public bool $showNextcloudPicker = false;
+
     public ?string $nextcloud_error = null;
 
     public array $preflightResults = [];
 
     // Regeneration state
     public bool $regeneration_timeout = false;
+
     public int $regeneration_checks = 0;
+
     public bool $showCancelRegenerationButton = false;
 
     public ?int $expectedCurrentVersionId = null;
+
     public bool $mediaResolutionFailed = false;
 
     private MarketingCampaignPostVersionMediaResolver $mediaResolver;
-    private \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver;
+
+    private MarketingCampaignPostMediaUrlResolver $urlResolver;
 
     public function boot(
         MarketingCampaignPostVersionMediaResolver $mediaResolver,
-        \App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver $urlResolver
+        MarketingCampaignPostMediaUrlResolver $urlResolver
     ): void {
         $this->mediaResolver = $mediaResolver;
         $this->urlResolver = $urlResolver;
@@ -90,12 +140,12 @@ class MarketingCampaignPostShow extends Component
         return [
             'form.title' => 'nullable|string|max:255',
             'form.description' => 'nullable|string',
-            'form.content_type' => ['required', \Illuminate\Validation\Rule::in(array_column(MarketingCampaignPostType::cases(), 'value'))],
+            'form.content_type' => ['required', Rule::in(array_column(MarketingCampaignPostType::cases(), 'value'))],
             'form.scheduled_date' => 'nullable|date',
             'form.scheduled_time' => 'nullable|date_format:H:i',
-            'form.status' => ['required', \Illuminate\Validation\Rule::in(array_column(MarketingCampaignPostStatus::cases(), 'value'))],
+            'form.status' => ['required', Rule::in(array_column(MarketingCampaignPostStatus::cases(), 'value'))],
             'form.ai_analysis_enabled' => 'boolean',
-            'form.media_source' => ['required', \Illuminate\Validation\Rule::in(['local', 'nextcloud'])],
+            'form.media_source' => ['required', Rule::in(['local', 'nextcloud'])],
             'form.nextcloud_path' => 'nullable|string|max:255',
             'form.publishing_platforms' => 'nullable|array',
             'form.publishing_platforms.*' => 'string|in:instagram,facebook,tiktok',
@@ -163,7 +213,7 @@ class MarketingCampaignPostShow extends Component
         $this->post->refresh();
         $this->post->load(['currentVersion', 'comments.user']);
         $this->loadExistingMedia();
-        
+
         $this->form['status'] = $this->post->status->value;
 
         if ($this->post->currentVersion) {
@@ -175,6 +225,7 @@ class MarketingCampaignPostShow extends Component
             $this->dispatch('marketing-post-regeneration-completed');
             $this->regeneration_timeout = false;
             $this->regeneration_checks = 0;
+
             return;
         }
 
@@ -195,7 +246,7 @@ class MarketingCampaignPostShow extends Component
         $this->authorize('update', $this->post);
 
         $previous = $this->post->n8n_previous_status?->value
-            ?? \App\Enums\Social\MarketingCampaignPostStatus::Generated->value;
+            ?? MarketingCampaignPostStatus::Generated->value;
 
         $this->post->forceFill([
             'status' => $previous,
@@ -225,16 +276,18 @@ class MarketingCampaignPostShow extends Component
             $this->addError('media', 'I media della versione non possono essere determinati in modo sicuro.');
             Log::error('social.version_media.resolution_failed_in_show', [
                 'marketing_campaign_post_id' => $this->post->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
-            
+
         $this->existing_media = $resolvedMedia
             ->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'source' => $item->source,
-                    'path' => ($item->disk === 'public' && filled($item->path)) ? $item->path : $item->nextcloud_path,
+                    'path' => (in_array($item->disk, ['public', 'social_media'], true) && filled($item->path))
+                        ? $item->path
+                        : $item->nextcloud_path,
                     'preview_url' => $this->urlResolver->previewUrl($item),
                     'original_name' => $item->original_name,
                     'mime_type' => $item->mime_type,
@@ -244,13 +297,13 @@ class MarketingCampaignPostShow extends Component
                     'sort_order' => $item->sort_order,
                 ];
             })->toArray();
-            
+
         // Rebuild selected_media_items preserving local/nextcloud pending uploads if any
         $newSelected = [];
         foreach ($this->existing_media as $existing) {
-            $isVid = ($existing['media_type'] ?? null) === 'video' || \Illuminate\Support\Str::startsWith($existing['mime_type'] ?? '', 'video/');
+            $isVid = ($existing['media_type'] ?? null) === 'video' || Str::startsWith($existing['mime_type'] ?? '', 'video/');
             $newSelected[] = [
-                'uid' => 'existing:' . $existing['id'],
+                'uid' => 'existing:'.$existing['id'],
                 'source' => 'existing',
                 'existing_id' => $existing['id'],
                 'type' => $isVid ? 'video' : 'image',
@@ -258,7 +311,7 @@ class MarketingCampaignPostShow extends Component
                 'preview_url' => $existing['preview_url'],
             ];
         }
-        
+
         // Append current un-saved items (if any)
         if ($preserveUnsaved) {
             foreach ($this->selected_media_items as $item) {
@@ -275,18 +328,22 @@ class MarketingCampaignPostShow extends Component
         // Now sync legacy media fields using selected_media_items first item if existing
         $first = collect($this->selected_media_items)->firstWhere('source', 'existing');
         if ($first) {
-            $model = \App\Models\MarketingCampaignPostMedia::find($first['existing_id']);
+            $model = MarketingCampaignPostMedia::find($first['existing_id']);
             if ($model) {
-                $isLocal = $model->disk === 'public' && filled($model->path);
-                
+                $isLocal = in_array(
+                    $model->disk,
+                    ['public', 'social_media'],
+                    true
+                ) && filled($model->path);
+
                 $this->post->update([
                     'media_path' => $isLocal ? $model->path : null,
                     'media_source' => $model->source,
                     'media_original_name' => $model->original_name,
                     'media_mime' => $model->mime_type,
-                    'nextcloud_path' => !$isLocal ? $model->nextcloud_path : null,
-                    'nextcloud_share_url' => !$isLocal ? $model->nextcloud_share_url : null,
-                    'nextcloud_file_id' => !$isLocal ? $model->nextcloud_file_id : null,
+                    'nextcloud_path' => ! $isLocal ? $model->nextcloud_path : null,
+                    'nextcloud_share_url' => ! $isLocal ? $model->nextcloud_share_url : null,
+                    'nextcloud_file_id' => ! $isLocal ? $model->nextcloud_file_id : null,
                 ]);
                 $this->form['media_source'] = $model->source;
                 $this->form['nextcloud_path'] = $model->source === 'nextcloud' ? $model->nextcloud_path : null;
@@ -308,11 +365,13 @@ class MarketingCampaignPostShow extends Component
     public function removeSelectedMediaItem(string $uid): void
     {
         $this->authorize('update', $this->post);
-        
-        $item = collect($this->selected_media_items)->firstWhere('uid', $uid);
-        if (!$item) return;
 
-        $this->selected_media_items = array_values(array_filter($this->selected_media_items, fn($i) => $i['uid'] !== $uid));
+        $item = collect($this->selected_media_items)->firstWhere('uid', $uid);
+        if (! $item) {
+            return;
+        }
+
+        $this->selected_media_items = array_values(array_filter($this->selected_media_items, fn ($i) => $i['uid'] !== $uid));
 
         // Legacy sync for nextcloud files
         $this->selected_nextcloud_files = [];
@@ -326,7 +385,7 @@ class MarketingCampaignPostShow extends Component
                 ];
             }
         }
-        
+
         if (empty($this->selected_nextcloud_files)) {
             $this->form['nextcloud_path'] = null;
         } else {
@@ -336,11 +395,13 @@ class MarketingCampaignPostShow extends Component
 
     public function reorderSelectedMedia(int $fromIndex, int $toIndex): void
     {
-        if (!isset($this->selected_media_items[$fromIndex]) || $toIndex < 0 || $toIndex >= count($this->selected_media_items)) return;
-        
+        if (! isset($this->selected_media_items[$fromIndex]) || $toIndex < 0 || $toIndex >= count($this->selected_media_items)) {
+            return;
+        }
+
         $item = array_splice($this->selected_media_items, $fromIndex, 1)[0];
         array_splice($this->selected_media_items, $toIndex, 0, [$item]);
-        
+
         // Immediate reorder in DB for existing items if they changed order?
         // Let's just update all existing items sort_order based on current selected_media_items
         $this->syncSortOrderToDb();
@@ -353,7 +414,7 @@ class MarketingCampaignPostShow extends Component
 
     public function updatedFormAiAnalysisEnabled($value)
     {
-        if (!$value) {
+        if (! $value) {
             $this->include_client_logo = true;
             $this->include_client_header = true;
         }
@@ -362,7 +423,7 @@ class MarketingCampaignPostShow extends Component
     public function browseNextcloud(string $path = '/')
     {
         $this->nextcloud_error = null;
-        $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+        $service = app(NextcloudService::class);
 
         if ($service->isConfigured()) {
             $this->nextcloud_browse_path = $path;
@@ -388,11 +449,11 @@ class MarketingCampaignPostShow extends Component
         $this->showNextcloudPicker = true;
         $this->pending_nextcloud_files = [];
 
-        $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+        $service = app(NextcloudService::class);
         $startPath = $service->mediaRoot($mediaKind);
         if ($this->campaign->client) {
             $clientPath = $mediaKind === 'video' ? $this->campaign->client->nextcloud_videos_path : $this->campaign->client->nextcloud_photos_path;
-            if (!empty($clientPath)) {
+            if (! empty($clientPath)) {
                 $startPath = $clientPath;
             }
         }
@@ -407,8 +468,8 @@ class MarketingCampaignPostShow extends Component
 
     public function toggleNextcloudFile($path, $name, $size, $mime = null, $fileId = null): void
     {
-        $existingIndex = collect($this->pending_nextcloud_files)->search(fn($f) => $f['path'] === $path);
-        
+        $existingIndex = collect($this->pending_nextcloud_files)->search(fn ($f) => $f['path'] === $path);
+
         if ($existingIndex !== false) {
             unset($this->pending_nextcloud_files[$existingIndex]);
             $this->pending_nextcloud_files = array_values($this->pending_nextcloud_files);
@@ -416,6 +477,7 @@ class MarketingCampaignPostShow extends Component
             $totalCount = count($this->existing_media) + (is_array($this->media) ? count($this->media) : 0) + count($this->pending_nextcloud_files);
             if ($totalCount >= 10) {
                 $this->addError('form.nextcloud_path', 'Puoi avere al massimo 10 file totali.');
+
                 return;
             }
             $this->pending_nextcloud_files[] = [
@@ -432,6 +494,7 @@ class MarketingCampaignPostShow extends Component
     {
         if (empty($this->pending_nextcloud_files)) {
             $this->addError('form.nextcloud_path', 'Seleziona almeno una foto da Nextcloud.');
+
             return;
         }
 
@@ -449,9 +512,9 @@ class MarketingCampaignPostShow extends Component
                 $this->addError('form.nextcloud_path', 'Hai raggiunto il limite massimo di 10 media.');
                 break;
             }
-            $isVid = !empty($ncFile['mime']) ? str_starts_with($ncFile['mime'], 'video/') : (preg_match('/\.(mp4|mov|m4v|webm|avi)$/i', $ncFile['name'] ?? '') === 1);
+            $isVid = ! empty($ncFile['mime']) ? str_starts_with($ncFile['mime'], 'video/') : (preg_match('/\.(mp4|mov|m4v|webm|avi)$/i', $ncFile['name'] ?? '') === 1);
             $this->selected_media_items[] = [
-                'uid' => 'nc:' . uniqid(),
+                'uid' => 'nc:'.uniqid(),
                 'source' => 'nextcloud',
                 'type' => $isVid ? 'video' : 'image',
                 'name' => $ncFile['name'] ?? basename($ncFile['path']),
@@ -468,9 +531,9 @@ class MarketingCampaignPostShow extends Component
     public function removeNextcloudFile($path = null): void
     {
         if ($path) {
-            $this->selected_nextcloud_files = array_filter($this->selected_nextcloud_files, fn($f) => $f['path'] !== $path);
+            $this->selected_nextcloud_files = array_filter($this->selected_nextcloud_files, fn ($f) => $f['path'] !== $path);
             $this->selected_nextcloud_files = array_values($this->selected_nextcloud_files);
-            
+
             if (empty($this->selected_nextcloud_files)) {
                 $this->form['nextcloud_path'] = null;
             } else {
@@ -484,8 +547,12 @@ class MarketingCampaignPostShow extends Component
 
     public function reorderNextcloudMedia($fromIndex, $toIndex): void
     {
-        if (!isset($this->selected_nextcloud_files[$fromIndex])) return;
-        if ($toIndex < 0 || $toIndex >= count($this->selected_nextcloud_files)) return;
+        if (! isset($this->selected_nextcloud_files[$fromIndex])) {
+            return;
+        }
+        if ($toIndex < 0 || $toIndex >= count($this->selected_nextcloud_files)) {
+            return;
+        }
 
         $item = $this->selected_nextcloud_files[$fromIndex];
         array_splice($this->selected_nextcloud_files, $fromIndex, 1);
@@ -498,7 +565,7 @@ class MarketingCampaignPostShow extends Component
         $file = collect($this->nextcloudFilesOnlyImagesOrVideos())
             ->firstWhere('path', $path);
 
-        if (!$file) {
+        if (! $file) {
             return;
         }
 
@@ -524,7 +591,7 @@ class MarketingCampaignPostShow extends Component
 
     private function moveNextcloudPreview(array $files, int $direction): void
     {
-        if (!$this->preview_nextcloud_file || count($files) === 0) {
+        if (! $this->preview_nextcloud_file || count($files) === 0) {
             return;
         }
 
@@ -550,33 +617,43 @@ class MarketingCampaignPostShow extends Component
             ->values()
             ->all();
     }
+
     public function getPendingMediaCountProperty(): int
     {
-        return collect($this->selected_media_items)->filter(fn($i) => $i['source'] !== 'existing')->count();
+        return collect($this->selected_media_items)->filter(fn ($i) => $i['source'] !== 'existing')->count();
     }
 
     public function hasVideoMedia(): bool
     {
         foreach ($this->selected_media_items as $item) {
-            if ($item['type'] === 'video') return true;
+            if ($item['type'] === 'video') {
+                return true;
+            }
         }
+
         return false;
     }
 
     public function hasPhotoMedia(): bool
     {
         foreach ($this->selected_media_items as $item) {
-            if ($item['type'] === 'image') return true;
+            if ($item['type'] === 'image') {
+                return true;
+            }
         }
+
         return false;
     }
 
     private function validateReelMedia(): bool
     {
-        if ($this->form['content_type'] !== 'reel') return true;
-        
-        if (!$this->hasVideoMedia()) {
+        if ($this->form['content_type'] !== 'reel') {
+            return true;
+        }
+
+        if (! $this->hasVideoMedia()) {
             $this->addError('media', 'Un Reel richiede almeno un file video.');
+
             return false;
         }
 
@@ -589,47 +666,52 @@ class MarketingCampaignPostShow extends Component
             ->contains(fn ($item) => ($item['source'] ?? null) === 'local_pending');
     }
 
-    private function buildPostDataAndStoredMedia(array &$data, array &$newlyCreatedFilePaths, array &$newlyCreatedNextcloudShares, ?\App\Services\Integrations\Nextcloud\NextcloudService $service): array|false
+    private function buildPostDataAndStoredMedia(array &$data, array &$newlyCreatedFilePaths, array &$newlyCreatedNextcloudShares, ?NextcloudService $service): array|false
     {
         $orderedMediaIds = [];
         $newlyCreatedMediaIds = [];
 
         $totalCount = count($this->selected_media_items);
-            
+
         if ($totalCount > 10) {
             $this->addError('media', 'Il totale dei media non può superare i 10 elementi.');
+
             return false;
         }
 
         foreach ($this->selected_media_items as $index => $item) {
             if (($item['source'] ?? null) === 'local_pending') {
                 $this->addError('media', 'Uno o più file locali non hanno ancora terminato il caricamento.');
+
                 return false;
             }
 
             if ($item['source'] === 'existing') {
                 $orderedMediaIds[] = $item['existing_id'];
+
                 continue;
             }
 
             if ($item['source'] === 'local') {
                 $uploadedFile = $this->all_local_media[$item['local_index']] ?? null;
-                if (!$uploadedFile) continue;
+                if (! $uploadedFile) {
+                    continue;
+                }
 
-                $filename = \Illuminate\Support\Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME))
-                    . '_' . \Illuminate\Support\Str::uuid()->toString() . '.' . $uploadedFile->getClientOriginalExtension();
-                
-                $path = $uploadedFile->storeAs('marketing/campaign-posts', $filename, 'public');
+                $filename = Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME))
+                    .'_'.Str::uuid()->toString().'.'.$uploadedFile->getClientOriginalExtension();
+
+                $path = $uploadedFile->storeAs('marketing/campaign-posts', $filename, 'social_media');
                 $newlyCreatedFilePaths[] = $path;
                 $integrity = app(
-                    \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
-                )->readLocal('public', $path);
+                    MediaIntegrityMetadataReader::class
+                )->readLocal('social_media', $path);
 
-                $newRecord = \App\Models\MarketingCampaignPostMedia::create([
+                $newRecord = MarketingCampaignPostMedia::create([
                     'marketing_campaign_post_id' => $this->post->id,
                     'source' => 'local',
-                    'disk' => 'public',
-                    'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($integrity['mime_type']),
+                    'disk' => 'social_media',
+                    'media_type' => MarketingCampaignPostMedia::detectMediaType($integrity['mime_type']),
                     'path' => $path,
                     'original_name' => $uploadedFile->getClientOriginalName(),
                     'mime_type' => $integrity['mime_type'],
@@ -648,10 +730,10 @@ class MarketingCampaignPostShow extends Component
                         $newlyCreatedNextcloudShares[] = $shareResult->shareId;
                     }
 
-                    $newRecord = \App\Models\MarketingCampaignPostMedia::create([
+                    $newRecord = MarketingCampaignPostMedia::create([
                         'marketing_campaign_post_id' => $this->post->id,
                         'source' => 'nextcloud',
-                        'media_type' => \App\Models\MarketingCampaignPostMedia::detectMediaType($fileInfo->mimeType),
+                        'media_type' => MarketingCampaignPostMedia::detectMediaType($fileInfo->mimeType),
                         'nextcloud_path' => $fileInfo->path,
                         'original_name' => $item['name'] ?? basename($item['nextcloud_path']),
                         'mime_type' => $fileInfo->mimeType,
@@ -663,8 +745,9 @@ class MarketingCampaignPostShow extends Component
                     ]);
                     $orderedMediaIds[] = $newRecord->id;
                     $newlyCreatedMediaIds[] = $newRecord->id;
-                } catch (\App\Exceptions\NextcloudShareException $e) {
+                } catch (NextcloudShareException $e) {
                     $this->addError('form.nextcloud_path', $e->getMessage());
+
                     return false;
                 }
             }
@@ -682,22 +765,25 @@ class MarketingCampaignPostShow extends Component
 
         if ($this->mediaResolutionFailed) {
             $this->addError('media', 'Correggere l\'integrità dei media prima di continuare.');
+
             return;
         }
 
         if ($this->hasPendingLocalMedia()) {
             $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+
             return;
         }
 
         $this->validate();
 
-        if (!$this->validateReelMedia()) {
+        if (! $this->validateReelMedia()) {
             return;
         }
 
-        if (!$this->post->status->isManuallyEditable()) {
+        if (! $this->post->status->isManuallyEditable()) {
             $this->addError('post', 'Lo stato attuale non consente la modifica manuale.');
+
             return;
         }
 
@@ -707,28 +793,29 @@ class MarketingCampaignPostShow extends Component
         $newlyCreatedNextcloudShares = [];
         $locks = [];
         $ncService = null;
-        
+
         $hasNextcloud = collect($this->selected_media_items)->contains('source', 'nextcloud');
         if ($hasNextcloud) {
-            $ncService = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+            $ncService = app(NextcloudService::class);
             $ncPaths = collect($this->selected_media_items)
                 ->where('source', 'nextcloud')
                 ->pluck('nextcloud_path')
                 ->all();
-            
+
             try {
                 $locks = $ncService->acquireLocksForPaths($ncPaths);
-            } catch (\App\Exceptions\NextcloudShareException $e) {
+            } catch (NextcloudShareException $e) {
                 $this->addError('form.nextcloud_path', $e->getMessage());
+
                 return;
             }
         }
 
         try {
-            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($data, &$preparedMedia, &$newlyCreatedMediaPaths, &$newlyCreatedNextcloudShares, $ncService) {
+            $result = DB::transaction(function () use ($data, &$preparedMedia, &$newlyCreatedMediaPaths, &$newlyCreatedNextcloudShares, $ncService) {
                 $preparedMedia = $this->buildPostDataAndStoredMedia($data, $newlyCreatedMediaPaths, $newlyCreatedNextcloudShares, $ncService);
                 if ($preparedMedia === false) {
-                    throw new \App\Exceptions\Social\MediaPreparationException();
+                    throw new MediaPreparationException;
                 }
 
                 // Metadati base (non cambiamo title, description e status direttamente qui se versionati)
@@ -736,7 +823,7 @@ class MarketingCampaignPostShow extends Component
                 unset($metadataToUpdate['title'], $metadataToUpdate['description'], $metadataToUpdate['status']);
                 $this->post->update($metadataToUpdate);
 
-                $dto = new \App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData(
+                $dto = new CreateManualMarketingCampaignPostVersionData(
                     expected_current_version_id: $this->expectedCurrentVersionId,
                     title: $data['title'] ?? null,
                     caption: $data['description'] ?? null,
@@ -745,7 +832,8 @@ class MarketingCampaignPostShow extends Component
                     author_id: auth()->id()
                 );
 
-                $action = app(\App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction::class);
+                $action = app(CreateManualMarketingCampaignPostVersionAction::class);
+
                 return $action->execute($this->post, $dto);
             });
 
@@ -755,21 +843,24 @@ class MarketingCampaignPostShow extends Component
                 session()->flash('success', 'Nessuna modifica da salvare.');
             }
 
-        } catch (\App\Exceptions\Social\StaleMarketingCampaignPostVersionException $e) {
+        } catch (StaleMarketingCampaignPostVersionException $e) {
             $this->cleanupCompensatoryFiles($newlyCreatedMediaPaths, $newlyCreatedNextcloudShares);
             $this->addError('post', $e->getMessage());
+
             return;
-        } catch (\App\Exceptions\Social\MediaPreparationException $e) {
+        } catch (MediaPreparationException $e) {
             $this->cleanupCompensatoryFiles($newlyCreatedMediaPaths, $newlyCreatedNextcloudShares);
+
             // Error already added to component
             return;
         } catch (\Exception $e) {
             $this->cleanupCompensatoryFiles($newlyCreatedMediaPaths, $newlyCreatedNextcloudShares);
-            \Illuminate\Support\Facades\Log::error('Errore salvataggio manuale:', ['error' => $e->getMessage()]);
+            Log::error('Errore salvataggio manuale:', ['error' => $e->getMessage()]);
             session()->flash('error', 'Si è verificato un errore durante il salvataggio.');
+
             return;
         } finally {
-            if ($ncService && !empty($locks)) {
+            if ($ncService && ! empty($locks)) {
                 $ncService->releaseLocks($locks);
             }
         }
@@ -780,11 +871,11 @@ class MarketingCampaignPostShow extends Component
             $logoUpdated = false;
             $activityUpdated = false;
 
-            \Illuminate\Support\Facades\DB::transaction(function () use (&$newlyCreatedClientIdentityPaths, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
+            DB::transaction(function () use (&$newlyCreatedClientIdentityPaths, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
                 $client = $this->campaign->client()->lockForUpdate()->first();
                 $clientUpdates = $this->prepareClientIdentity($newlyCreatedClientIdentityPaths);
-                
-                if (!empty($clientUpdates)) {
+
+                if (! empty($clientUpdates)) {
                     if (isset($clientUpdates['logo_path'])) {
                         $oldLogoPathToClean = $client->logo_path;
                         $logoUpdated = true;
@@ -796,11 +887,15 @@ class MarketingCampaignPostShow extends Component
                     $client->save();
                 }
             });
-            
+
             $this->commitClientIdentityUpdates($logoUpdated, $activityUpdated, $oldLogoPathToClean);
         } catch (\Throwable $e) {
-            $this->cleanupCompensatoryFiles($newlyCreatedClientIdentityPaths);
-            \Illuminate\Support\Facades\Log::warning('Errore aggiornamento cliente post salvataggio versione:', ['error' => $e->getMessage()]);
+            $this->cleanupCompensatoryFiles(
+                $newlyCreatedClientIdentityPaths,
+                [],
+                'public'
+            );
+            Log::warning('Errore aggiornamento cliente post salvataggio versione:', ['error' => $e->getMessage()]);
             session()->flash('warning', 'Versione salvata, ma si è verificato un errore nell\'aggiornamento dei dati cliente.');
         }
 
@@ -821,26 +916,29 @@ class MarketingCampaignPostShow extends Component
         $this->refreshPreflight();
     }
 
-    private function cleanupCompensatoryFiles(array $paths, array $nextcloudShares = [])
-    {
+    private function cleanupCompensatoryFiles(
+        array $paths,
+        array $nextcloudShares = [],
+        string $disk = 'social_media'
+    ) {
         foreach ($paths as $path) {
             try {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+                Storage::disk($disk)->delete($path);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Failed to delete temporary local file during cleanup', [
+                Log::warning('Failed to delete temporary local file during cleanup', [
                     'path' => $path,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
-        
-        if (!empty($nextcloudShares)) {
-            $ncService = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+
+        if (! empty($nextcloudShares)) {
+            $ncService = app(NextcloudService::class);
             foreach ($nextcloudShares as $shareId) {
                 try {
                     $ncService->revokePublicShareById($shareId);
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Failed to revoke Nextcloud share during cleanup', [
+                    Log::warning('Failed to revoke Nextcloud share during cleanup', [
                         'shareId' => $shareId,
                         'error' => $e->getMessage(),
                     ]);
@@ -856,26 +954,29 @@ class MarketingCampaignPostShow extends Component
 
     public function saveAndSubmitToN8n(string $generationType = 'full')
     {
-        $submitAction = app(\App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction::class);
-        
+        $submitAction = app(SubmitMarketingCampaignPostToN8nAction::class);
+
         if ($this->mediaResolutionFailed) {
             $this->addError('media', 'Correggere l\'integrità dei media prima di continuare.');
+
             return;
         }
-        
+
         if ($this->hasPendingLocalMedia()) {
             $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+
             return;
         }
 
         $this->validate();
 
-        if (!$this->validateReelMedia()) {
+        if (! $this->validateReelMedia()) {
             return;
         }
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
             $this->addError('post', 'Impossibile inviare a N8n un post già pubblicato.');
+
             return;
         }
 
@@ -892,18 +993,19 @@ class MarketingCampaignPostShow extends Component
         $service = null;
         $locks = [];
         $hasNextcloud = collect($this->selected_media_items)->contains('source', 'nextcloud');
-        
+
         if ($hasNextcloud) {
-            $service = app(\App\Services\Integrations\Nextcloud\NextcloudService::class);
+            $service = app(NextcloudService::class);
             $paths = collect($this->selected_media_items)
                 ->where('source', 'nextcloud')
                 ->pluck('nextcloud_path')
                 ->all();
-            
+
             try {
                 $locks = $service->acquireLocksForPaths($paths);
-            } catch (\App\Exceptions\NextcloudShareException $e) {
+            } catch (NextcloudShareException $e) {
                 $this->addError('media', 'Impossibile acquisire il lock per i file su Nextcloud. Riprova più tardi.');
+
                 return;
             }
         }
@@ -913,11 +1015,11 @@ class MarketingCampaignPostShow extends Component
             $logoUpdated = false;
             $activityUpdated = false;
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($data, &$preparedMedia, &$newlyCreatedMediaPaths, &$newlyCreatedClientIdentityPaths, &$newlyCreatedNextcloudShares, $service, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
+            DB::transaction(function () use ($data, &$preparedMedia, &$newlyCreatedMediaPaths, &$newlyCreatedClientIdentityPaths, &$newlyCreatedNextcloudShares, $service, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
                 $client = $this->campaign->client()->lockForUpdate()->first();
                 $clientUpdates = $this->prepareClientIdentity($newlyCreatedClientIdentityPaths);
-                
-                if (!empty($clientUpdates)) {
+
+                if (! empty($clientUpdates)) {
                     if (isset($clientUpdates['logo_path'])) {
                         $oldLogoPathToClean = $client->logo_path;
                         $logoUpdated = true;
@@ -931,7 +1033,7 @@ class MarketingCampaignPostShow extends Component
 
                 $preparedMedia = $this->buildPostDataAndStoredMedia($data, $newlyCreatedMediaPaths, $newlyCreatedNextcloudShares, $service);
                 if ($preparedMedia === false) {
-                    throw new \App\Exceptions\Social\MediaPreparationException();
+                    throw new MediaPreparationException;
                 }
 
                 // Metadati
@@ -939,19 +1041,29 @@ class MarketingCampaignPostShow extends Component
                 unset($metadataToUpdate['status']); // We don't update status directly here, action does it
                 $this->post->update($metadataToUpdate);
             });
-            
+
             $this->commitClientIdentityUpdates($logoUpdated, $activityUpdated, $oldLogoPathToClean);
-        } catch (\App\Exceptions\Social\MediaPreparationException $e) {
+        } catch (MediaPreparationException $e) {
             $this->cleanupCompensatoryFiles($newlyCreatedMediaPaths, $newlyCreatedNextcloudShares);
-            $this->cleanupCompensatoryFiles($newlyCreatedClientIdentityPaths);
+            $this->cleanupCompensatoryFiles(
+                $newlyCreatedClientIdentityPaths,
+                [],
+                'public'
+            );
+
             return;
         } catch (\Exception $e) {
             $this->cleanupCompensatoryFiles($newlyCreatedMediaPaths, $newlyCreatedNextcloudShares);
-            $this->cleanupCompensatoryFiles($newlyCreatedClientIdentityPaths);
-            $this->addError('post', 'Errore durante il salvataggio: ' . $e->getMessage());
+            $this->cleanupCompensatoryFiles(
+                $newlyCreatedClientIdentityPaths,
+                [],
+                'public'
+            );
+            $this->addError('post', 'Errore durante il salvataggio: '.$e->getMessage());
+
             return;
         } finally {
-            if ($service && !empty($locks)) {
+            if ($service && ! empty($locks)) {
                 $service->releaseLocks($locks);
             }
         }
@@ -974,18 +1086,19 @@ class MarketingCampaignPostShow extends Component
             $submitAction->execute($this->post, $runtimeClientData);
             $this->dispatch('post-submitted-n8n');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("N8n dispatch error: " . $e->getMessage());
+            Log::error('N8n dispatch error: '.$e->getMessage());
         }
 
         $this->refreshPost();
     }
 
-    public function regeneratePost(string $type, \App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction $action)
+    public function regeneratePost(string $type, RequestMarketingCampaignPostRegenerationAction $action)
     {
         $this->authorize('update', $this->post);
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
             $this->addError('post', 'Impossibile rigenerare un post già pubblicato.');
+
             return;
         }
 
@@ -995,33 +1108,34 @@ class MarketingCampaignPostShow extends Component
             'title' => $this->form['title'] ?? null,
             'description' => $this->form['description'] ?? null,
         ];
-        $this->post->update(array_filter($metadataToUpdate, fn($val) => !is_null($val)));
+        $this->post->update(array_filter($metadataToUpdate, fn ($val) => ! is_null($val)));
 
         try {
             $this->showCancelRegenerationButton = false;
             $this->regeneration_timeout = false;
             $this->regeneration_checks = 0;
-            
+
             $action->execute($this->post, auth()->user(), $type);
             $this->refreshPost();
             $this->dispatch('post-regenerating');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Marketing post regeneration failed', [
+            Log::error('Marketing post regeneration failed', [
                 'post_id' => $this->post->id,
                 'type' => $type,
                 'error' => $e->getMessage(),
             ]);
 
-            $this->addError('post', 'Errore rigenerazione: ' . $e->getMessage());
+            $this->addError('post', 'Errore rigenerazione: '.$e->getMessage());
         }
     }
 
-    public function sendToClient(\App\Domain\Social\Actions\SendMarketingCampaignPostToClientAction $action)
+    public function sendToClient(SendMarketingCampaignPostToClientAction $action)
     {
         $this->authorize('update', $this->post);
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
             $this->addError('post', 'Impossibile inviare in revisione un post già pubblicato.');
+
             return;
         }
 
@@ -1041,11 +1155,12 @@ class MarketingCampaignPostShow extends Component
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
             $this->addError('post', 'Post già pubblicato.');
+
             return;
         }
 
         $this->post->update([
-            'status' => \App\Enums\Social\MarketingCampaignPostStatus::Approved->value,
+            'status' => MarketingCampaignPostStatus::Approved->value,
         ]);
 
         $this->dispatch('post-approved');
@@ -1062,8 +1177,8 @@ class MarketingCampaignPostShow extends Component
             'marketing_campaign_post_version_id' => $this->post->current_version_id,
             'user_id' => auth()->id(),
             'body' => $this->newInternalComment,
-            'visibility' => \App\Enums\Social\MarketingCampaignPostCommentVisibility::Internal->value,
-            'type' => \App\Enums\Social\MarketingCampaignPostCommentType::Comment->value,
+            'visibility' => MarketingCampaignPostCommentVisibility::Internal->value,
+            'type' => MarketingCampaignPostCommentType::Comment->value,
         ]);
 
         $this->newInternalComment = '';
@@ -1075,43 +1190,46 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('update', $this->post);
 
-        if (!in_array($this->post->status, [
+        if (! in_array($this->post->status, [
             MarketingCampaignPostStatus::Approved,
             MarketingCampaignPostStatus::Failed,
         ])) {
             $this->addError('post', 'Stato del post non compatibile con la pubblicazione.');
+
             return;
         }
 
         try {
             // We no longer need the legacy preflight check here. The preflight is part of the execution action.
             // Also, we don't dispatch the legacy job. We synchronously create the publication via Create action, then dispatch Execute job.
-            
-            $platformEnum = \App\Enums\Social\SocialPlatform::tryFrom($platform);
+
+            $platformEnum = SocialPlatform::tryFrom($platform);
             $account = $this->post->campaign->client->socialAccountFor($platform);
 
-            if (!$platformEnum || !$account) {
+            if (! $platformEnum || ! $account) {
                 $this->addError('post', 'Impossibile determinare account o piattaforma.');
+
                 return;
             }
-            
+
             $version = $this->post->currentVersion;
-            if (!$version) {
+            if (! $version) {
                 $this->addError('post', 'Impossibile trovare la versione corrente del post.');
+
                 return;
             }
-            
-            $createAction = app(\App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction::class);
+
+            $createAction = app(CreateMarketingCampaignPostPublicationAction::class);
             $publication = $createAction->execute($this->post, $version, $platformEnum, $account);
 
             // Dispatch async job
-            \App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::dispatch($publication->id);
-            
+            ExecuteMarketingCampaignPostPublicationJob::dispatch($publication->id);
+
             session()->flash("success_publish_{$platform}", "Pubblicazione in corso su {$platform}... Il job è stato accodato.");
             $this->refreshPost();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Errore durante dispatch pubblicazione social', ['error' => $e->getMessage()]);
-            $this->addError('post', 'Errore di sistema: ' . $e->getMessage());
+            Log::error('Errore durante dispatch pubblicazione social', ['error' => $e->getMessage()]);
+            $this->addError('post', 'Errore di sistema: '.$e->getMessage());
         }
     }
 
@@ -1120,17 +1238,19 @@ class MarketingCampaignPostShow extends Component
         $this->authorize('update', clone $this->post);
 
         $publication = $this->post->publications()->whereKey($publicationId)->first();
-        if (!$publication) return;
+        if (! $publication) {
+            return;
+        }
 
         try {
-            $retryAction = app(\App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction::class);
+            $retryAction = app(RetryMarketingCampaignPostPublicationAction::class);
             $newPublication = $retryAction->execute($publication);
-            
-            \App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::dispatch($newPublication->id);
+
+            ExecuteMarketingCampaignPostPublicationJob::dispatch($newPublication->id);
             session()->flash("success_publish_{$publication->platform->value}", "Riavvio pubblicazione su {$publication->platform->value} in corso.");
             $this->refreshPost();
         } catch (\Exception $e) {
-            $this->addError('post', 'Errore durante il retry: ' . $e->getMessage());
+            $this->addError('post', 'Errore durante il retry: '.$e->getMessage());
         }
     }
 
@@ -1140,10 +1260,10 @@ class MarketingCampaignPostShow extends Component
 
         $publication = $this->post->publications()->whereKey($publicationId)->first();
         // forceFailPublication is redundant if already failed, but kept for compatibility
-        if ($publication && $publication->status === \App\Enums\Social\PublicationStatus::Failed) {
-            $publication->update(['status' => \App\Enums\Social\PublicationStatus::Failed->value]);
-            
-            app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
+        if ($publication && $publication->status === PublicationStatus::Failed) {
+            $publication->update(['status' => PublicationStatus::Failed->value]);
+
+            app(SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
             session()->flash("error_publish_{$publication->platform->value}", "Post marcato come definitivamente fallito su {$publication->platform->value}.");
             $this->refreshPost();
         }
@@ -1154,9 +1274,10 @@ class MarketingCampaignPostShow extends Component
         $this->authorize('delete', $this->post);
 
         try {
-            app(\App\Domain\Social\Actions\DeleteMarketingCampaignPostAction::class)->execute($this->post);
+            app(DeleteMarketingCampaignPostAction::class)->execute($this->post);
         } catch (\Exception $e) {
-            $this->addError('post', 'Impossibile eliminare il post: ' . $e->getMessage());
+            $this->addError('post', 'Impossibile eliminare il post: '.$e->getMessage());
+
             return;
         }
 
@@ -1167,9 +1288,9 @@ class MarketingCampaignPostShow extends Component
     {
         $updates = [];
 
-        if ($this->include_client_logo && $this->runtime_logo && ($this->save_runtime_logo_to_client || !$this->form['ai_analysis_enabled'])) {
-            if ($this->runtime_logo instanceof \Illuminate\Http\UploadedFile) {
-                $filename = 'logo_' . \Illuminate\Support\Str::uuid()->toString() . '.' . $this->runtime_logo->getClientOriginalExtension();
+        if ($this->include_client_logo && $this->runtime_logo && ($this->save_runtime_logo_to_client || ! $this->form['ai_analysis_enabled'])) {
+            if ($this->runtime_logo instanceof UploadedFile) {
+                $filename = 'logo_'.Str::uuid()->toString().'.'.$this->runtime_logo->getClientOriginalExtension();
                 $newLogoPath = $this->runtime_logo->storeAs('clients/logos', $filename, 'public');
                 $newlyCreatedClientIdentityPaths[] = $newLogoPath;
 
@@ -1177,7 +1298,7 @@ class MarketingCampaignPostShow extends Component
             }
         }
 
-        if ($this->include_client_header && $this->runtime_activity_description && ($this->save_runtime_activity_to_client || !$this->form['ai_analysis_enabled'])) {
+        if ($this->include_client_header && $this->runtime_activity_description && ($this->save_runtime_activity_to_client || ! $this->form['ai_analysis_enabled'])) {
             $updates['activity_description'] = $this->runtime_activity_description;
         }
 
@@ -1196,9 +1317,9 @@ class MarketingCampaignPostShow extends Component
         }
         if ($oldLogoPath) {
             try {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldLogoPath);
+                Storage::disk('public')->delete($oldLogoPath);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Failed to delete old client logo', ['path' => $oldLogoPath, 'error' => $e->getMessage()]);
+                Log::warning('Failed to delete old client logo', ['path' => $oldLogoPath, 'error' => $e->getMessage()]);
             }
         }
     }
@@ -1213,26 +1334,27 @@ class MarketingCampaignPostShow extends Component
     {
         $this->preflightResults = [];
         $platforms = [
-            \App\Enums\Social\SocialPlatform::Instagram->value,
-            \App\Enums\Social\SocialPlatform::Facebook->value,
-            \App\Enums\Social\SocialPlatform::Tiktok->value,
+            SocialPlatform::Instagram->value,
+            SocialPlatform::Facebook->value,
+            SocialPlatform::Tiktok->value,
         ];
         foreach ($platforms as $platform) {
             $account = $this->post->campaign->client->socialAccountFor($platform);
-            if (!$account) {
+            if (! $account) {
                 $this->preflightResults[$platform] = null;
+
                 continue;
             }
 
-            if (in_array($platform, [\App\Enums\Social\SocialPlatform::Facebook->value, \App\Enums\Social\SocialPlatform::Instagram->value])) {
-                $this->preflightResults[$platform] = app(\App\Domain\Social\Services\MetaPreflightService::class)->runPreflight($this->post, $account);
-            } elseif ($platform === \App\Enums\Social\SocialPlatform::Tiktok->value) {
-                $this->preflightResults[$platform] = app(\App\Domain\Social\Services\TikTokPreflightService::class)->runPreflight($this->post, $account);
+            if (in_array($platform, [SocialPlatform::Facebook->value, SocialPlatform::Instagram->value])) {
+                $this->preflightResults[$platform] = app(MetaPreflightService::class)->runPreflight($this->post, $account);
+            } elseif ($platform === SocialPlatform::Tiktok->value) {
+                $this->preflightResults[$platform] = app(TikTokPreflightService::class)->runPreflight($this->post, $account);
             }
         }
     }
 
-    public function getPreflightResult(string $platform): ?\App\Domain\Social\Services\PreflightResult
+    public function getPreflightResult(string $platform): ?PreflightResult
     {
         return $this->preflightResults[$platform] ?? null;
     }
@@ -1256,7 +1378,9 @@ class MarketingCampaignPostShow extends Component
 
     public function updatedMedia()
     {
-        if (!is_array($this->media)) return;
+        if (! is_array($this->media)) {
+            return;
+        }
 
         foreach ($this->media as $uploadedFile) {
             $this->all_local_media[] = $uploadedFile;
@@ -1268,12 +1392,13 @@ class MarketingCampaignPostShow extends Component
             if ($pendingIndex !== false) {
                 $this->selected_media_items[$pendingIndex]['source'] = 'local';
                 $this->selected_media_items[$pendingIndex]['local_index'] = $localIndex;
+
                 continue;
             }
 
-            $isVid = \Illuminate\Support\Str::startsWith($uploadedFile->getMimeType(), 'video/');
+            $isVid = Str::startsWith($uploadedFile->getMimeType(), 'video/');
             $this->selected_media_items[] = [
-                'uid' => 'local:' . uniqid(),
+                'uid' => 'local:'.uniqid(),
                 'source' => 'local',
                 'type' => $isVid ? 'video' : 'image',
                 'name' => $uploadedFile->getClientOriginalName(),
@@ -1281,7 +1406,7 @@ class MarketingCampaignPostShow extends Component
             ];
         }
 
-        $this->media = []; 
+        $this->media = [];
     }
 
     #[Computed]
@@ -1300,24 +1425,28 @@ class MarketingCampaignPostShow extends Component
 
                 if ($item['source'] === 'local') {
                     $m = $this->all_local_media[$item['local_index']] ?? null;
-                    if (!$m) return null;
+                    if (! $m) {
+                        return null;
+                    }
                     $isVid = $item['type'] === 'video';
-                    $url = method_exists($m, 'temporaryUrl') ? ($isVid ? $this->temporaryVideoPreviewUrl($m) . '#t=0.001' : $m->temporaryUrl()) : '';
+                    $url = method_exists($m, 'temporaryUrl') ? ($isVid ? $this->temporaryVideoPreviewUrl($m).'#t=0.001' : $m->temporaryUrl()) : '';
+
                     return $url ? ['uid' => $item['uid'], 'type' => $item['type'], 'url' => $url, 'source' => 'local'] : null;
                 }
-                
+
                 if ($item['source'] === 'nextcloud') {
                     $isVid = $item['type'] === 'video';
+
                     return [
                         'uid' => $item['uid'],
                         'type' => $item['type'],
                         'source' => 'nextcloud',
                         'url' => $isVid
-                            ? route('nextcloud.download', ['path' => $item['nextcloud_path']]) . '#t=0.001'
+                            ? route('nextcloud.download', ['path' => $item['nextcloud_path']]).'#t=0.001'
                             : route('nextcloud.preview', ['path' => $item['nextcloud_path'], 'w' => 600, 'h' => 600]),
                     ];
                 }
-                
+
                 if ($item['source'] === 'local_pending') {
                     return [
                         'uid' => $item['uid'],
@@ -1334,9 +1463,9 @@ class MarketingCampaignPostShow extends Component
             ->all();
     }
 
-    public function temporaryVideoPreviewUrl(\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string
+    public function temporaryVideoPreviewUrl(TemporaryUploadedFile $file): string
     {
-        return \Illuminate\Support\Facades\URL::signedRoute('social.temporary-video-preview', [
+        return URL::signedRoute('social.temporary-video-preview', [
             'filename' => $file->getFilename(),
         ], now()->addMinutes(30));
     }

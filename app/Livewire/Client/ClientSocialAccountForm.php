@@ -3,27 +3,32 @@
 namespace App\Livewire\Client;
 
 use App\Domain\Social\Actions\CreateOrUpdateClientSocialAccountAction;
-use App\Models\Client;
-use App\Enums\Social\SocialPlatform;
+use App\Domain\Social\Actions\ValidateAgencyAssetAssignmentAction;
 use App\Enums\Social\SocialAccessMethod;
 use App\Enums\Social\SocialAccessStatus;
 use App\Enums\Social\SocialApiProvider;
 use App\Enums\Social\SocialApiStatus;
-use Livewire\Component;
+use App\Enums\Social\SocialPlatform;
+use App\Models\AgencySocialAsset;
+use App\Models\Client;
+use App\Models\ClientSocialAccount;
+use App\Support\Http\SocialProviderHttp;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Component;
 
 class ClientSocialAccountForm extends Component
 {
     use AuthorizesRequests;
 
     public Client $client;
-    
+
     public array $forms = [];
+
     public string $activeTab = 'facebook';
 
     public function mount(Client $client): void
     {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
+        $this->authorize('viewAny', ClientSocialAccount::class);
         $this->client = $client->load('socialAccounts');
 
         foreach (SocialPlatform::cases() as $platform) {
@@ -61,17 +66,17 @@ class ClientSocialAccountForm extends Component
 
     public function save(string $platform, CreateOrUpdateClientSocialAccountAction $action)
     {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
-        
-        if (!isset($this->forms[$platform])) {
+        $this->authorize('viewAny', ClientSocialAccount::class);
+
+        if (! isset($this->forms[$platform])) {
             return;
         }
 
         $data = $this->forms[$platform];
-        
+
         // Normalizza e formatta l'URL prima della validazione
-        if (!empty($data['account_url']) && !preg_match('~^(?:f|ht)tps?://~i', $data['account_url'])) {
-            $data['account_url'] = 'https://' . $data['account_url'];
+        if (! empty($data['account_url']) && ! preg_match('~^(?:f|ht)tps?://~i', $data['account_url'])) {
+            $data['account_url'] = 'https://'.$data['account_url'];
             $this->forms[$platform]['account_url'] = $data['account_url'];
         }
 
@@ -81,7 +86,7 @@ class ClientSocialAccountForm extends Component
         ], [
             "forms.$platform.account_url.url" => 'L\'URL inserito non è valido (es. https://...)',
         ]);
-        
+
         $action->execute($this->client, $platform, $data);
 
         $this->client->refresh();
@@ -89,19 +94,19 @@ class ClientSocialAccountForm extends Component
 
         session()->flash(
             'success_'.$platform,
-            ucfirst($platform) . ' salvato correttamente.'
+            ucfirst($platform).' salvato correttamente.'
         );
 
         $this->dispatch('client-social-accounts-updated');
     }
 
-    public function validateAssetAssignment(string $platform, int $assetId, \App\Domain\Social\Actions\ValidateAgencyAssetAssignmentAction $action)
+    public function validateAssetAssignment(string $platform, int $assetId, ValidateAgencyAssetAssignmentAction $action)
     {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
-        $asset = \App\Models\AgencySocialAsset::find($assetId);
+        $this->authorize('viewAny', ClientSocialAccount::class);
+        $asset = AgencySocialAsset::find($assetId);
         if ($asset) {
             $result = $action->execute($asset, $this->client->id, $platform);
-            
+
             if ($result->isBlocked()) {
                 $this->dispatch('show-toast', type: 'error', message: $result->message);
                 $this->forms[$platform]['agency_social_asset_id'] = ''; // Reset selection
@@ -112,10 +117,9 @@ class ClientSocialAccountForm extends Component
         }
     }
 
-
     public function disconnect(string $platform)
     {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
+        $this->authorize('viewAny', ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
         if ($account) {
             $account->update([
@@ -134,12 +138,12 @@ class ClientSocialAccountForm extends Component
 
     public function disconnectOauth(string $platform)
     {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
+        $this->authorize('viewAny', ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
         if ($account) {
             if ($platform === 'tiktok' && $account->access_token) {
                 $apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
-                \Illuminate\Support\Facades\Http::asForm()->post("{$apiBase}/v2/oauth/revoke/", [
+                SocialProviderHttp::tiktok()->asForm()->post("{$apiBase}/v2/oauth/revoke/", [
                     'client_key' => config('services.tiktok.client_key'),
                     'client_secret' => config('services.tiktok.client_secret'),
                     'token' => $account->access_token,
@@ -164,11 +168,12 @@ class ClientSocialAccountForm extends Component
 
     public function startTikTokOauth(string $platform)
     {
-        $this->authorize('viewAny', \App\Models\ClientSocialAccount::class);
+        $this->authorize('viewAny', ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
 
-        if (!$account || $platform !== 'tiktok') {
+        if (! $account || $platform !== 'tiktok') {
             session()->flash('error_'.$platform, 'Account non valido per questa operazione.');
+
             return;
         }
 
@@ -176,7 +181,7 @@ class ClientSocialAccountForm extends Component
         session([
             'tiktok_oauth_account_id' => $account->id,
             'tiktok_oauth_client_id' => $this->client->id,
-            'tiktok_oauth_expected_platform' => \App\Enums\Social\SocialPlatform::Tiktok->value,
+            'tiktok_oauth_expected_platform' => SocialPlatform::Tiktok->value,
         ]);
 
         return redirect()->route('admin.social.tiktok.redirect');
@@ -187,19 +192,19 @@ class ClientSocialAccountForm extends Component
         $availableAssets = [];
         if ($this->activeTab === 'facebook' || $this->activeTab === 'instagram') {
             $platformType = $this->activeTab === 'facebook' ? 'facebook_page' : 'instagram_business_account';
-            
-            $query = \App\Models\AgencySocialAsset::where('asset_type', $platformType);
-            
-            if (!empty($this->forms[$this->activeTab]['agency_social_asset_id'])) {
+
+            $query = AgencySocialAsset::where('asset_type', $platformType);
+
+            if (! empty($this->forms[$this->activeTab]['agency_social_asset_id'])) {
                 $selectedId = $this->forms[$this->activeTab]['agency_social_asset_id'];
-                $query->where(function($q) use ($selectedId) {
+                $query->where(function ($q) use ($selectedId) {
                     $q->where('is_active', true)
-                      ->orWhere('id', $selectedId);
+                        ->orWhere('id', $selectedId);
                 });
             } else {
                 $query->where('is_active', true);
             }
-            
+
             $availableAssets = $query->get();
         }
 

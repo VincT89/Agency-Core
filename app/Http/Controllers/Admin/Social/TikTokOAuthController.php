@@ -6,8 +6,9 @@ use App\Domain\Social\TikTok\TikTokCreatorInfoService;
 use App\Enums\Social\SocialPlatform;
 use App\Http\Controllers\Controller;
 use App\Models\ClientSocialAccount;
+use App\Support\Http\ProviderErrorSanitizer;
+use App\Support\Http\SocialProviderHttp;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -86,10 +87,13 @@ class TikTokOAuthController extends Controller
         }
 
         if ($error) {
-            Log::warning('TikTok OAuth Error', ['error' => $error, 'description' => $errorDescription]);
+            Log::warning('TikTok OAuth Error', [
+                'error' => ProviderErrorSanitizer::safeText((string) $error),
+                'account_id' => $account->id,
+            ]);
 
             return redirect()->route('clients.show', $account->client_id)
-                ->with('error', "Errore durante il collegamento TikTok: {$errorDescription}");
+                ->with('error', 'TikTok ha annullato o rifiutato il collegamento.');
         }
 
         if (! $state || $state !== $sessionState) {
@@ -105,18 +109,28 @@ class TikTokOAuthController extends Controller
         // Scambio del codice per l'access token
         $apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
 
-        $response = Http::asForm()->post("{$apiBase}/v2/oauth/token/", [
-            'client_key' => config('services.tiktok.client_key'),
-            'client_secret' => config('services.tiktok.client_secret'),
-            'code' => $code,
-            'grant_type' => 'authorization_code',
-            'redirect_uri' => config('services.tiktok.redirect_uri'),
-        ]);
+        try {
+            $response = SocialProviderHttp::tiktok()->asForm()->post("{$apiBase}/v2/oauth/token/", [
+                'client_key' => config('services.tiktok.client_key'),
+                'client_secret' => config('services.tiktok.client_secret'),
+                'code' => $code,
+                'grant_type' => 'authorization_code',
+                'redirect_uri' => config('services.tiktok.redirect_uri'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('TikTok Token Exchange Exception', [
+                'account_id' => $account->id,
+                'exception' => $e::class,
+            ]);
+
+            return redirect()->route('clients.show', $account->client_id)
+                ->with('error', 'TikTok non è raggiungibile. Riprova più tardi.');
+        }
 
         if ($response->failed()) {
             Log::error('TikTok Token Exchange Error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'account_id' => $account->id,
+                ...ProviderErrorSanitizer::context($response),
             ]);
 
             return redirect()->route('clients.show', $account->client_id)
@@ -124,16 +138,33 @@ class TikTokOAuthController extends Controller
         }
 
         $data = $response->json();
+        $accessToken = $data['access_token'] ?? null;
+        $openId = $data['open_id'] ?? null;
+
+        if (
+            ! is_string($accessToken)
+            || $accessToken === ''
+            || ! is_string($openId)
+            || $openId === ''
+        ) {
+            Log::error('TikTok Token Exchange Invalid Response', [
+                'account_id' => $account->id,
+                'has_access_token' => filled($accessToken),
+                'has_open_id' => filled($openId),
+            ]);
+
+            return redirect()->route('clients.show', $account->client_id)
+                ->with('error', 'TikTok ha restituito una risposta incompleta. Nessun dato è stato salvato.');
+        }
 
         // Salva i token e le informazioni dell'account
         $account->update([
-            'access_token' => $data['access_token'] ?? null,
+            'access_token' => $accessToken,
             'refresh_token' => $data['refresh_token'] ?? null,
             'token_expires_at' => isset($data['expires_in']) ? now()->addSeconds($data['expires_in']) : null,
             'refresh_token_expires_at' => isset($data['refresh_expires_in']) ? now()->addSeconds($data['refresh_expires_in']) : null,
-            'tiktok_open_id' => $data['open_id'] ?? null,
-            'provider_account_id' => $data['open_id']
-                ?? $account->provider_account_id,
+            'tiktok_open_id' => $openId,
+            'provider_account_id' => $openId,
             'scopes' => array_values(array_filter(explode(',', $data['scope'] ?? ''))),
             'api_status' => 'connected',
             'connected_at' => now(),

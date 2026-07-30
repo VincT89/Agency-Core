@@ -5,11 +5,11 @@ namespace App\Console\Commands;
 use App\Models\SystemHeartbeat;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class MonitorSystem extends Command
 {
     protected $signature = 'monitor:system';
+
     protected $description = 'Monitora lo stato del sistema e ritorna un exit code semantico';
 
     public function handle()
@@ -17,7 +17,7 @@ class MonitorSystem extends Command
         $critical = false;
         $warning = false;
         $messages = [];
-        
+
         // 1. Retention per System Command Runs
         // Retention moved to a separate cleanup job as this monitor must be strictly read-only.
 
@@ -35,21 +35,21 @@ class MonitorSystem extends Command
         // 3. Controllo Scheduler
         $schedulerTimeout = config('system-monitoring.scheduler_timeout_minutes', 5);
         $schedulerHeartbeat = SystemHeartbeat::where('name', 'scheduler')->first();
-        if (!$schedulerHeartbeat) {
+        if (! $schedulerHeartbeat) {
             $critical = true;
             $messages[] = '[CRITICAL] Scheduler heartbeat mancante.';
         } elseif ($schedulerHeartbeat->last_seen_at->lt(now()->subMinutes($schedulerTimeout))) {
             $critical = true;
-            $messages[] = "[CRITICAL] Scheduler fermo da oltre {$schedulerTimeout} minuti. Ultimo: " . $schedulerHeartbeat->last_seen_at;
+            $messages[] = "[CRITICAL] Scheduler fermo da oltre {$schedulerTimeout} minuti. Ultimo: ".$schedulerHeartbeat->last_seen_at;
         }
 
         // 4. Metriche Queue
         $queues = config('system-monitoring.queues', ['default', 'chatbot', 'social-publishing', 'social-reconciliation']);
-        
+
         foreach ($queues as $queue) {
             $now = now()->timestamp;
             $staleTimeout = now()->subMinutes(config('system-monitoring.stale_reserved_timeout_minutes', 30))->timestamp;
-            
+
             $available = DB::table('jobs')->where('queue', $queue)->whereNull('reserved_at')->where('available_at', '<=', $now)->count();
             $delayed = DB::table('jobs')->where('queue', $queue)->whereNull('reserved_at')->where('available_at', '>', $now)->count();
             $reserved = DB::table('jobs')->where('queue', $queue)->whereNotNull('reserved_at')->count();
@@ -63,6 +63,27 @@ class MonitorSystem extends Command
             if ($staleReserved > 0) {
                 $critical = true;
                 $messages[] = "[CRITICAL] Coda '{$queue}' ha {$staleReserved} job in stale_reserved da troppo tempo.";
+            }
+
+            $heartbeatTimeout = max(
+                1,
+                (int) config(
+                    'system-monitoring.queue_heartbeat_timeout_minutes',
+                    5
+                )
+            );
+            $heartbeat = SystemHeartbeat::query()
+                ->where('name', 'queue:'.$queue)
+                ->first();
+
+            if (! $heartbeat
+                || $heartbeat->last_seen_at->lt(
+                    now()->subMinutes($heartbeatTimeout)
+                )) {
+                $critical = true;
+                $lastSeen = $heartbeat?->last_seen_at?->toIso8601String()
+                    ?? 'mai';
+                $messages[] = "[CRITICAL] Worker coda '{$queue}' senza heartbeat recente. Ultimo: {$lastSeen}.";
             }
         }
 
@@ -95,15 +116,18 @@ class MonitorSystem extends Command
 
         if ($critical) {
             $this->error('Stato del sistema: CRITICAL');
+
             return 2;
         }
 
         if ($warning) {
             $this->warn('Stato del sistema: WARNING');
+
             return 1;
         }
 
         $this->info('Stato del sistema: OK');
+
         return 0;
     }
 }

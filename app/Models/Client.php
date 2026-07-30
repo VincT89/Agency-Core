@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\Social\SocialAccessMethod;
+use App\Enums\Social\SocialConnectionMode;
+use App\Enums\Social\SocialPlatform;
+use App\Models\Scopes\ProjectSupremacyScope;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Builder;
-use App\Models\User;
+use Illuminate\Support\Facades\URL;
 
 #[Fillable([
     'name',
@@ -41,9 +45,27 @@ class Client extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo_path 
-            ? url(route('media.public', ['path' => $this->logo_path], false)) 
+        return $this->logo_path
+            ? URL::temporarySignedRoute(
+                'media.public',
+                now()->addMinutes(
+                    (int) config('services.tiktok.media_url_ttl', 1440)
+                ),
+                ['path' => $this->logo_path]
+            )
             : null;
+    }
+
+    public function getNextcloudVideosPathAttribute(): ?string
+    {
+        if (blank($this->nextcloud_folder_name)) {
+            return null;
+        }
+
+        return rtrim(
+            (string) config('services.nextcloud.videos_root', '/VideoClienti'),
+            '/'
+        ).'/'.ltrim($this->nextcloud_folder_name, '/');
     }
 
     public function toN8nPayload(): array
@@ -108,28 +130,27 @@ class Client extends Model
 
     public function facebookAccount()
     {
-        return $this->hasOne(ClientSocialAccount::class)->where('platform', \App\Enums\Social\SocialPlatform::Facebook->value);
+        return $this->hasOne(ClientSocialAccount::class)->where('platform', SocialPlatform::Facebook->value);
     }
 
     public function instagramAccount()
     {
-        return $this->hasOne(ClientSocialAccount::class)->where('platform', \App\Enums\Social\SocialPlatform::Instagram->value);
+        return $this->hasOne(ClientSocialAccount::class)->where('platform', SocialPlatform::Instagram->value);
     }
 
     public function tiktokAccount()
     {
-        return $this->hasOne(ClientSocialAccount::class)->where('platform', \App\Enums\Social\SocialPlatform::Tiktok->value);
+        return $this->hasOne(ClientSocialAccount::class)->where('platform', SocialPlatform::Tiktok->value);
     }
 
     public function socialAccountFor(string $platform): ?ClientSocialAccount
     {
-        $enumPlatform = \App\Enums\Social\SocialPlatform::tryFrom($platform);
+        $enumPlatform = SocialPlatform::tryFrom($platform);
+
         return $this->socialAccounts->first(function ($account) use ($enumPlatform, $platform) {
             return $account->platform === $enumPlatform || $account->platform === $platform;
         });
     }
-
-
 
     public function marketingCampaigns(): HasMany
     {
@@ -138,19 +159,19 @@ class Client extends Model
 
     public function isMetaReady(): bool
     {
-        $fb = $this->socialAccountFor(\App\Enums\Social\SocialPlatform::Facebook->value);
-        $ig = $this->socialAccountFor(\App\Enums\Social\SocialPlatform::Instagram->value);
+        $fb = $this->socialAccountFor(SocialPlatform::Facebook->value);
+        $ig = $this->socialAccountFor(SocialPlatform::Instagram->value);
 
-        if (!$fb || !$ig) {
+        if (! $fb || ! $ig) {
             return false;
         }
 
-        if (!$fb->isReadyToPublish() || !$ig->isReadyToPublish()) {
+        if (! $fb->isReadyToPublish() || ! $ig->isReadyToPublish()) {
             return false;
         }
 
-        $fbIsOauth = $fb->connection_mode === \App\Enums\Social\SocialConnectionMode::Oauth;
-        $igIsOauth = $ig->connection_mode === \App\Enums\Social\SocialConnectionMode::Oauth;
+        $fbIsOauth = $fb->connection_mode === SocialConnectionMode::Oauth;
+        $igIsOauth = $ig->connection_mode === SocialConnectionMode::Oauth;
 
         // Se entrambi sono connessi via OAuth e sono ready, sono ok
         if ($fbIsOauth && $igIsOauth) {
@@ -167,8 +188,8 @@ class Client extends Model
         }
 
         if (
-            $fb->access_method !== \App\Enums\Social\SocialAccessMethod::MetaBusiness ||
-            $ig->access_method !== \App\Enums\Social\SocialAccessMethod::MetaBusiness
+            $fb->access_method !== SocialAccessMethod::MetaBusiness ||
+            $ig->access_method !== SocialAccessMethod::MetaBusiness
         ) {
             return false;
         }
@@ -182,8 +203,12 @@ class Client extends Model
             return $query;
         }
 
-        return $query->whereHas('projects.users', function ($q) use ($user) {
-            $q->where('users.id', $user->id);
+        return $query->whereHas('projects', function ($projects) use ($user) {
+            $projects
+                ->withoutGlobalScope(ProjectSupremacyScope::class)
+                ->whereHas('users', function ($users) use ($user) {
+                    $users->where('users.id', $user->id);
+                });
         });
     }
 

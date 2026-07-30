@@ -15,7 +15,7 @@ Il sistema si basa su una rigorosa architettura incentrata sul concetto di "Proj
 
 ### Flussi Verticali
 - **Modulo Shooting**: Gestione completa del ciclo di vita fotografico. Comprende la proposizione di slot orari, l'accettazione da parte del cliente, la generazione automatica di task ed eventi a calendario, fino alla consegna e archiviazione sicura degli asset.
-- **Pagamenti e Booking**: Integrazione sicura (Zero-Trust) con Stripe e PayPal per i checkout pubblici, con validazione server-side degli importi e gestione idempotente delle transazioni (PaymentConfirmationService).
+- **Amministrazione e pagamenti**: registrazione interna di fatture e pagamenti, riepiloghi economici e sincronizzazione dello stato delle fatture. Il repository non include checkout Stripe o PayPal.
 
 ### UI/UX e Frontend
 - **Design System Custom**: CSS modulare suddiviso per responsabilità (`_shell.css`, `_auth.css`, `_canvas-bg.css`, ecc.) integrato tramite Vite.
@@ -35,11 +35,12 @@ Prima di esporre l'applicazione in ambiente di produzione, è obbligatorio compl
 - Assicurarsi che `APP_URL` rifletta il dominio corretto (incluso `https://`).
 - Forzare l'utilizzo di HTTPS dal web server (Nginx/Apache) o tramite middleware.
 
-### 2. Integrazioni e API Keys
-- Aggiornare le credenziali di Stripe passando dalle chiavi di test alle chiavi Live (`STRIPE_KEY`, `STRIPE_SECRET`).
-- Configurare i Webhook Secret di Stripe per la ricezione sicura degli eventi.
-- Aggiornare le credenziali di PayPal per l'ambiente Live.
-- (Opzionale) Configurare le credenziali SMTP o i servizi di invio email definitivi.
+### 2. Integrazioni e credenziali
+- Configurare Meta, TikTok e Nextcloud soltanto per i moduli effettivamente usati.
+- Configurare `N8N_API_TOKEN` e un distinto `N8N_SIGNING_SECRET`, entrambi
+  casuali e di almeno 32 byte.
+- In produzione lasciare `N8N_REQUIRE_SIGNATURE=true` e `N8N_REQUIRE_IDEMPOTENCY_KEY=true`.
+- Configurare SMTP o il servizio email definitivo.
 
 ### 3. Ottimizzazione Prestazioni
 Eseguire i comandi di caching forniti da Laravel:
@@ -49,10 +50,17 @@ Eseguire i comandi di caching forniti da Laravel:
 - `php artisan event:cache`
 
 ### 4. Code e Processi in Background
-- Configurare un process monitor (es. Supervisor) per mantenere attivi i worker delle code (`php artisan queue:work`).
+- Configurare Supervisor usando `deploy/supervisor/agency-core.conf.example` come base. Le code social e applicative hanno timeout differenti e devono avere worker dedicati.
 - Assicurarsi che il demone cron di sistema esegua il comando di scheduling di Laravel (`* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1`).
 
 ### 5. Storage e Permessi
 - Verificare i permessi di scrittura sulle directory `storage/` e `bootstrap/cache/`.
-- Eseguire `php artisan storage:link` per rendere pubblici gli asset salvati nello storage locale.
+- Eseguire `php artisan storage:link` soltanto per loghi e altri asset esplicitamente pubblici. I media social sono salvati sul disco privato `social_media` e vengono consegnati tramite URL firmati.
 - Assicurarsi che i driver di storage remoto (es. S3) per i file di Shooting o gli allegati siano correttamente configurati.
+
+### 6. Verifiche prima del traffico
+- Eseguire `php artisan migrate --force`.
+- Eseguire prima `php artisan social:migrate-media-to-private`, poi lo stesso comando con `--execute` dopo aver verificato il conteggio.
+- Avviare scheduler e worker, attendere almeno un ciclo e verificare `php artisan monitor:system`.
+- Eseguire `php artisan social:production-readiness --allow-auto-disabled`.
+- Eseguire `php artisan optimize` e `php artisan queue:restart` dopo ogni rilascio.

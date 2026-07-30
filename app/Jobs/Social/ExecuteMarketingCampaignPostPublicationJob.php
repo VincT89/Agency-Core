@@ -27,6 +27,10 @@ class ExecuteMarketingCampaignPostPublicationJob implements ShouldBeUnique, Shou
 
     public array $backoff = [60, 300, 900];
 
+    public int $timeout = 600;
+
+    public bool $failOnTimeout = true;
+
     public ?MarketingCampaignPost $post = null;
 
     public ?string $platform = null;
@@ -62,7 +66,7 @@ class ExecuteMarketingCampaignPostPublicationJob implements ShouldBeUnique, Shou
 
     public function middleware(): array
     {
-        return [new RateLimited('meta-publishing')];
+        return [new RateLimited('social-publishing')];
     }
 
     public function handle(
@@ -100,7 +104,25 @@ class ExecuteMarketingCampaignPostPublicationJob implements ShouldBeUnique, Shou
             $this->publicationId = $publication->id;
         }
 
-        if (! $circuitBreaker->isAvailable()) {
+        $publication = MarketingCampaignPostPublication::query()
+            ->with('post.campaign')
+            ->find($this->publicationId);
+
+        if (! $publication) {
+            Log::warning('Publication non trovata dal job di esecuzione.', [
+                'publication_id' => $this->publicationId,
+            ]);
+
+            return;
+        }
+
+        $scopedCircuitBreaker = $circuitBreaker->scoped(
+            $publication->platform->value,
+            ($publication->post?->campaign?->client_id ?? 'unknown')
+                .':'.$publication->client_social_account_id
+        );
+
+        if (! $scopedCircuitBreaker->isAvailable()) {
             $this->release(300);
 
             return;
@@ -110,12 +132,15 @@ class ExecuteMarketingCampaignPostPublicationJob implements ShouldBeUnique, Shou
             $outcome = $action->execute($this->publicationId);
 
             if ($outcome->success) {
-                $circuitBreaker->recordSuccess();
-            } else {
-                $circuitBreaker->recordFailure();
+                $scopedCircuitBreaker->recordSuccess();
+            } elseif (
+                $outcome->classification ===
+                PublicationFailureClassification::Temporary
+            ) {
+                $scopedCircuitBreaker->recordFailure();
             }
         } catch (\Throwable $e) {
-            $circuitBreaker->recordFailure();
+            $scopedCircuitBreaker->recordFailure();
 
             Log::error('Errore infrastrutturale nel job di pubblicazione social', [
                 'publication_id' => $this->publicationId,

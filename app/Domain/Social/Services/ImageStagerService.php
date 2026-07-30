@@ -2,6 +2,7 @@
 
 namespace App\Domain\Social\Services;
 
+use App\Support\Http\ProviderErrorSanitizer;
 use App\Support\Network\HostResolver;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -48,7 +49,10 @@ class ImageStagerService
                 $this->deleteTemporary($temporaryFiles);
 
                 throw new RuntimeException(
-                    "Failed to download image from: {$url}. Error: {$exception->getMessage()}",
+                    'Download o validazione dell’immagine non riusciti: '
+                    .ProviderErrorSanitizer::safeText(
+                        $exception->getMessage()
+                    ),
                     0,
                     $exception
                 );
@@ -353,7 +357,7 @@ class ImageStagerService
                 }
 
                 try {
-                    if (! Storage::disk('public')->writeStream($finalPath, $stream)) {
+                    if (! Storage::disk('social_media')->writeStream($finalPath, $stream)) {
                         throw new RuntimeException("Unable to promote temporary file: {$tempPath}");
                     }
                 } finally {
@@ -390,7 +394,7 @@ class ImageStagerService
     public function deletePromoted(array $promotedPaths): void
     {
         foreach ($promotedPaths as $path) {
-            Storage::disk('public')->delete($path);
+            Storage::disk('social_media')->delete($path);
         }
     }
 }

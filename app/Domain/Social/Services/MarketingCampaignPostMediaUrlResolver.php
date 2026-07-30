@@ -2,28 +2,34 @@
 
 namespace App\Domain\Social\Services;
 
+use App\Domain\Social\Exceptions\MarketingCampaignPostMediaDeliveryException;
 use App\Models\MarketingCampaignPostMedia;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class MarketingCampaignPostMediaUrlResolver
 {
     public function deliveryUrl(MarketingCampaignPostMedia $media): ?string
     {
         if ($media->source === 'nextcloud') {
-            return $media->nextcloud_share_url ? rtrim($media->nextcloud_share_url, '/') . '/download' : null;
+            return $media->nextcloud_share_url ? rtrim($media->nextcloud_share_url, '/').'/download' : null;
         }
 
-        if ($media->disk === 'public' && $media->path) {
-            try {
-                return Storage::disk('public')->url($media->path);
-            } catch (\Exception $e) {
-                // Ignore missing disk
-            }
-        }
-        
-        if ($media->path) {
-            return route('media.marketing-campaign-posts', ['path' => $media->path]);
+        $effectiveDisk = $media->disk
+            ?: (in_array($media->source, ['local', 'n8n'], true)
+                ? 'public'
+                : null);
+
+        if ($media->path
+            && in_array($effectiveDisk, ['public', 'social_media'], true)) {
+            return URL::temporarySignedRoute(
+                'social.media.delivery',
+                now()->addMinutes(
+                    (int) config('services.tiktok.media_url_ttl', 1440)
+                ),
+                ['media' => $media->id]
+            );
         }
 
         return null;
@@ -32,7 +38,7 @@ class MarketingCampaignPostMediaUrlResolver
     public function previewUrl(MarketingCampaignPostMedia $media): ?string
     {
         if ($media->source === 'nextcloud') {
-            return $media->nextcloud_share_url ? rtrim($media->nextcloud_share_url, '/') . '/preview' : null;
+            return $media->nextcloud_share_url ? rtrim($media->nextcloud_share_url, '/').'/preview' : null;
         }
 
         return $this->deliveryUrl($media);
@@ -44,7 +50,7 @@ class MarketingCampaignPostMediaUrlResolver
             ->values()
             ->map(function (MarketingCampaignPostMedia $media): string {
                 return $this->deliveryUrl($media)
-                    ?? throw \App\Domain\Social\Exceptions\MarketingCampaignPostMediaDeliveryException::forMedia($media->id);
+                    ?? throw MarketingCampaignPostMediaDeliveryException::forMedia($media->id);
             })
             ->all();
     }
@@ -52,15 +58,16 @@ class MarketingCampaignPostMediaUrlResolver
     public function primaryPreviewUrlOrNull(Collection $mediaItems): ?string
     {
         $firstMedia = $mediaItems->first();
-        if (!$firstMedia) {
+        if (! $firstMedia) {
             return null;
         }
 
         $url = $this->previewUrl($firstMedia);
         if ($url === null) {
-            \Illuminate\Support\Facades\Log::warning('social.version_media.primary_preview_resolution_failed', [
+            Log::warning('social.version_media.primary_preview_resolution_failed', [
                 'marketing_campaign_post_media_id' => $firstMedia->id,
             ]);
+
             return null;
         }
 

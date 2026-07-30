@@ -2,14 +2,15 @@
 
 namespace App\Domain\Social\Actions;
 
-use App\Models\AgencySocialConnection;
-use App\Models\AgencySocialAsset;
 use App\Domain\Social\DTO\SyncMetaAssetsResult;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use App\Enums\Social\AgencyConnectionStatus;
-use App\Enums\Social\SocialAssetType;
 use App\Enums\Social\PublishingStatus;
+use App\Enums\Social\SocialAssetType;
+use App\Models\AgencySocialAsset;
+use App\Models\AgencySocialConnection;
+use App\Support\Http\SocialProviderHttp;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SyncMetaAssetsAction
 {
@@ -18,7 +19,7 @@ class SyncMetaAssetsAction
      */
     public function execute(AgencySocialConnection $connection): SyncMetaAssetsResult
     {
-        if (!$connection->access_token) {
+        if (! $connection->access_token) {
             return new SyncMetaAssetsResult(errors: 1, errorMessage: 'Access token assente');
         }
 
@@ -37,19 +38,41 @@ class SyncMetaAssetsAction
             $queryParams = [
                 'access_token' => $connection->access_token,
                 'fields' => 'id,name,access_token,instagram_business_account{id,username,profile_picture_url},tasks,picture',
-                'limit' => 100
+                'limit' => 100,
             ];
+            $visitedUrls = [];
+            $pageCount = 0;
+            $maxPages = max(1, (int) config('services.meta.max_sync_pages', 25));
 
             while ($nextUrl) {
-                $response = Http::get($nextUrl, $queryParams);
+                $pageCount++;
+
+                if ($pageCount > $maxPages) {
+                    throw new \RuntimeException('La paginazione Meta ha superato il limite di sicurezza.');
+                }
+
+                if (! $this->isTrustedGraphUrl($nextUrl)) {
+                    throw new \RuntimeException('Meta ha restituito un URL di paginazione non attendibile.');
+                }
+
+                $pageFingerprint = hash('sha256', $nextUrl);
+                if (isset($visitedUrls[$pageFingerprint])) {
+                    throw new \RuntimeException('Meta ha restituito un ciclo nella paginazione.');
+                }
+                $visitedUrls[$pageFingerprint] = true;
+
+                $response = SocialProviderHttp::meta(retrySafe: true)
+                    ->get($nextUrl, $queryParams);
 
                 if ($response->failed()) {
+                    $safeError = $this->safeApiError($response);
                     $connection->update([
                         'status' => AgencyConnectionStatus::SyncFailed,
-                        'last_api_error' => $response->body(),
+                        'last_api_error' => $safeError,
                         'last_api_check_at' => now(),
                     ]);
-                    return new SyncMetaAssetsResult(errors: 1, errorMessage: 'Errore API Meta: ' . $response->body());
+
+                    return new SyncMetaAssetsResult(errors: 1, errorMessage: $safeError);
                 }
 
                 $data = $response->json();
@@ -57,9 +80,13 @@ class SyncMetaAssetsAction
 
                 // Controlla se c'è una pagina successiva
                 $nextUrl = $data['paging']['next'] ?? null;
+                if ($nextUrl !== null && ! is_string($nextUrl)) {
+                    throw new \RuntimeException('Meta ha restituito una paginazione non valida.');
+                }
+
                 // Svuota queryParams per le chiamate successive, dato che la nextUrl contiene già tutti i parametri
                 if ($nextUrl) {
-                    $queryParams = []; 
+                    $queryParams = [];
                 }
             }
 
@@ -68,9 +95,14 @@ class SyncMetaAssetsAction
             $syncedAssetIds = [];
 
             foreach ($pages as $page) {
+                if (! is_array($page) || empty($page['id']) || empty($page['name'])) {
+                    throw new \RuntimeException('Meta ha restituito un asset privo dei campi obbligatori.');
+                }
+
                 $tasks = $page['tasks'] ?? [];
                 $canPublish = count(array_intersect($tasks, ['CREATE_CONTENT', 'MANAGE'])) > 0;
                 $fbPublishingStatus = $canPublish ? PublishingStatus::Ready : PublishingStatus::MissingPermissions;
+                $pageAccessToken = $page['access_token'] ?? null;
 
                 // Sincronizza Pagina Facebook (Root Asset)
                 $fbAsset = AgencySocialAsset::updateOrCreate(
@@ -84,11 +116,11 @@ class SyncMetaAssetsAction
                         'asset_type' => SocialAssetType::FacebookPage,
                         'name' => $page['name'],
                         'facebook_page_id' => $page['id'],
-                        'page_access_token' => $page['access_token'] ?? null,
-                        'page_token_status' => $page['access_token'] ? 'connected' : 'invalid',
+                        'page_access_token' => $pageAccessToken,
+                        'page_token_status' => filled($pageAccessToken) ? 'connected' : 'invalid',
                         'page_token_last_validated_at' => now(),
                         'capabilities' => $tasks,
-                        'raw_payload' => $page,
+                        'raw_payload' => $this->withoutSecrets($page),
                         'status' => AgencyConnectionStatus::Connected,
                         'publishing_status' => $fbPublishingStatus,
                         'is_active' => true,
@@ -96,7 +128,7 @@ class SyncMetaAssetsAction
                         'last_synced_at' => now(),
                     ]
                 );
-                
+
                 if ($fbAsset->wasRecentlyCreated) {
                     $newCreated++;
                 } else {
@@ -108,7 +140,7 @@ class SyncMetaAssetsAction
                 if (isset($page['instagram_business_account'])) {
                     $igData = $page['instagram_business_account'];
                     $totalFound++;
-                    
+
                     $igAsset = AgencySocialAsset::updateOrCreate(
                         [
                             'agency_social_connection_id' => $connection->id,
@@ -131,7 +163,7 @@ class SyncMetaAssetsAction
                             'last_synced_at' => now(),
                         ]
                     );
-                    
+
                     if ($igAsset->wasRecentlyCreated) {
                         $newCreated++;
                     } else {
@@ -146,7 +178,7 @@ class SyncMetaAssetsAction
                 ->whereNotIn('id', $syncedAssetIds)
                 ->where('is_active', true)
                 ->get();
-                
+
             foreach ($revokedAssets as $rAsset) {
                 $rAsset->update([
                     'is_active' => false,
@@ -173,14 +205,77 @@ class SyncMetaAssetsAction
                 errors: 0
             );
 
-        } catch (\Exception $e) {
-            Log::error('SyncMetaAssetsAction Exception', ['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            $safeError = $this->safeExceptionMessage($e->getMessage());
+            Log::error('SyncMetaAssetsAction Exception', ['error' => $safeError]);
             $connection->update([
                 'status' => AgencyConnectionStatus::SyncFailed,
-                'last_api_error' => $e->getMessage(),
+                'last_api_error' => $safeError,
                 'last_api_check_at' => now(),
             ]);
-            return new SyncMetaAssetsResult(errors: 1, errorMessage: $e->getMessage());
+
+            return new SyncMetaAssetsResult(errors: 1, errorMessage: $safeError);
         }
+    }
+
+    private function isTrustedGraphUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (! is_array($parts)) {
+            return false;
+        }
+
+        return strtolower((string) ($parts['scheme'] ?? '')) === 'https'
+            && strtolower((string) ($parts['host'] ?? '')) === 'graph.facebook.com'
+            && ! isset($parts['user'], $parts['pass'])
+            && (! isset($parts['port']) || (int) $parts['port'] === 443);
+    }
+
+    private function withoutSecrets(array $payload): array
+    {
+        $sensitiveKeys = [
+            'access_token',
+            'page_access_token',
+            'client_secret',
+            'app_secret',
+        ];
+
+        foreach ($payload as $key => $value) {
+            if (in_array(strtolower((string) $key), $sensitiveKeys, true)) {
+                unset($payload[$key]);
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                $payload[$key] = $this->withoutSecrets($value);
+            }
+        }
+
+        return $payload;
+    }
+
+    private function safeApiError($response): string
+    {
+        $providerMessage = data_get($response->json(), 'error.message');
+        $summary = is_string($providerMessage) && $providerMessage !== ''
+            ? $providerMessage
+            : 'Risposta di errore senza dettagli utilizzabili.';
+
+        return $this->safeExceptionMessage(
+            Str::limit("Errore API Meta (HTTP {$response->status()}): {$summary}", 1000, '')
+        );
+    }
+
+    private function safeExceptionMessage(string $message): string
+    {
+        $redacted = preg_replace(
+            '/([?&](?:access_token|client_secret|app_secret)=)[^&\s]+/i',
+            '$1[REDACTED]',
+            $message
+        ) ?? 'Errore durante la sincronizzazione Meta.';
+
+        return Str::limit($redacted, 1000, '');
     }
 }

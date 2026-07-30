@@ -4,16 +4,18 @@ namespace Tests\Feature\Integrations\N8n;
 
 use App\Domain\Social\Actions\AddMarketingCampaignPostVersionFromN8nAction;
 use App\Domain\Social\DTOs\AddMarketingCampaignPostVersionData;
+use App\Domain\Social\Services\ImageStagerService;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Models\Client;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
+use App\Support\Network\HostResolver;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
-use Illuminate\Support\Facades\DB;
-use Exception;
 
 class ImageStagerRollbackTest extends TestCase
 {
@@ -29,12 +31,13 @@ class ImageStagerRollbackTest extends TestCase
             ),
         ]);
 
-        $this->mock(\App\Support\Network\HostResolver::class, function ($mock) {
+        $this->mock(HostResolver::class, function ($mock) {
             $mock->shouldReceive('resolveAndValidatePublicHost')->andReturn('example.com');
         });
 
         Storage::fake('local');
         Storage::fake('public');
+        Storage::fake('social_media');
 
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
@@ -73,7 +76,7 @@ class ImageStagerRollbackTest extends TestCase
         }
     }
 
-    public function test_deleteTemporary_failure_after_commit_preserves_promoted_files()
+    public function test_delete_temporary_failure_after_commit_preserves_promoted_files()
     {
         Http::fake([
             '*' => Http::response(
@@ -83,12 +86,13 @@ class ImageStagerRollbackTest extends TestCase
             ),
         ]);
 
-        $this->mock(\App\Support\Network\HostResolver::class, function ($mock) {
+        $this->mock(HostResolver::class, function ($mock) {
             $mock->shouldReceive('resolveAndValidatePublicHost')->andReturn('example.com');
         });
 
         Storage::fake('local');
         Storage::fake('public');
+        Storage::fake('social_media');
 
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
@@ -110,32 +114,34 @@ class ImageStagerRollbackTest extends TestCase
         $data = AddMarketingCampaignPostVersionData::fromArray($post->id, $payload);
 
         // Creiamo un anonymous class invece di Mockery per evitare problemi
-        $stager = new class(app(\App\Support\Network\HostResolver::class)) extends \App\Domain\Social\Services\ImageStagerService {
-            public function deleteTemporary(array $paths): void {
-                throw new \Exception('Delete temporary failed');
+        $stager = new class(app(HostResolver::class)) extends ImageStagerService
+        {
+            public function deleteTemporary(array $paths): void
+            {
+                throw new Exception('Delete temporary failed');
             }
         };
-        
-        $this->app->instance(\App\Domain\Social\Services\ImageStagerService::class, $stager);
+
+        $this->app->instance(ImageStagerService::class, $stager);
 
         $action = app(AddMarketingCampaignPostVersionFromN8nAction::class);
         $result = $action->execute($data);
 
         // L'azione dovrebbe aver completato con successo (l'eccezione è ignorata/loggata)
         $this->assertEquals('created', $result->outcome);
-        
+
         // Verifichiamo che il DB sia stato commitato (la versione esiste)
         $this->assertDatabaseHas('marketing_campaign_post_versions', [
             'marketing_campaign_post_id' => $post->id,
             'n8n_request_id' => 'req-new-2',
         ]);
-        
+
         $post->refresh();
         $this->assertNotNull($post->current_version_id);
-        
-        // Verifichiamo che il file promosso sia persistito su public disk
+
+        // Verifichiamo che il file promosso sia persistito sul disco privato
         $media = $post->currentVersion->mediaItems->first();
         $this->assertNotNull($media);
-        Storage::disk('public')->assertExists($media->path);
+        Storage::disk('social_media')->assertExists($media->path);
     }
 }

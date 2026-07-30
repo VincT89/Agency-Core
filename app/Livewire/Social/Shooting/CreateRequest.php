@@ -2,30 +2,37 @@
 
 namespace App\Livewire\Social\Shooting;
 
-use App\Models\Shooting\Shoot;
-use App\Models\Project;
-use App\Models\User;
-use Livewire\Component;
 use App\Domain\Shooting\Actions\CreateShootRequestAction;
+use App\Models\MarketingCampaign;
+use App\Models\Project;
+use App\Models\Shooting\Shoot;
+use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Component;
 
 class CreateRequest extends Component
 {
     use AuthorizesRequests;
 
     public $title;
+
     public $project_id;
+
     public $marketing_campaign_id;
+
     public $photographer_id;
+
     public $location;
+
     public $internal_notes;
+
     public $client_notes;
-    
+
     public $proposedSlots = [];
 
     public function mount()
     {
-        if (auth()->user()->isPhotographer() && !auth()->user()->canManageSystem()) {
+        if (auth()->user()->isPhotographer() && ! auth()->user()->canManageSystem()) {
             abort(403, 'Accesso negato: sezione riservata a team interno.');
         }
 
@@ -37,7 +44,7 @@ class CreateRequest extends Component
     {
         $this->proposedSlots[] = ['date' => '', 'period' => 'morning'];
     }
-    
+
     public function removeSlot($index)
     {
         unset($this->proposedSlots[$index]);
@@ -61,26 +68,53 @@ class CreateRequest extends Component
     public function save(CreateShootRequestAction $action)
     {
         $this->authorize('create', Shoot::class);
-        
+
         $this->validate();
 
         $user = auth()->user();
-        if (!$user->canManageSystem()) {
-            if ($this->project_id && !$user->projects()->where('projects.id', $this->project_id)->exists()) {
+        $project = $this->project_id
+            ? Project::query()->findOrFail($this->project_id)
+            : null;
+        $campaign = $this->marketing_campaign_id
+            ? MarketingCampaign::query()->findOrFail($this->marketing_campaign_id)
+            : null;
+
+        if (! $user->canManageSystem()) {
+            if ($project && ! $user->projects()->where('projects.id', $project->id)->exists()) {
                 abort(403, 'Non hai accesso a questo progetto.');
             }
+
+            if (
+                $campaign
+                && ! MarketingCampaign::query()
+                    ->visibleTo($user)
+                    ->whereKey($campaign->id)
+                    ->exists()
+            ) {
+                abort(403, 'Non hai accesso a questa campagna.');
+            }
+        }
+
+        if ($project && $campaign && $project->client_id !== $campaign->client_id) {
+            $this->addError(
+                'marketing_campaign_id',
+                'Il progetto e la campagna devono appartenere allo stesso cliente.'
+            );
+
+            return;
         }
 
         // Mappa e formatta gli slot temporali per il salvataggio
         $formattedSlots = [];
         foreach ($this->proposedSlots as $slot) {
-            if (!empty($slot['date']) && !empty($slot['period'])) {
+            if (! empty($slot['date']) && ! empty($slot['period'])) {
                 $formattedSlots[] = ['date' => $slot['date'], 'period' => $slot['period']];
             }
         }
 
         if (empty($formattedSlots)) {
             $this->addError('slots', 'Compila tutti i dettagli degli slot temporali.');
+
             return;
         }
 
@@ -105,20 +139,17 @@ class CreateRequest extends Component
     public function render()
     {
         $user = auth()->user();
-        $projects = $user->canManageSystem() 
-            ? Project::all() 
+        $projects = $user->canManageSystem()
+            ? Project::all()
             : $user->projects;
 
-        $campaigns = $user->canManageSystem() || $user->isMarketing()
-            ? \App\Models\MarketingCampaign::with('client')->orderBy('name')->get()
-            : \App\Models\MarketingCampaign::with('client')
-                ->whereHas('client.users', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                })
-                ->orderBy('name')
-                ->get();
-            
-        $photographers = User::where('role', 'photographer')->get(); 
+        $campaigns = MarketingCampaign::query()
+            ->visibleTo($user)
+            ->with('client')
+            ->orderBy('name')
+            ->get();
+
+        $photographers = User::where('role', 'photographer')->get();
 
         return view('livewire.social.shooting.create-request', [
             'projects' => $projects,

@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Domain\Social\Exceptions\HistoricalPostProtectedException;
+use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostType;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\URL;
 
 class MarketingCampaignPost extends Model
 {
@@ -37,7 +40,7 @@ class MarketingCampaignPost extends Model
     {
         static::deleting(function (MarketingCampaignPost $post) {
             if ($post->versions()->exists() || $post->publications()->exists()) {
-                throw \App\Domain\Social\Exceptions\HistoricalPostProtectedException::forPost($post);
+                throw HistoricalPostProtectedException::forPost($post);
             }
         });
     }
@@ -113,7 +116,7 @@ class MarketingCampaignPost extends Model
         if ($this->relationLoaded('orderedMediaItems')) {
             return $this->orderedMediaItems->first();
         }
-        
+
         if ($this->relationLoaded('mediaItems')) {
             return $this->mediaItems->sortBy('sort_order')->first();
         }
@@ -126,31 +129,28 @@ class MarketingCampaignPost extends Model
         $primary = $this->getPrimaryMediaItem();
 
         if ($primary) {
-            if ($primary->source === 'nextcloud') {
-                return $primary->nextcloud_share_url
-                    ? rtrim($primary->nextcloud_share_url, '/') . '/download'
-                    : null;
-            }
-            if ($primary->path) {
-                return route('media.marketing-campaign-posts', [
-                    'path' => $primary->path
-                ]);
-            }
+            return app(
+                MarketingCampaignPostMediaUrlResolver::class
+            )->deliveryUrl($primary);
         }
 
         if ($this->media_source === 'nextcloud') {
             return $this->nextcloud_share_url
-                ? rtrim($this->nextcloud_share_url, '/') . '/download'
+                ? rtrim($this->nextcloud_share_url, '/').'/download'
                 : null;
         }
 
-        if (!$this->media_path) {
+        if (! $this->media_path) {
             return null;
         }
-        
-        return route('media.marketing-campaign-posts', [
-            'path' => $this->media_path
-        ]);
+
+        return URL::temporarySignedRoute(
+            'media.marketing-campaign-posts',
+            now()->addMinutes(
+                (int) config('services.tiktok.media_url_ttl', 1440)
+            ),
+            ['path' => $this->media_path]
+        );
     }
 
     public function getPreviewUrlAttribute(): ?string

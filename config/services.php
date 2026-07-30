@@ -37,6 +37,37 @@ return [
 
     'n8n' => [
         'token' => env('N8N_API_TOKEN'),
+        'signing_secret' => env('N8N_SIGNING_SECRET'),
+        'require_signature' => filter_var(
+            env('N8N_REQUIRE_SIGNATURE', env('APP_ENV') === 'production'),
+            FILTER_VALIDATE_BOOL
+        ),
+        'signature_max_clock_skew_seconds' => (int) env(
+            'N8N_SIGNATURE_MAX_CLOCK_SKEW_SECONDS',
+            300
+        ),
+        'require_idempotency_key' => filter_var(
+            env('N8N_REQUIRE_IDEMPOTENCY_KEY', env('APP_ENV') === 'production'),
+            FILTER_VALIDATE_BOOL
+        ),
+        'idempotency_ttl_hours' => (int) env(
+            'N8N_IDEMPOTENCY_TTL_HOURS',
+            48
+        ),
+        'idempotency_lock_seconds' => (int) env(
+            'N8N_IDEMPOTENCY_LOCK_SECONDS',
+            600
+        ),
+        'idempotency_lock_wait_seconds' => (int) env(
+            'N8N_IDEMPOTENCY_LOCK_WAIT_SECONDS',
+            5
+        ),
+        'idempotency_in_progress_timeout_minutes' => (int) env(
+            'N8N_IDEMPOTENCY_IN_PROGRESS_TIMEOUT_MINUTES',
+            30
+        ),
+        'connect_timeout' => (int) env('N8N_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('N8N_HTTP_TIMEOUT', 15),
         'regenerate_social_post_webhook_url' => env('N8N_REGENERATE_SOCIAL_POST_WEBHOOK_URL', env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL')),
         'generate_social_post_webhook_url' => env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL'),
         'submit_marketing_campaign_post_webhook_url' => env('N8N_SUBMIT_MARKETING_CAMPAIGN_POST_WEBHOOK_URL', env('N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL')),
@@ -48,6 +79,9 @@ return [
         'client_secret' => env('META_CLIENT_SECRET'),
         'redirect_uri' => env('META_REDIRECT_URI'),
         'graph_version' => env('META_GRAPH_VERSION', 'v25.0'),
+        'connect_timeout' => (int) env('META_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('META_HTTP_TIMEOUT', 15),
+        'max_sync_pages' => (int) env('META_MAX_SYNC_PAGES', 25),
         'instagram' => [
             'max_container_lifecycle' => env('META_INSTAGRAM_MAX_CONTAINER_LIFECYCLE', 15),
         ],
@@ -64,6 +98,8 @@ return [
         'client_secret' => env('TIKTOK_CLIENT_SECRET'),
         'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
         'api_base' => env('TIKTOK_API_BASE', 'https://open.tiktokapis.com'),
+        'connect_timeout' => (int) env('TIKTOK_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('TIKTOK_HTTP_TIMEOUT', 20),
         'delivery_mode' => env('TIKTOK_DELIVERY_MODE', 'disabled'),
         'upload_mode' => env('TIKTOK_UPLOAD_MODE', 'PullFromUrl'),
         'max_photo_count' => env('TIKTOK_MAX_PHOTO_COUNT', 10),
@@ -82,6 +118,10 @@ return [
         'photos_root' => env('NEXTCLOUD_PHOTOS_ROOT', '/FotoClienti'),
         'videos_root' => env('NEXTCLOUD_VIDEOS_ROOT', '/VideoClienti'),
         'share_expire_days' => env('NEXTCLOUD_SHARE_EXPIRE_DAYS', 7),
+        'connect_timeout' => env('NEXTCLOUD_CONNECT_TIMEOUT', 5),
+        'request_timeout' => env('NEXTCLOUD_REQUEST_TIMEOUT', 15),
+        'stream_timeout' => env('NEXTCLOUD_STREAM_TIMEOUT', 300),
+        'stream_read_timeout' => env('NEXTCLOUD_STREAM_READ_TIMEOUT', 30),
     ],
 
 ];

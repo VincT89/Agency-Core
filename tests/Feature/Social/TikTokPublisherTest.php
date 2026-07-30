@@ -131,7 +131,7 @@ class TikTokPublisherTest extends TestCase
     public function test_aborts_on_lock_collision()
     {
         $post = MarketingCampaignPost::factory()->create();
-        MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $post->id, 'media_type' => 'video', 'mime_type' => 'video/mp4']);
+        $media = MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $post->id, 'media_type' => 'video', 'mime_type' => 'video/mp4']);
 
         $post->load('orderedMediaItems');
 
@@ -143,11 +143,6 @@ class TikTokPublisherTest extends TestCase
             'publishing_capabilities' => ['tiktok' => ['can_upload_video_draft' => true]],
             'scopes' => ['video.upload'],
         ]);
-
-        $lockKey = "tiktok_publish_lock_{$post->id}_{$account->id}";
-        $mockLock = Mockery::mock(Lock::class);
-        $mockLock->shouldReceive('get')->once()->andReturn(false); // Simulate lock not acquired
-        Cache::shouldReceive('lock')->with($lockKey, 300)->andReturn($mockLock);
 
         $mockUrlService = Mockery::mock(SocialMediaPublicUrlService::class);
         $mockUrlService->shouldReceive('getValidatedPublicUrl')
@@ -163,7 +158,7 @@ class TikTokPublisherTest extends TestCase
             'payload_snapshot' => [
                 'media' => [
                     [
-                        'media_id' => 1,
+                        'media_id' => $media->id,
                         'storage_source' => 'local',
                         'disk' => 'public',
                         'path' => 'video.mp4',
@@ -174,6 +169,11 @@ class TikTokPublisherTest extends TestCase
                 ],
             ],
         ]);
+
+        $lockKey = "tiktok_publish_lock_{$publication->id}_{$account->id}";
+        $mockLock = Mockery::mock(Lock::class);
+        $mockLock->shouldReceive('get')->once()->andReturn(false); // Simulate lock not acquired
+        Cache::shouldReceive('lock')->with($lockKey, 300)->andReturn($mockLock);
 
         $publisher = app(TikTokPublisher::class);
         $result = $publisher->publish($publication, $account, Str::uuid()->toString());

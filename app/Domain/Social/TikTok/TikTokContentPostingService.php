@@ -5,8 +5,9 @@ namespace App\Domain\Social\TikTok;
 use App\Domain\Social\DTOs\TikTokPostStatusResult;
 use App\Domain\Social\TikTok\Strategies\TikTokMediaTransferStrategy;
 use App\Exceptions\Social\TikTokApiException;
+use App\Support\Http\ProviderErrorSanitizer;
+use App\Support\Http\SocialProviderHttp;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TikTokContentPostingService
@@ -27,7 +28,7 @@ class TikTokContentPostingService
             $cacheKey,
             max(0, (int) config('services.tiktok.creator_info_ttl_seconds', 300)),
             function () use ($accessToken) {
-                $response = Http::withToken($accessToken)
+                $response = SocialProviderHttp::tiktok(retrySafe: true)->withToken($accessToken)
                     ->post("{$this->apiBase}/v2/post/publish/creator_info/query/");
 
                 if (! $response->successful()) {
@@ -77,14 +78,19 @@ class TikTokContentPostingService
             'video'
         );
 
-        $response = Http::withToken($accessToken)
+        $response = SocialProviderHttp::tiktok()->withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json; charset=UTF-8',
             ])
             ->post("{$this->apiBase}/v2/post/publish/inbox/video/init/", $payload);
 
         if (! $response->successful()) {
-            throw new TikTokApiException('TikTok API Draft Upload Video fallito: '.$response->body());
+            throw new TikTokApiException(
+                ProviderErrorSanitizer::message(
+                    $response,
+                    'TikTok API Draft Upload Video fallito'
+                )
+            );
         }
 
         $data = $response->json();
@@ -136,14 +142,19 @@ class TikTokContentPostingService
             'video'
         );
 
-        $response = Http::withToken($accessToken)
+        $response = SocialProviderHttp::tiktok()->withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json; charset=UTF-8',
             ])
             ->post("{$this->apiBase}/v2/post/publish/video/init/", $payload);
 
         if (! $response->successful()) {
-            throw new TikTokApiException('TikTok API Direct Post Video fallito: '.$response->body());
+            throw new TikTokApiException(
+                ProviderErrorSanitizer::message(
+                    $response,
+                    'TikTok API Direct Post Video fallito'
+                )
+            );
         }
 
         $data = $response->json();
@@ -240,7 +251,7 @@ class TikTokContentPostingService
         }
         $payload['source_info']['photo_cover_index'] = $coverIndex;
 
-        $response = Http::withToken($accessToken)
+        $response = SocialProviderHttp::tiktok()->withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json; charset=UTF-8',
             ])
@@ -248,7 +259,10 @@ class TikTokContentPostingService
 
         if (! $response->successful()) {
             throw new TikTokApiException(
-                'TikTok API Photo Post fallito: '.$response->body()
+                ProviderErrorSanitizer::message(
+                    $response,
+                    'TikTok API Photo Post fallito'
+                )
             );
         }
 
@@ -285,7 +299,7 @@ class TikTokContentPostingService
             throw new TikTokApiException('TikTok publishing  disabilitato.');
         }
 
-        $response = Http::withToken($accessToken)
+        $response = SocialProviderHttp::tiktok(retrySafe: true)->withToken($accessToken)
             ->post("{$this->apiBase}/v2/post/publish/status/fetch/", [
                 'publish_id' => $publishId,
             ]);

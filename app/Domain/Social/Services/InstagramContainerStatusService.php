@@ -2,7 +2,8 @@
 
 namespace App\Domain\Social\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Support\Http\ProviderErrorSanitizer;
+use App\Support\Http\SocialProviderHttp;
 use Illuminate\Support\Facades\Log;
 
 class InstagramContainerStatusService
@@ -14,8 +15,8 @@ class InstagramContainerStatusService
     public function getContainerStatus(string $containerId, string $accessToken, ?string $correlationId = null): InstagramContainerStatusResult
     {
         try {
-            $client = Http::withHeaders([
-                'X-Correlation-Id' => $correlationId ?? 'none'
+            $client = SocialProviderHttp::meta(retrySafe: true)->withHeaders([
+                'X-Correlation-Id' => $correlationId ?? 'none',
             ]);
 
             $graphVersion = config('services.meta.graph_version', 'v19.0');
@@ -25,30 +26,33 @@ class InstagramContainerStatusService
                 'access_token' => $accessToken,
             ]);
 
-            if (!$statusResponse->successful()) {
+            if (! $statusResponse->successful()) {
                 $errorData = $statusResponse->json();
-                
+
                 if ($statusResponse->clientError()) {
                     $errorCode = $errorData['error']['code'] ?? null;
                     // Codici temporanei: 4, 17, 32, 613 (rate limits/throttling)
                     $temporaryCodes = [4, 17, 32, 613];
-                    
-                    if (!in_array($errorCode, $temporaryCodes)) {
+
+                    if (! in_array($errorCode, $temporaryCodes)) {
                         return new InstagramContainerStatusResult(
                             status: 'ERROR',
                             isPermanentError: true,
-                            errorMessage: "Errore permanente (4xx) da Instagram nel recupero status Container: " . ($errorData['error']['message'] ?? 'Sconosciuto'),
+                            errorMessage: 'Errore permanente (4xx) da Instagram nel recupero status Container: '.($errorData['error']['message'] ?? 'Sconosciuto'),
                             responseData: $errorData
                         );
                     }
                 }
-                
+
                 // Errore generico (o 5xx o rate limit). Ritorniamo error non permanente per far scattare retry.
                 return new InstagramContainerStatusResult(
                     status: 'UNKNOWN',
                     isPermanentError: false,
-                    errorMessage: 'Errore nel recupero status Container: ' . $statusResponse->body(),
-                    responseData: $errorData
+                    errorMessage: ProviderErrorSanitizer::message(
+                        $statusResponse,
+                        'Errore nel recupero status Container'
+                    ),
+                    responseData: ProviderErrorSanitizer::payload($statusResponse)
                 );
             }
 
@@ -56,10 +60,11 @@ class InstagramContainerStatusService
             $statusCode = $statusData['status_code'] ?? 'UNKNOWN';
 
             $isPermanent = in_array($statusCode, ['ERROR', 'EXPIRED']);
+
             return new InstagramContainerStatusResult(
                 status: $statusCode,
                 isPermanentError: $isPermanent,
-                errorMessage: $isPermanent ? "Instagram ha riportato un errore nel container o è scaduto." : null,
+                errorMessage: $isPermanent ? 'Instagram ha riportato un errore nel container o è scaduto.' : null,
                 responseData: $statusData
             );
 
@@ -68,11 +73,11 @@ class InstagramContainerStatusService
                 'error' => $e->getMessage(),
                 'container_id' => $containerId,
             ]);
-            
+
             return new InstagramContainerStatusResult(
                 status: 'UNKNOWN',
                 isPermanentError: false,
-                errorMessage: 'Eccezione interna durante check: ' . $e->getMessage(),
+                errorMessage: 'Eccezione interna durante check: '.$e->getMessage(),
                 responseData: null
             );
         }
@@ -80,8 +85,8 @@ class InstagramContainerStatusService
 
     public function createCarouselParent(string $igAccountId, array $childrenIds, string $caption, string $accessToken, ?string $correlationId = null): array
     {
-        $client = Http::withHeaders([
-            'X-Correlation-Id' => $correlationId ?? 'none'
+        $client = SocialProviderHttp::meta()->withHeaders([
+            'X-Correlation-Id' => $correlationId ?? 'none',
         ]);
 
         $graphVersion = config('services.meta.graph_version', 'v19.0');
@@ -96,8 +101,13 @@ class InstagramContainerStatusService
 
         $containerResponse = $client->post("{$baseEndpoint}/media", $carouselPayload);
 
-        if (!$containerResponse->successful()) {
-            throw new \Exception('Errore IG Carousel Container Parent: ' . $containerResponse->body());
+        if (! $containerResponse->successful()) {
+            throw new \Exception(
+                ProviderErrorSanitizer::message(
+                    $containerResponse,
+                    'Errore IG Carousel Container Parent'
+                )
+            );
         }
 
         return $containerResponse->json();
@@ -105,8 +115,8 @@ class InstagramContainerStatusService
 
     public function publishContainer(string $igAccountId, string $containerId, string $accessToken, ?string $correlationId = null): array
     {
-        $client = Http::withHeaders([
-            'X-Correlation-Id' => $correlationId ?? 'none'
+        $client = SocialProviderHttp::meta()->withHeaders([
+            'X-Correlation-Id' => $correlationId ?? 'none',
         ]);
 
         $graphVersion = config('services.meta.graph_version', 'v19.0');
@@ -116,8 +126,13 @@ class InstagramContainerStatusService
             'access_token' => $accessToken,
         ]);
 
-        if (!$publishResponse->successful()) {
-            throw new \Exception('Errore nella media_publish di Instagram: ' . $publishResponse->body());
+        if (! $publishResponse->successful()) {
+            throw new \Exception(
+                ProviderErrorSanitizer::message(
+                    $publishResponse,
+                    'Errore nella media_publish di Instagram'
+                )
+            );
         }
 
         return $publishResponse->json();

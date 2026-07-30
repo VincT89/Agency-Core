@@ -37,7 +37,10 @@ class ProductionReadinessCommand extends Command
             $this->checkDatabase($checks);
             $this->checkApplicationUrl($checks);
             $this->checkQueue($checks);
+            $this->checkQueueWorkers($checks);
             $this->checkPublishingMode($checks);
+            $this->checkInboundIntegrationSecurity($checks);
+            $this->checkPrivateSocialMedia($checks);
             $this->checkScheduler($checks);
             $this->checkStalePublications($checks);
             $this->checkAutomaticPosts($checks);
@@ -168,6 +171,79 @@ class ProductionReadinessCommand extends Command
                 : ($allowDisabled
                     ? 'Kill switch disattivato, ammesso esplicitamente dal comando.'
                     : 'SOCIAL_AUTO_PUBLISH_ENABLED è disattivato.')
+        );
+    }
+
+    private function checkQueueWorkers(array &$checks): void
+    {
+        $timeoutMinutes = max(
+            1,
+            (int) config(
+                'system-monitoring.queue_heartbeat_timeout_minutes',
+                5
+            )
+        );
+        $missing = [];
+
+        foreach ((array) config('system-monitoring.queues', []) as $queue) {
+            $heartbeat = SystemHeartbeat::query()
+                ->where('name', 'queue:'.$queue)
+                ->first();
+
+            if (! $heartbeat
+                || $heartbeat->last_seen_at->lt(
+                    now()->subMinutes($timeoutMinutes)
+                )) {
+                $missing[] = $queue;
+            }
+        }
+
+        $this->addCheck(
+            $checks,
+            'Worker code',
+            $missing === [],
+            $missing === []
+                ? 'Heartbeat recenti per tutte le code monitorate.'
+                : 'Heartbeat mancanti o scaduti: '.implode(', ', $missing).'.'
+        );
+    }
+
+    private function checkInboundIntegrationSecurity(array &$checks): void
+    {
+        $token = (string) config('services.n8n.token', '');
+        $signingSecret = (string) config(
+            'services.n8n.signing_secret',
+            ''
+        );
+        $passed = strlen($token) >= 32
+            && strlen($signingSecret) >= 32
+            && (bool) config('services.n8n.require_signature')
+            && (bool) config('services.n8n.require_idempotency_key');
+
+        $this->addCheck(
+            $checks,
+            'Sicurezza callback n8n',
+            $passed,
+            $passed
+                ? 'Bearer e signing secret robusti; firma HMAC e idempotenza obbligatorie.'
+                : 'Configurare token e signing secret n8n di almeno 32 byte e rendere obbligatorie firma HMAC e Idempotency-Key.'
+        );
+    }
+
+    private function checkPrivateSocialMedia(array &$checks): void
+    {
+        $publicMedia = MarketingCampaignPostMedia::query()
+            ->where('disk', 'public')
+            ->whereIn('source', ['local', 'n8n'])
+            ->count();
+
+        $this->addCheck(
+            $checks,
+            'Storage media social',
+            $publicMedia === 0,
+            $publicMedia === 0
+                ? 'Nessun media social locale sul disco pubblico.'
+                : "{$publicMedia} media social devono essere migrati sul disco privato."
         );
     }
 
@@ -499,6 +575,11 @@ class ProductionReadinessCommand extends Command
             if (blank(config("services.nextcloud.{$key}"))) {
                 $issues[] = "configurazione Nextcloud {$key} mancante";
             }
+        }
+
+        $baseUrl = (string) config('services.nextcloud.base_url', '');
+        if (strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME)) !== 'https') {
+            $issues[] = 'NEXTCLOUD_BASE_URL deve usare HTTPS';
         }
     }
 

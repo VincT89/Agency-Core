@@ -352,7 +352,6 @@ class AuditHistoricalIntegrityCommand extends Command
             ->values()
             ->all();
         $pivotMedia = $publication->version->mediaItems()
-            ->orderBy('pivot_sort_order')
             ->pluck('marketing_campaign_post_media.id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all();

@@ -2,19 +2,25 @@
 
 namespace App\Domain\Social\Actions;
 
-use App\Models\MarketingCampaignPost;
-use App\Models\MarketingCampaignPostVersion;
-use App\Models\ClientSocialAccount;
-use App\Models\MarketingCampaignPostPublication;
-use App\Domain\Social\Services\MarketingCampaignPostPublicationSnapshotBuilder;
 use App\Domain\Social\Services\CanonicalJsonEncoder;
+use App\Domain\Social\Services\MarketingCampaignPostPublicationSnapshotBuilder;
+use App\Domain\Social\Services\MediaIntegrityMetadataReader;
 use App\Enums\Social\PublicationStatus;
 use App\Enums\Social\SocialPlatform;
+use App\Exceptions\Social\NextcloudFileNotFoundException;
+use App\Exceptions\Social\NextcloudPermanentFailureException;
+use App\Exceptions\Social\NextcloudTemporaryUnavailableException;
+use App\Models\AgencySocialAsset;
+use App\Models\ClientSocialAccount;
+use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostPublication;
+use App\Models\MarketingCampaignPostVersion;
+use App\Services\Integrations\Nextcloud\NextcloudService;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Services\Integrations\Nextcloud\NextcloudService;
-use Illuminate\Support\Facades\Cache;
-use App\Models\AgencySocialAsset;
+use Illuminate\Support\Str;
 
 class CreateMarketingCampaignPostPublicationAction
 {
@@ -34,27 +40,27 @@ class CreateMarketingCampaignPostPublicationAction
         string $publicationType = 'publish',
         array $platformOptions = []
     ): MarketingCampaignPostPublication {
-        
+
         // Logical check before lock
         if ($version->marketing_campaign_post_id !== $post->id) {
-            throw new \Exception("La versione non appartiene a questo post.");
+            throw new \Exception('La versione non appartiene a questo post.');
         }
 
         // We could build a tentative logical key to lock at application level for concurrency
         // But since snapshotHash depends on media size, we can just use a simple lock by version and account
         $lockKey = "create_pub_{$version->id}_{$account->id}_{$platform->value}";
         $lock = Cache::lock($lockKey, 30);
-        
-        if (!$lock->get()) {
-            throw new \Exception("Creazione publication già in corso per questa versione e account.");
+
+        if (! $lock->get()) {
+            throw new \Exception('Creazione publication già in corso per questa versione e account.');
         }
 
         try {
             // 1. Gather Media metadata BEFORE the transaction to avoid long DB locks on network/storage IO
-            $mediaItems = $version->mediaItems()->orderBy('pivot_sort_order')->get();
+            $mediaItems = $version->mediaItems()->get();
             $mediaMetadataCache = [];
             $initialMediaPivotState = [];
-            
+
             foreach ($mediaItems as $media) {
                 $initialMediaPivotState[] = [
                     'media_id' => $media->id,
@@ -66,13 +72,13 @@ class CreateMarketingCampaignPostPublicationAction
                     'sha256' => null,
                     'etag' => null,
                 ];
-                
+
                 $storageSource = in_array($media->source, ['nextcloud']) ? 'nextcloud' : 'local';
 
                 if ($storageSource === 'local' && $media->path) {
                     try {
                         $integrity = app(
-                            \App\Domain\Social\Services\MediaIntegrityMetadataReader::class
+                            MediaIntegrityMetadataReader::class
                         )->readLocal($media->disk ?: 'public', $media->path);
                         $metadata['size_bytes'] = $integrity['source_size_bytes'];
                         $metadata['sha256'] = $integrity['sha256'];
@@ -87,7 +93,7 @@ class CreateMarketingCampaignPostPublicationAction
                         }
                         if (
                             filled($media->sha256)
-                            && !hash_equals($media->sha256, $integrity['sha256'])
+                            && ! hash_equals($media->sha256, $integrity['sha256'])
                         ) {
                             throw new \Exception(
                                 "Contenuto del media locale {$media->id} cambiato dopo l'acquisizione."
@@ -129,11 +135,11 @@ class CreateMarketingCampaignPostPublicationAction
                         if ($media->mime_type && $media->mime_type !== $propfind->mimeType) {
                             throw new \Exception("MIME type Nextcloud cambiato per il media {$media->id}.");
                         }
-                    } catch (\App\Exceptions\Social\NextcloudFileNotFoundException $e) {
+                    } catch (NextcloudFileNotFoundException $e) {
                         throw new \Exception("File Nextcloud rimosso o inaccessibile prima della pubblicazione: {$e->getMessage()}");
-                    } catch (\App\Exceptions\Social\NextcloudTemporaryUnavailableException $e) {
+                    } catch (NextcloudTemporaryUnavailableException $e) {
                         throw new \Exception("Servizio Nextcloud temporaneamente non disponibile: {$e->getMessage()}");
-                    } catch (\App\Exceptions\Social\NextcloudPermanentFailureException $e) {
+                    } catch (NextcloudPermanentFailureException $e) {
                         throw new \Exception("Configurazione o risposta Nextcloud non valida: {$e->getMessage()}");
                     } catch (\Exception $e) {
                         throw new \Exception("Impossibile verificare metadati Nextcloud: {$e->getMessage()}");
@@ -141,9 +147,10 @@ class CreateMarketingCampaignPostPublicationAction
                 }
                 $mediaMetadataCache[$media->id] = $metadata;
             }
+
             // 2. Short DB Transaction
             return DB::transaction(function () use ($post, $version, $platform, $account, $privacyOptions, $publicationType, $mediaMetadataCache, $initialMediaPivotState, $platformOptions) {
-                
+
                 // Lock records explicitly
                 $post = MarketingCampaignPost::where('id', $post->id)->lockForUpdate()->firstOrFail();
                 $version = $post->versions()->where('id', $version->id)->lockForUpdate()->firstOrFail();
@@ -154,10 +161,10 @@ class CreateMarketingCampaignPostPublicationAction
                         ->lockForUpdate()
                         ->firstOrFail();
                 }
-                
+
                 // Validate relations and authorizations
                 if ($version->marketing_campaign_post_id !== $post->id) {
-                    throw new \Exception("La versione non appartiene a questo post.");
+                    throw new \Exception('La versione non appartiene a questo post.');
                 }
                 if ($account->client_id !== $post->campaign->client_id) {
                     throw new \Exception("L'account social non appartiene al cliente di questa campagna.");
@@ -165,15 +172,15 @@ class CreateMarketingCampaignPostPublicationAction
                 if ($account->platform !== $platform) {
                     throw new \Exception("L'account social specificato non corrisponde alla piattaforma richiesta.");
                 }
-                
+
                 // Verify that this version is authorized (e.g. currentVersion or specifically approved)
                 if ($post->current_version_id !== $version->id) {
                     // Check if it's approved anyway, or strictly require it to be current
-                    throw new \Exception("La versione richiesta non e la versione corrente attiva/approvata del post.");
+                    throw new \Exception('La versione richiesta non e la versione corrente attiva/approvata del post.');
                 }
 
                 // Re-read media pivot to ensure no race condition modified the media attached to this version
-                $currentMediaItems = $version->mediaItems()->orderBy('pivot_sort_order')->get();
+                $currentMediaItems = $version->mediaItems()->get();
                 $currentMediaPivotState = [];
                 foreach ($currentMediaItems as $media) {
                     $currentMediaPivotState[] = [
@@ -183,7 +190,7 @@ class CreateMarketingCampaignPostPublicationAction
                 }
 
                 if ($initialMediaPivotState !== $currentMediaPivotState) {
-                    throw new \Exception("La composizione dei media e cambiata durante la preparazione. Riprovare.");
+                    throw new \Exception('La composizione dei media e cambiata durante la preparazione. Riprovare.');
                 }
 
                 // Resolve target INSIDE the transaction to guarantee consistency
@@ -202,7 +209,7 @@ class CreateMarketingCampaignPostPublicationAction
                 );
 
                 $schemaVersion = 1;
-                
+
                 // Compute Canonical Hash
                 $canonicalJson = $this->encoder->encode($snapshot);
                 $snapshotHash = hash('sha256', $canonicalJson);
@@ -213,7 +220,7 @@ class CreateMarketingCampaignPostPublicationAction
                     $version->id,
                     $platform->value,
                     $account->id,
-                    $snapshotHash
+                    $snapshotHash,
                 ]);
                 $idempotencyKey = hash('sha256', $idempotencyKeyInput);
 
@@ -231,19 +238,27 @@ class CreateMarketingCampaignPostPublicationAction
                         'snapshot_schema_version' => $schemaVersion,
                         'snapshot_hash' => $snapshotHash,
                         'publishing_started_at' => null,
-                        'stale_deadline_at' => null,
-                        'correlation_id' => \Illuminate\Support\Str::uuid()->toString(),
+                        'stale_deadline_at' => now()->addMinutes(
+                            max(
+                                1,
+                                (int) config(
+                                    'social.production_readiness.pending_stale_minutes',
+                                    15
+                                )
+                            )
+                        ),
+                        'correlation_id' => Str::uuid()->toString(),
                         'poll_count' => 0,
                     ]);
-                    
+
                     return $publication;
-                } catch (\Illuminate\Database\QueryException $e) {
+                } catch (QueryException $e) {
                     // Check if it's a unique constraint violation on idempotency_key
                     if ($e->errorInfo[1] === 1062 || $e->errorInfo[1] === 19) { // 1062 MySQL, 19 SQLite
                         $existing = MarketingCampaignPostPublication::where('idempotency_key', $idempotencyKey)
                             ->where('attempt_count', 1)
                             ->first();
-                            
+
                         if ($existing) {
                             return $existing;
                         }

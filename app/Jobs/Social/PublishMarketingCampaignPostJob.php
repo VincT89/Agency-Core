@@ -7,27 +7,31 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use App\Models\MarketingCampaignPostPublication;
 use App\Models\MarketingCampaignPost;
-use App\Domain\Social\Actions\PublishMarketingCampaignPostAction;
+use Illuminate\Support\Facades\Log;
+
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 
 class PublishMarketingCampaignPostJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 3;
-    public $backoff = [60, 300, 900]; // 1m, 5m, 15m
+    public MarketingCampaignPost $post;
+    public string $platform;
+    public ?string $correlationId;
+    public ?MarketingCampaignPostPublication $retryPublication;
 
     public function __construct(
-        public MarketingCampaignPost $post,
-        public string $platform,
-        public ?string $correlationId = null,
-        public ?\App\Models\MarketingCampaignPostPublication $retryPublication = null
+        MarketingCampaignPost $post,
+        string $platform,
+        ?string $correlationId = null,
+        ?MarketingCampaignPostPublication $retryPublication = null
     ) {
-        $this->onQueue('social-publishing');
-        if (!$this->correlationId) {
-            $this->correlationId = \Illuminate\Support\Str::uuid()->toString();
-        }
+        $this->post = $post;
+        $this->platform = $platform;
+        $this->correlationId = $correlationId;
+        $this->retryPublication = $retryPublication;
     }
 
     public function uniqueId(): string
@@ -35,30 +39,24 @@ class PublishMarketingCampaignPostJob implements ShouldQueue, ShouldBeUnique
         return $this->post->id . '-' . $this->platform;
     }
 
-    public function middleware(): array
+    public function handle(): void
     {
-        return [new \Illuminate\Queue\Middleware\RateLimited('meta-publishing')];
-    }
+        Log::info("Legacy PublishMarketingCampaignPostJob invocato e intercettato dal drain shim.", [
+            'post_id' => $this->post->id ?? null,
+            'retry_publication_id' => $this->retryPublication->id ?? null,
+        ]);
 
-    public function handle(PublishMarketingCampaignPostAction $action, \App\Services\SocialCircuitBreaker $circuitBreaker): void
-    {
-        if (!$circuitBreaker->isAvailable()) {
-            $this->release(300); // 5 minuti di backoff se il circuito è aperto
-            return;
-        }
-
-        try {
-            // Correlation ID is propagated to action
-            $publication = $action->execute($this->post, $this->platform, $this->correlationId, $this->retryPublication);
-
-            if ($publication->status === \App\Enums\Social\PublicationStatus::Failed) {
-                $circuitBreaker->recordFailure();
-            } else {
-                $circuitBreaker->recordSuccess();
+        if ($this->retryPublication) {
+            // Ricarichiamo fresco per assicurarci di avere lo stato aggiornato
+            $publication = MarketingCampaignPostPublication::find($this->retryPublication->id);
+            
+            if ($publication && in_array($publication->status->value, ['pending', 'publishing']) && $publication->snapshot_schema_version === null) {
+                $publication->update([
+                    'status' => 'abandoned',
+                    'error_message' => 'Job drain (legacy): intercettato job pendente di vecchio tipo e convertito in abandoned.',
+                ]);
             }
-        } catch (\Exception $e) {
-            $circuitBreaker->recordFailure();
-            throw $e;
         }
     }
 }
+

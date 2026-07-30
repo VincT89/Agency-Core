@@ -8,19 +8,15 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
-
 class MarketingCampaignPostReviewMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
 
     /**
      * Create a new message instance.
      */
     public function __construct(
-        public \App\Models\MarketingCampaignPost $post,
-        public \App\Models\ClientReviewToken $token,
-        public array $previewUrls = []
+        public \App\Domain\Social\DTOs\ClientReviewEmailData $data
     ) {
     }
 
@@ -30,7 +26,7 @@ class MarketingCampaignPostReviewMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Revisione Post: ' . ($this->post->title ?: 'Nuovo Post in Approvazione'),
+            subject: 'Revisione Post: ' . ($this->data->postTitle ?: 'Nuovo Post in Approvazione'),
         );
     }
 
@@ -39,7 +35,7 @@ class MarketingCampaignPostReviewMail extends Mailable
         return new Content(
             markdown: 'emails.social.marketing-campaign-post-review',
             with: [
-                'resolvedMedia' => $this->previewUrls,
+                'data' => $this->data,
             ],
         );
     }

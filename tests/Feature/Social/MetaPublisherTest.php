@@ -44,8 +44,8 @@ class MetaPublisherTest extends TestCase
             'marketing_campaign_post_id' => $post->id,
             'platform' => SocialPlatform::Instagram->value,
             'payload_snapshot' => [
-                'media' => [
-                    ['media_id' => $media->id]
+                'target' => ['page_id' => '123', 'external_id' => 'fake_external', 'publication_type' => 'reel'], 'caption' => 'Test', 'hashtags' => [], 'media' => [
+                    ['media_id' => $media->id, 'media_type' => 'photo', 'path' => 'dummy.jpg']
                 ]
             ]
         ]);

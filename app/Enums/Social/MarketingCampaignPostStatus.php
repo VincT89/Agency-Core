@@ -17,6 +17,7 @@ enum MarketingCampaignPostStatus: string
     case Publishing = 'publishing';
     case Published = 'published';
     case PartialSuccess = 'partial_success';
+    case NeedsManualReview = 'needs_manual_review';
     case Failed = 'failed';
     case Cancelled = 'cancelled';
 
@@ -36,6 +37,7 @@ enum MarketingCampaignPostStatus: string
             self::Publishing => 'In Pubblicazione',
             self::Published => 'Pubblicato',
             self::PartialSuccess => 'Pubblicazione Parziale',
+            self::NeedsManualReview => 'Richiede Revisione Manuale',
             self::Failed => 'Fallito',
             self::Cancelled => 'Annullato',
         };
@@ -53,7 +55,7 @@ enum MarketingCampaignPostStatus: string
             self::Publishing => 'var(--blue)',
             self::Published => 'var(--green)',
             self::PartialSuccess => 'var(--yellow)',
-            self::Failed, self::Cancelled => 'var(--red)',
+            self::NeedsManualReview, self::Failed, self::Cancelled => 'var(--red)',
         };
     }
 
@@ -65,6 +67,7 @@ enum MarketingCampaignPostStatus: string
             self::Published,
             self::PartialSuccess,
             self::Failed,
+            self::NeedsManualReview,
         ]);
     }
 

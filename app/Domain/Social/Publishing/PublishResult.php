@@ -2,6 +2,8 @@
 
 namespace App\Domain\Social\Publishing;
 
+use App\Enums\Social\PublicationFailureClassification;
+
 class PublishResult
 {
     public function __construct(
@@ -13,7 +15,8 @@ class PublishResult
         public readonly ?array $responseSnapshot = null,
         public readonly bool $isProcessing = false,
         public readonly ?string $externalTaskId = null,
-        public readonly ?array $providerStatePayload = null
+        public readonly ?array $providerStatePayload = null,
+        public readonly ?PublicationFailureClassification $failureClassification = null
     ) {}
 
     public static function success(string $postId, ?string $permalink = null, ?array $response = null): self
@@ -35,9 +38,9 @@ class PublishResult
         return new self(true, null, null, null, null, $response, true, $taskId, $providerStatePayload);
     }
 
-    public static function failure(string $errorMessage, ?array $response = null): self
+    public static function failure(string $errorMessage, PublicationFailureClassification $classification, ?array $response = null): self
     {
-        return new self(false, null, null, null, $errorMessage, $response, false);
+        return new self(false, null, null, null, $errorMessage, $response, false, null, null, $classification);
     }
 
     public function isProcessing(): bool

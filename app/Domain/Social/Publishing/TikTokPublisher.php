@@ -7,12 +7,13 @@ use App\Models\ClientSocialAccount;
 use App\Domain\Social\TikTok\TikTokContentPostingService;
 use App\Domain\Social\TikTok\TikTokVideoValidationService;
 use App\Domain\Social\TikTok\TikTokPhotoValidationService;
-use App\Domain\Social\Services\SocialMediaPublicUrlService;
+use App\Domain\Social\Services\PublicationMediaDeliveryService;
 use App\Domain\Social\Services\TikTokTokenRefreshService;
 use App\Domain\Social\TikTok\Strategies\PullFromUrlStrategy;
 use App\Enums\Social\SocialPlatform;
 use App\Enums\Social\SocialConnectionStrategy;
 use App\Enums\Social\SocialApiStatus;
+use App\Enums\Social\PublicationFailureClassification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -21,20 +22,20 @@ class TikTokPublisher implements SocialPublisherInterface
     private TikTokContentPostingService $contentService;
     private TikTokVideoValidationService $videoValidationService;
     private TikTokPhotoValidationService $photoValidationService;
-    private SocialMediaPublicUrlService $publicUrlService;
+    private PublicationMediaDeliveryService $mediaDeliveryService;
     private TikTokTokenRefreshService $tokenRefreshService;
 
     public function __construct(
         TikTokContentPostingService $contentService,
         TikTokVideoValidationService $videoValidationService,
         TikTokPhotoValidationService $photoValidationService,
-        SocialMediaPublicUrlService $publicUrlService,
+        PublicationMediaDeliveryService $mediaDeliveryService,
         TikTokTokenRefreshService $tokenRefreshService
     ) {
         $this->contentService = $contentService;
         $this->videoValidationService = $videoValidationService;
         $this->photoValidationService = $photoValidationService;
-        $this->publicUrlService = $publicUrlService;
+        $this->mediaDeliveryService = $mediaDeliveryService;
         $this->tokenRefreshService = $tokenRefreshService;
     }
 
@@ -58,22 +59,22 @@ class TikTokPublisher implements SocialPublisherInterface
 
     public function publish(\App\Models\MarketingCampaignPostPublication $publication, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
     {
-        $post = clone $publication->post;
         // 1. Blocco se disabilitato
         if (config('services.tiktok.delivery_mode', 'disabled') === 'disabled') {
             return PublishResult::failure(
-                "TikTok publishing non configurato o non ancora abilitato."
+                "TikTok publishing non configurato o non ancora abilitato.",
+                PublicationFailureClassification::Permanent
             );
         }
 
         if (config('social.publishing.dry_run', false) || config('services.tiktok.mock_publishing', false)) {
             return PublishResult::processingTask(
-                'dryrun_tiktok_' . $post->id . '_' . now()->timestamp,
+                'dryrun_tiktok_' . $publication->id . '_' . now()->timestamp,
                 [
                     'dry_run' => true,
                     'platform' => 'tiktok',
                     'delivery_mode' => config('services.tiktok.delivery_mode'),
-                    'post_id' => $post->id,
+                    'publication_id' => $publication->id,
                     'account_id' => $account->id,
                 ],
                 [
@@ -85,26 +86,27 @@ class TikTokPublisher implements SocialPublisherInterface
 
         // 2. Controllo base
         if (!$account->isApiConnected()) {
-            return PublishResult::failure("Account TikTok non valido, disconnesso o token scaduto.");
+            return PublishResult::failure("Account TikTok non valido, disconnesso o token scaduto.", PublicationFailureClassification::ManualReview);
         }
 
         $snapshot = $publication->payload_snapshot ?? [];
-        $mediaItemsData = collect($snapshot['media'] ?? []);
-        $mediaItemIds = $mediaItemsData->pluck('media_id')->filter()->toArray();
-        $mediaCollection = \App\Models\MarketingCampaignPostMedia::whereIn('id', $mediaItemIds)->get()
-            ->sortBy(function($model) use ($mediaItemIds) {
-                return array_search($model->id, $mediaItemIds);
-            })->values();
+        $mediaItemsData = $snapshot['media'] ?? [];
         
-        $hasVideo = $mediaCollection->contains(fn($m) => $m->isVideo() || $m->media_type === 'video');
-        $hasPhoto = $mediaCollection->contains(fn($m) => !$m->isVideo() && $m->media_type !== 'video');
+        $hasVideo = false;
+        $hasPhoto = false;
+        foreach ($mediaItemsData as $m) {
+            $ext = strtolower(pathinfo($m['path'] ?? '', PATHINFO_EXTENSION));
+            $isVid = strtolower($m['media_type'] ?? '') === 'video' || in_array($ext, ['mp4', 'mov', 'webm']);
+            if ($isVid) $hasVideo = true;
+            else $hasPhoto = true;
+        }
 
         if ($hasVideo && $hasPhoto) {
-            return PublishResult::failure("TikTok non supporta media misti. Carica solo un video o un set di foto.");
+            return PublishResult::failure("TikTok non supporta media misti. Carica solo un video o un set di foto.", PublicationFailureClassification::Permanent);
         }
 
         if (!$hasVideo && !$hasPhoto) {
-            return PublishResult::failure("Nessun media fornito per la pubblicazione TikTok.");
+            return PublishResult::failure("Nessun media fornito per la pubblicazione TikTok.", PublicationFailureClassification::Permanent);
         }
 
         $publishMethod = null;
@@ -114,52 +116,66 @@ class TikTokPublisher implements SocialPublisherInterface
 
         if ($hasVideo) {
             if (!$account->canPublishTikTokVideo()) {
-                return PublishResult::failure("L'account non ha i permessi (capability) per pubblicare video su TikTok.");
+                return PublishResult::failure("L'account non ha i permessi (capability) per pubblicare video su TikTok.", PublicationFailureClassification::ManualReview);
             }
             
-            $media = $mediaCollection->first();
-            $validation = $this->videoValidationService->validate($media);
-            if (!$validation['isValid']) {
-                return PublishResult::failure($validation['error']);
+            $media = $mediaItemsData[0];
+            $deliveryResults = $this->mediaDeliveryService->deliver($publication);
+            $result = $deliveryResults[0];
+            
+            if (!$result->passed) {
+                return PublishResult::failure(implode(', ', $result->errors), PublicationFailureClassification::Temporary);
             }
-            $validated = $this->publicUrlService->getValidatedPublicUrl($media);
-            $postData['video_url'] = $validated['url'];
-            $diagnosticPayload = $validated['diagnostic'];
+            
+            $postData['video_url'] = $result->url;
+            $diagnosticPayload = $result->diagnosticPayload;
             $publishMethod = 'initializeVideoPost';
         } else {
             if (!$account->canPublishTikTokPhoto()) {
-                return PublishResult::failure("La pubblicazione foto su TikTok non è supportata o disabilitata dalle configurazioni di questo account.");
+                return PublishResult::failure("La pubblicazione foto su TikTok non è supportata o disabilitata dalle configurazioni di questo account.", PublicationFailureClassification::ManualReview);
             }
 
             $maxCapability = $account->publishing_capabilities['tiktok']['max_photo_count'] ?? 10;
-            $validation = $this->photoValidationService->validate($mediaCollection, $maxCapability);
-            if (!$validation['isValid']) {
-                return PublishResult::failure($validation['error']);
+            if (count($mediaItemsData) > $maxCapability) {
+                return PublishResult::failure("Troppe foto per TikTok. Limite: {$maxCapability}.", PublicationFailureClassification::Permanent);
             }
             
-            $validatedArray = $this->publicUrlService->getValidatedPublicUrls($mediaCollection);
-            $postData['photo_urls'] = array_column($validatedArray, 'url');
-            $diagnosticPayload = array_column($validatedArray, 'diagnostic');
+            $urls = [];
+            $diagnostics = [];
+            $deliveryResults = $this->mediaDeliveryService->deliver($publication);
+            
+            // Per TikTok photo, ci aspettiamo che il result sia ok per tutte
+            foreach ($deliveryResults as $result) {
+                if (!$result->passed) {
+                    return PublishResult::failure(implode(', ', $result->errors), PublicationFailureClassification::Temporary);
+                }
+                $urls[] = $result->url;
+                $diagnostics[] = $result->diagnosticPayload;
+            }
+            if (empty($urls)) return PublishResult::failure("Impossibile generare URL per le foto TikTok.", PublicationFailureClassification::Temporary);
+            
+            $postData['photo_urls'] = $urls;
+            $diagnosticPayload = $diagnostics;
             $publishMethod = 'initializePhotoPost';
         }
 
         // 4. Lock di idempotenza per evitare post doppi (sprint 2 hardening)
-        $lockKey = "tiktok_publish_lock_{$post->id}_{$account->id}";
+        $lockKey = "tiktok_publish_lock_{$publication->id}_{$account->id}";
         $lock = Cache::lock($lockKey, 300); // 5 minuti TTL anti-zombie/overlapping
         
         if (!$lock->get()) {
             Log::warning("TikTok publish abortito: lock attivo (già in corso)", [
-                'post_id' => $post->id,
+                'publication_id' => $publication->id,
                 'account_id' => $account->id
             ]);
-            return PublishResult::failure("Pubblicazione già in corso, attendere.");
+            return PublishResult::failure("Pubblicazione già in corso, attendere.", PublicationFailureClassification::Temporary);
         }
 
         // 5. Esecuzione
         try {
             // Assicuriamoci che il token sia aggiornato (bloccante se fallisce)
             if (!$this->tokenRefreshService->ensureValidToken($account)) {
-                return PublishResult::failure('Token TikTok scaduto o non rinnovabile. Ricollegare account.');
+                return PublishResult::failure('Token TikTok scaduto o non rinnovabile. Ricollegare account.', PublicationFailureClassification::ManualReview);
             }
             // Refresh in mem per avere il nuovo access token
             $account->refresh();
@@ -187,15 +203,14 @@ class TikTokPublisher implements SocialPublisherInterface
 
         } catch (\Exception $e) {
             Log::error("TikTok Publisher Error", [
-                'post_id' => $post->id,
+                'publication_id' => $publication->id,
                 'error' => $e->getMessage()
             ]);
             
-            return PublishResult::failure($e->getMessage());
+            return PublishResult::failure($e->getMessage(), PublicationFailureClassification::Temporary);
         } finally {
             // Rilascio il lock in ogni caso (successo o errore) per pulizia (TTL lungo anti-overlapping garantito da 300s max)
             isset($lock) && $lock->release();
         }
     }
 }
-

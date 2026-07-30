@@ -96,7 +96,7 @@ class TikTokOAuthTest extends TestCase
                 'scope' => 'user.info.basic,video.upload',
             ], 200),
             // Fake per CreatorInfoService se viene chiamato
-            'open.tiktokapis.com/v2/post/publish/creator_info/query/*' => Http::response([
+            'open.tiktokapis.com/v2/user/info/*' => Http::response(['data' => ['user' => ['display_name' => 'TestUser', 'avatar_url' => 'https://example.com/avatar.jpg', 'union_id' => 'dummy_union']]], 200), 'open.tiktokapis.com/v2/post/publish/creator_info/query/*' => Http::response([
                 'data' => [
                     'creator_avatar_url' => 'https://example.com/avatar.jpg',
                     'creator_nickname' => 'TestUser',

@@ -34,6 +34,7 @@ class SyncMarketingCampaignPostPublicationStatusAction
 
         $hasPublished = in_array(PublicationStatus::Published->value, $statuses);
         $hasFailed = in_array(PublicationStatus::Failed->value, $statuses);
+        $hasNeedsManualReview = in_array(PublicationStatus::NeedsManualReview->value, $statuses);
         $hasPendingOrPublishing = in_array(PublicationStatus::Pending->value, $statuses) || in_array(PublicationStatus::Publishing->value, $statuses);
 
         $allPublished = count(array_unique($statuses)) === 1 && $statuses[0] === PublicationStatus::Published->value;
@@ -46,6 +47,8 @@ class SyncMarketingCampaignPostPublicationStatusAction
         } elseif ($hasPendingOrPublishing) {
             // Include sia il caso (1 Published + 1 Publishing) sia (Nessuna Published + 1 Publishing)
             $newState = MarketingCampaignPostStatus::Publishing;
+        } elseif ($hasNeedsManualReview) {
+            $newState = MarketingCampaignPostStatus::NeedsManualReview;
         } elseif ($hasPublished && $hasFailed) {
             $newState = MarketingCampaignPostStatus::PartialSuccess;
         } elseif ($allTerminalFailure) {

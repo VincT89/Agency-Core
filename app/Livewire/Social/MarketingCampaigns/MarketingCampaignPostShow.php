@@ -1076,30 +1076,28 @@ class MarketingCampaignPostShow extends Component
         }
 
         try {
-            if (in_array($platform, [\App\Enums\Social\SocialPlatform::Facebook->value, \App\Enums\Social\SocialPlatform::Instagram->value])) {
-                $preflightService = app(\App\Domain\Social\Services\MetaPreflightService::class);
-                $account = $this->post->campaign->client->socialAccountFor($platform);
-                if ($account) {
-                    $preflight = $preflightService->runPreflight($this->post, $account);
-                    if (!$preflight->isPass) {
-                        $this->addError('post', 'Preflight fallito: ' . implode(', ', $preflight->errors));
-                        return;
-                    }
-                }
-            } elseif ($platform === \App\Enums\Social\SocialPlatform::Tiktok->value) {
-                $preflightService = app(\App\Domain\Social\Services\TikTokPreflightService::class);
-                $account = $this->post->campaign->client->socialAccountFor($platform);
-                if ($account) {
-                    $preflight = $preflightService->runPreflight($this->post, $account);
-                    if (!$preflight->isPass) {
-                        $this->addError('post', 'TikTok Preflight fallito: ' . implode(', ', $preflight->errors));
-                        return;
-                    }
-                }
+            // We no longer need the legacy preflight check here. The preflight is part of the execution action.
+            // Also, we don't dispatch the legacy job. We synchronously create the publication via Create action, then dispatch Execute job.
+            
+            $platformEnum = \App\Enums\Social\SocialPlatform::tryFrom($platform);
+            $account = $this->post->campaign->client->socialAccountFor($platform);
+
+            if (!$platformEnum || !$account) {
+                $this->addError('post', 'Impossibile determinare account o piattaforma.');
+                return;
             }
+            
+            $version = $this->post->currentVersion;
+            if (!$version) {
+                $this->addError('post', 'Impossibile trovare la versione corrente del post.');
+                return;
+            }
+            
+            $createAction = app(\App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction::class);
+            $publication = $createAction->execute($this->post, $version, $platformEnum, $account);
 
             // Dispatch async job
-            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $platform);
+            \App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::dispatch($publication->id);
             
             session()->flash("success_publish_{$platform}", "Pubblicazione in corso su {$platform}... Il job è stato accodato.");
             $this->refreshPost();
@@ -1116,20 +1114,15 @@ class MarketingCampaignPostShow extends Component
         $publication = $this->post->publications()->whereKey($publicationId)->first();
         if (!$publication) return;
 
-        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && $publication->status === \App\Enums\Social\PublicationStatus::Failed) {
-            $publication->update([
-                'status' => \App\Enums\Social\PublicationStatus::Cancelled->value,
-                'error_message' => 'Dismesso (sostituito da nuovo tentativo)',
-            ]);
+        try {
+            $retryAction = app(\App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction::class);
+            $newPublication = $retryAction->execute($publication);
             
-            app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($this->post);
-            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, 'instagram');
-            session()->flash("success_publish_{$publication->platform->value}", "Nuova pubblicazione Instagram avviata. Il vecchio container è stato scartato.");
+            \App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::dispatch($newPublication->id);
+            session()->flash("success_publish_{$publication->platform->value}", "Riavvio pubblicazione su {$publication->platform->value} in corso.");
             $this->refreshPost();
-        } else {
-            \App\Jobs\Social\PublishMarketingCampaignPostJob::dispatch($this->post, $publication->platform->value);
-            session()->flash("success_publish_{$publication->platform->value}", "Riavvio forzato pubblicazione su {$publication->platform->value}.");
-            $this->refreshPost();
+        } catch (\Exception $e) {
+            $this->addError('post', 'Errore durante il retry: ' . $e->getMessage());
         }
     }
 

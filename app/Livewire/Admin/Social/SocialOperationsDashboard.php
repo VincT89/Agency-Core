@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Admin\Social;
 
-use App\Domain\Social\Actions\PublishMarketingCampaignPostAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Enums\Social\PublicationStatus;
 use App\Models\MarketingCampaignPostPublication;
@@ -27,49 +26,21 @@ class SocialOperationsDashboard extends Component
         $this->resetPage();
     }
 
-    public function retryPublication(int $publicationId, PublishMarketingCampaignPostAction $publishAction, SyncMarketingCampaignPostPublicationStatusAction $syncAction)
+    public function retryPublication(int $publicationId, SyncMarketingCampaignPostPublicationStatusAction $syncAction)
     {
         $this->authorize('manage_social_operations');
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
 
-        if (in_array($publication->status, [
-            PublicationStatus::Published,
-            PublicationStatus::Cancelled,
-            PublicationStatus::Superseded,
-            PublicationStatus::Abandoned,
-        ])) {
-            session()->flash('error', 'Impossibile riprovare: la pubblicazione è in uno stato terminale o di successo.');
-            return;
-        }
-
-        // Se era failed IG e stiamo rifacendo da zero, dismettiamo questo e non usiamo il vecchio container
-        if ($publication->platform === \App\Enums\Social\SocialPlatform::Instagram && in_array($publication->status, [PublicationStatus::Failed, PublicationStatus::NeedsManualReview])) {
-            $publication->update([
-                'status' => PublicationStatus::Superseded->value,
-                'error_message' => 'Dismesso (sostituito da nuovo tentativo)',
-            ]);
+        try {
+            $retryAction = app(\App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction::class);
+            $newPublication = $retryAction->execute($publication);
             
-            // Creiamo un nuovo correlation id
-            $correlationId = Str::uuid()->toString();
-            
-            try {
-                $publishAction->execute($publication->post, 'instagram', $correlationId);
-                session()->flash('success', 'Nuova pubblicazione Instagram avviata con successo. Il vecchio container è stato scartato.');
-            } catch (\Exception $e) {
-                Log::error('Errore durante il retry da zero IG', ['error' => $e->getMessage()]);
-                session()->flash('error', 'Errore durante l\'avvio della nuova pubblicazione: ' . $e->getMessage());
-            }
-
-        } else {
-            // Per FB o retry classici, possiamo rifare
-            try {
-                $correlationId = Str::uuid()->toString();
-                $publishAction->execute($publication->post, $publication->platform->value, $correlationId);
-                session()->flash('success', 'Pubblicazione riavviata con successo.');
-            } catch (\Exception $e) {
-                session()->flash('error', 'Errore durante il retry: ' . $e->getMessage());
-            }
+            \App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::dispatch($newPublication->id);
+            session()->flash('success', 'Nuova pubblicazione avviata con successo. Il vecchio record è stato riprovato.');
+        } catch (\Exception $e) {
+            Log::error('Errore durante il retry da dashboard', ['error' => $e->getMessage()]);
+            session()->flash('error', 'Errore durante l\'avvio della nuova pubblicazione: ' . $e->getMessage());
         }
         
         $syncAction->execute($publication->post);

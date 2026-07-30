@@ -11,7 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
-use App\Domain\Social\Actions\PublishMarketingCampaignPostAction;
+use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use Mockery\MockInterface;
 
@@ -57,9 +57,11 @@ class SocialOperationsDashboardTest extends TestCase
             'correlation_id' => 'abc',
         ]);
 
-        $this->mock(PublishMarketingCampaignPostAction::class, function (MockInterface $mock) {
-            $mock->shouldReceive('execute')->once();
+        $this->mock(RetryMarketingCampaignPostPublicationAction::class, function (MockInterface $mock) use ($publication) {
+            $mock->shouldReceive('execute')->once()->andReturn($publication);
         });
+        
+        \Illuminate\Support\Facades\Queue::fake();
         
         $this->mock(SyncMarketingCampaignPostPublicationStatusAction::class, function (MockInterface $mock) {
             $mock->shouldReceive('execute')->once();
@@ -69,9 +71,7 @@ class SocialOperationsDashboardTest extends TestCase
             ->test(SocialOperationsDashboard::class)
             ->call('retryPublication', $publication->id);
 
-        $publication->refresh();
-        $this->assertEquals(PublicationStatus::Superseded->value, $publication->status->value);
-        $this->assertEquals('Dismesso (sostituito da nuovo tentativo)', $publication->error_message);
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::class);
     }
 
     public function test_refresh_container_blocks_terminal_state()

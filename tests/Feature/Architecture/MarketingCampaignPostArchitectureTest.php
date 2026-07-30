@@ -19,7 +19,6 @@ class MarketingCampaignPostArchitectureTest extends TestCase
             'app/Domain/Social/Actions/RequestMarketingCampaignPostRegenerationAction.php',
             'app/Domain/Social/Services/MetaPreflightService.php',
             'app/Domain/Social/Services/TikTokPreflightService.php',
-            'app/Domain/Social/Actions/PublishMarketingCampaignPostAction.php',
             'app/Livewire/Social/MarketingCampaigns/MarketingCampaignShow.php',
             'app/Livewire/Social/MarketingCampaigns/MarketingCampaignPostShow.php',
             'resources/views/livewire/social/marketing-campaigns/marketing-campaign-show.blade.php',

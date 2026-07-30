@@ -28,13 +28,21 @@ class AppServiceProvider extends ServiceProvider
         });
 
         \Illuminate\Support\Facades\RateLimiter::for('social-media-delivery', function (\Illuminate\Http\Request $request) {
+            // Seleziona la chiave: dal media object se esiste, altrimenti dal combination publication+index
             $media = $request->route('media');
             $mediaId = is_object($media) ? $media->getKey() : $media;
-            return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)->by(
+            
+            if (!$mediaId) {
+                $pubId = $request->route('publication');
+                $mediaIndex = $request->route('mediaIndex');
+                $mediaId = "pub_{$pubId}_index_{$mediaIndex}";
+            }
+
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(300)->by(
                 $mediaId.'|'.$request->ip()
             )->response(function (\Illuminate\Http\Request $request, array $headers) use ($mediaId) {
                 \Illuminate\Support\Facades\Log::warning('Rate limit superato per Provider Delivery', [
-                    'media_id' => $mediaId,
+                    'media_identifier' => $mediaId,
                     'ip' => $request->ip()
                 ]);
                 return response('Too Many Requests', 429, $headers);

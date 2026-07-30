@@ -53,7 +53,7 @@ class TikTokPublisherTest extends TestCase
             'platform' => SocialPlatform::Tiktok->value,
             'payload_snapshot' => [
                 'media' => [
-                    ['media_id' => 1],
+                    ['media_id' => 1, 'media_type' => 'video', 'path' => 'video.mp4'],
                     ['media_id' => 2]
                 ]
             ]
@@ -102,7 +102,15 @@ class TikTokPublisherTest extends TestCase
             'platform' => SocialPlatform::Tiktok->value,
             'payload_snapshot' => [
                 'media' => [
-                    ['media_id' => 1]
+                    [
+                        'media_id' => 1,
+                        'storage_source' => 'local',
+                        'disk' => 'public',
+                        'path' => 'video.mp4',
+                        'mime_type' => 'video/mp4',
+                        'media_type' => 'video',
+                        'size_bytes' => 100,
+                    ]
                 ]
             ]
         ]);
@@ -151,7 +159,15 @@ class TikTokPublisherTest extends TestCase
             'platform' => SocialPlatform::Tiktok->value,
             'payload_snapshot' => [
                 'media' => [
-                    ['media_id' => 1]
+                    [
+                        'media_id' => 1,
+                        'storage_source' => 'local',
+                        'disk' => 'public',
+                        'path' => 'video.mp4',
+                        'mime_type' => 'video/mp4',
+                        'media_type' => 'video',
+                        'size_bytes' => 100,
+                    ]
                 ]
             ]
         ]);
@@ -185,7 +201,7 @@ class TikTokPublisherTest extends TestCase
             'platform' => SocialPlatform::Tiktok->value,
             'payload_snapshot' => [
                 'media' => [
-                    ['media_id' => 1]
+                    ['media_id' => 1, 'media_type' => 'photo', 'path' => 'photo.jpg']
                 ]
             ]
         ]);
@@ -197,4 +213,3 @@ class TikTokPublisherTest extends TestCase
         $this->assertEquals('La pubblicazione foto su TikTok non è supportata o disabilitata dalle configurazioni di questo account.', $result->errorMessage);
     }
 }
-

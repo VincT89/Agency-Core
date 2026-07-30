@@ -76,37 +76,61 @@ class MarketingCampaignPostReview extends Component
             abort(409, 'Impossibile caricare in modo sicuro i media di questa versione. Contatta il team per ricevere un nuovo link.');
         }
 
-
         $this->validate([
             'clientName' => 'required|string|max:255',
             'clientEmail' => 'required|email|max:255',
         ]);
 
-        $updated = ClientReviewToken::whereKey($this->tokenRecord->id)
-            ->whereNull('used_at')
-            ->update(['used_at' => now()]);
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () {
+                $token = ClientReviewToken::lockForUpdate()->findOrFail($this->tokenRecord->id);
+                $post = MarketingCampaignPost::lockForUpdate()->findOrFail($token->reviewable_id);
 
-        if ($updated === 0) {
-            session()->flash('error', 'Questo link di revisione è già stato utilizzato.');
+                if ($token->isUsed()) {
+                    throw new \App\Exceptions\Social\ClientReviewTokenUsedException();
+                }
+
+                if ($token->isExpired()) {
+                    throw new \App\Exceptions\Social\ClientReviewTokenExpiredException();
+                }
+
+                if ($token->marketing_campaign_post_version_id && $token->marketing_campaign_post_version_id !== $post->current_version_id) {
+                    throw new \App\Exceptions\Social\ClientReviewVersionConflictException();
+                }
+
+                if ($post->status !== MarketingCampaignPostStatus::SentToClient->value) {
+                    throw new \App\Exceptions\Social\ClientReviewStateConflictException();
+                }
+
+                $token->update(['used_at' => now()]);
+
+                $post->comments()->create([
+                    'marketing_campaign_post_version_id' => $post->current_version_id,
+                    'client_name' => $this->clientName,
+                    'client_email' => $this->clientEmail,
+                    'body' => 'Approvato senza modifiche.',
+                    'visibility' => MarketingCampaignPostCommentVisibility::Client->value,
+                    'type' => MarketingCampaignPostCommentType::Approval->value,
+                ]);
+
+                $post->update([
+                    'status' => MarketingCampaignPostStatus::ClientApproved->value,
+                    'client_approved_at' => now(),
+                ]);
+            });
+
+            session()->flash('success', 'Post approvato con successo. Grazie!');
             return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
+
+        } catch (\App\Exceptions\Social\ClientReviewTokenUsedException | 
+                 \App\Exceptions\Social\ClientReviewTokenExpiredException | 
+                 \App\Exceptions\Social\ClientReviewVersionConflictException | 
+                 \App\Exceptions\Social\ClientReviewStateConflictException $e) {
+            $this->addError('review', $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Errore durante l\'approvazione lato client', ['error' => $e->getMessage()]);
+            $this->addError('review', 'Si è verificato un errore durante l\'elaborazione. Riprova più tardi.');
         }
-
-        $this->post->comments()->create([
-            'marketing_campaign_post_version_id' => $this->post->current_version_id,
-            'client_name' => $this->clientName,
-            'client_email' => $this->clientEmail,
-            'body' => 'Approvato senza modifiche.',
-            'visibility' => MarketingCampaignPostCommentVisibility::Client->value,
-            'type' => MarketingCampaignPostCommentType::Approval->value,
-        ]);
-
-        $this->post->update([
-            'status' => MarketingCampaignPostStatus::ClientApproved->value,
-            'client_approved_at' => now(),
-        ]);
-
-        session()->flash('success', 'Post approvato con successo. Grazie!');
-        return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
     }
 
     public function requestChanges()
@@ -115,37 +139,61 @@ class MarketingCampaignPostReview extends Component
             abort(409, 'Impossibile caricare in modo sicuro i media di questa versione. Contatta il team per ricevere un nuovo link.');
         }
 
-
         $this->validate([
             'clientName' => 'required|string|max:255',
             'clientEmail' => 'required|email|max:255',
             'commentBody' => 'required|string',
         ]);
 
-        $updated = ClientReviewToken::whereKey($this->tokenRecord->id)
-            ->whereNull('used_at')
-            ->update(['used_at' => now()]);
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () {
+                $token = ClientReviewToken::lockForUpdate()->findOrFail($this->tokenRecord->id);
+                $post = MarketingCampaignPost::lockForUpdate()->findOrFail($token->reviewable_id);
 
-        if ($updated === 0) {
-            session()->flash('error', 'Questo link di revisione è già stato utilizzato.');
+                if ($token->isUsed()) {
+                    throw new \App\Exceptions\Social\ClientReviewTokenUsedException();
+                }
+
+                if ($token->isExpired()) {
+                    throw new \App\Exceptions\Social\ClientReviewTokenExpiredException();
+                }
+
+                if ($token->marketing_campaign_post_version_id && $token->marketing_campaign_post_version_id !== $post->current_version_id) {
+                    throw new \App\Exceptions\Social\ClientReviewVersionConflictException();
+                }
+
+                if ($post->status !== MarketingCampaignPostStatus::SentToClient->value) {
+                    throw new \App\Exceptions\Social\ClientReviewStateConflictException();
+                }
+
+                $token->update(['used_at' => now()]);
+
+                $post->comments()->create([
+                    'marketing_campaign_post_version_id' => $post->current_version_id,
+                    'client_name' => $this->clientName,
+                    'client_email' => $this->clientEmail,
+                    'body' => $this->commentBody,
+                    'visibility' => MarketingCampaignPostCommentVisibility::Client->value,
+                    'type' => MarketingCampaignPostCommentType::ChangeRequest->value,
+                ]);
+
+                $post->update([
+                    'status' => MarketingCampaignPostStatus::ClientChangesRequested->value,
+                ]);
+            });
+
+            session()->flash('success', 'Richiesta di modifiche inviata con successo. Il team si metterà al lavoro a breve.');
             return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
+
+        } catch (\App\Exceptions\Social\ClientReviewTokenUsedException | 
+                 \App\Exceptions\Social\ClientReviewTokenExpiredException | 
+                 \App\Exceptions\Social\ClientReviewVersionConflictException | 
+                 \App\Exceptions\Social\ClientReviewStateConflictException $e) {
+            $this->addError('review', $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Errore durante la richiesta di modifiche lato client', ['error' => $e->getMessage()]);
+            $this->addError('review', 'Si è verificato un errore durante l\'elaborazione. Riprova più tardi.');
         }
-
-        $this->post->comments()->create([
-            'marketing_campaign_post_version_id' => $this->post->current_version_id,
-            'client_name' => $this->clientName,
-            'client_email' => $this->clientEmail,
-            'body' => $this->commentBody,
-            'visibility' => MarketingCampaignPostCommentVisibility::Client->value,
-            'type' => MarketingCampaignPostCommentType::ChangeRequest->value,
-        ]);
-
-        $this->post->update([
-            'status' => MarketingCampaignPostStatus::ClientChangesRequested->value,
-        ]);
-
-        session()->flash('success', 'Richiesta di modifiche inviata con successo. Il team si metterà al lavoro a breve.');
-        return redirect()->route('public.marketing-campaign-posts.review', ['token' => $this->tokenRecord->token]);
     }
 
     #[Layout('layouts.guest')]

@@ -86,16 +86,38 @@ class MarketingCampaignPostShowOwnershipTest extends TestCase
 
         $owner = User::factory()->create(['role' => \App\Enums\UserRole::Marketing->value]);
         $client = Client::factory()->create();
+        $account = \App\Models\ClientSocialAccount::factory()->create([
+            'client_id' => $client->id,
+            'platform' => \App\Enums\Social\SocialPlatform::Instagram,
+            'provider_account_id' => '123456',
+        ]);
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
         $post = MarketingCampaignPost::factory()->create([
             'marketing_campaign_id' => $campaign->id,
             'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
         ]);
+        
+        $version = \App\Models\MarketingCampaignPostVersion::factory()->create(['marketing_campaign_post_id' => $post->id]);
+        $post->update(['current_version_id' => $version->id]);
+        
         $publication = MarketingCampaignPostPublication::factory()->create([
             'marketing_campaign_post_id' => $post->id,
+            'client_social_account_id' => $account->id,
             'platform' => SocialPlatform::Instagram->value,
             'status' => PublicationStatus::Failed->value,
+            'snapshot_schema_version' => '1.0',
+            'snapshot_hash' => 'dummy',
+            'attempt_count' => 1,
+            'payload_snapshot' => [],
         ]);
+
+        $verifierMock = \Mockery::mock(\App\Domain\Social\Services\MarketingCampaignPostPublicationIntegrityVerifier::class);
+        $verifierMock->shouldReceive('verify')->andReturn(new \App\Domain\Social\DTOs\PublicationIntegrityResult(
+            passed: true,
+            severity: \App\Enums\Social\IntegritySeverity::Error,
+            errors: []
+        ));
+        $this->app->instance(\App\Domain\Social\Services\MarketingCampaignPostPublicationIntegrityVerifier::class, $verifierMock);
 
         Livewire::actingAs($owner)
             ->test(\App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post])
@@ -103,11 +125,12 @@ class MarketingCampaignPostShowOwnershipTest extends TestCase
 
         $publication->refresh();
         
-        $this->assertEquals(PublicationStatus::Cancelled, $publication->status);
+        $this->assertEquals(PublicationStatus::Superseded, $publication->status);
         $this->assertEquals('Dismesso (sostituito da nuovo tentativo)', $publication->error_message);
         
-        Queue::assertPushed(\App\Jobs\Social\PublishMarketingCampaignPostJob::class, function ($job) use ($post) {
-            return $job->post->id === $post->id && $job->platform === 'instagram';
+        Queue::assertPushed(\App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob::class, function ($job) use ($publication) {
+            return $job->publicationId !== $publication->id;
         });
     }
 }
+

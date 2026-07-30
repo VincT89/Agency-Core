@@ -73,10 +73,21 @@ class SendMarketingCampaignPostToClientAction
             ]);
 
             if ($hasEmail) {
-                // Prepare mailable before afterCommit block to capture data
-                $mailable = new MarketingCampaignPostReviewMail($post, $token, $previewUrls);
-                
-                \Illuminate\Support\Facades\DB::afterCommit(function () use ($client, $mailable) {
+                $emailData = new \App\Domain\Social\DTOs\ClientReviewEmailData(
+                    clientName: $client->name,
+                    campaignName: $post->campaign->name,
+                    postId: $post->id,
+                    versionId: $post->current_version_id,
+                    versionNumber: $post->currentVersion->version_number,
+                    postTitle: $post->currentVersion->title ?: 'N/A',
+                    postCaption: $post->currentVersion->caption ?: 'N/A',
+                    previewUrls: $previewUrls,
+                    reviewUrl: route('public.marketing-campaign-posts.review', ['token' => $token->token]),
+                    expiresAt: $token->expires_at?->toIso8601String()
+                );
+
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($client, $emailData) {
+                    $mailable = new MarketingCampaignPostReviewMail($emailData);
                     Mail::to($client->email)->queue($mailable);
                 });
             }

@@ -159,7 +159,15 @@ class TikTokPublishingTest extends TestCase
             'platform' => SocialPlatform::Tiktok->value,
             'payload_snapshot' => [
                 'media' => [
-                    ['media_id' => 1]
+                    [
+                        'media_id' => 1,
+                        'storage_source' => 'local',
+                        'disk' => 'public',
+                        'path' => 'video.mp4',
+                        'mime_type' => 'video/mp4',
+                        'media_type' => 'video',
+                        'size_bytes' => 100,
+                    ]
                 ]
             ]
         ]);
@@ -198,7 +206,10 @@ class TikTokPublishingTest extends TestCase
 
         $publication->refresh();
         $this->assertEquals(\App\Enums\Social\PublicationStatus::Failed, $publication->status);
-        $this->assertEquals('La pubblicazione è fallita asincronamente su TikTok.', $publication->error_message);
+        $this->assertEquals(
+            'TikTok ha rifiutato la pubblicazione: Video non supportato',
+            $publication->error_message
+        );
         $this->assertEquals(\App\Enums\Social\MarketingCampaignPostStatus::Failed, $this->post->fresh()->status);
     }
 }

@@ -15,7 +15,8 @@ class TikTokPostStatusService
         // Stati basati sulla documentazione TikTok Content Posting API
         // FAILED è solo per errori sistemici. Per problemi lato content, meglio NeedsManualReview
         return match ($tiktokStatus) {
-            'PUBLISH_COMPLETE' => PublicationStatus::Published,
+            'PUBLISH_COMPLETE',
+            'PUBLISHED' => PublicationStatus::Published,
 
             'PROCESSING_UPLOAD',
             'PROCESSING_DOWNLOAD' => PublicationStatus::Publishing,

@@ -1,23 +1,23 @@
 @component('mail::message')
 # È richiesta la tua approvazione
 
-Ciao {{ $post->campaign->client->name }},
+Ciao {{ $data->clientName }},
 
-Il nostro team ha preparato un nuovo post per la campagna **{{ $post->campaign->name }}**. 
+Il nostro team ha preparato un nuovo post per la campagna **{{ $data->campaignName }}**. 
 Ti invitiamo a visionarlo e a lasciarci il tuo feedback o la tua approvazione.
 
-@if(count($resolvedMedia) > 0)
-@foreach($resolvedMedia as $vImg)
+@if(count($data->previewUrls) > 0)
+@foreach($data->previewUrls as $vImg)
 ![Anteprima Post]({{ $vImg }})
 @endforeach
 @endif
 
-**Titolo:** {{ $post->currentVersion?->title ?: 'N/A' }}
+**Titolo:** {{ $data->postTitle }}
 
 **Testo:**
-{{ $post->currentVersion?->caption ?: 'N/A' }}
+{{ $data->postCaption }}
 
-@component('mail::button', ['url' => route('public.marketing-campaign-posts.review', ['token' => $token->token])])
+@component('mail::button', ['url' => $data->reviewUrl])
 Vai alla Revisione
 @endcomponent
 

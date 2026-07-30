@@ -25,6 +25,9 @@ Route::get('/client/marketing-campaign-posts/{token}', \App\Livewire\Public\Mark
     ->name('public.marketing-campaign-posts.review')
     ->middleware('throttle:30,1');
 
+Route::get('/publication/{publication}/media/{mediaIndex}/deliver', [\App\Http\Controllers\Social\SocialPublicationMediaDeliveryController::class, 'deliver'])
+    ->name('public.social.publication-media.deliver')->middleware('throttle:social-media-delivery');
+
 
 Route::get('/media/marketing-campaign-posts/{path}', function (string $path) {
     abort_if(str_contains($path, '..') || str_contains($path, '\\'), 404);

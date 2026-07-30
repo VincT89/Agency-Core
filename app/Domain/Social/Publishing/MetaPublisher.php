@@ -5,17 +5,20 @@ namespace App\Domain\Social\Publishing;
 use App\Models\MarketingCampaignPost;
 use App\Models\ClientSocialAccount;
 use App\Domain\Social\Services\SocialMediaPublicUrlService;
+use App\Domain\Social\Services\PublicationMediaDeliveryService;
+use App\Domain\Social\Services\MetaTokenRefreshService;
+use App\Enums\Social\PublicationFailureClassification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class MetaPublisher implements SocialPublisherInterface
 {
-    protected SocialMediaPublicUrlService $mediaUrlService;
+    protected PublicationMediaDeliveryService $mediaDeliveryService;
 
-    public function __construct(SocialMediaPublicUrlService $mediaUrlService)
+    public function __construct(PublicationMediaDeliveryService $mediaDeliveryService)
     {
-        $this->mediaUrlService = $mediaUrlService;
+        $this->mediaDeliveryService = $mediaDeliveryService;
     }
 
     public function verifyAccountCapabilities(ClientSocialAccount $account): bool
@@ -34,26 +37,31 @@ class MetaPublisher implements SocialPublisherInterface
 
     public function publish(\App\Models\MarketingCampaignPostPublication $publication, ClientSocialAccount $account, ?string $correlationId = null): PublishResult
     {
-        $post = clone $publication->post; // Clone it so we don't mess up the instance, although we shouldn't use it directly much anymore.
+        if ($account->connection_strategy?->value === 'agency_oauth' && !$account->agencyAsset) {
+            return PublishResult::failure(
+                'Nessun asset Meta assegnato all’account del cliente.',
+                PublicationFailureClassification::ManualReview
+            );
+        }
 
         if ($account->connection_strategy?->value === 'agency_oauth' && $account->agencyAsset && $account->agencyAsset->connection) {
             if ($account->agencyAsset->connection->requires_reauth) {
-                return PublishResult::failure('La connessione dell\'agenzia Meta richiede un nuovo accesso (Token Scaduto/Revocato). Ricollega l\'account dal pannello Admin.');
+                return PublishResult::failure('La connessione dell\'agenzia Meta richiede un nuovo accesso (Token Scaduto/Revocato). Ricollega l\'account dal pannello Admin.', PublicationFailureClassification::ManualReview);
             }
         }
 
         if (!$this->verifyAccountCapabilities($account)) {
-            return PublishResult::failure('Account non configurato per la pubblicazione API (o token mancante).');
+            return PublishResult::failure('Account non configurato per la pubblicazione API (o token mancante).', PublicationFailureClassification::ManualReview);
         }
 
         if (config('social.publishing.dry_run', false)) {
             return PublishResult::success(
-                'dryrun_meta_' . $post->id . '_' . now()->timestamp,
+                'dryrun_meta_' . $publication->id . '_' . now()->timestamp,
                 null,
                 [
                     'dry_run' => true,
                     'platform' => $account->platform->value,
-                    'post_id' => $post->id,
+                    'publication_id' => $publication->id,
                     'account_id' => $account->id,
                     'should_not_count_as_real_publication' => true,
                 ]
@@ -65,16 +73,24 @@ class MetaPublisher implements SocialPublisherInterface
             
             $snapshot = $publication->payload_snapshot ?? [];
             
-            $message = $snapshot['caption'] ?? '';
-            $hashtags = $snapshot['hashtags'] ?? [];
+            // Resolve Target Account live: use frozen target data
+            // To respect user feedback: "MetaPublisher deve utilizzare proprio il target congelato dopo la verifica."
+            $snapshotTarget = $snapshot['target'];
+            
+            $message = $snapshot['caption'];
+            $hashtags = $snapshot['hashtags'];
+            $privacyOptions = $snapshotTarget['privacy_options'] ?? [];
             if (!empty($hashtags)) {
                 $message = trim($message . "\n\n" . collect($hashtags)
                     ->map(fn ($h) => str_starts_with($h, '#') ? $h : "#{$h}")
                     ->implode(' '));
             }
             
-            // Risolvi token e ID tramite metodo isolato
-            [$accessToken, $providerAccountId] = $this->resolveTokenAndProviderId($account);
+            // Risolvi token 
+            [$accessToken, $defaultProviderId] = $this->resolveTokenAndProviderId($account);
+
+            // USE FROZEN TARGET ID
+            $providerAccountId = $snapshotTarget['external_id'] ?? throw new \Exception("Missing frozen target external_id for Meta publishing");
 
             $payload = [
                 'access_token' => $accessToken,
@@ -84,77 +100,62 @@ class MetaPublisher implements SocialPublisherInterface
             // Media attachment handling from snapshot
             $mediaItemsData = collect($snapshot['media'] ?? []);
             
-            // Generate public URLs for the media items from the snapshot
-            // We need to pass them to mediaUrlService which expects a collection of MarketingCampaignPostMedia,
-            // but the snapshot only has arrays. We can mock them or reconstruct them.
-            // Let's get the IDs and load them from DB, or if we want absolute isolation, we shouldn't use live DB.
-            // But SocialMediaPublicUrlService expects Media models. So we load them from DB using the snapshot IDs.
-            $mediaItemIds = $mediaItemsData->pluck('media_id')->filter()->toArray();
-            $mediaItems = \App\Models\MarketingCampaignPostMedia::whereIn('id', $mediaItemIds)->get()
-                ->sortBy(function($model) use ($mediaItemIds) {
-                    return array_search($model->id, $mediaItemIds);
-                })->values();
-
+            // Generate public URLs for the media items from the snapshot directly
             $mediaUrls = [];
             $mediaType = null;
             $diagnosticPayloads = [];
-
             $mediaDescriptors = [];
+            $contentTypeStr = $snapshotTarget['publication_type'];
 
-            if ($mediaItems->count() > 0) {
-                // Prendi il tipo dal primo media per Facebook
-                $primaryMedia = $mediaItems->first();
-                if (isset($primaryMedia->media_type) && in_array(strtolower($primaryMedia->media_type), ['video', 'image'])) {
-                    $mediaType = strtolower($primaryMedia->media_type) === 'video' ? 'VIDEO' : 'IMAGE';
-                } else {
-                    $mediaType = in_array(strtolower(pathinfo($primaryMedia->path ?? '', PATHINFO_EXTENSION)), ['mp4', 'mov', 'webm']) ? 'VIDEO' : 'IMAGE';
+            if (count($mediaItemsData) > 0) {
+                $primaryMedia = $mediaItemsData[0];
+                $mediaType = strtolower($primaryMedia['media_type']) === 'video' ? 'VIDEO' : 'IMAGE';
+
+                if ($contentTypeStr === 'reel' && $mediaType !== 'VIDEO') {
+                    return PublishResult::failure(
+                        'Dominio Meta: Un Reel richiede obbligatoriamente un file video.',
+                        PublicationFailureClassification::Permanent
+                    );
                 }
 
-                // Genera public URLs per tutti i media
-                $validatedItems = $this->mediaUrlService->getValidatedPublicUrls($mediaItems, $correlationId);
-                foreach ($mediaItems as $idx => $media) {
-                    $v = $validatedItems[$idx] ?? null;
-                    if (!$v) continue;
-                    $mediaUrls[] = $v['url'];
-                    $diagnosticPayloads[] = $v['diagnostic'];
+                $deliveryResults = $this->mediaDeliveryService->deliver($publication);
+                
+                foreach ($deliveryResults as $idx => $result) {
+                    if (!$result->passed) {
+                        return PublishResult::failure(implode(', ', $result->errors), PublicationFailureClassification::Temporary);
+                    }
+
+                    $mediaUrls[] = $result->url;
+                    $diagnosticPayloads[] = $result->diagnosticPayload;
                     
-                    $ext = strtolower(pathinfo($media->path ?? '', PATHINFO_EXTENSION));
-                    $isVideo = strtolower($media->media_type ?? '') === 'video' || in_array($ext, ['mp4', 'mov', 'webm']);
                     $mediaDescriptors[] = [
-                        'id' => $media->id,
-                        'url' => $v['url'],
-                        'type' => $isVideo ? 'video' : 'image'
+                        'id' => $mediaItemsData[$idx]['media_id'] ?? $idx,
+                        'url' => $result->url,
+                        'type' => $result->type
                     ];
                 }
-            }
-
-            $contentTypeStr = $post->content_type instanceof \App\Enums\Social\MarketingCampaignPostType 
-                ? $post->content_type->value 
-                : $post->content_type;
-
-            if ($contentTypeStr === 'reel' && $mediaType !== 'VIDEO') {
-                return PublishResult::failure('Dominio Meta: Un Reel richiede obbligatoriamente un file video.');
             }
 
             if ($isInstagram) {
                 $result = $this->publishToInstagram($account, $payload, $mediaDescriptors, $contentTypeStr, $correlationId, $providerAccountId);
             } else {
-                $result = $this->publishToFacebook($account, $payload, $mediaUrls[0] ?? null, $mediaType, $correlationId, $providerAccountId);
+                $result = $this->publishToFacebook($account, $payload, $mediaUrls[0] ?? null, $mediaType, $correlationId, $providerAccountId, $privacyOptions);
             }
 
             if (!empty($diagnosticPayloads)) {
-                $snapshot = $result->responseSnapshot ?? [];
-                $snapshot['media_diagnostics'] = $diagnosticPayloads;
+                $snapshotDiag = $result->responseSnapshot ?? [];
+                $snapshotDiag['media_diagnostics'] = $diagnosticPayloads;
                 $result = new PublishResult(
                     $result->success,
                     $result->externalPostId,
                     $result->externalContainerId,
                     $result->externalPermalink,
                     $result->errorMessage,
-                    $snapshot,
+                    $snapshotDiag,
                     $result->isProcessing(),
                     $result->externalTaskId,
-                    $result->providerStatePayload
+                    $result->providerStatePayload,
+                    $result->failureClassification
                 );
             }
 
@@ -163,14 +164,26 @@ class MetaPublisher implements SocialPublisherInterface
         } catch (\Exception $e) {
             Log::error('Meta Publisher Exception', [
                 'error' => $e->getMessage(),
-                'post_id' => $post->id,
+                'publication_id' => $publication->id,
                 'correlation_id' => $correlationId
             ]);
-            return PublishResult::failure('Eccezione durante la pubblicazione: ' . $e->getMessage());
+            return PublishResult::failure('Eccezione durante la pubblicazione: ' . $e->getMessage(), PublicationFailureClassification::Temporary);
         }
     }
 
-    protected function publishToFacebook(ClientSocialAccount $account, array $payload, ?string $mediaUrl, ?string $mediaType, ?string $correlationId, string $providerAccountId): PublishResult
+    protected function classifyErrorResponse(\Illuminate\Http\Client\Response $response): PublicationFailureClassification
+    {
+        $status = $response->status();
+        if ($status >= 500 || $status === 429 || $status === 408) {
+            return PublicationFailureClassification::Temporary;
+        }
+        if ($status === 401 || $status === 403) {
+            return PublicationFailureClassification::ManualReview;
+        }
+        return PublicationFailureClassification::Permanent;
+    }
+
+    protected function publishToFacebook(ClientSocialAccount $account, array $payload, ?string $mediaUrl, ?string $mediaType, ?string $correlationId, string $providerAccountId, array $privacyOptions = []): PublishResult
     {
         $graphVersion = config('services.meta.graph_version', 'v19.0');
         $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$providerAccountId}";
@@ -189,6 +202,10 @@ class MetaPublisher implements SocialPublisherInterface
             $endpoint = "{$baseEndpoint}/feed";
         }
 
+        if (!empty($privacyOptions)) {
+            $payload['privacy'] = json_encode($privacyOptions);
+        }
+
         $client = Http::withHeaders([
             'X-Correlation-Id' => $correlationId ?? 'none'
         ]);
@@ -196,7 +213,7 @@ class MetaPublisher implements SocialPublisherInterface
         $response = $client->post($endpoint, $payload);
 
         if (!$response->successful()) {
-            return PublishResult::failure('Errore API Facebook: ' . $response->body(), $response->json());
+            return PublishResult::failure('Errore API Facebook: ' . $response->body(), $this->classifyErrorResponse($response), $response->json());
         }
 
         $data = $response->json();
@@ -206,14 +223,10 @@ class MetaPublisher implements SocialPublisherInterface
     protected function publishToInstagram(ClientSocialAccount $account, array $payload, array $mediaDescriptors, ?string $contentTypeStr, ?string $correlationId, string $providerAccountId): PublishResult
     {
         if (empty($mediaDescriptors)) {
-            return PublishResult::failure('Instagram richiede un file multimediale (Immagine o Video).');
+            return PublishResult::failure('Instagram richiede un file multimediale (Immagine o Video).', PublicationFailureClassification::Permanent);
         }
 
-        // Se l'account usa la vecchia config e manca l'ID, proviamo il fallback
         $igAccountId = $providerAccountId;
-        if (empty($igAccountId)) {
-             $igAccountId = $account->instagram_business_account_id;
-        }
 
         $graphVersion = config('services.meta.graph_version', 'v19.0');
         $baseEndpoint = "https://graph.facebook.com/{$graphVersion}/{$igAccountId}";
@@ -242,7 +255,7 @@ class MetaPublisher implements SocialPublisherInterface
                 $itemResponse = $client->post("{$baseEndpoint}/media", $itemPayload);
 
                 if (!$itemResponse->successful()) {
-                    return PublishResult::failure("Errore IG Carousel Item Container (Indice {$index}): " . $itemResponse->body(), $itemResponse->json());
+                    return PublishResult::failure("Errore IG Carousel Item Container (Indice {$index}): " . $itemResponse->body(), $this->classifyErrorResponse($itemResponse), $itemResponse->json());
                 }
 
                 $childId = $itemResponse->json('id');
@@ -276,7 +289,7 @@ class MetaPublisher implements SocialPublisherInterface
             $containerResponse = $client->post("{$baseEndpoint}/media", $containerPayload);
 
             if (!$containerResponse->successful()) {
-                return PublishResult::failure('Errore IG Single Container: ' . $containerResponse->body(), $containerResponse->json());
+                return PublishResult::failure('Errore IG Single Container: ' . $containerResponse->body(), $this->classifyErrorResponse($containerResponse), $containerResponse->json());
             }
 
             $containerData = $containerResponse->json();

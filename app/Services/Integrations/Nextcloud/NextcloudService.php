@@ -5,6 +5,11 @@ namespace App\Services\Integrations\Nextcloud;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Exceptions\Social\NextcloudFileNotFoundException;
+use App\Exceptions\Social\NextcloudPermanentFailureException;
+use App\Exceptions\Social\NextcloudTemporaryUnavailableException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 
 class NextcloudService
 {
@@ -153,6 +158,144 @@ class NextcloudService
         } catch (\Exception $e) {
             Log::error('Errore connessione Nextcloud: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Recupera le info dettagliate di un singolo file (depth 0).
+     */
+    public function getFileInfo(string $path): \App\Domain\Social\DTOs\NextcloudFileInfo
+    {
+        if (!$this->isConfigured()) {
+            throw new NextcloudPermanentFailureException('Nextcloud non è configurato.');
+        }
+
+        $url = rtrim($this->buildWebdavUrl($path), '/');
+
+        try {
+            $response = Http::timeout(10)
+                ->retry(
+                    3,
+                    300,
+                    function (\Throwable $exception): bool {
+                        if ($exception instanceof ConnectionException) {
+                            return true;
+                        }
+
+                        if ($exception instanceof RequestException && $exception->response) {
+                            return in_array(
+                                $exception->response->status(),
+                                [408, 425, 429],
+                                true
+                            ) || $exception->response->serverError();
+                        }
+
+                        return false;
+                    },
+                    throw: false
+                )
+                ->withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Depth' => '0',
+                    'Content-Type' => 'application/xml',
+                ])
+                ->send('PROPFIND', $url, [
+                    'body' => '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/><oc:fileid/></d:prop></d:propfind>'
+                ]);
+        } catch (ConnectionException $e) {
+            throw new NextcloudTemporaryUnavailableException(
+                'Nextcloud connection failed: ' . $e->getMessage(),
+                0,
+                $e
+            );
+        } catch (\Throwable $e) {
+            throw new NextcloudTemporaryUnavailableException(
+                'Nextcloud request failed: ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+
+        if ($response->status() === 404) {
+            throw new NextcloudFileNotFoundException("File not found on Nextcloud: {$path}");
+        }
+
+        if (!$response->successful()) {
+            if (in_array($response->status(), [408, 425, 429], true) || $response->serverError()) {
+                throw new NextcloudTemporaryUnavailableException(
+                    "Nextcloud API returned {$response->status()}"
+                );
+            }
+
+            throw new NextcloudPermanentFailureException(
+                "Nextcloud API returned {$response->status()}"
+            );
+        }
+
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NOCDATA);
+        if ($xml === false) {
+            throw new NextcloudTemporaryUnavailableException("Nextcloud XML parsing failed for {$path}");
+        }
+
+        $dav = $xml->children('DAV:');
+        $res = $dav->response[0] ?? null;
+
+        if (!$res) {
+            throw new NextcloudTemporaryUnavailableException("Nextcloud invalid DAV response for {$path}");
+        }
+
+        $responseDav = $res->children('DAV:');
+        $href = urldecode((string) $responseDav->href);
+        $hrefPath = \Illuminate\Support\Str::after($href, $this->webdavPath . '/' . $this->username);
+
+        $propstat = null;
+        foreach ($responseDav->propstat as $p) {
+            $status = (string) $p->children('DAV:')->status;
+            if (str_contains($status, '200 OK')) {
+                $propstat = $p;
+                break;
+            }
+        }
+
+        if (!$propstat) {
+             throw new NextcloudTemporaryUnavailableException("Nextcloud missing 200 OK propstat for {$path}");
+        }
+
+        $prop = $propstat->children('DAV:')->prop;
+        if (!$prop) {
+            throw new NextcloudTemporaryUnavailableException("Nextcloud missing prop in response for {$path}");
+        }
+
+        $resourceType = $prop->resourcetype->children('DAV:');
+        $isDir = isset($resourceType->collection);
+        
+        if ($isDir) {
+            throw new NextcloudFileNotFoundException("Requested Nextcloud path is a directory: {$path}");
+        }
+
+        $contentType = (string) $prop->children('DAV:')->getcontenttype;
+        $size = (int) $prop->children('DAV:')->getcontentlength;
+        $etag = (string) $prop->children('DAV:')->getetag;
+        $etag = trim($etag, '"');
+
+        $ocProp = $prop->children('http://owncloud.org/ns');
+        $fileId = isset($ocProp->fileid) ? (string) $ocProp->fileid : '';
+
+        try {
+            return new \App\Domain\Social\DTOs\NextcloudFileInfo(
+                path: $hrefPath,
+                fileId: $fileId,
+                etag: $etag,
+                mimeType: $contentType,
+                sizeBytes: $size
+            );
+        } catch (\InvalidArgumentException $e) {
+            throw new NextcloudPermanentFailureException(
+                "Nextcloud returned invalid metadata for {$path}: {$e->getMessage()}",
+                0,
+                $e
+            );
         }
     }
 

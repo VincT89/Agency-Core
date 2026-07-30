@@ -28,7 +28,7 @@ class PublicationLifecycleTest extends TestCase
             ],
             'Failed and NeedsManualReview' => [
                 [PublicationStatus::Failed, PublicationStatus::NeedsManualReview],
-                MarketingCampaignPostStatus::Failed
+                MarketingCampaignPostStatus::NeedsManualReview
             ],
             'Publishing and Published' => [
                 [PublicationStatus::Publishing, PublicationStatus::Published],
@@ -119,7 +119,19 @@ class PublicationLifecycleTest extends TestCase
             'client_social_account_id' => $account->id,
             'platform' => \App\Enums\Social\SocialPlatform::Instagram->value,
             'status' => PublicationStatus::NeedsManualReview->value,
+            'snapshot_schema_version' => '1.0',
+            'snapshot_hash' => 'dummy',
+            'attempt_count' => 1,
+            'payload_snapshot' => [],
         ]);
+
+        $verifierMock = \Mockery::mock(\App\Domain\Social\Services\MarketingCampaignPostPublicationIntegrityVerifier::class);
+        $verifierMock->shouldReceive('verify')->andReturn(new \App\Domain\Social\DTOs\PublicationIntegrityResult(
+            passed: true,
+            severity: \App\Enums\Social\IntegritySeverity::Error,
+            errors: []
+        ));
+        $this->app->instance(\App\Domain\Social\Services\MarketingCampaignPostPublicationIntegrityVerifier::class, $verifierMock);
 
         $admin = \App\Models\User::factory()->create(['role' => 'admin'] ?? []);
         $this->actingAs($admin);

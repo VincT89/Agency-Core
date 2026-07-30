@@ -72,7 +72,10 @@ class AgencySocialDomainTest extends TestCase
         $action = new \App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction();
         $action->execute($post);
 
-        $this->assertEquals(\App\Enums\Social\MarketingCampaignPostStatus::Failed->value, $post->refresh()->status->value);
+        $this->assertEquals(
+            \App\Enums\Social\MarketingCampaignPostStatus::NeedsManualReview->value,
+            $post->refresh()->status->value
+        );
 
         // Ora forziamo manual review a published
         $pub2->update(['status' => \App\Enums\Social\PublicationStatus::Published->value]);

@@ -232,6 +232,21 @@ pre {
 }
 
 @media (max-width: 767px) {
+  .aruba-status-grid,
+  .fiscal-history-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fiscal-action-row,
+  .fiscal-action-row form,
+  .fiscal-action-row .btn {
+    width: 100%;
+  }
+
+  .fiscal-action-row .btn {
+    min-height: 44px;
+  }
+
   .audit-log-filters {
     grid-template-columns: minmax(0, 1fr);
   }

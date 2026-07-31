@@ -2,256 +2,241 @@
 
 ## Stato reale
 
-La fondazione fiscale interna è pronta. L'integrazione Aruba non è ancora
-implementata.
+L'integrazione è pronta lato codice e attende il collaudo con un account Aruba
+abilitato alle API. Il gestionale genera l'XML FatturaPA, esegue la verifica
+Aruba senza invio, trasmette una sola volta quando autorizzato, riceve le
+callback e riconcilia gli stati come controllo aggiuntivo.
 
-Preparare una fattura nel gestionale oggi significa validare i dati, assegnare
-un numero, congelare uno snapshot e impedire modifiche accidentali. Non viene
-generato alcun XML e non parte alcuna chiamata verso Aruba o lo SdI.
+Questo non significa che la produzione sia già certificata. Prima dell'uso
+reale servono credenziali valide, servizio Premium o delega compatibile,
+configurazione delle callback, collaudo DEMO e conferma del commercialista sul
+caso fiscale effettivo.
 
-## Funzioni già implementate
+## Perimetro supportato
 
-### Profilo fiscale dell'agenzia
+Il primo perimetro volutamente limitato comprende:
 
-Sono gestiti:
+- fattura ordinaria `TD01`;
+- formato privati `FPR12`;
+- valuta `EUR`;
+- emittente italiano;
+- clienti privati italiani o esteri;
+- una condizione di pagamento `TP02` e una modalità FatturaPA `MP01`-`MP23`;
+- IBAN obbligatorio per le modalità che lo richiedono;
+- aliquote IVA ordinarie oppure aliquota zero con natura e riferimento
+  normativo;
+- un solo documento XML per fattura.
 
-- denominazione;
-- partita IVA e codice fiscale;
-- regime fiscale;
-- indirizzo, CAP, comune, provincia e Stato;
-- email e PEC;
-- codice destinatario;
-- IBAN;
-- serie e numero iniziale della numerazione fiscale.
+Non sono ancora supportati:
 
-Il profilo è accessibile soltanto ad admin e amministrazione.
+- fatture verso la Pubblica Amministrazione `FPA12`;
+- note di credito e documenti diversi da `TD01`;
+- ritenute, casse previdenziali, split payment e bollo virtuale;
+- sconti o maggiorazioni fiscali complessi;
+- pagamenti rateali multipli;
+- allegati FatturaPA;
+- fatture ricevute e contabilità passiva Aruba.
 
-### Dati del cliente
+Questi casi non vengono improvvisati: i controlli impediscono la preparazione o
+l'invio e mostrano cosa deve essere completato.
 
-Sono disponibili partita IVA, codice fiscale, indirizzo, Stato, PEC, email di
-fatturazione e codice destinatario. Per i clienti italiani la preparazione
-richiede partita IVA o codice fiscale e almeno codice destinatario o PEC.
+## Flusso operativo
 
-### Voci e importi
+1. Admin o amministrazione completa profilo fiscale, cliente, righe e
+   pagamento.
+2. Il gestionale ricalcola imponibile, IVA e totale sul server.
+3. Con `Prepara fattura elettronica` assegna il numero fiscale, salva uno
+   snapshot e blocca le modifiche. Non contatta Aruba.
+4. `Verifica con Aruba` genera l'XML e usa `dryRun=true`. La fattura non viene
+   inviata allo SdI.
+5. L'invio effettivo compare soltanto se quella precisa versione dell'XML ha
+   superato la verifica e il blocco di sicurezza è abilitato.
+6. Il gestionale trasmette senza retry automatico dell'upload e conserva il
+   riferimento restituito da Aruba.
+7. Callback e sincronizzazione periodica registrano gli aggiornamenti Aruba e
+   le notifiche SdI.
+8. Admin e amministrazione ricevono una notifica interna per consegna, scarto o
+   altro esito finale rilevante.
 
-Ogni riga contiene descrizione, quantità, unità di misura, prezzo, aliquota IVA,
-natura e riferimento normativo per le operazioni a IVA zero. Imponibile, IVA e
-totale sono ricalcolati sul server.
+Il download dell'XML è disponibile dalla pagina della fattura dopo la
+preparazione.
 
-### Preparazione fiscale
+## Protezione dal doppio invio
 
-Il sistema:
+- La preparazione e la numerazione sono transazionali.
+- Un doppio clic sulla verifica riusa il risultato già valido per lo stesso
+  hash XML.
+- L'invio reale richiede una verifica `dryRun` corrispondente, salvo esplicita
+  disattivazione di questa regola in configurazione.
+- Quando parte l'upload reale, la fattura entra subito in `transmitting` e non
+  accetta un secondo invio concorrente.
+- Nessun retry HTTP viene applicato automaticamente all'upload.
+- Se la risposta è certa e negativa, la fattura torna `ready` e può essere
+  corretta o ritentata.
+- Se la risposta è assente o ambigua, resta bloccata in `transmitting` finché
+  lo stato non viene riconciliato. Non va premuto nuovamente l'invio.
+- Il codice Aruba `0034`, relativo a un file già ricevuto, viene trattato come
+  esito da verificare e non come autorizzazione a reinviare.
 
-1. supporta attualmente soltanto `TD01`;
-2. verifica i dati dell'agenzia, del cliente e delle righe;
-3. assegna un numero progressivo separato per anno e serie;
-4. crea uno snapshot fiscale immutabile;
-5. blocca modifica, eliminazione e variazione delle righe;
-6. consente di riaprire una fattura non inviata mantenendo il numero già
-   riservato;
-7. rende idempotente il doppio clic sulla preparazione.
+## Stati registrati
 
-## Stati fiscali presenti
-
-| Stato | Significato previsto |
+| Stato gestionale | Significato |
 | --- | --- |
-| `not_prepared` | Bozza ancora modificabile. |
-| `ready` | Validata e bloccata, ma non inviata. |
-| `transmitting` | Invio al provider in corso. |
-| `sent` | Presa in carico dal provider o inoltrata, secondo la futura mappatura. |
-| `delivered` | Consegna confermata. |
-| `delivery_failed` | Mancata consegna. |
-| `rejected` | Fattura scartata. |
+| `not_prepared` | Bozza fiscale modificabile. |
+| `ready` | Snapshot bloccato, non inviato. |
+| `transmitting` | Invio avviato o esito ancora incerto. |
+| `sent` | Presa in carico da Aruba o inviata allo SdI. |
+| `delivered` | Consegnata. |
+| `delivery_failed` | Non consegnata, notifica `MC`. |
+| `undeliverable` | Recapito impossibile, notifica `AT`. |
+| `rejected` | Scartata, notifica `NS`. |
+| `accepted` | Accettata, notifica `NE EC01`. |
+| `refused` | Rifiutata, notifica `NE EC02`. |
+| `terms_expired` | Decorrenza termini, notifica `DT`. |
+| `processing_error` | Errore di elaborazione Aruba. |
 
-Solo i primi due stati sono attualmente raggiunti dal flusso applicativo. La
-mappatura precisa degli altri stati deve essere definita usando le risposte e le
-notifiche Aruba.
+Uno scarto o un errore di elaborazione permette la riapertura controllata. Il
+numero fiscale già riservato viene mantenuto e la cronologia precedente non
+viene cancellata.
 
-## Parti mancanti
+## Configurazione
 
-Non sono ancora presenti:
+Le variabili sono presenti in `.env.example`:
 
-- generatore XML FatturaPA;
-- validazione contro schema e controlli applicabili;
-- nomi file conformi e gestione progressivo invio;
-- client HTTP Aruba;
-- autenticazione, cache e refresh dei token;
-- `dryRun` Aruba;
-- invio effettivo;
-- persistenza di nome file Aruba, identificativo richiesta e identificativo
-  SdI;
-- endpoint callback autenticato;
-- polling di riconciliazione come fallback;
-- gestione delle notifiche di scarto, consegna e mancata consegna;
-- retry e idempotenza specifici per l'invio fiscale;
-- download e conservazione dei file e delle ricevute;
-- costruzione completa dei dati di pagamento FatturaPA, inclusi modalità,
-  condizioni, scadenze e coordinate previste dal tracciato;
-- note di credito, ritenute, casse previdenziali, bollo, sconti complessi,
-  fatture PA e altri tipi documento.
+```dotenv
+ARUBA_EINVOICING_ENABLED=false
+ARUBA_EINVOICING_ENV=demo
+ARUBA_EINVOICING_USERNAME=
+ARUBA_EINVOICING_PASSWORD=
+ARUBA_EINVOICING_CALLBACK_KEY=
+ARUBA_EINVOICING_ALLOW_SEND=false
+ARUBA_EINVOICING_REQUIRE_DRY_RUN=true
+ARUBA_EINVOICING_SIGNATURE_DOMAIN=
+ARUBA_EINVOICING_SIGNATURE_CREDENTIAL=
+ARUBA_EINVOICING_CONNECT_TIMEOUT=5
+ARUBA_EINVOICING_HTTP_TIMEOUT=20
+```
 
-Di conseguenza, aggiungere username e password Aruba nel `.env` oggi non produce
-alcun effetto.
+Regole:
 
-## Requisiti Aruba
+- `ARUBA_EINVOICING_ENV` accetta soltanto `demo` o `production`;
+- gli URL ufficiali di autenticazione e web service sono derivati
+  dall'ambiente e non vanno inseriti manualmente;
+- `ARUBA_EINVOICING_CALLBACK_KEY` deve contenere almeno 32 caratteri;
+- `ARUBA_EINVOICING_ALLOW_SEND=false` consente il test connessione e il
+  `dryRun`, ma blocca l'upload effettivo;
+- `ARUBA_EINVOICING_REQUIRE_DRY_RUN=true` va mantenuto;
+- dominio e credenziale di firma sono opzionali e vanno compilati soltanto se
+  previsti dal contratto Aruba;
+- in produzione `APP_URL` deve essere HTTPS;
+- dopo ogni modifica al file `.env` vanno ricostruite le cache di
+  configurazione e riavviati i processi persistenti.
 
-La documentazione Aruba API v2 prevede:
+Username, password e chiave callback non vengono salvati nel profilo fiscale e
+non sono mostrati nell'interfaccia.
 
-- ambiente DEMO e ambiente PRODUZIONE con base URL distinti;
-- accesso ai web service per utenti Premium o utenze gestite tramite delega
-  idonea;
-- autenticazione `POST /auth/signin` con credenziali nel body
-  `application/x-www-form-urlencoded`;
-- access token con durata dichiarata di 30 minuti e possibilità di refresh;
-- invio di XML non firmato tramite `POST /services/invoice/upload`;
-- file XML codificato Base64 nel campo `dataFile`;
-- opzione `dryRun=true` per validare senza inviare allo SdI;
-- ricerca delle fatture e delle notifiche;
-- callback push per fatture, notifiche e cambi di stato;
-- callback autenticata con API key statica oppure con il metodo configurato nel
-  pannello Premium.
+## Callback da configurare su Aruba
 
-La documentazione indica inoltre limiti di frequenza e dimensione, inclusi 5 MB
-per il file e 30 richieste di upload al minuto per IP. Il client dovrà quindi
-gestire cache del token, `429`, backoff e riconciliazione.
+Il pannello `Dati fiscali e Aruba` mostra gli URL completi dell'ambiente
+corrente. I percorsi sono:
 
-Aruba ritenta le callback non consegnate secondo la propria policy; la
-documentazione corrente indica fino a 10 tentativi a intervalli di 3 ore. Il
-nostro endpoint dovrà essere idempotente, perché la stessa notifica può arrivare
-più volte.
+```text
+POST /api/v1/integrations/aruba/updateInvoiceStatus
+POST /api/v1/integrations/aruba/createNotification
+```
 
-## Attività richieste all'utente Aruba
+La chiave statica configurata su Aruba deve essere inviata nell'header
+`Authorization` e deve coincidere con `ARUBA_EINVOICING_CALLBACK_KEY`.
 
-1. Attivare il servizio adatto all'uso API o una delega compatibile.
-2. Completare il primo accesso e le verifiche richieste, incluso OTP quando
-   previsto.
-3. Richiedere o abilitare l'ambiente DEMO.
-4. Confermare partita IVA mittente e soggetto titolare del servizio.
-5. Configurare dal pannello la callback HTTPS quando l'endpoint sarà disponibile.
-6. Generare o configurare la credenziale di autenticazione della callback.
-7. Conservare username, password e chiave callback fuori dal repository.
+Le callback:
 
-Questi passaggi non possono essere sostituiti dal solo codice del gestionale.
+- accettano soltanto JSON valido;
+- rifiutano richieste prive della chiave corretta;
+- deduplicano le consegne ripetute;
+- archiviano separatamente e in forma cifrata l'XML della notifica;
+- non inseriscono Base64, token o credenziali nei log;
+- non fanno retrocedere lo stato quando arriva un evento più vecchio;
+- rispondono senza effetti alle fatture in ingresso, fuori dal perimetro
+  attuale.
 
-## Architettura da implementare
+Aruba dichiara fino a 10 tentativi di consegna a intervalli di 3 ore quando la
+callback non ottiene una risposta valida.
 
-### Configurazione
+## Sincronizzazione di sicurezza
 
-La configurazione finale dovrà distinguere almeno:
+Lo scheduler esegue ogni cinque minuti:
 
-- abilitazione globale;
-- ambiente `demo` o `production`;
-- username e password;
-- URL di autenticazione e API derivati dall'ambiente;
-- segreto della callback;
-- timeout e limiti di retry.
+```bash
+php artisan invoices:sync-electronic-statuses --limit=5
+```
 
-I nomi delle future variabili `ARUBA_*` verranno definiti insieme al codice. Non
-vanno documentati come operativi prima che esistano in `config` e
-`.env.example`.
+Ogni fattura richiede al massimo una lettura del dettaglio e una delle
+notifiche. Il limite a cinque fatture mantiene il ciclo entro il limite
+documentato di ricerca Aruba. La sincronizzazione non sostituisce le callback,
+ma recupera aggiornamenti mancanti o esiti ambigui.
 
-### Componenti
+## Dati e log
 
-1. `FatturaPaXmlBuilder`: trasforma lo snapshot fiscale in XML.
-2. `FatturaPaValidator`: verifica schema e regole supportate.
-3. `ArubaAuthenticator`: ottiene, memorizza e rinnova il token.
-4. `ArubaInvoiceClient`: esegue dry-run, upload e ricerche.
-5. Action transazionale di invio: blocca la fattura e crea una richiesta
-   idempotente.
-6. Job di trasmissione: separa il click dell'utente dalla chiamata esterna.
-7. Callback controller: autentica, valida, deduplica e aggiorna lo stato.
-8. Job di riconciliazione: recupera gli esiti mancanti o ambigui.
-9. Audit e telemetria: registra identificativi ed esiti senza salvare segreti.
+Per ogni tentativo sono conservati:
 
-### Persistenza necessaria
+- ambiente e modalità, `dry_run` o `live`;
+- utente che ha avviato l'operazione;
+- hash, nome e contenuto XML cifrato;
+- nome assegnato da Aruba e identificativo della richiesta;
+- identificativo Aruba e identificativo SdI;
+- stato, descrizione leggibile ed eventuale codice errore;
+- cronologia deduplicata degli eventi;
+- XML delle notifiche SdI cifrato.
 
-Oltre allo stato attuale serviranno almeno:
+I log di integrazione contengono soltanto metadati sanitizzati. Le credenziali,
+il token, il file Base64 e la chiave callback non devono comparire nei log né
+nel repository.
 
-- hash dell'XML inviato;
-- nome file locale e nome assegnato da Aruba;
-- identificativo della richiesta;
-- identificativo SdI;
-- data di invio e ultimo aggiornamento;
-- ultimo codice e descrizione di errore sanitizzata;
-- payload delle notifiche strettamente necessario;
-- chiave di idempotenza;
-- riferimenti a ricevute e file conservati.
+## Procedura DEMO
 
-## Flusso target
+1. Attivare il servizio Premium o la delega API e ottenere le credenziali DEMO.
+2. Impostare ambiente `demo`, servizio attivo, credenziali e chiave callback.
+3. Lasciare `ARUBA_EINVOICING_ALLOW_SEND=false`.
+4. Ricostruire la cache di configurazione e usare `Verifica collegamento`.
+5. Preparare una fattura con dati concordati e scaricare l'XML.
+6. Eseguire `Verifica con Aruba` e confrontare XML, importi e anagrafiche.
+7. Impostare `ARUBA_EINVOICING_ALLOW_SEND=true` soltanto per il collaudo
+   completo.
+8. Inviare nel collaudo Aruba e simulare almeno `RC`, `NS`, `MC` e `AT`.
+9. Verificare callback, polling, campanella notifiche e cronologia.
+10. Riportare il blocco invio a `false` alla fine del test.
 
-1. L'operatore completa profilo, cliente, righe e pagamento.
-2. Il gestionale prepara e blocca la fattura.
-3. Genera XML da quello stesso snapshot.
-4. Valida localmente formato e regole supportate.
-5. Esegue `dryRun` Aruba in DEMO.
-6. Se il risultato è valido, l'operatore autorizza l'invio reale.
-7. Il job autentica, invia una sola volta e salva gli identificativi.
-8. Callback o polling aggiornano stato e ricevute.
-9. Uno scarto permette un nuovo documento corretto secondo la procedura
-   contabile concordata; non si modifica silenziosamente ciò che è già partito.
+## Passaggio in produzione
 
-## Gestione degli errori
-
-- `401`: rinnovare il token una sola volta; se persiste, richiedere intervento
-  sulle credenziali.
-- `429`: rispettare attesa e backoff, senza creare un nuovo invio logico.
-- timeout prima della risposta: riconciliare per nome file, hash o
-  identificativo prima di ritentare.
-- errore Aruba `0034` o indicazione di file già inviato: trattare come possibile
-  duplicato e cercare l'invio esistente.
-- scarto SdI: memorizzare codice e descrizione, mostrare un messaggio chiaro e
-  richiedere intervento amministrativo.
-- callback duplicata: rispondere in modo idempotente senza ripetere gli effetti.
-
-## Piano di collaudo
-
-### Test automatici
-
-- XML valido per il caso TD01 supportato;
-- caratteri speciali e arrotondamenti;
-- aliquota zero con natura e riferimento;
-- numerazione concorrente;
-- token scaduto e refresh;
-- dry-run riuscito e fallito;
-- timeout e `429`;
-- risposta duplicato;
-- callback valida, non autorizzata, duplicata e fuori ordine;
-- riconciliazione dopo esito ambiguo;
-- impossibilità di modificare una fattura già trasmessa.
-
-### DEMO Aruba
-
-1. Test connessione e verifica utenza.
-2. Invio dry-run di una fattura controllata.
-3. Invio DEMO completo.
-4. Ricezione degli stati previsti.
-5. Simulazione di scarto e mancata consegna.
-6. Verifica del retry callback.
-7. Confronto tra XML, snapshot, importi e pannello Aruba.
-
-### Produzione
-
-1. Credenziali inserite nel secret store.
-2. Callback HTTPS verificata.
-3. Kill switch inizialmente disattivato.
-4. Una sola fattura reale autorizzata dall'amministrazione.
-5. Confronto con pannello Aruba e ricevuta SdI.
-6. Attivazione ordinaria soltanto dopo riconciliazione completa.
+1. Ottenere conferma scritta del commercialista su serie, progressivo iniziale,
+   regime, modalità di pagamento e casi fiscali realmente usati.
+2. Eseguire backup di database e storage.
+3. Impostare `APP_URL` pubblico HTTPS e credenziali di produzione.
+4. Configurare e provare entrambe le callback nel pannello Aruba Premium.
+5. Mantenere `ARUBA_EINVOICING_ALLOW_SEND=false` durante il test connessione e
+   il primo `dryRun` di produzione.
+6. Confrontare la fattura con il pannello Aruba.
+7. Abilitare l'invio e autorizzare una sola prima fattura reale.
+8. Attendere lo stato SdI e confrontare ricevuta, XML e pannello Aruba.
+9. Abilitare l'uso ordinario soltanto dopo il completamento del primo ciclo.
 
 ## Criterio di completamento
 
-La fatturazione elettronica sarà considerata pronta soltanto quando una fattura
-DEMO avrà completato generazione XML, validazione, upload, callback o polling e
-stato finale senza interventi sul database. Per la produzione servirà poi una
-prima fattura reale verificata anche nel pannello Aruba.
+Il codice è considerato pronto. L'integrazione esterna sarà considerata pronta
+per la produzione soltanto dopo:
 
-La correttezza tecnica non sostituisce la verifica del commercialista su
-numerazione, regime fiscale, bollo, ritenute e casi documentali effettivamente
-necessari all'agenzia.
+- ciclo DEMO completo;
+- callback verificate da Aruba;
+- primo invio reale autorizzato;
+- riconciliazione dello stato finale senza interventi sul database;
+- verifica contabile del documento.
+
+Dire che “mancano soltanto le credenziali” è quindi corretto per avviare il
+collaudo, ma non è sufficiente per dichiarare conclusa la messa in produzione.
 
 ## Riferimenti ufficiali
 
 - [Aruba Fatturazione Elettronica: documentazione API v2](https://fatturazioneelettronica.aruba.it/apidoc/v2/docs.html)
 - [Aruba: manuale account Premium](https://guide.pec.it/fatturazione-elettronica/manuale-account-premium.pdf)
-- [Specifiche tecniche operative FatturaPA](https://www.fatturapa.gov.it/export/documenti/Specifiche_tecniche_del_formato_FatturaPA_V1.3.1.pdf)
+- [Specifiche tecniche FatturaPA](https://www.fatturapa.gov.it/export/documenti/Specifiche_tecniche_del_formato_FatturaPA_V1.3.1.pdf)
 - [Agenzia delle Entrate: fatturazione elettronica e SdI](https://www1.agenziaentrate.gov.it/web_app_entrate/fatturazione_elettronica.html)

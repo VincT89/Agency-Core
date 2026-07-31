@@ -20,7 +20,7 @@ class InvoiceFiscalSnapshotBuilder
             : ($clientCountry === 'IT' ? '0000000' : 'XXXXXXX');
 
         return [
-            'schema_version' => 1,
+            'schema_version' => 2,
             'prepared_at' => now()->toIso8601String(),
             'issuer' => [
                 'legal_name' => $profile->legal_name,
@@ -63,6 +63,12 @@ class InvoiceFiscalSnapshotBuilder
                 'tax_amount' => $this->money($invoice->tax_amount),
                 'total' => $this->money($invoice->total),
                 'notes' => $invoice->notes,
+            ],
+            'payment' => [
+                'terms' => 'TP02',
+                'method' => strtoupper((string) $profile->default_payment_method),
+                'due_date' => $invoice->due_date?->toDateString(),
+                'iban' => $this->normalizeIdentifier($profile->iban),
             ],
             'lines' => $invoice->items
                 ->values()

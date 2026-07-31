@@ -42,6 +42,14 @@
   outline-offset: 2px;
 }
 
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .62;
+  transform: none;
+  box-shadow: none;
+}
+
 
 .btn-purple { background: var(--purple); color: var(--text-inv); border-color: var(--purple); }
 .btn-purple:hover { background: color-mix(in srgb, var(--purple) 80%, black); }

@@ -284,7 +284,7 @@ class MarketingCampaignPostShow extends Component
         } catch (MarketingCampaignPostMediaResolutionException $e) {
             $resolvedMedia = collect();
             $this->mediaResolutionFailed = true;
-            $this->addError('media', 'I media della versione non possono essere determinati in modo sicuro.');
+            $this->addError('media', 'Media non disponibili.');
             Log::error('social.version_media.resolution_failed_in_show', [
                 'marketing_campaign_post_id' => $this->post->id,
                 'error' => $e->getMessage(),

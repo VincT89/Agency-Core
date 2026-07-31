@@ -3,6 +3,7 @@
 use App\Http\Middleware\ForcePasswordChange;
 use App\Http\Middleware\N8nAuth;
 use App\Http\Middleware\N8nIdempotency;
+use App\Http\Middleware\ArubaCallbackAuth;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'force.password.change' => ForcePasswordChange::class,
             'n8n.auth' => N8nAuth::class,
             'n8n.idempotency' => N8nIdempotency::class,
+            'aruba.callback.auth' => ArubaCallbackAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

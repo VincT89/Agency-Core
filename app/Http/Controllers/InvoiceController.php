@@ -7,7 +7,12 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Domain\Finance\Services\InvoiceAmountsCalculator;
+use App\Domain\Finance\Services\FatturaPaXmlBuilder;
 use App\Domain\Finance\Services\InvoiceFiscalReadinessService;
+use App\Enums\Finance\ElectronicInvoiceTransmissionStatus;
+use App\Exceptions\Finance\ArubaConfigurationException;
+use App\Exceptions\Finance\ElectronicInvoiceXmlException;
+use App\Services\Integrations\Aruba\ArubaConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -64,14 +69,71 @@ class InvoiceController extends Controller
     public function show(
         Invoice $invoice,
         InvoiceFiscalReadinessService $readinessService,
+        FatturaPaXmlBuilder $xmlBuilder,
+        ArubaConfiguration $arubaConfiguration,
     ): View
     {
         $this->authorize('view', $invoice);
-        $invoice->load(['client', 'project', 'marketingCampaign', 'creator', 'items', 'payments', 'auditLogs.user', 'attachments.uploader']);
+        $invoice->load([
+            'client',
+            'project',
+            'marketingCampaign',
+            'creator',
+            'items',
+            'payments',
+            'auditLogs.user',
+            'attachments.uploader',
+            'electronicInvoiceTransmissions' => fn ($query) => $query
+                ->with('submitter')
+                ->with(['events' => fn ($events) => $events->latest('occurred_at')])
+                ->latest('attempt_number'),
+        ]);
 
         $fiscalReadiness = $readinessService->check($invoice);
 
-        return view('invoices.show', compact('invoice', 'fiscalReadiness'));
+        try {
+            $arubaStatus = $arubaConfiguration->status();
+        } catch (ArubaConfigurationException $exception) {
+            $arubaStatus = [
+                'enabled' => false,
+                'environment' => null,
+                'environment_label' => 'Configurazione non valida',
+                'credentials_configured' => false,
+                'callback_configured' => false,
+                'allow_send' => false,
+                'ready_for_validation' => false,
+                'ready_for_send' => false,
+                'configuration_error' => $exception->getMessage(),
+            ];
+        }
+
+        $currentXmlHash = null;
+
+        if (is_array($invoice->fiscal_snapshot)) {
+            try {
+                $currentXmlHash = $xmlBuilder->build($invoice->fiscal_snapshot)->hash;
+            } catch (ElectronicInvoiceXmlException) {
+                $currentXmlHash = null;
+            }
+        }
+
+        $matchingValidation = $currentXmlHash !== null
+            && $invoice->electronicInvoiceTransmissions->contains(
+                fn ($transmission) => $transmission->mode === 'dry_run'
+                    && $transmission->environment === ($arubaStatus['environment'] ?? null)
+                    && $transmission->xml_hash === $currentXmlHash
+                    && $transmission->status === ElectronicInvoiceTransmissionStatus::Validated
+            );
+        $latestLiveTransmission = $invoice->electronicInvoiceTransmissions
+            ->firstWhere('mode', 'live');
+
+        return view('invoices.show', compact(
+            'invoice',
+            'fiscalReadiness',
+            'arubaStatus',
+            'matchingValidation',
+            'latestLiveTransmission',
+        ));
     }
 
     public function edit(Invoice $invoice, \App\Domain\Core\Queries\ClientQuery $clientQuery): View

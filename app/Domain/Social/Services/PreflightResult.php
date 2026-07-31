@@ -46,9 +46,9 @@ class PreflightResult implements Wireable
 
             $messages[] = match (true) {
                 in_array($name, ['account_capabilities', 'token_valid'], true) =>
-                    'Ricollega l\'account social prima di pubblicare.',
+                    'Account social non disponibile.',
                 $name === 'platform' =>
-                    'La piattaforma selezionata non è configurata correttamente.',
+                    'Piattaforma non disponibile.',
                 in_array($name, ['media_resolution'], true) =>
                     'Alcuni file del post non sono più disponibili. Selezionali di nuovo.',
                 in_array($name, ['instagram_media_present', 'media_present'], true) =>
@@ -74,7 +74,7 @@ class PreflightResult implements Wireable
                 $name === 'reel_media_valid' =>
                     'Un Reel richiede un solo file video.',
                 default =>
-                    'La configurazione della pubblicazione non è completa.',
+                    'Pubblicazione non disponibile per questo post.',
             };
         }
 

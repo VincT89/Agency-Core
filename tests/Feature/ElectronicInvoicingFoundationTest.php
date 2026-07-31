@@ -265,6 +265,7 @@ class ElectronicInvoicingFoundationTest extends TestCase
             'pec' => 'agenzia@pec.example.test',
             'recipient_code' => 'ABC1234',
             'iban' => 'IT60X0542811101000000123456',
+            'default_payment_method' => 'MP05',
             'invoice_series' => 'FE',
             'initial_sequence' => 1,
         ], $overrides);

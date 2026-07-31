@@ -271,6 +271,84 @@
   color: var(--text2);
 }
 .inv-fiscal-issues li + li { margin-top: 6px; }
+.fiscal-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.fiscal-action-row-top {
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.btn-loading-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.inline-loader {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: inline-loader-spin .7s linear infinite;
+}
+@keyframes inline-loader-spin {
+  to { transform: rotate(360deg); }
+}
+.aruba-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.aruba-status-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--bg2);
+}
+.aruba-status-card .badge { margin-top: 4px; }
+.fiscal-history {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.fiscal-history-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.fiscal-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .45fr);
+  gap: 18px;
+  align-items: start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--bg2);
+}
+.fiscal-history-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 5px;
+}
+.fiscal-history-side { min-width: 0; }
+.fiscal-history-error {
+  margin-top: 8px;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.fiscal-file-name { overflow-wrap: anywhere; }
 .inv-filter-stack {
   align-items: stretch;
   flex-direction: column;

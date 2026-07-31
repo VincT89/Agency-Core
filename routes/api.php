@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Integrations\N8n\MarketingCampaignPostResultCont
 use App\Http\Controllers\Api\V1\Integrations\N8n\MarketingCampaignPostVersionController;
 use App\Http\Controllers\Api\V1\Integrations\N8n\N8nChatbotController;
 use App\Http\Controllers\Api\V1\Integrations\N8n\N8nTicketController;
+use App\Http\Controllers\Api\V1\Integrations\Aruba\ArubaCallbackController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/integrations/n8n')
@@ -27,4 +28,14 @@ Route::prefix('v1/integrations/n8n')
 
         Route::post('/chatbot/client-message', [N8nChatbotController::class, 'store'])->name('chatbot.client-message');
         Route::post('/chatbot/outgoing-messages/{messageId}/status', [N8nChatbotController::class, 'updateOutgoingMessageStatus'])->name('chatbot.outgoing-messages.status');
+    });
+
+Route::prefix('v1/integrations/aruba')
+    ->middleware(['aruba.callback.auth', 'throttle:aruba-callbacks'])
+    ->name('api.v1.integrations.aruba.')
+    ->group(function () {
+        Route::post('/updateInvoiceStatus', [ArubaCallbackController::class, 'updateInvoiceStatus'])
+            ->name('invoice-status.update');
+        Route::post('/createNotification', [ArubaCallbackController::class, 'createNotification'])
+            ->name('notifications.store');
     });

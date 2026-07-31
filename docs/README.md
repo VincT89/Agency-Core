@@ -15,7 +15,7 @@ l'implementazione divergono.
 | [Shooting](shooting-workflow.md) | Flusso tra marketing, fotografo e contatto esterno del cliente. |
 | [Pubblicazione social](social-production-readiness.md) | Architettura, Meta, kill switch, collaudo, monitoraggio e gestione errori. |
 | [Contratto n8n](n8n-contract.md) | Autenticazione, firma, idempotenza, endpoint e payload. |
-| [Fatturazione elettronica e Aruba](electronic-invoicing-aruba.md) | Stato del codice fiscale, parti mancanti e piano di integrazione Aruba/SdI. |
+| [Fatturazione elettronica e Aruba](electronic-invoicing-aruba.md) | Perimetro supportato, configurazione, sicurezza, callback e collaudo Aruba/SdI. |
 
 ## Significato degli stati
 

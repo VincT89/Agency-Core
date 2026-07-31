@@ -5,6 +5,7 @@ namespace App\Domain\Finance\Services;
 use App\Domain\Finance\DTOs\InvoiceFiscalReadiness;
 use App\Domain\Finance\Support\ItalianTaxIdentifier;
 use App\Enums\Finance\VatNature;
+use App\Enums\Finance\FatturaPaPaymentMethod;
 use App\Models\BillingProfile;
 use App\Models\Client;
 use App\Models\Invoice;
@@ -53,6 +54,7 @@ class InvoiceFiscalReadinessService
             'city' => 'comune dell’agenzia',
             'country_code' => 'Stato della sede dell’agenzia',
             'invoice_series' => 'serie di numerazione',
+            'default_payment_method' => 'modalità di pagamento',
         ];
 
         foreach ($required as $field => $label) {
@@ -94,6 +96,26 @@ class InvoiceFiscalReadinessService
         ) {
             $issues[] = 'Il codice fiscale dell’agenzia non è formalmente valido.';
         }
+
+        if (strtoupper((string) $profile->vat_country_code) !== 'IT') {
+            $issues[] = 'Il collegamento Aruba è predisposto per un emittente con partita IVA italiana.';
+        }
+
+        if (strtoupper((string) $profile->country_code) !== 'IT') {
+            $issues[] = 'Il collegamento Aruba è predisposto per una sede italiana.';
+        }
+
+        $paymentMethod = FatturaPaPaymentMethod::tryFrom(
+            strtoupper((string) $profile->default_payment_method)
+        );
+
+        if ($paymentMethod === null) {
+            $issues[] = 'Seleziona una modalità di pagamento valida.';
+        } elseif ($paymentMethod->requiresIban() && blank($profile->iban)) {
+            $issues[] = 'Inserisci l’IBAN richiesto dalla modalità di pagamento selezionata.';
+        }
+
+        $this->checkPartyLengths($profile, 'agenzia', $issues);
     }
 
     /**
@@ -163,9 +185,19 @@ class InvoiceFiscalReadinessService
             ) {
                 $issues[] = 'Il codice destinatario del cliente deve contenere 6 o 7 caratteri.';
             }
+
+            if (filled($client->sdi_code) && strlen((string) $client->sdi_code) === 6) {
+                $issues[] = 'Le fatture verso la Pubblica Amministrazione non sono ancora supportate.';
+            }
+
+            if (! preg_match('/^\d{5}$/', (string) $client->postal_code)) {
+                $issues[] = 'Il CAP italiano del cliente deve contenere cinque cifre.';
+            }
         } elseif (blank($client->vat_number) && blank($client->tax_code)) {
             $issues[] = 'Inserisci l’identificativo fiscale del cliente estero.';
         }
+
+        $this->checkPartyLengths($client, 'cliente', $issues);
     }
 
     /**
@@ -179,6 +211,26 @@ class InvoiceFiscalReadinessService
 
         if ($invoice->issue_date === null) {
             $issues[] = 'Indica la data della fattura.';
+        }
+
+        if ($invoice->due_date === null) {
+            $issues[] = 'Indica la data di scadenza della fattura.';
+        }
+
+        if (strtoupper((string) $invoice->currency) !== 'EUR') {
+            $issues[] = 'La trasmissione elettronica è abilitata soltanto per fatture in euro.';
+        }
+
+        if (filled($invoice->fiscal_number) && strlen((string) $invoice->fiscal_number) > 20) {
+            $issues[] = 'Il numero fiscale supera i 20 caratteri ammessi da FatturaPA.';
+        }
+
+        if ((float) $invoice->total <= 0) {
+            $issues[] = 'Il totale della fattura deve essere maggiore di zero.';
+        }
+
+        if ($invoice->status === 'cancelled') {
+            $issues[] = 'Una fattura annullata non può essere trasmessa.';
         }
 
         if ($invoice->items->isEmpty()) {
@@ -242,6 +294,8 @@ class InvoiceFiscalReadinessService
 
             if (blank($item->vat_reference)) {
                 $issues[] = "{$prefix}: indica il riferimento normativo per l’IVA zero.";
+            } elseif (mb_strlen((string) $item->vat_reference) > 100) {
+                $issues[] = "{$prefix}: il riferimento normativo non può superare 100 caratteri.";
             }
         } elseif (filled($item->vat_nature)) {
             $issues[] = "{$prefix}: la natura IVA va indicata solo con aliquota zero.";
@@ -277,5 +331,25 @@ class InvoiceFiscalReadinessService
     private function sameAmount(float $left, float $right): bool
     {
         return abs($left - $right) < 0.005;
+    }
+
+    /**
+     * @param  array<int, string>  $issues
+     */
+    private function checkPartyLengths(object $party, string $label, array &$issues): void
+    {
+        $legalName = $party instanceof Client
+            ? ($party->company_name ?: $party->name)
+            : $party->legal_name;
+
+        foreach ([
+            [$legalName, 80, "La denominazione del {$label}"],
+            [$party->address, 60, "L’indirizzo del {$label}"],
+            [$party->city, 60, "Il comune del {$label}"],
+        ] as [$value, $limit, $description]) {
+            if (filled($value) && mb_strlen((string) $value) > $limit) {
+                $issues[] = "{$description} non può superare {$limit} caratteri.";
+            }
+        }
     }
 }

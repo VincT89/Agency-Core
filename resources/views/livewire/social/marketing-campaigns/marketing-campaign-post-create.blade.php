@@ -94,11 +94,15 @@
                     $hasPhoto = $this->hasPhotoMedia();
                     
                     $isMixed = $hasVideo && $hasPhoto;
+                    $tiktokPublishingAvailable = ! config('services.tiktok.mock_publishing', true);
                     $canSelectTikTok = false;
                     $tiktokTitle = 'TikTok';
                     $tiktokLabelMeta = '';
                     
-                    if (!$tiktokAccount) {
+                    if (!$tiktokPublishingAvailable) {
+                        $tiktokTitle = 'TikTok non disponibile';
+                        $tiktokLabelMeta = '(Non disponibile)';
+                    } elseif (!$tiktokAccount) {
                         $tiktokTitle = 'Account TikTok non configurato';
                         $tiktokLabelMeta = '(Non collegato)';
                     } elseif ($isMixed) {
@@ -280,13 +284,6 @@
                         <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
                             <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Caricamento dei file in corso...
                         </div>
-                        <div wire:loading.remove wire:target="media" class="u-bg-gray-50 u-border u-border-line u-p-sm u-flex u-gap-sm" style="border-radius: 6px;" x-show="Object.keys(localBlobUrls).length === 0">
-                            <i data-lucide="info" class="u-icon-sm u-text-muted u-mt-xs"></i>
-                            <div class="u-text-meta u-text-muted">
-                                Puoi selezionare più file (max 10 in totale). <br>
-                                <strong class="u-text-heading">MP4 H.264 consigliato.</strong> Formati come HEVC/H.265 potrebbero non mostrare l'anteprima o fallire la pubblicazione sui social.
-                            </div>
-                        </div>
                     </div>
                 </div>
                 @error('media') <span class="form-err">{{ $message }}</span> @enderror
@@ -323,7 +320,6 @@
             <input type="checkbox" wire:model.live="form.ai_analysis_enabled" class="cmp-ai-check-input">
             <div class="cmp-ai-check-content">
               <div class="cmp-ai-check-title">Richiedi Analisi Sody</div>
-              <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà un copy se assente.</div>
             </div>
           </label>
 

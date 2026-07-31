@@ -17,9 +17,9 @@ Stato verificato il 31 luglio 2026.
 | Notifiche e registro attività | Pronto | Notifiche personali e campanella ticket restano separate. Il registro completo è visibile soltanto agli amministratori. |
 | n8n | Pronto lato contratto | Generazione e rigenerazione post, callback protette, ticket e messaggi chatbot sono documentati e testati. |
 | Pubblicazione social | Pronta lato codice, collaudo esterno pendente | Motore, code, snapshot, controlli, retry e dashboard sono presenti. Meta richiede ancora configurazione dell'app, autorizzazioni e test reali. |
-| Fatturazione elettronica | Fondazione pronta | Dati fiscali, controlli, numerazione e snapshot sono presenti. XML FatturaPA, client Aruba, invio e callback SdI non sono ancora implementati. |
+| Fatturazione elettronica | Pronta lato codice, collaudo Aruba pendente | XML FatturaPA, verifica senza invio, upload protetto, callback, polling e cronologia sono presenti. Servono account Premium o delega, credenziali e ciclo DEMO prima della produzione. |
 
-L'ultima verifica completa ha superato 712 test con 2.032 asserzioni; un test è
+L'ultima verifica completa ha superato 719 test con 2.085 asserzioni; un test è
 stato escluso perché specifico di un diverso motore database. Questo risultato
 riduce il rischio di regressioni, ma non sostituisce i collaudi reali con Meta,
 Aruba, n8n e Nextcloud.
@@ -38,8 +38,8 @@ Aruba, n8n e Nextcloud.
 - Shooting interno tra marketing e fotografo, con contatto cliente gestito
   esternamente tramite email, WhatsApp, telefono o altro canale.
 - Fatture gestionali, voci, IVA, pagamenti, scadenze e riepilogo economico.
-- Preparazione fiscale TD01, numerazione progressiva e blocco della fattura
-  prima del futuro invio elettronico.
+- Preparazione fiscale TD01, numerazione progressiva, XML FatturaPA, verifica
+  Aruba senza invio, trasmissione controllata e ricezione degli esiti SdI.
 - Hosting, domini, rinnovi e interventi tecnici.
 - Notifiche personali, campanella ticket e registro attività amministrativo.
 - Monitoraggio di scheduler, code, job falliti e processi operativi.
@@ -112,9 +112,9 @@ presenti nell'esempio.
 - Meta: App ID, App Secret, redirect OAuth e versione Graph API.
 - TikTok: credenziali, redirect, modalità di consegna e kill switch.
 - Social: dry-run, pubblicazione automatica e soglie operative.
-
-Non esistono ancora variabili Aruba nel codice: aggiungerle al file `.env` non
-attiverebbe alcun invio. Verranno definite insieme al client Aruba.
+- Aruba: ambiente, abilitazione, credenziali Premium, chiave callback, verifica
+  obbligatoria e blocco separato dell'invio effettivo. Le variabili operative
+  sono riportate in `.env.example` e nella guida dedicata.
 
 ## Verifiche di sviluppo
 
@@ -147,7 +147,9 @@ I punti non negoziabili sono:
 6. cache ricostruite e worker riavviati dopo ogni rilascio;
 7. smoke test delle funzioni principali e controllo dei log;
 8. pubblicazione automatica lasciata disattivata finché Meta non supera il
-   collaudo reale.
+   collaudo reale;
+9. `ARUBA_EINVOICING_ALLOW_SEND=false` finché il ciclo DEMO, le callback e la
+   prima fattura reale non sono stati autorizzati e verificati.
 
 ## Documentazione
 
@@ -170,8 +172,12 @@ L'indice completo è disponibile in [docs/README.md](docs/README.md).
   gestionale coordina richiesta, disponibilità, conferma, task e calendario.
 - Meta non è considerato pronto per la produzione finché OAuth, asset reali e
   primo ciclo di pubblicazione non vengono verificati con l'app approvata.
-- La fatturazione elettronica non invia ancora nulla ad Aruba o allo SdI.
-- La preparazione fiscale supporta attualmente soltanto il documento TD01.
+- La fatturazione elettronica è pronta lato codice, ma non è dichiarata pronta
+  in produzione finché non supera DEMO, callback e primo invio reale con
+  credenziali Aruba.
+- Il perimetro fiscale supporta TD01/FPR12 in EUR; non comprende ancora PA,
+  note di credito, ritenute, casse previdenziali, split payment, bollo e
+  rateazioni multiple.
 - La cancellazione di un cliente dal database non elimina automaticamente le
   cartelle remote Nextcloud.
 - I contenuti e le integrazioni future possono introdurre nuovi casi non coperti

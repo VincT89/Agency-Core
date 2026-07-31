@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Domain\Finance\Support\ItalianTaxIdentifier;
+use App\Enums\Finance\FatturaPaPaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateBillingProfileRequest extends FormRequest
@@ -16,20 +18,21 @@ class UpdateBillingProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'legal_name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['required', 'string', 'max:80'],
             'vat_country_code' => ['required', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
             'vat_number' => ['required', 'string', 'max:28'],
             'tax_code' => ['nullable', 'string', 'max:28'],
             'fiscal_regime' => ['required', 'string', 'size:4', 'regex:/^RF\d{2}$/'],
-            'address' => ['required', 'string', 'max:255'],
+            'address' => ['required', 'string', 'max:60'],
             'postal_code' => ['required', 'string', 'max:12'],
-            'city' => ['required', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:60'],
             'province' => ['nullable', 'required_if:country_code,IT', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
             'country_code' => ['required', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
             'email' => ['nullable', 'email', 'max:255'],
             'pec' => ['nullable', 'email', 'max:255'],
             'recipient_code' => ['nullable', 'string', 'min:6', 'max:7', 'regex:/^[A-Z0-9]+$/'],
             'iban' => ['nullable', 'string', 'min:15', 'max:34', 'regex:/^[A-Z]{2}\d{2}[A-Z0-9]+$/'],
+            'default_payment_method' => ['required', Rule::enum(FatturaPaPaymentMethod::class)],
             'invoice_series' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9-]+$/'],
             'initial_sequence' => ['required', 'integer', 'min:1', 'max:999999'],
         ];
@@ -59,6 +62,17 @@ class UpdateBillingProfileRequest extends FormRequest
                         'Il codice fiscale non è formalmente valido.'
                     );
                 }
+
+                $paymentMethod = FatturaPaPaymentMethod::tryFrom(
+                    (string) $this->input('default_payment_method')
+                );
+
+                if ($paymentMethod?->requiresIban() && blank($this->input('iban'))) {
+                    $validator->errors()->add(
+                        'iban',
+                        'La modalità di pagamento selezionata richiede l’IBAN.'
+                    );
+                }
             },
         ];
     }
@@ -74,6 +88,7 @@ class UpdateBillingProfileRequest extends FormRequest
             'country_code',
             'recipient_code',
             'iban',
+            'default_payment_method',
             'invoice_series',
         ];
 

@@ -44,6 +44,33 @@ class InvoicePolicy
     public function reopenFiscal(User $user, Invoice $invoice): bool
     {
         return $user->canAccessFinance()
+            && $invoice->fiscal_status->allowsReopening();
+    }
+
+    public function validateFiscal(User $user, Invoice $invoice): bool
+    {
+        return $user->canAccessFinance()
             && $invoice->fiscal_status === InvoiceFiscalStatus::Ready;
+    }
+
+    public function sendFiscal(User $user, Invoice $invoice): bool
+    {
+        return $user->canAccessFinance()
+            && $invoice->fiscal_status === InvoiceFiscalStatus::Ready;
+    }
+
+    public function syncFiscal(User $user, Invoice $invoice): bool
+    {
+        return $user->canAccessFinance()
+            && $invoice->electronicInvoiceTransmissions()
+                ->where('mode', 'live')
+                ->whereNotNull('upload_filename')
+                ->exists();
+    }
+
+    public function downloadFiscalXml(User $user, Invoice $invoice): bool
+    {
+        return $user->canAccessFinance()
+            && filled($invoice->fiscal_snapshot);
     }
 }

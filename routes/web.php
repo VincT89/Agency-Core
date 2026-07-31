@@ -226,12 +226,22 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         ->name('invoices.fiscal.prepare');
     Route::post('invoices/{invoice}/fiscal/reopen', [InvoiceFiscalController::class, 'reopen'])
         ->name('invoices.fiscal.reopen');
+    Route::post('invoices/{invoice}/fiscal/validate', [InvoiceFiscalController::class, 'validateWithAruba'])
+        ->name('invoices.fiscal.validate');
+    Route::post('invoices/{invoice}/fiscal/send', [InvoiceFiscalController::class, 'send'])
+        ->name('invoices.fiscal.send');
+    Route::post('invoices/{invoice}/fiscal/sync', [InvoiceFiscalController::class, 'sync'])
+        ->name('invoices.fiscal.sync');
+    Route::get('invoices/{invoice}/fiscal/xml', [InvoiceFiscalController::class, 'downloadXml'])
+        ->name('invoices.fiscal.xml');
     Route::post('invoices/{invoice}/items', [InvoiceItemController::class, 'store'])->name('invoices.items.store');
     Route::delete('invoices/{invoice}/items/{item}', [InvoiceItemController::class, 'destroy'])->name('invoices.items.destroy');
     Route::get('/billing-profile', [BillingProfileController::class, 'edit'])
         ->name('billing-profile.edit');
     Route::put('/billing-profile', [BillingProfileController::class, 'update'])
         ->name('billing-profile.update');
+    Route::post('/billing-profile/aruba/test', [BillingProfileController::class, 'testArubaConnection'])
+        ->name('billing-profile.aruba.test');
     Route::resource('payments', PaymentController::class);
     Route::get('/economic-summary', EconomicSummaryController::class)->name('economic-summary.index');
 

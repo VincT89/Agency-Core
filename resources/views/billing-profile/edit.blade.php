@@ -9,10 +9,6 @@
     <x-panel padded>
         <div class="u-mb-lg">
             <div class="u-text-strong">Dati dell’emittente</div>
-            <div class="u-text-meta">
-                Queste informazioni saranno copiate e bloccate dentro ogni fattura preparata.
-                Non configurano ancora il collegamento con Aruba.
-            </div>
         </div>
 
         <form action="{{ route('billing-profile.update') }}" method="POST">
@@ -98,6 +94,17 @@
                            value="{{ old('recipient_code', $billingProfile->recipient_code) }}"
                            maxlength="7">
                 </x-form-group>
+                <x-form-group label="Modalità di pagamento predefinita" name="default_payment_method" required>
+                    <select name="default_payment_method"
+                            class="form-in @error('default_payment_method') is-invalid @enderror">
+                        @foreach($paymentMethods as $paymentMethod)
+                            <option value="{{ $paymentMethod->value }}"
+                                @selected(old('default_payment_method', $billingProfile->default_payment_method) === $paymentMethod->value)>
+                                {{ $paymentMethod->value }} — {{ $paymentMethod->label() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </x-form-group>
                 <x-form-group label="IBAN" name="iban">
                     <input name="iban" class="form-in @error('iban') is-invalid @enderror"
                            value="{{ old('iban', $billingProfile->iban) }}">
@@ -120,7 +127,6 @@
             </div>
             <div class="u-text-meta u-mb-lg">
                 Esempio: serie FE, anno 2026 e progressivo 1 producono FE-2026-0001.
-                Prima della produzione, fai confermare serie e progressivo iniziale dal commercialista.
             </div>
 
             <div class="modal-ft form-footer-sep">
@@ -129,4 +135,62 @@
             </div>
         </form>
     </x-panel>
+
+    <div class="inv-panel-gap">
+        <x-panel title="Collegamento Aruba" dot="var(--accent)" padded>
+            <div class="inv-section-copy u-mb-lg">
+                <div class="u-text-strong">Stato del collegamento</div>
+            </div>
+
+            <div class="aruba-status-grid">
+                <div class="aruba-status-card">
+                    <div class="form-lbl inv-lbl">Connessione</div>
+                    <x-badge
+                        :status="$arubaStatus['ready_for_validation'] ? 'paid' : 'pending'"
+                        :label="$arubaStatus['ready_for_validation'] ? 'Disponibile' : 'Non disponibile'" />
+                </div>
+                <div class="aruba-status-card">
+                    <div class="form-lbl inv-lbl">Ricezione esiti</div>
+                    <x-badge
+                        :status="$arubaStatus['callback_configured'] ? 'paid' : 'pending'"
+                        :label="$arubaStatus['callback_configured'] ? 'Attiva' : 'Non disponibile'" />
+                </div>
+                <div class="aruba-status-card">
+                    <div class="form-lbl inv-lbl">Invio fatture</div>
+                    <x-badge
+                        :status="$arubaStatus['ready_for_send'] ? 'paid' : 'pending'"
+                        :label="$arubaStatus['ready_for_send'] ? 'Disponibile' : 'Non disponibile'" />
+                </div>
+            </div>
+
+            @if(isset($arubaStatus['configuration_error']))
+                <div class="inv-fiscal-message has-errors">
+                    <div class="u-text-strong">Collegamento non disponibile</div>
+                </div>
+            @endif
+
+            @if($errors->has('aruba'))
+                <div class="inv-fiscal-message has-errors">
+                    <div class="u-text-strong">Collegamento non verificato</div>
+                    <div class="u-text-meta">{{ $errors->first('aruba') }}</div>
+                </div>
+            @endif
+
+            <div class="fiscal-action-row">
+                <form action="{{ route('billing-profile.aruba.test') }}" method="POST"
+                      x-data="{ submitting: false }"
+                      @submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
+                    @csrf
+                    <button type="submit" class="btn btn-p"
+                            :disabled="submitting || {{ $arubaStatus['ready_for_validation'] ? 'false' : 'true' }}">
+                        <span x-show="!submitting">Verifica collegamento</span>
+                        <span x-show="submitting" x-cloak class="btn-loading-copy">
+                            <span class="inline-loader" aria-hidden="true"></span>
+                            Collegamento in verifica
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </x-panel>
+    </div>
 </x-app-layout>

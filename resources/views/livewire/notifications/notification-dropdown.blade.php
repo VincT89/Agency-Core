@@ -33,7 +33,7 @@
                 $iconName = 'check-square';
               elseif ($nType === 'ticket_assigned')
                 $iconName = 'ticket';
-              elseif (in_array($nType, ['invoice_overdue', 'payment_recorded']))
+              elseif (in_array($nType, ['invoice_overdue', 'payment_recorded', 'electronic_invoice_status']))
                 $iconName = 'credit-card';
             @endphp
             <div class="notif-item-title">

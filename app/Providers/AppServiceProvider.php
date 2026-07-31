@@ -27,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
+        \Illuminate\Support\Facades\RateLimiter::for('aruba-callbacks', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)->by($request->ip());
+        });
+
         \Illuminate\Support\Facades\RateLimiter::for('social-media-delivery', function (\Illuminate\Http\Request $request) {
             // Seleziona la chiave: dal media object se esiste, altrimenti dal combination publication+index
             $media = $request->route('media');

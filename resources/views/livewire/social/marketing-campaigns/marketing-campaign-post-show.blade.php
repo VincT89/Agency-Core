@@ -148,11 +148,15 @@
                                     $hasPhoto = $this->hasPhotoMedia();
                                     
                                     $isMixed = $hasVideo && $hasPhoto;
+                                    $tiktokPublishingAvailable = ! config('services.tiktok.mock_publishing', true);
                                     $canSelectTikTok = false;
                                     $tiktokTitle = 'TikTok';
                                     $tiktokLabelMeta = '';
                                     
-                                    if (!$tiktokAccount) {
+                                    if (!$tiktokPublishingAvailable) {
+                                        $tiktokTitle = 'TikTok non disponibile';
+                                        $tiktokLabelMeta = '(Non disponibile)';
+                                    } elseif (!$tiktokAccount) {
                                         $tiktokTitle = 'Account TikTok non configurato';
                                         $tiktokLabelMeta = '(Non collegato)';
                                     } elseif ($isMixed) {
@@ -190,22 +194,6 @@
                             </div>
                             @error('form.publishing_platforms') <span class="form-err">{{ $message }}</span> @enderror
                         </div>
-
-                        @if(config('services.tiktok.mock_publishing', true))
-                            <div class="cmp-alert cmp-alert-warning u-mt-md u-mb-md" style="background: rgba(255, 170, 0, 0.1); border-left: 4px solid #ffaa00; padding: 12px; border-radius: 4px; display: flex; align-items: flex-start; gap: 12px;">
-                                <div class="cmp-alert-icon" style="color: #ffaa00;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                    </svg>
-                                </div>
-                                <div class="cmp-alert-content">
-                                    <h4 style="margin:0 0 4px 0; color: #b37700; font-weight: 600;">Pubblicazione TikTok in prova</h4>
-                                    <p style="margin:0; font-size: 13px; color: #b37700;">I controlli vengono eseguiti normalmente, ma nessun contenuto verrà pubblicato su TikTok.</p>
-                                </div>
-                            </div>
-                        @endif
 
                         {{-- Box 1: Dati Editoriali --}}
                         <div class="panel cmp-panel-pad u-mb-md">
@@ -419,13 +407,6 @@
                                             <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
                                                 <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Caricamento dei file in corso...
                                             </div>
-                                            <div wire:loading.remove wire:target="media" class="u-bg-gray-50 u-border u-border-line u-p-sm u-flex u-gap-sm" style="border-radius: 6px;" x-show="Object.keys(localBlobUrls).length === 0">
-                                                <i data-lucide="info" class="u-icon-sm u-text-muted u-mt-xs"></i>
-                                                <div class="u-text-meta u-text-muted">
-                                                    Puoi selezionare più file (max 10 in totale). <br>
-                                                    <strong class="u-text-heading">MP4 H.264 consigliato.</strong> Formati come HEVC/H.265 potrebbero non mostrare l'anteprima o fallire la pubblicazione sui social.
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                     @error('media') <span class="form-err">{{ $message }}</span> @enderror
@@ -483,8 +464,6 @@
                                             class="cmp-ai-check-input">
                                         <div class="cmp-ai-check-content">
                                             <div class="cmp-ai-check-title">Richiedi Analisi Sody</div>
-                                            <div class="cmp-ai-check-desc">Se abilitato, Sody analizzerà il media e genererà
-                                                un copy se assente.</div>
                                         </div>
                                     </label>
 
@@ -902,18 +881,14 @@
                                             ->orderBy('created_at', 'desc')
                                             ->first();
                                         $preflight = $this->getPreflightResult($platform);
-                                        $canPublish = !$preflight || $preflight->isPass;
+                                        $canPublish = (!$preflight || $preflight->isPass)
+                                            && !($platform === \App\Enums\Social\SocialPlatform::Tiktok->value
+                                                && config('services.tiktok.mock_publishing', true));
                                     @endphp
-                                    
-                                    @if($platform === \App\Enums\Social\SocialPlatform::Tiktok->value)
-                                        <div class="u-bg-gray-50 u-border u-border-gray-200 u-text-gray-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                            <strong>Nota:</strong> il contenuto verrà inviato all'app TikTok. La pubblicazione dovrà essere completata dal telefono.
-                                        </div>
-                                    @endif
                                     
                                     @if($preflight && !$preflight->isPass)
                                         <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                            <strong>Prima di pubblicare, correggi questi elementi</strong>
+                                            <strong>Elementi da correggere</strong>
                                             <ul class="u-pl-sm u-mt-xs" style="list-style-type: disc; margin-left: 1rem;">
                                                 @foreach($preflight->userFacingErrors() as $err)
                                                     <li>{{ $err }}</li>
@@ -937,8 +912,7 @@
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
                                             <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                                <strong>Pubblicazione non completata</strong><br>
-                                                Controlla il collegamento dell'account e riprova. I dettagli sono stati registrati per l'assistenza.
+                                                <strong>Pubblicazione non completata</strong>
                                             </div>
                                             <div class="u-flex u-gap-sm">
                                                 <button type="button" wire:confirm="Vuoi riprovare la pubblicazione? Verifica prima che il tentativo precedente non sia già visibile sul social." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Riprova</button>

@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'pec',
     'recipient_code',
     'iban',
+    'default_payment_method',
     'invoice_series',
     'initial_sequence',
 ])]

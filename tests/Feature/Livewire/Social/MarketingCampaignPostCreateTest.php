@@ -102,6 +102,7 @@ class MarketingCampaignPostCreateTest extends TestCase
         Livewire::test(MarketingCampaignPostCreate::class, ['campaign' => $campaign])
             ->assertSee('Sody sta preparando il contenuto')
             ->assertSee('Chiudi questo pannello')
+            ->assertDontSee('this.$cleanup')
             ->assertDontSee('Interrompi')
             ->set('form.content_type', 'unsupported')
             ->call('saveAndSubmitToN8n')

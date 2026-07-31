@@ -21,6 +21,7 @@
             messageTimer: null,
             delayTimer: null,
             closeTimer: null,
+            cleanupPageHandler: null,
             messages: [
                 'Sto analizzando le informazioni del post.',
                 'Sto preparando il contenuto.',
@@ -30,10 +31,10 @@
             errorMessage: 'La richiesta non è partita. Controlla i campi evidenziati e riprova.',
 
             init() {
-                const cleanupPage = () => this.unlockPage();
+                this.cleanupPageHandler = () => this.unlockPage();
 
-                document.addEventListener('livewire:navigating', cleanupPage);
-                window.addEventListener('pagehide', cleanupPage);
+                document.addEventListener('livewire:navigating', this.cleanupPageHandler);
+                window.addEventListener('pagehide', this.cleanupPageHandler);
 
                 this.messageTimer = window.setInterval(() => {
                     if (this.visible && this.mode === 'working') {
@@ -44,15 +45,19 @@
                 if (this.visible) {
                     this.open();
                 }
+            },
 
-                this.$cleanup(() => {
-                    window.clearInterval(this.messageTimer);
-                    window.clearTimeout(this.delayTimer);
-                    window.clearTimeout(this.closeTimer);
-                    document.removeEventListener('livewire:navigating', cleanupPage);
-                    window.removeEventListener('pagehide', cleanupPage);
-                    this.unlockPage();
-                });
+            destroy() {
+                window.clearInterval(this.messageTimer);
+                window.clearTimeout(this.delayTimer);
+                window.clearTimeout(this.closeTimer);
+
+                if (this.cleanupPageHandler) {
+                    document.removeEventListener('livewire:navigating', this.cleanupPageHandler);
+                    window.removeEventListener('pagehide', this.cleanupPageHandler);
+                }
+
+                this.unlockPage();
             },
 
             start() {

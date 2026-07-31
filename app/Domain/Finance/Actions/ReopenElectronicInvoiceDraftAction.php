@@ -17,9 +17,9 @@ class ReopenElectronicInvoiceDraftAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($lockedInvoice->fiscal_status !== InvoiceFiscalStatus::Ready) {
+            if (! $lockedInvoice->fiscal_status->allowsReopening()) {
                 throw new InvoiceFiscalPreparationException([
-                    'Puoi riaprire soltanto una fattura pronta che non è ancora stata inviata.',
+                    'Puoi riaprire soltanto una fattura pronta, scartata o non elaborata dal servizio.',
                 ]);
             }
 

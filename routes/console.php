@@ -25,6 +25,12 @@ Schedule::command('notify:due-tickets')
     ->withoutOverlapping(120)
     ->onOneServer();
 
+Schedule::command('invoices:sync-electronic-statuses --limit=5')
+    ->everyFiveMinutes()
+    ->name('sync-electronic-invoice-statuses')
+    ->withoutOverlapping(5)
+    ->onOneServer();
+
 Schedule::command('chatbot:sync-tables')
     ->hourly()
     ->name('chatbot-sync-tables')

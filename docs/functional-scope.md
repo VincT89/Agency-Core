@@ -57,10 +57,16 @@ consegna fotografica restano esterne.
 - dati fiscali dell'agenzia;
 - controlli per la preparazione elettronica TD01;
 - numero fiscale progressivo per anno e serie;
-- snapshot fiscale e blocco delle modifiche dopo la preparazione.
+- snapshot fiscale e blocco delle modifiche dopo la preparazione;
+- XML FatturaPA FPR12, pagamento e download del documento;
+- verifica Aruba `dryRun` legata all'hash dell'XML;
+- invio effettivo con blocco del doppio clic e degli esiti incerti;
+- callback autenticate, polling di riconciliazione e cronologia SdI;
+- notifiche a ruoli amministrativi per gli esiti finali rilevanti.
 
-La trasmissione elettronica non è completa: mancano XML FatturaPA, Aruba e
-ricezione degli esiti SdI.
+Il codice è pronto per il collaudo Aruba. L'uso reale resta subordinato ad
+account Premium o delega compatibile, credenziali, callback HTTPS, ciclo DEMO e
+verifica del commercialista.
 
 ### Hosting e operatività
 
@@ -103,15 +109,18 @@ una voce di menu non concede l'accesso alla risorsa.
 | n8n | Contratto implementato con Bearer, HMAC e idempotenza. |
 | Meta | Publisher e OAuth implementati; autorizzazione dell'app e collaudo reale pendenti. |
 | TikTok | Codice presente; attivazione reale soggetta a credenziali, modalità e collaudo separati. |
-| Aruba Fatturazione Elettronica | Non implementata; esiste soltanto la fondazione fiscale interna. |
+| Aruba Fatturazione Elettronica | Codice completo per TD01/FPR12; credenziali e collaudo DEMO/produzione pendenti. |
 | Email | Dipende dal mailer configurato nell'ambiente. |
 
 ## Limiti dichiarati
 
 - Nessun portale cliente generale.
 - Nessun pagamento online Stripe o PayPal.
-- Nessun invio elettronico ad Aruba/SdI allo stato attuale.
-- Solo TD01 nella preparazione fiscale corrente.
+- Fatturazione elettronica limitata a TD01/FPR12 in EUR e ai casi fiscali
+  esplicitamente validati; PA, note di credito, ritenute, casse, split payment,
+  bollo e rateazioni multiple non sono supportati.
+- Nessuna garanzia di operatività Aruba finché credenziali, callback, quote e
+  primo ciclo reale non vengono verificati con il provider.
 - Nessuna eliminazione automatica delle cartelle Nextcloud quando si elimina un
   record locale.
 - La modifica del nome cartella Nextcloud crea la nuova struttura ma non sposta
@@ -128,7 +137,7 @@ Al 31 luglio 2026:
 - build frontend superata;
 - compilazione delle viste superata;
 - controllo formale del diff superato;
-- 712 test superati, 1 escluso, 2.032 asserzioni;
+- 719 test superati, 1 escluso, 2.085 asserzioni;
 - migrazioni applicate correttamente su MySQL;
 - controllo responsive già eseguito sulle pagine raggiungibili a 375, 768 e
   1440 pixel.

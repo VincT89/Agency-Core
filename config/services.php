@@ -1,5 +1,8 @@
 <?php
 
+$arubaEnvironment = strtolower((string) env('ARUBA_EINVOICING_ENV', 'demo'));
+$arubaProduction = $arubaEnvironment === 'production';
+
 return [
 
     /*
@@ -122,6 +125,26 @@ return [
         'request_timeout' => env('NEXTCLOUD_REQUEST_TIMEOUT', 15),
         'stream_timeout' => env('NEXTCLOUD_STREAM_TIMEOUT', 300),
         'stream_read_timeout' => env('NEXTCLOUD_STREAM_READ_TIMEOUT', 30),
+    ],
+
+    'aruba_einvoicing' => [
+        'enabled' => filter_var(env('ARUBA_EINVOICING_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'environment' => $arubaEnvironment,
+        'username' => env('ARUBA_EINVOICING_USERNAME'),
+        'password' => env('ARUBA_EINVOICING_PASSWORD'),
+        'callback_key' => env('ARUBA_EINVOICING_CALLBACK_KEY'),
+        'allow_send' => filter_var(env('ARUBA_EINVOICING_ALLOW_SEND', false), FILTER_VALIDATE_BOOL),
+        'require_dry_run' => filter_var(env('ARUBA_EINVOICING_REQUIRE_DRY_RUN', true), FILTER_VALIDATE_BOOL),
+        'signature_domain' => env('ARUBA_EINVOICING_SIGNATURE_DOMAIN'),
+        'signature_credential' => env('ARUBA_EINVOICING_SIGNATURE_CREDENTIAL'),
+        'auth_base_url' => $arubaProduction
+            ? 'https://auth.fatturazioneelettronica.aruba.it'
+            : 'https://demoauth.fatturazioneelettronica.aruba.it',
+        'api_base_url' => $arubaProduction
+            ? 'https://ws.fatturazioneelettronica.aruba.it'
+            : 'https://demows.fatturazioneelettronica.aruba.it',
+        'connect_timeout' => (int) env('ARUBA_EINVOICING_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('ARUBA_EINVOICING_HTTP_TIMEOUT', 20),
     ],
 
 ];

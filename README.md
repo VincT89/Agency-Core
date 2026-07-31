@@ -94,9 +94,10 @@ generico. Per provare pubblicazione e monitoraggio devono essere avviati anche
 worker che ascoltino `chatbot`, `social-publishing` e
 `social-reconciliation`.
 
-Non eseguire `php artisan db:seed` in produzione: il `DatabaseSeeder` richiama
-`DemoDataSeeder`, che crea utenti e dati dimostrativi. La procedura sicura di
-pulizia è descritta in [Pulizia dei dati dimostrativi](docs/data-cleanup.md).
+Non eseguire `php artisan db:seed` in produzione senza indicare una classe: il
+`DatabaseSeeder` richiama `DemoDataSeeder`, che crea utenti e dati
+dimostrativi. Il seeder dedicato alla pulizia è descritto in
+[Pulizia dei dati dimostrativi](docs/data-cleanup.md).
 
 ## Configurazione essenziale
 

@@ -1,75 +1,131 @@
 # Contratto n8n
 
-Questo documento descrive il contratto API e i payload scambiati tra Laravel (Agency Core) e n8n, bloccando lo stato attuale per i test di integrazione e garantendo retrocompatibilità.
+## Scopo
 
-## 1. Auth inbound n8n → Laravel
+Questo documento descrive il contratto tra Agency Core e n8n per generazione
+dei post, callback, ticket e messaggi chatbot. Le richieste in ingresso passano
+dal prefisso:
 
-Tutte le API in ingresso da n8n verso Laravel richiedono:
+```text
+/api/v1/integrations/n8n
+```
 
-- `Authorization: Bearer <N8N_API_TOKEN>`
-- `X-N8N-Timestamp: <unix timestamp>`
-- `X-N8N-Signature: sha256=<hex digest>`
-- `Idempotency-Key: <identificatore stabile del tentativo>` per tutte le
-  richieste mutative.
+Il contratto è implementato e coperto da test. In produzione devono restare
+obbligatorie firma HMAC e idempotenza.
 
-`N8N_API_TOKEN` e `N8N_SIGNING_SECRET` devono essere valori distinti di almeno
-32 byte. La firma è l'HMAC SHA-256, calcolato con `N8N_SIGNING_SECRET`, dei
-seguenti byte canonici:
+## Sicurezza delle richieste n8n verso Laravel
+
+Ogni richiesta richiede:
+
+```http
+Authorization: Bearer <N8N_API_TOKEN>
+X-N8N-Timestamp: <unix timestamp>
+X-N8N-Signature: sha256=<digest esadecimale>
+Idempotency-Key: <chiave stabile del tentativo>
+```
+
+`Idempotency-Key` è obbligatoria per le richieste mutative. Token e segreto di
+firma devono essere distinti, casuali e lunghi almeno 32 byte.
+
+La firma è un HMAC SHA-256 calcolato con `N8N_SIGNING_SECRET` sui byte:
 
 ```text
 <timestamp>\n<METHOD>\n<request-target>\n<raw request body>
 ```
 
-`METHOD` è il verbo HTTP maiuscolo. `request-target` comprende path e query
-string esattamente come inviati, per esempio
-`/api/v1/integrations/n8n/health?probe=ready`. Il body deve essere firmato
-esattamente come viene trasmesso, senza ri-serializzarlo dopo il calcolo.
-Timestamp oltre la finestra configurata e firme già usate vengono rifiutati.
+- `METHOD` è il verbo HTTP maiuscolo.
+- `request-target` comprende path e query string esattamente come inviati.
+- Il body va firmato prima di qualsiasi deserializzazione o nuova codifica.
+- Timestamp e firma devono essere rigenerati a ogni retry.
+- La chiave di idempotenza deve restare uguale quando si ripete la stessa
+  operazione logica.
 
-Una `Idempotency-Key` deve contenere da 8 a 255 caratteri ASCII visibili. Se
-viene riutilizzata per metodo, endpoint, query o payload differenti, Laravel
-restituisce `409`; se identifica la stessa richiesta già completata, restituisce
-la risposta memorizzata senza ripetere gli effetti. Nei retry la chiave di
-idempotenza resta uguale, mentre timestamp e firma devono essere rigenerati.
+Configurazione:
 
-- **Configurazione Reale:** `services.n8n.token`
-- **Variabile d'ambiente:** `N8N_API_TOKEN`
-- **Signing secret:** `N8N_SIGNING_SECRET`
-- **Finestra temporale:** `N8N_SIGNATURE_MAX_CLOCK_SKEW_SECONDS`
-- **Durata idempotenza:** `N8N_IDEMPOTENCY_TTL_HOURS`
-- **Durata lock idempotenza:** `N8N_IDEMPOTENCY_LOCK_SECONDS`
-- **Attesa lock idempotenza:** `N8N_IDEMPOTENCY_LOCK_WAIT_SECONDS`
-- **Recupero richieste interrotte:** `N8N_IDEMPOTENCY_IN_PROGRESS_TIMEOUT_MINUTES`
+```dotenv
+N8N_API_TOKEN=
+N8N_SIGNING_SECRET=
+N8N_REQUIRE_SIGNATURE=true
+N8N_SIGNATURE_MAX_CLOCK_SKEW_SECONDS=300
+N8N_REQUIRE_IDEMPOTENCY_KEY=true
+N8N_IDEMPOTENCY_TTL_HOURS=48
+N8N_IDEMPOTENCY_LOCK_SECONDS=600
+N8N_IDEMPOTENCY_LOCK_WAIT_SECONDS=5
+N8N_IDEMPOTENCY_IN_PROGRESS_TIMEOUT_MINUTES=30
+N8N_CONNECT_TIMEOUT=5
+N8N_HTTP_TIMEOUT=15
+```
 
-## 2. Laravel → n8n: Generazione post marketing (Outbound)
+## Idempotenza
 
-- **Metodo:** `N8nClient::submitMarketingCampaignPost()`
-- **Action:** `SubmitMarketingCampaignPostToN8nAction`
-- **Webhook primario:** `N8N_SUBMIT_MARKETING_CAMPAIGN_POST_WEBHOOK_URL`
-- **Fallback:** `N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL`
+La chiave deve contenere da 8 a 255 caratteri ASCII visibili.
 
-### Payload Obbligatorio di Fatto
-I seguenti campi vengono sempre costruiti dal codice e inviati (anche se alcuni valori sono null):
+- Stessa chiave e stessa richiesta completata: Laravel restituisce la risposta
+  memorizzata senza ripetere gli effetti.
+- Stessa chiave con metodo, route, query o payload diversi: risposta `409`.
+- Richiesta ancora in lavorazione: viene rispettato il lock configurato.
+- Prenotazione interrotta oltre la soglia: può essere recuperata soltanto per la
+  stessa richiesta logica.
+
+I record scaduti vengono rimossi dal comando pianificato
+`system:prune-operational-logs`.
+
+## Health check
+
+```http
+GET /api/v1/integrations/n8n/health
+```
+
+Risposta attesa:
+
+```json
+{
+  "ok": true,
+  "provider": "n8n",
+  "status": "ready"
+}
+```
+
+Il risultato conferma autenticazione e raggiungibilità dell'applicazione, non
+la salute completa dei singoli workflow n8n.
+
+## Laravel verso n8n: generazione post
+
+Webhook primario:
+
+```dotenv
+N8N_SUBMIT_MARKETING_CAMPAIGN_POST_WEBHOOK_URL=
+```
+
+Fallback:
+
+```dotenv
+N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL=
+```
+
+Metodo applicativo: `N8nClient::submitMarketingCampaignPost()`.
+
+Payload di riferimento:
 
 ```json
 {
   "type": "marketing_campaign_post",
-  "request_id": "...",
+  "request_id": "identificatore-univoco",
   "campaign": {
     "id": 1,
-    "name": "..."
+    "name": "Campagna"
   },
   "client": {
     "id": 1,
-    "name": "...",
+    "name": "Cliente",
     "logo_url": null,
     "activity_description": null
   },
   "post": {
     "id": 1,
-    "title": "...",
-    "description": "...",
-    "content_type": "...",
+    "title": "Titolo",
+    "description": "Indicazioni",
+    "content_type": "post",
     "scheduled_date": null,
     "scheduled_time": null,
     "ai_analysis_enabled": true,
@@ -80,69 +136,66 @@ I seguenti campi vengono sempre costruiti dal codice e inviati (anche se alcuni 
     "media_items": [],
     "media": {}
   },
-  "callback_url": "..."
+  "callback_url": "https://gestionale.example.it/api/v1/integrations/n8n/..."
 }
 ```
 
-### Obbligatori per n8n
-- `type`
-- `request_id`
-- `campaign.id`
-- `campaign.name`
-- `client.id`
-- `client.name`
-- `post.id`
-- `post.title`
-- `post.description`
-- `post.content_type`
-- `post.publishing_platforms`
-- `post.media_count`
-- `post.media_items`
-- `callback_url`
+Campi sempre richiesti dal workflow:
 
-### Opzionali / nullable
-- `client.logo_url`
-- `client.activity_description`
-- `post.scheduled_date`
-- `post.scheduled_time`
-- `post.primary_media_url`
-- `post.primary_media_type`
-- `post.media`
-- `generation_type`
+- `type` e `request_id`;
+- `campaign.id` e `campaign.name`;
+- `client.id` e `client.name`;
+- `post.id`, `post.title`, `post.description`, `post.content_type`;
+- `post.publishing_platforms`, `post.media_count`, `post.media_items`;
+- `callback_url`.
 
-### Preferenze payload media
-Preferire `post.media_items` rispetto a `post.media`. Quest'ultimo è solo un alias/fallback del primo media. Per il media principale, i campi `post.primary_media_url` e `post.primary_media_type` sono comodi ma non vanno trattati come unica fonte.
+Campi nullable:
 
-## 3. Laravel → n8n: Rigenerazione post (Outbound)
+- logo e descrizione attività del cliente;
+- data e ora programmate;
+- media principale;
+- alias `post.media`;
+- `generation_type`.
 
-- **Metodo:** `N8nClient::requestMarketingCampaignPostRegeneration()`
-- **Action:** `RequestMarketingCampaignPostRegenerationAction`
-- **Webhook primario:** `N8N_REGENERATE_SOCIAL_POST_WEBHOOK_URL`
-- **Fallback:** `N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL`
+Usare `post.media_items` come fonte principale. `post.media` è mantenuto come
+alias del primo media per compatibilità.
 
-### Payload Obbligatorio di Fatto
+## Laravel verso n8n: rigenerazione
+
+Webhook primario:
+
+```dotenv
+N8N_REGENERATE_SOCIAL_POST_WEBHOOK_URL=
+```
+
+Fallback: `N8N_GENERATE_SOCIAL_POST_WEBHOOK_URL`.
+
+Metodo: `N8nClient::requestMarketingCampaignPostRegeneration()`.
+
+Payload di riferimento:
+
 ```json
 {
   "type": "marketing_campaign_post_regeneration",
   "post_id": 1,
-  "request_id": "...",
+  "request_id": "identificatore-univoco",
   "regeneration_type": "full",
   "prompt": null,
   "campaign": {
     "id": 1,
-    "name": "..."
+    "name": "Campagna"
   },
   "client": {
     "id": 1,
-    "name": "...",
-    "logo_url": "...",
-    "activity_description": "..."
+    "name": "Cliente",
+    "logo_url": null,
+    "activity_description": null
   },
   "post": {
     "id": 1,
-    "title": "...",
-    "description": "...",
-    "content_type": "...",
+    "title": "Titolo",
+    "description": "Indicazioni",
+    "content_type": "post",
     "publishing_platforms": [],
     "media_count": 0,
     "primary_media_url": null,
@@ -151,115 +204,184 @@ Preferire `post.media_items` rispetto a `post.media`. Quest'ultimo è solo un al
     "media": {}
   },
   "current_version": null,
-  "callback_url": "..."
+  "callback_url": "https://gestionale.example.it/api/v1/integrations/n8n/..."
 }
 ```
 
-### Obbligatori per n8n
-- `type`
-- `post_id`
-- `request_id`
-- `regeneration_type` (valori ammessi: `full` | `caption` | `image`)
-- `campaign.id`
-- `campaign.name`
-- `client.id`
-- `client.name`
-- `post.id`
-- `post.title`
-- `post.description`
-- `post.content_type`
-- `post.publishing_platforms`
-- `callback_url`
+`regeneration_type` ammette:
 
-### Opzionali / nullable
-- `prompt`
-- `client.logo_url`
-- `client.activity_description`
-- `current_version` (con campi: `id`, `version_number`, `title`, `caption`, `hashtags`, `image_url`, `image_urls`)
-- `post.media_count`, `post.primary_media_url`, `post.primary_media_type`, `post.media_items`, `post.media`
+- `full`: testo e immagini;
+- `caption`: solo testo, conservando i media;
+- `image`: solo media, conservando il testo.
 
-## 4. n8n → Laravel: Callback nuova versione (Inbound)
+`current_version`, quando presente, può includere `id`, `version_number`,
+`title`, `caption`, `hashtags`, `image_url` e `image_urls`.
 
-- **Endpoint:** `POST /api/v1/integrations/n8n/marketing-campaign-posts/{post}/versions`
-- **Controller:** `MarketingCampaignPostVersionController`
-- **Request:** `StoreMarketingCampaignPostVersionRequest`
+## Callback nuova versione
 
-### Obbligatori
-- `request_id`
-- `regeneration_type`
+```http
+POST /api/v1/integrations/n8n/marketing-campaign-posts/{post}/versions
+```
 
-In base al `regeneration_type`:
-- **`full`**: richiede almeno `caption` e (`image_url` oppure `image_urls`)
-- **`caption`**: richiede `caption` (immagine ereditata)
-- **`image`**: richiede (`image_url` oppure `image_urls`) (testo ereditato)
+Obbligatori:
 
-### Opzionali
-- `external_generation_id`, `title`, `hashtags`, `prompt_used`, `raw_payload`
+- `request_id`;
+- `regeneration_type`.
 
-### Alias accettati e preferenze
-- **Caption:** preferenza `caption`, fallback `text`, `description`, `copy`
-- **Immagine singola:** preferenza `image_url`, fallback `media_url`, `url`
-- **Immagini multiple:** preferenza `image_urls`, fallback `images` (se stringa, diventa array)
-- **Hashtag:** array `hashtags` oppure stringa csv
-- **Payload annidati:** supportati wrap `{ "data": {} }` oppure `{ "body": {} }`
+Regole condizionali:
 
-## 5. n8n → Laravel: Callback result legacy (Inbound)
+- `full`: almeno `caption` e uno tra `image_url` e `image_urls`;
+- `caption`: `caption`;
+- `image`: uno tra `image_url` e `image_urls`.
 
-- **Endpoint:** `POST /api/v1/integrations/n8n/marketing-campaign-posts/result`
-- **Controller:** `MarketingCampaignPostResultController`
-- **Request:** `StoreMarketingCampaignPostResultRequest`
+Opzionali:
 
-Richiede `post_id`, `request_id`, `regeneration_type` e le stesse regole alias/condizionali delle versioni (`full`, `caption`, `image`).
+- `external_generation_id`;
+- `title`;
+- `hashtags`;
+- `prompt_used`;
+- `raw_payload`.
 
-## 6. n8n → Laravel: Failed callback (Inbound)
+Alias accettati:
 
-- **Endpoint:** `POST /api/v1/integrations/n8n/marketing-campaign-posts/{post}/failed`
-- **Controller:** `MarketingCampaignPostFailedController`
+- caption: `caption`, poi `text`, `description`, `copy`;
+- immagine singola: `image_url`, poi `media_url`, `url`;
+- immagini multiple: `image_urls`, poi `images`;
+- hashtag: array oppure stringa CSV;
+- wrapper: `{ "data": {} }` oppure `{ "body": {} }`.
 
-- **Obbligatori:** `request_id`, `error`
-- **Comportamento:** Se request_id non coincide, 400. Se coincide, 200 e il post torna al suo `n8n_previous_status` o `Generated` con salvataggio errore in `n8n_error` e timestamp in `n8n_completed_at`.
+## Callback result legacy
 
-## 7. n8n → Laravel: Creazione ticket (Inbound)
+```http
+POST /api/v1/integrations/n8n/marketing-campaign-posts/result
+```
 
-- **Endpoint:** `POST /api/v1/integrations/n8n/tickets`
-- **Controller:** `N8nTicketController`
-- **Request:** `CreateTicketFromN8nRequest`
+Richiede `post_id`, `request_id`, `regeneration_type` e applica le stesse
+regole condizionali della callback versionata. L'endpoint resta disponibile per
+retrocompatibilità; i nuovi workflow dovrebbero preferire la route legata al
+post.
 
-### Obbligatori
-- Uno tra `client_id` e `project_id`
-- `source` (ammessi: `whatsapp`, `n8n`, `email`, `manual`)
-- `n8n_execution_id`
+## Callback di fallimento
 
-### Opzionali e Default
-- `title` (default: "Ticket WhatsApp")
-- `description` (default: `context.original_message` oppure "Ticket creato automaticamente da n8n.")
-- `priority` (default: `medium`. Ammessi: `low`, `medium`, `high`, `urgent`)
-- `context`
+```http
+POST /api/v1/integrations/n8n/marketing-campaign-posts/{post}/failed
+```
 
-**Idempotenza:** Se esiste già un ticket con stessa `source` + `n8n_execution_id`, non crea doppione.
+Obbligatori:
 
-## 8. n8n → Laravel: Chatbot client message (Inbound)
+- `request_id`;
+- `error`.
 
-- **Endpoint:** `POST /api/v1/integrations/n8n/chatbot/client-message`
-- **Controller:** `N8nChatbotController@store`
+Se `request_id` non coincide con la generazione attiva, la richiesta viene
+rifiutata. Con una corrispondenza valida il post torna allo stato precedente
+memorizzato, oppure a `generated`, e vengono registrati errore e completamento.
 
-### Obbligatori
-- Uno tra `client_id` e `phone`
-- `session_type` (ammessi: `marketing`, `ticket`)
-- `session_id`
-- `message`
-- `type` (ammessi: `comment`, `approval`, `change_request`)
+Non inviare stack trace, token o payload contenenti segreti nel campo `error`.
 
-### Regole
-- `client_id` e `phone` se entrambi passati devono coincidere (altrimenti 409).
-- Se `phone` non risolve un client, 404.
-- `session_id` non inventato (deve corrispondere a records in `ChatbotMarketingPost` o `ChatbotTicket` se session_type = ticket).
+## Creazione ticket da n8n
 
-## 9. n8n → Laravel: Stato messaggio outbound (Inbound)
+```http
+POST /api/v1/integrations/n8n/tickets
+```
 
-- **Endpoint:** `POST /api/v1/integrations/n8n/chatbot/outgoing-messages/{messageId}/status`
+Obbligatori:
 
-- **messageId:** formato `ticket_comment_{id}` o `task_comment_{id}` (se non supportato, 400).
-- **Obbligatorio:** `status` (`sent` o `failed`).
-- **Opzionali:** `external_message_id`, `error`.
-- **Regole:** Il commento deve esistere (404) e avere `delivery_channel = sody` (400). Lo stato aggiornabile solo da `pending` o `processing`. Se già uguale, risponde idempotente (200 senza errori).
+- uno tra `client_id` e `project_id`;
+- `source`: `whatsapp`, `n8n`, `email` o `manual`;
+- `n8n_execution_id`.
+
+Opzionali:
+
+- `title`, con default `Ticket WhatsApp`;
+- `description`;
+- `priority`: `low`, `medium`, `high`, `urgent`;
+- `context`.
+
+La coppia `source` e `n8n_execution_id` evita la creazione duplicata del
+ticket.
+
+## Messaggio cliente chatbot
+
+```http
+POST /api/v1/integrations/n8n/chatbot/client-message
+```
+
+Obbligatori:
+
+- uno tra `client_id` e `phone`;
+- `session_type`: `marketing` o `ticket`;
+- `session_id`;
+- `message`;
+- `type`: `comment`, `approval` o `change_request`.
+
+Regole:
+
+- se `client_id` e `phone` sono entrambi presenti devono identificare lo stesso
+  cliente;
+- un telefono non riconosciuto produce `404`;
+- `session_id` deve corrispondere a una sessione esistente del tipo dichiarato.
+
+## Stato dei messaggi in uscita
+
+```http
+POST /api/v1/integrations/n8n/chatbot/outgoing-messages/{messageId}/status
+```
+
+Formati supportati:
+
+- `ticket_comment_{id}`;
+- `task_comment_{id}`.
+
+Richiede `status` uguale a `sent` o `failed`. Può includere
+`external_message_id` ed `error`.
+
+Il commento deve esistere, avere canale `sody` ed essere ancora in stato
+aggiornabile. Ripetere lo stesso esito è idempotente.
+
+## Retry n8n
+
+Per una richiesta Laravel verso n8n:
+
+- riutilizzare lo stesso `request_id` quando si ripete la medesima generazione;
+- non creare due esecuzioni concorrenti per lo stesso post e richiesta;
+- usare timeout coerenti con `N8N_CONNECT_TIMEOUT` e `N8N_HTTP_TIMEOUT`;
+- classificare come ambiguo un timeout avvenuto dopo l'accettazione del webhook;
+- verificare prima se n8n ha già completato il lavoro.
+
+Per una callback n8n verso Laravel:
+
+- riutilizzare la stessa `Idempotency-Key` per lo stesso tentativo logico;
+- rigenerare timestamp e firma;
+- applicare backoff su timeout, `429` e `5xx`;
+- non cambiare payload mantenendo la stessa chiave.
+
+## Checklist produzione
+
+1. `APP_URL` pubblico e HTTPS.
+2. Token e signing secret distinti e robusti.
+3. Firma e idempotenza obbligatorie.
+4. Orologi di Laravel e n8n sincronizzati.
+5. Webhook separati per generazione, rigenerazione e messaggi.
+6. Callback configurate con gli URL dell'ambiente corretto.
+7. Test health con header validi.
+8. Test di replay della stessa callback.
+9. Test di rifiuto per firma errata, timestamp scaduto e payload cambiato.
+10. Controllo dei log senza segreti.
+11. Scheduler attivo per la pulizia dei record scaduti.
+
+## Diagnostica
+
+- `401` o `403`: token, firma, formato dell'header o configurazione cache.
+- `409`: chiave riutilizzata per una richiesta diversa oppure identità cliente
+  incoerente.
+- `422`: payload non conforme o campi condizionali mancanti.
+- `429`: limite superato; applicare backoff.
+- `5xx`: errore temporaneo dell'applicazione; conservare ID richiesta e
+  correlazione senza esporre dati sensibili.
+
+Usare inoltre:
+
+```bash
+php artisan monitor:system
+php artisan system:prune-operational-logs --dry-run
+```

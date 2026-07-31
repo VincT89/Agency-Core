@@ -1,66 +1,189 @@
-# Sodano Consulting - Gestionale (Agency-Core)
+# Agency Core
 
-Sistema gestionale interno per Sodano Consulting, progettato per orchestrare le operazioni dell'agenzia, i flussi di lavoro verticali e le relazioni con i clienti. Sviluppato su stack Laravel con frontend ibrido (Blade, Alpine.js, Livewire) e un'architettura CSS modulare.
+Gestionale interno di Sodano Consulting per clienti, progetti, attività, ticket,
+calendario, campagne social, shooting, fatture, pagamenti, hosting e controllo
+operativo. L'applicazione è costruita con Laravel, Blade, Livewire, Alpine.js e
+Vite.
 
-## Architettura e Moduli Principali
+## Stato del progetto
 
-Il sistema si basa su una rigorosa architettura incentrata sul concetto di "Project Supremacy", garantendo che gli utenti accedano esclusivamente alle risorse di loro pertinenza.
+Stato verificato il 31 luglio 2026.
 
-### Core Foundation
-- **Clienti e Progetti**: Struttura gerarchica per l'organizzazione del lavoro.
-- **Gestione Accessi (RBAC)**: Ruoli definiti (Admin, System Admin, Developer, Marketing, Photographer, Graphic Designer, Administration).
-- **Task Management**: Assegnazione e monitoraggio di attività operative con scadenze.
-- **Ticketing**: Tracciamento di anomalie e richieste di supporto legate ai progetti.
-- **Calendario**: Pianificazione centralizzata degli eventi (riunioni interne, scadenze, appuntamenti clienti). Integrazione nativa dei link di videochiamata (Nextcloud Talk).
+| Area | Stato | Nota |
+| --- | --- | --- |
+| Gestionale operativo | Pronto | Clienti, progetti, task, ticket, calendario, spese, hosting, fatture e pagamenti sono coperti dalla suite automatica. |
+| Nextcloud | Pronto e collegato | Quando il cliente ha un nome cartella vengono predisposte le directory foto e video; se Nextcloud non risponde, la creazione del cliente viene interrotta. |
+| Shooting | Pronto | Il marketing propone le date, il fotografo risponde e il marketing registra il contatto e la risposta del cliente. Non esiste un portale cliente. |
+| Notifiche e registro attività | Pronto | Notifiche personali e campanella ticket restano separate. Il registro completo è visibile soltanto agli amministratori. |
+| n8n | Pronto lato contratto | Generazione e rigenerazione post, callback protette, ticket e messaggi chatbot sono documentati e testati. |
+| Pubblicazione social | Pronta lato codice, collaudo esterno pendente | Motore, code, snapshot, controlli, retry e dashboard sono presenti. Meta richiede ancora configurazione dell'app, autorizzazioni e test reali. |
+| Fatturazione elettronica | Fondazione pronta | Dati fiscali, controlli, numerazione e snapshot sono presenti. XML FatturaPA, client Aruba, invio e callback SdI non sono ancora implementati. |
 
-### Flussi Verticali
-- **Modulo Shooting**: Gestione completa del ciclo di vita fotografico. Comprende la proposizione di slot orari, l'accettazione da parte del cliente, la generazione automatica di task ed eventi a calendario, fino alla consegna e archiviazione sicura degli asset.
-- **Amministrazione e pagamenti**: registrazione interna di fatture e pagamenti, riepiloghi economici e sincronizzazione dello stato delle fatture. Il repository non include checkout Stripe o PayPal.
+L'ultima verifica completa ha superato 712 test con 2.032 asserzioni; un test è
+stato escluso perché specifico di un diverso motore database. Questo risultato
+riduce il rischio di regressioni, ma non sostituisce i collaudi reali con Meta,
+Aruba, n8n e Nextcloud.
 
-### UI/UX e Frontend
-- **Design System Custom**: CSS modulare suddiviso per responsabilità (`_shell.css`, `_auth.css`, `_canvas-bg.css`, ecc.) integrato tramite Vite.
-- **Auth Layout**: Struttura asimmetrica 2/3 - 1/3 con canvas generativo interattivo per valorizzare il brand aziendale.
-- **Micro-interattività**: Gestita tramite Alpine.js per modali, dropdown e form dinamici, limitando l'uso di JS complesso.
-- **Livewire**: Utilizzato selettivamente per componenti reattivi asincroni nella dashboard (es. panoramica shooting).
+## Funzionalità principali
 
----
+- Anagrafica clienti con dati fiscali, contatti, logo e cartelle Nextcloud.
+- Progetti, team, assegnazioni e perimetro di accesso per progetto.
+- Task e ticket con priorità, scadenze, checklist, commenti e notifiche.
+- Calendario condiviso e generazione automatica di eventi dagli shooting.
+- Campagne marketing, piano editoriale, versioni dei post, media e revisione
+  tramite collegamento pubblico firmato.
+- Generazione e rigenerazione dei contenuti tramite n8n.
+- Pubblicazione Facebook, Instagram e TikTok tramite code asincrone, con
+  snapshot immutabili, controlli preventivi, retry e revisione manuale.
+- Shooting interno tra marketing e fotografo, con contatto cliente gestito
+  esternamente tramite email, WhatsApp, telefono o altro canale.
+- Fatture gestionali, voci, IVA, pagamenti, scadenze e riepilogo economico.
+- Preparazione fiscale TD01, numerazione progressiva e blocco della fattura
+  prima del futuro invio elettronico.
+- Hosting, domini, rinnovi e interventi tecnici.
+- Notifiche personali, campanella ticket e registro attività amministrativo.
+- Monitoraggio di scheduler, code, job falliti e processi operativi.
 
-## Deploy e Configurazione Produzione
+Il perimetro dettagliato e i limiti sono descritti in
+[Ambito funzionale](docs/functional-scope.md).
 
-Prima di esporre l'applicazione in ambiente di produzione, è obbligatorio completare la seguente checklist per garantire sicurezza, performance e stabilità.
+## Ruoli
 
-### 1. Ambiente e Sicurezza
-- Impostare `APP_ENV=production` nel file `.env`.
-- Impostare `APP_DEBUG=false` nel file `.env`.
-- Assicurarsi che `APP_URL` rifletta il dominio corretto (incluso `https://`).
-- Forzare l'utilizzo di HTTPS dal web server (Nginx/Apache) o tramite middleware.
+I ruoli disponibili sono:
 
-### 2. Integrazioni e credenziali
-- Configurare Meta, TikTok e Nextcloud soltanto per i moduli effettivamente usati.
-- Configurare `N8N_API_TOKEN` e un distinto `N8N_SIGNING_SECRET`, entrambi
-  casuali e di almeno 32 byte.
-- In produzione lasciare `N8N_REQUIRE_SIGNATURE=true` e `N8N_REQUIRE_IDEMPOTENCY_KEY=true`.
-- Configurare SMTP o il servizio email definitivo.
+- `admin`: amministrazione completa del sistema, utenti, registro attività,
+  connessioni social e visibilità globale;
+- `administration`: clienti, progetti, fatture, pagamenti, spese e dati fiscali;
+- `operations_manager`: gestione operativa trasversale e visibilità globale sui
+  progetti;
+- `marketing`: campagne, post, revisione, shooting e operazioni social nel
+  proprio perimetro;
+- `photographer`: shooting assegnati, task e progetti autorizzati;
+- `developer`: task, ticket, hosting e progetti autorizzati;
+- `graphic_designer`: task, ticket e progetti autorizzati.
 
-### 3. Ottimizzazione Prestazioni
-Eseguire i comandi di caching forniti da Laravel:
-- `php artisan config:cache`
-- `php artisan route:cache`
-- `php artisan view:cache`
-- `php artisan event:cache`
+Le policy applicative restano la fonte definitiva. In particolare, soltanto
+`admin` può vedere chi ha effettuato l'accesso e chi ha compiuto le operazioni
+registrate nel sistema.
 
-### 4. Code e Processi in Background
-- Configurare Supervisor usando `deploy/supervisor/agency-core.conf.example` come base. Le code social e applicative hanno timeout differenti e devono avere worker dedicati.
-- Assicurarsi che il demone cron di sistema esegua il comando di scheduling di Laravel (`* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1`).
+## Requisiti tecnici
 
-### 5. Storage e Permessi
-- Verificare i permessi di scrittura sulle directory `storage/` e `bootstrap/cache/`.
-- Eseguire `php artisan storage:link` soltanto per loghi e altri asset esplicitamente pubblici. I media social sono salvati sul disco privato `social_media` e vengono consegnati tramite URL firmati.
-- Assicurarsi che i driver di storage remoto (es. S3) per i file di Shooting o gli allegati siano correttamente configurati.
+- PHP 8.3 o successivo con le estensioni richieste da Laravel.
+- Composer.
+- Node.js e npm.
+- MySQL in produzione.
+- Un driver di coda asincrono; la configurazione predefinita usa il database.
+- Scheduler Laravel eseguito ogni minuto.
+- HTTPS pubblico per callback, OAuth e consegna temporanea dei media.
 
-### 6. Verifiche prima del traffico
-- Eseguire `php artisan migrate --force`.
-- Eseguire prima `php artisan social:migrate-media-to-private`, poi lo stesso comando con `--execute` dopo aver verificato il conteggio.
-- Avviare scheduler e worker, attendere almeno un ciclo e verificare `php artisan monitor:system`.
-- Eseguire `php artisan social:production-readiness --allow-auto-disabled`.
-- Eseguire `php artisan optimize` e `php artisan queue:restart` dopo ogni rilascio.
+## Installazione locale
+
+```bash
+composer install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+```
+
+Su sistemi Unix sostituire `copy` con `cp`.
+
+Il comando `composer run dev` avvia il server locale, Vite, log e un worker
+generico. Per provare pubblicazione e monitoraggio devono essere avviati anche
+worker che ascoltino `chatbot`, `social-publishing` e
+`social-reconciliation`.
+
+Non eseguire `php artisan db:seed` in produzione: il `DatabaseSeeder` richiama
+`DemoDataSeeder`, che crea utenti e dati dimostrativi. La procedura sicura di
+pulizia è descritta in [Pulizia dei dati dimostrativi](docs/data-cleanup.md).
+
+## Configurazione essenziale
+
+Usare `.env.example` come punto di partenza per le variabili più comuni e
+conservare i segreti soltanto nel gestore sicuro dell'ambiente di esecuzione.
+Le guide di integrazione riportano anche opzioni supportate ma non ancora
+presenti nell'esempio.
+
+- Applicazione: `APP_ENV`, `APP_DEBUG`, `APP_URL`, database, sessioni, cache,
+  posta e code.
+- n8n: token Bearer, segreto HMAC, idempotenza e URL dei webhook.
+- Nextcloud: URL, credenziali WebDAV e radici foto/video.
+- Meta: App ID, App Secret, redirect OAuth e versione Graph API.
+- TikTok: credenziali, redirect, modalità di consegna e kill switch.
+- Social: dry-run, pubblicazione automatica e soglie operative.
+
+Non esistono ancora variabili Aruba nel codice: aggiungerle al file `.env` non
+attiverebbe alcun invio. Verranno definite insieme al client Aruba.
+
+## Verifiche di sviluppo
+
+```bash
+php artisan test --compact
+npm run build
+php artisan view:cache
+git diff --check
+```
+
+Per la pubblicazione social sono inoltre disponibili:
+
+```bash
+php artisan monitor:system
+php artisan social:production-readiness --allow-auto-disabled
+php artisan social:audit-runtime --fail-on-actionable
+php artisan social:audit-historical-integrity
+```
+
+## Produzione
+
+La procedura completa è in [Distribuzione in produzione](docs/production-deployment.md).
+I punti non negoziabili sono:
+
+1. backup coerente di database e storage;
+2. `APP_ENV=production`, `APP_DEBUG=false` e `APP_URL` HTTPS;
+3. migrazioni applicate prima di riaprire il traffico;
+4. scheduler attivo ogni minuto;
+5. worker attivi su tutte le code monitorate;
+6. cache ricostruite e worker riavviati dopo ogni rilascio;
+7. smoke test delle funzioni principali e controllo dei log;
+8. pubblicazione automatica lasciata disattivata finché Meta non supera il
+   collaudo reale.
+
+## Documentazione
+
+L'indice completo è disponibile in [docs/README.md](docs/README.md).
+
+- [Ambito funzionale e limiti](docs/functional-scope.md)
+- [Distribuzione in produzione](docs/production-deployment.md)
+- [Pulizia dei dati dimostrativi](docs/data-cleanup.md)
+- [Integrazione Nextcloud](docs/nextcloud.md)
+- [Flusso shooting](docs/shooting-workflow.md)
+- [Pubblicazione social e Meta](docs/social-production-readiness.md)
+- [Contratto n8n](docs/n8n-contract.md)
+- [Fatturazione elettronica e Aruba](docs/electronic-invoicing-aruba.md)
+
+## Limiti attuali
+
+- Non esiste un portale cliente generale. È presente soltanto il collegamento
+  pubblico, firmato e limitato, per la revisione dei post marketing.
+- Il fotografo gestisce esternamente esecuzione e consegna dello shooting; il
+  gestionale coordina richiesta, disponibilità, conferma, task e calendario.
+- Meta non è considerato pronto per la produzione finché OAuth, asset reali e
+  primo ciclo di pubblicazione non vengono verificati con l'app approvata.
+- La fatturazione elettronica non invia ancora nulla ad Aruba o allo SdI.
+- La preparazione fiscale supporta attualmente soltanto il documento TD01.
+- La cancellazione di un cliente dal database non elimina automaticamente le
+  cartelle remote Nextcloud.
+- I contenuti e le integrazioni future possono introdurre nuovi casi non coperti
+  dalle verifiche visuali e automatiche attuali.
+
+## Sicurezza operativa
+
+- Non committare mai `.env`, token, password, API key o file di backup.
+- Non riportare segreti nei log o nei ticket.
+- Usare credenziali dedicate e, dove disponibile, password applicative.
+- Mantenere firma HMAC e idempotenza obbligatorie per n8n in produzione.
+- Conservare `SOCIAL_AUTO_PUBLISH_ENABLED=false` come arresto immediato delle
+  nuove pubblicazioni automatiche.
+- Eseguire ogni cancellazione massiva soltanto dopo backup, inventario e
+  conferma esplicita dell'ambiente e del perimetro.

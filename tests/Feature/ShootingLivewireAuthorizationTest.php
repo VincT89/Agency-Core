@@ -89,6 +89,9 @@ class ShootingLivewireAuthorizationTest extends TestCase
         $this->shoot->update([
             'status' => ShootStatus::WaitingClient,
             'selected_slot_id' => $this->slot->id,
+            'client_notified_at' => now(),
+            'client_confirmation_channel' => 'phone',
+            'client_notification_recipient' => '+39 081 0000000',
         ]);
 
         Livewire::actingAs($this->admin)
@@ -99,40 +102,35 @@ class ShootingLivewireAuthorizationTest extends TestCase
         $this->assertEquals(ShootStatus::Scheduled, $this->shoot->fresh()->status);
     }
 
-    public function test_developer_cannot_create_shoot_for_unassigned_campaign(): void
+    public function test_developer_cannot_create_shoot_request(): void
     {
         $developer = User::factory()->create(['role' => 'developer']);
-        $foreignCampaign = MarketingCampaign::factory()->create();
 
         Livewire::actingAs($developer)
             ->test(CreateRequest::class)
-            ->set('marketing_campaign_id', $foreignCampaign->id)
-            ->set('proposedSlots', [[
-                'date' => now()->addWeek()->toDateString(),
-                'period' => 'morning',
-            ]])
-            ->call('save')
             ->assertForbidden();
     }
 
     public function test_project_and_campaign_must_belong_to_same_client(): void
     {
-        $developer = User::factory()->create(['role' => 'developer']);
+        $marketing = User::factory()->create(['role' => 'marketing']);
+        $photographer = User::factory()->create(['role' => 'photographer']);
         $projectClient = Client::factory()->create();
         $campaignClient = Client::factory()->create();
         $selectedProject = Project::factory()->create(['client_id' => $projectClient->id]);
         $campaignAccessProject = Project::factory()->create(['client_id' => $campaignClient->id]);
-        $selectedProject->users()->attach($developer->id, ['role' => 'contributor']);
-        $campaignAccessProject->users()->attach($developer->id, ['role' => 'contributor']);
+        $selectedProject->users()->attach($marketing->id, ['role' => 'owner']);
+        $campaignAccessProject->users()->attach($marketing->id, ['role' => 'owner']);
         $foreignCampaign = MarketingCampaign::factory()->create([
             'client_id' => $campaignClient->id,
         ]);
         $shootCount = Shoot::withoutGlobalScopes()->count();
 
-        Livewire::actingAs($developer)
+        Livewire::actingAs($marketing)
             ->test(CreateRequest::class)
             ->set('project_id', $selectedProject->id)
             ->set('marketing_campaign_id', $foreignCampaign->id)
+            ->set('photographer_id', $photographer->id)
             ->set('proposedSlots', [[
                 'date' => now()->addWeek()->toDateString(),
                 'period' => 'morning',

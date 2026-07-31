@@ -141,6 +141,58 @@ class MarketingCampaignPostShowTest extends TestCase
         $this->assertEquals('Regenerated Title', $post->title);
     }
 
+    public function test_sody_loader_resets_after_validation_error(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Draft->value,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post])
+            ->assertSee('Sody sta preparando il contenuto')
+            ->assertSee('Chiudi questo pannello')
+            ->assertDontSee('Interrompi')
+            ->set('form.content_type', 'unsupported')
+            ->call('saveAndSubmitToN8n')
+            ->assertHasErrors(['form.content_type'])
+            ->assertDispatched('sody-processing-started')
+            ->assertDispatched('sody-processing-failed');
+    }
+
+    public function test_sody_loader_reports_long_processing_without_cancelling_the_request(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::PendingN8n->value,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post,
+        ]);
+
+        for ($check = 0; $check < 10; $check++) {
+            $component->call('checkRegenerationStatus');
+        }
+
+        $component->assertDispatched('sody-processing-delayed');
+
+        $this->assertEquals(MarketingCampaignPostStatus::PendingN8n, $post->fresh()->status);
+        $this->assertNull($post->fresh()->n8n_error);
+    }
+
     public function test_remove_media_item_only_affects_livewire_state()
     {
         $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);

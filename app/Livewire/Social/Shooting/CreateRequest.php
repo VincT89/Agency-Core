@@ -57,11 +57,13 @@ class CreateRequest extends Component
             'title' => 'nullable|string|max:255',
             'project_id' => 'required_without:marketing_campaign_id|nullable|exists:projects,id',
             'marketing_campaign_id' => 'required_without:project_id|nullable|exists:marketing_campaigns,id',
-            'photographer_id' => 'nullable|exists:users,id',
+            'photographer_id' => 'required|exists:users,id',
             'location' => 'nullable|string',
             'internal_notes' => 'nullable|string',
             'client_notes' => 'nullable|string',
-            'proposedSlots.*.date' => 'required|date',
+            'proposedSlots' => 'required|array|min:1',
+            'proposedSlots.*.date' => 'required|date|after_or_equal:today',
+            'proposedSlots.*.period' => 'required|in:morning,intermediate,afternoon,full_day',
         ];
     }
 
@@ -149,7 +151,9 @@ class CreateRequest extends Component
             ->orderBy('name')
             ->get();
 
-        $photographers = User::where('role', 'photographer')->get();
+        $photographers = User::where('role', 'photographer')
+            ->orderBy('name')
+            ->get();
 
         return view('livewire.social.shooting.create-request', [
             'projects' => $projects,

@@ -18,7 +18,9 @@ return new class extends Migration
             $table->string('content_type')->nullable();
             $table->longText('response_body')->nullable();
             $table->timestamp('completed_at')->nullable();
-            $table->timestamp('expires_at')->index();
+            // DATETIME evita il default TIMESTAMP implicito non valido con
+            // alcune configurazioni MySQL che disabilitano explicit_defaults.
+            $table->dateTime('expires_at')->index();
             $table->timestamps();
 
             $table->unique(

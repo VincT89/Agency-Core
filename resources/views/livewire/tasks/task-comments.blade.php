@@ -32,7 +32,7 @@
                                         @elseif($comment->delivery_status === 'sent')
                                             <span class="badge badge-green">Inviato al cliente</span>
                                         @elseif($comment->delivery_status === 'failed')
-                                            <span class="badge badge-red" title="{{ $comment->delivery_error }}">Invio fallito</span>
+                                            <span class="badge badge-red" title="Il messaggio non è stato consegnato. Verifica il recapito del cliente e riprova.">Invio non riuscito</span>
                                         @endif
                                     </div>
                                 @endif

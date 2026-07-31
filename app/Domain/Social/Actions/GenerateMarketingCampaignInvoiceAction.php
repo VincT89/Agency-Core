@@ -2,6 +2,7 @@
 
 namespace App\Domain\Social\Actions;
 
+use App\Domain\Finance\Services\InvoiceAmountsCalculator;
 use App\Models\MarketingCampaign;
 use App\Models\Invoice;
 use App\Models\MarketingCampaignPeriod;
@@ -13,6 +14,11 @@ use Illuminate\Support\Facades\DB;
 
 class GenerateMarketingCampaignInvoiceAction
 {
+    public function __construct(
+        private readonly InvoiceAmountsCalculator $amounts,
+    ) {
+    }
+
     /**
      * @param array<string, mixed> $data
      */
@@ -44,7 +50,8 @@ class GenerateMarketingCampaignInvoiceAction
             $subtotal = $periods->sum('amount') 
                       + $extras->sum('amount') 
                       + $customLines->sum(fn($l) => ((float)($l['quantity'] ?? 1)) * (float)$l['unit_price']);
-            $taxAmount = $data['tax_amount'] ?? 0;
+            $vatRate = (float) ($data['vat_rate'] ?? 22);
+            $taxAmount = round($subtotal * $vatRate / 100, 2, PHP_ROUND_HALF_UP);
             $total = $subtotal + $taxAmount;
 
             $invoice = Invoice::create([
@@ -65,14 +72,16 @@ class GenerateMarketingCampaignInvoiceAction
             ]);
 
             foreach ($periods as $period) {
-                $invoice->items()->create([
-                    'billable_type' => MarketingCampaignPeriod::class,
-                    'billable_id' => $period->id,
+                $invoice->items()->create(array_merge($this->amounts->lineAttributes([
                     'description' => $period->description,
                     'quantity' => 1,
                     'unit_price' => $period->amount,
-                    'total' => $period->amount,
-                ]);
+                    'unit_of_measure' => 'NR',
+                    'vat_rate' => $vatRate,
+                ]), [
+                    'billable_type' => MarketingCampaignPeriod::class,
+                    'billable_id' => $period->id,
+                ]));
 
                 $period->update([
                     'invoice_id' => $invoice->id,
@@ -81,14 +90,16 @@ class GenerateMarketingCampaignInvoiceAction
             }
 
             foreach ($extras as $extra) {
-                $invoice->items()->create([
-                    'billable_type' => MarketingCampaignExtra::class,
-                    'billable_id' => $extra->id,
+                $invoice->items()->create(array_merge($this->amounts->lineAttributes([
                     'description' => $extra->description,
                     'quantity' => 1,
                     'unit_price' => $extra->amount,
-                    'total' => $extra->amount,
-                ]);
+                    'unit_of_measure' => 'NR',
+                    'vat_rate' => $vatRate,
+                ]), [
+                    'billable_type' => MarketingCampaignExtra::class,
+                    'billable_id' => $extra->id,
+                ]));
 
                 $extra->update([
                     'invoice_id' => $invoice->id,
@@ -99,15 +110,19 @@ class GenerateMarketingCampaignInvoiceAction
             foreach ($customLines as $line) {
                 $qty = (float) ($line['quantity'] ?? 1);
                 $price = (float) $line['unit_price'];
-                $invoice->items()->create([
+                $invoice->items()->create(array_merge($this->amounts->lineAttributes([
+                    'description' => $line['description'],
+                    'quantity' => $qty,
+                    'unit_price' => $price,
+                    'unit_of_measure' => 'NR',
+                    'vat_rate' => $vatRate,
+                ]), [
                     'billable_type' => null,
                     'billable_id'   => null,
-                    'description'   => $line['description'],
-                    'quantity'      => $qty,
-                    'unit_price'    => $price,
-                    'total'         => $qty * $price,
-                ]);
+                ]));
             }
+
+            $this->amounts->recalculate($invoice);
 
             return $invoice;
         });

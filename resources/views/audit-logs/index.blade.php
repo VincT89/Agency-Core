@@ -1,45 +1,81 @@
-<x-app-layout title="Attività Recenti">
-    <x-page-header  eyebrow="Amministrazione" >
-    <x-slot:title>Attività Recenti</x-slot:title>
-</x-page-header>
+<x-app-layout title="Registro attività">
+    <x-page-header eyebrow="Amministrazione" meta="Accessi e operazioni eseguite dagli utenti, in ordine cronologico.">
+        <x-slot:title>Registro attività</x-slot:title>
+    </x-page-header>
 
-    <x-panel class="u-mb-md">
-    <x-slot:title>Filtri</x-slot:title>
-        <form action="{{ route('audit-logs.index') }}" method="GET" class="g-3col u-items-end">
-            <div>
-                <label class="form-lbl">Entità</label>
-                <select name="auditable_type" class="form-in">
-                    <option value="">Tutte le entità</option>
-                    <option value="Ticket" {{ request('auditable_type') === 'Ticket' ? 'selected' : '' }}>Ticket</option>
-                    <option value="Invoice" {{ request('auditable_type') === 'Invoice' ? 'selected' : '' }}>Fatture</option>
-                    <option value="Payment" {{ request('auditable_type') === 'Payment' ? 'selected' : '' }}>Pagamenti</option>
-                    <option value="Client" {{ request('auditable_type') === 'Client' ? 'selected' : '' }}>Clienti</option>
-                    <option value="Project" {{ request('auditable_type') === 'Project' ? 'selected' : '' }}>Progetti</option>
-                    <option value="Task" {{ request('auditable_type') === 'Task' ? 'selected' : '' }}>Task</option>
-                    <option value="User" {{ request('auditable_type') === 'User' ? 'selected' : '' }}>Utenti</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-lbl">Utente</label>
-                <select name="user_id" class="form-in">
-                    <option value="">Tutti gli utenti</option>
-                    @foreach(\App\Models\User::orderBy('name')->get() as $u)
-                        <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+    <x-panel title="Filtri del registro" padded class="u-mb-md">
+        <form action="{{ route('audit-logs.index') }}" method="GET" class="audit-log-filters">
+            <div class="form-g">
+                <label for="audit-entity" class="form-lbl">Sezione</label>
+                <select id="audit-entity" name="auditable_type" class="form-in">
+                    <option value="">Tutte le sezioni</option>
+                    @foreach($entityFilters as $value => $filter)
+                        <option value="{{ $value }}" @selected(request('auditable_type') === $value)>
+                            {{ $filter['label'] }}
+                        </option>
                     @endforeach
                 </select>
             </div>
-            <div class="u-flex u-gap-sm">
-                <button type="submit" class="btn btn-p">Filtra</button>
-                <a href="{{ route('audit-logs.index') }}" class="btn btn-g">Reset</a>
+
+            <div class="form-g">
+                <label for="audit-action" class="form-lbl">Tipo di attività</label>
+                <select id="audit-action" name="action" class="form-in">
+                    <option value="">Tutte le attività</option>
+                    @foreach($actionFilters as $value => $filter)
+                        <option value="{{ $value }}" @selected(request('action') === $value)>
+                            {{ $filter['label'] }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="form-g">
+                <label for="audit-user" class="form-lbl">Utente</label>
+                <select id="audit-user" name="user_id" class="form-in">
+                    <option value="">Tutti gli utenti</option>
+                    @foreach($users as $user)
+                        <option value="{{ $user->id }}" @selected((string) request('user_id') === (string) $user->id)>
+                            {{ $user->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="form-g">
+                <label for="audit-date-from" class="form-lbl">Dal giorno</label>
+                <input id="audit-date-from" type="date" name="date_from" value="{{ request('date_from') }}" class="form-in">
+            </div>
+
+            <div class="form-g">
+                <label for="audit-date-to" class="form-lbl">Al giorno</label>
+                <input id="audit-date-to" type="date" name="date_to" value="{{ request('date_to') }}" class="form-in">
+            </div>
+
+            <div class="audit-log-filter-actions">
+                <button type="submit" class="btn btn-p">Applica filtri</button>
+                @if($activeFiltersCount > 0)
+                    <a href="{{ route('audit-logs.index') }}" class="btn btn-g">Azzera filtri</a>
+                @endif
             </div>
         </form>
     </x-panel>
 
-    <x-panel title="Elenco Globale Attività">
-        <x-audit-timeline :logs="$logs" />
-        
+    <div class="audit-log-results-summary" aria-live="polite">
+        @if($logs->total() > 0)
+            Visualizzate {{ $logs->firstItem() }}-{{ $logs->lastItem() }} di {{ $logs->total() }} attività
+            @if($activeFiltersCount > 0)
+                corrispondenti ai filtri selezionati
+            @endif
+        @else
+            Nessuna attività corrisponde ai filtri selezionati
+        @endif
+    </div>
+
+    <x-audit-timeline :logs="$logs" title="Attività registrate" />
+
+    @if($logs->hasPages())
         <div class="u-mt-md">
             {{ $logs->links() }}
         </div>
-    </x-panel>
+    @endif
 </x-app-layout>

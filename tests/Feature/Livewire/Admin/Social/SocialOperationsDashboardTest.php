@@ -154,7 +154,7 @@ class SocialOperationsDashboardTest extends TestCase
         $this->assertEquals(PublicationStatus::Superseded->value, $publication->refresh()->status->value);
     }
 
-    public function test_tiktok_publish_id_is_rendered_from_external_task_id(): void
+    public function test_tiktok_provider_reference_is_not_exposed_in_the_interface(): void
     {
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::create([
@@ -183,6 +183,7 @@ class SocialOperationsDashboardTest extends TestCase
 
         Livewire::actingAs($this->user)
             ->test(SocialOperationsDashboard::class)
-            ->assertSee('Publish ID: publish-task-123');
+            ->assertSee('Pubblicazione non completata. Controlla l\'account collegato o riprova.', false)
+            ->assertDontSee('publish-task-123');
     }
 }

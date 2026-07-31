@@ -5,11 +5,17 @@ namespace App\Policies;
 use App\Models\MarketingCampaign;
 use App\Models\Shooting\Shoot;
 use App\Models\User;
-use App\Policies\Concerns\HandlesRoleAuthorization;
 
 class ShootPolicy
 {
-    use HandlesRoleAuthorization;
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->canManageSystem() && $ability !== 'respond') {
+            return true;
+        }
+
+        return null;
+    }
 
     public function viewAny(User $user): bool
     {
@@ -23,13 +29,13 @@ class ShootPolicy
 
     public function create(User $user): bool
     {
-        return $user->isMarketing() || $user->isDeveloper();
+        return $user->isMarketing();
     }
 
     public function update(User $user, Shoot $shoot): bool
     {
         // Consenti aggiornamento al team interno o al fotografo assegnato
-        if ($user->isMarketing() || $user->isDeveloper()) {
+        if ($user->isMarketing()) {
             return $this->canAccessShoot($user, $shoot);
         }
 
@@ -76,7 +82,11 @@ class ShootPolicy
 
     public function confirmClient(User $user, Shoot $shoot): bool
     {
-        // Autorizzazione ristretta agli Admin (gestita dal metodo before)
-        return false;
+        return $user->isMarketing() && $this->canAccessShoot($user, $shoot);
+    }
+
+    public function revise(User $user, Shoot $shoot): bool
+    {
+        return $user->isMarketing() && $this->canAccessShoot($user, $shoot);
     }
 }

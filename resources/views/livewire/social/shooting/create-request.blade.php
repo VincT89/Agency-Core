@@ -9,7 +9,7 @@
         </x-page-header>
     </div>
 
-    <div class="g-2col-main shooting-2col-main-start">
+    <div class="g-2col-main shooting-request-layout shooting-2col-main-start">
         {{-- DETTAGLI --}}
         <x-panel title="Dettagli Shooting" dot="var(--purple)" padded>
             <div class="shooting-main-col">
@@ -47,9 +47,9 @@
 
                 <div class="form-row full shooting-form-row">
                     <div>
-                        <label class="form-lbl">Fotografo Assegnato</label>
+                        <label class="form-lbl">Fotografo Assegnato *</label>
                         <select wire:model="photographer_id" class="form-in shooting-input-full">
-                            <option value="">Da definire</option>
+                            <option value="">Seleziona fotografo...</option>
                             @foreach($photographers as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }}</option>
                             @endforeach
@@ -67,8 +67,8 @@
                 </div>
 
                 <div>
-                    <label class="form-lbl">Note per il Cliente</label>
-                    <textarea wire:model="client_notes" class="form-in shooting-input-full" rows="2" placeholder="Visibili al cliente in fase di approvazione"></textarea>
+                    <label class="form-lbl">Note da comunicare al Cliente</label>
+                    <textarea wire:model="client_notes" class="form-in shooting-input-full" rows="2" placeholder="Informazioni che il marketing inserirà nel messaggio al cliente"></textarea>
                     @error('client_notes') <span class="shooting-err-msg">{{ $message }}</span> @enderror
                 </div>
                 

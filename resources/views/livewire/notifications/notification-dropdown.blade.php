@@ -26,7 +26,10 @@
             @php
               $iconName = 'bell';
               $nType = $notification->data['type'] ?? '';
-              if (in_array($nType, ['task_assigned', 'task_due_soon', 'task_created']))
+              $nCategory = $notification->data['category'] ?? '';
+              if ($nCategory === 'shooting')
+                $iconName = 'camera';
+              elseif (in_array($nType, ['task_assigned', 'task_due_soon', 'task_created']))
                 $iconName = 'check-square';
               elseif ($nType === 'ticket_assigned')
                 $iconName = 'ticket';

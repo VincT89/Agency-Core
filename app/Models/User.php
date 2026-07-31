@@ -163,7 +163,7 @@ class User extends Authenticatable
 
     public function canViewAuditLogs(): bool
     {
-        return $this->isAdmin() || $this->isAdministration();
+        return $this->isAdmin();
     }
 
     public function canBypassProjectScope(): bool

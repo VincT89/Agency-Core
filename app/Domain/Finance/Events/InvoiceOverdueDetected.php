@@ -2,10 +2,10 @@
 
 namespace App\Domain\Finance\Events;
 
+use App\Models\Invoice;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Invoice;
 
 class InvoiceOverdueDetected
 {

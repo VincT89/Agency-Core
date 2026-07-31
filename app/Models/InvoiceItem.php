@@ -16,12 +16,21 @@ class InvoiceItem extends Model
         'quantity',
         'unit_price',
         'total',
+        'unit_of_measure',
+        'vat_rate',
+        'vat_nature',
+        'vat_reference',
+        'tax_amount',
+        'total_with_tax',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'total' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'total_with_tax' => 'decimal:2',
     ];
 
     public function invoice(): BelongsTo

@@ -2,110 +2,155 @@
 
 namespace App\Domain\Shooting\Actions;
 
-use App\Models\Shooting\Shoot;
+use App\Enums\Shooting\ShootingWorkflowEvent;
+use App\Enums\Shooting\ShootStatus;
+use App\Helpers\ShootingRouteResolver;
 use App\Models\CalendarEvent;
+use App\Models\Shooting\Shoot;
 use App\Models\Task;
 use App\Models\User;
-use App\Enums\Shooting\ShootStatus;
-use App\Enums\Shooting\ShootSlotStatus;
-use App\Enums\Shooting\ShootingWorkflowEvent;
 use App\Notifications\ShootingWorkflowNotification;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ClientConfirmAction
 {
-    public function execute(Shoot $shoot, bool $accepted, int $adminId): void
+    public function execute(Shoot $shoot, bool $accepted, int $actorId): void
     {
         if ($shoot->status !== ShootStatus::WaitingClient) {
-            throw new \Exception('Lo shooting non è in attesa del cliente.');
+            throw ValidationException::withMessages([
+                'clientResponse' => 'Lo shooting non è più in attesa del cliente.',
+            ]);
+        }
+
+        if (! $shoot->client_notified_at) {
+            throw ValidationException::withMessages([
+                'clientChannel' => 'Registra prima l’avvenuta comunicazione al cliente.',
+            ]);
         }
 
         if ($accepted && ($shoot->calendar_event_id || $shoot->task_id)) {
-            throw new \DomainException('Shooting già confermato: Evento o Task già esistenti.');
+            throw ValidationException::withMessages([
+                'clientResponse' => 'Lo shooting è già stato pianificato.',
+            ]);
         }
 
-        DB::transaction(function () use ($shoot, $accepted, $adminId) {
-            
-            if ($accepted) {
-                if (!$shoot->selectedSlot) {
-                    throw new \Exception("Impossibile confermare: nessuno slot selezionato dal fotografo.");
-                }
-
-                $slot = $shoot->selectedSlot;
-
-                $tz = config('app.timezone');
-                $startAt = Carbon::parse($slot->date->format('Y-m-d') . ' ' . $slot->starts_at, $tz);
-                $endAt = Carbon::parse($slot->date->format('Y-m-d') . ' ' . $slot->ends_at, $tz);
-
-                $clientId = $shoot->project ? $shoot->project->client_id : ($shoot->marketingCampaign ? $shoot->marketingCampaign->client_id : null);
-                $shootContextName = $shoot->project ? $shoot->project->name : ($shoot->marketingCampaign ? $shoot->marketingCampaign->name : 'Nuovo');
-
-                // Fissa a calendario l'appuntamento per lo shooting
-                $event = CalendarEvent::create([
-                    'client_id' => $clientId,
-                    'project_id' => $shoot->project_id,
-                    'created_by' => $adminId,
-                    'assigned_to' => $shoot->photographer_id,
-                    'title' => 'Shooting: ' . $shootContextName,
-                    'description' => "Shooting programmato.\nNote cliente: {$shoot->client_notes}\nNote interne: {$shoot->internal_notes}",
-                    'type' => 'other',
-                    'status' => 'scheduled',
-                    'start_at' => $startAt,
-                    'end_at' => $endAt,
-                    'is_all_day' => false,
-                    'location' => $shoot->location,
-                ]);
-
-                // Crea la task operativa per il fotografo
-                $task = Task::create([
-                    'project_id' => $shoot->project_id,
-                    'created_by' => $adminId,
-                    'assigned_to' => $shoot->photographer_id,
-                    'title' => 'Shooting: ' . $shootContextName,
-                    'description' => "Effettuare shooting.\nData: {$slot->date->format('d/m/Y')} ({$slot->starts_at} - {$slot->ends_at})\nLocation: {$shoot->location}",
-                    'status' => 'todo',
-                    'priority' => 'high',
-                    'due_date' => $slot->date,
-                ]);
-
-                // Aggiorna lo stato dello shooting agganciando evento e task
-                $shoot->update([
-                    'status' => ShootStatus::Scheduled,
-                    'client_confirmation_status' => 'accepted',
-                    'client_confirmed_at' => now(),
-                    'calendar_event_id' => $event->id,
-                    'task_id' => $task->id,
-                ]);
-                
-                $this->notifyAll($shoot, ShootingWorkflowEvent::ClientConfirmed, 'Shooting Confermato', "Il cliente ha confermato lo shooting {$shoot->code}. Evento a calendario e Task creati.");
-
-            } else {
-                // Il cliente ha rifiutato: ripristina gli slot per una nuova proposta
-                $shoot->slots()->update(['status' => ShootSlotStatus::Proposed]);
-                
+        DB::transaction(function () use ($shoot, $accepted, $actorId) {
+            if (! $accepted) {
                 $shoot->update([
                     'status' => ShootStatus::ClientRejected,
                     'client_confirmation_status' => 'rejected',
                     'client_confirmed_at' => now(),
-                    'selected_slot_id' => null, // Rimuove il vincolo dello slot
+                    'selected_slot_id' => null,
                 ]);
-                
-                $this->notifyAll($shoot, ShootingWorkflowEvent::ClientRejected, 'Shooting Rifiutato', "Il cliente ha rifiutato lo shooting {$shoot->code}.");
+
+                $this->notifyAll(
+                    $shoot,
+                    ShootingWorkflowEvent::ClientRejected,
+                    'Nuova proposta richiesta',
+                    "Il cliente ha rifiutato la data dello shooting {$shoot->code}. Prepara nuove date."
+                );
+
+                return;
             }
+
+            $shoot->loadMissing([
+                'project.client',
+                'marketingCampaign.client',
+                'selectedSlot',
+            ]);
+
+            $slot = $shoot->selectedSlot;
+            $client = $shoot->clientRecord();
+
+            if (! $slot || ! $client) {
+                throw ValidationException::withMessages([
+                    'clientResponse' => 'Mancano lo slot selezionato o il cliente collegato.',
+                ]);
+            }
+
+            $timezone = config('app.timezone');
+            $startAt = Carbon::parse(
+                $slot->date->format('Y-m-d').' '.$slot->starts_at,
+                $timezone
+            );
+            $endAt = Carbon::parse(
+                $slot->date->format('Y-m-d').' '.$slot->ends_at,
+                $timezone
+            );
+            $contextName = $shoot->project?->name
+                ?? $shoot->marketingCampaign?->name
+                ?? $shoot->title;
+
+            $event = CalendarEvent::create([
+                'client_id' => $client->id,
+                'project_id' => $shoot->project_id,
+                'created_by' => $actorId,
+                'assigned_to' => $shoot->photographer_id,
+                'title' => 'Shooting: '.$contextName,
+                'description' => implode("\n", array_filter([
+                    'Shooting confermato dal cliente.',
+                    $shoot->client_notes ? "Note cliente: {$shoot->client_notes}" : null,
+                    $shoot->internal_notes ? "Note interne: {$shoot->internal_notes}" : null,
+                ])),
+                'type' => 'other',
+                'status' => 'scheduled',
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'is_all_day' => false,
+                'location' => $shoot->location,
+            ]);
+
+            $task = Task::create([
+                'project_id' => $shoot->project_id,
+                'created_by' => $actorId,
+                'assigned_to' => $shoot->photographer_id,
+                'title' => 'Shooting: '.$contextName,
+                'description' => implode("\n", array_filter([
+                    'Effettuare lo shooting confermato.',
+                    "Data: {$slot->date->format('d/m/Y')} ({$slot->starts_at} - {$slot->ends_at})",
+                    $shoot->location ? "Luogo: {$shoot->location}" : null,
+                    $shoot->client_notes ? "Indicazioni cliente: {$shoot->client_notes}" : null,
+                    $shoot->internal_notes ? "Note interne: {$shoot->internal_notes}" : null,
+                ])),
+                'status' => 'todo',
+                'priority' => 'high',
+                'due_date' => $slot->date,
+            ]);
+
+            $shoot->update([
+                'status' => ShootStatus::Scheduled,
+                'client_confirmation_status' => 'accepted',
+                'client_confirmed_at' => now(),
+                'calendar_event_id' => $event->id,
+                'task_id' => $task->id,
+            ]);
+
+            $this->notifyAll(
+                $shoot,
+                ShootingWorkflowEvent::ClientConfirmed,
+                'Shooting confermato',
+                "Il cliente ha confermato lo shooting {$shoot->code}. Calendario e task sono stati aggiornati."
+            );
         });
     }
 
-    private function notifyAll(Shoot $shoot, ShootingWorkflowEvent $event, string $title, string $message): void
-    {
-        $usersToNotify = User::where('role', 'admin')
+    private function notifyAll(
+        Shoot $shoot,
+        ShootingWorkflowEvent $event,
+        string $title,
+        string $message
+    ): void {
+        $usersToNotify = User::query()
+            ->where('role', 'admin')
             ->orWhere('id', $shoot->created_by)
             ->orWhere('id', $shoot->photographer_id)
             ->get()
             ->unique('id');
-            
+
         foreach ($usersToNotify as $user) {
-            $url = \App\Helpers\ShootingRouteResolver::showRouteFor($user, $shoot);
+            $url = ShootingRouteResolver::showRouteFor($user, $shoot);
             $user->notify(new ShootingWorkflowNotification(
                 $event,
                 $title,

@@ -43,6 +43,17 @@ class MarketingCampaignPostReview extends Component
 
     private MarketingCampaignPostMediaUrlResolver $urlResolver;
 
+    private function reviewConflictMessage(Exception $exception): string
+    {
+        return match (true) {
+            $exception instanceof ClientReviewTokenUsedException => 'Questo link di revisione è già stato utilizzato.',
+            $exception instanceof ClientReviewTokenExpiredException => 'Questo link di revisione è scaduto. Chiedi al team un nuovo link.',
+            $exception instanceof ClientReviewVersionConflictException => 'Il post è stato aggiornato. Chiedi al team un nuovo link di revisione.',
+            $exception instanceof ClientReviewStateConflictException => 'Il post non è più disponibile per questa revisione.',
+            default => 'Non è stato possibile completare la revisione.',
+        };
+    }
+
     public function boot(
         MarketingCampaignPostVersionMediaResolver $mediaResolver,
         MarketingCampaignPostMediaUrlResolver $urlResolver
@@ -143,7 +154,7 @@ class MarketingCampaignPostReview extends Component
                  ClientReviewTokenExpiredException|
                  \App\Exceptions\Social\ClientReviewVersionConflictException|
                  ClientReviewStateConflictException $e) {
-                     $this->addError('review', $e->getMessage());
+                     $this->addError('review', $this->reviewConflictMessage($e));
                  } catch (Exception $e) {
                      Log::error('Errore durante l\'approvazione lato client', ['error' => $e->getMessage()]);
                      $this->addError('review', 'Si è verificato un errore durante l\'elaborazione. Riprova più tardi.');
@@ -212,7 +223,7 @@ class MarketingCampaignPostReview extends Component
                  ClientReviewTokenExpiredException|
                  \App\Exceptions\Social\ClientReviewVersionConflictException|
                  ClientReviewStateConflictException $e) {
-                     $this->addError('review', $e->getMessage());
+                     $this->addError('review', $this->reviewConflictMessage($e));
                  } catch (Exception $e) {
                      Log::error('Errore durante la richiesta di modifiche lato client', ['error' => $e->getMessage()]);
                      $this->addError('review', 'Si è verificato un errore durante l\'elaborazione. Riprova più tardi.');

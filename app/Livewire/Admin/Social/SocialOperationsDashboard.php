@@ -40,7 +40,7 @@ class SocialOperationsDashboard extends Component
             session()->flash('success', 'Nuova pubblicazione avviata con successo. Il vecchio record è stato riprovato.');
         } catch (\Exception $e) {
             Log::error('Errore durante il retry da dashboard', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Errore durante l\'avvio della nuova pubblicazione: ' . $e->getMessage());
+            session()->flash('error', 'Non è stato possibile avviare un nuovo tentativo di pubblicazione.');
         }
         
         $syncAction->execute($publication->post);
@@ -75,9 +75,17 @@ class SocialOperationsDashboard extends Component
                 session()->flash('success', 'Stato pubblicazione verificato.');
             }
         } catch (\App\Exceptions\Social\ContainerProcessingException $e) {
-            session()->flash('info', 'Pubblicazione ancora in progress: ' . $e->getMessage());
+            Log::info('Social publication is still being processed', [
+                'publication_id' => $publicationId,
+                'message' => $e->getMessage(),
+            ]);
+            session()->flash('info', 'La pubblicazione è ancora in corso. Controlla di nuovo tra poco.');
         } catch (\Exception $e) {
-            session()->flash('error', 'Errore imprevisto durante il controllo: ' . $e->getMessage());
+            Log::error('Unable to refresh social publication status', [
+                'publication_id' => $publicationId,
+                'error' => $e->getMessage(),
+            ]);
+            session()->flash('error', 'Non è stato possibile aggiornare lo stato della pubblicazione.');
         }
     }
 

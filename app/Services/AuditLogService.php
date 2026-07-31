@@ -11,12 +11,27 @@ class AuditLogService
     // Whitelist dei campi rilevanti da salvare nel payload JSON per le operazioni di update.
     protected array $trackedFields = [
         \App\Models\Ticket::class => ['status', 'priority', 'assigned_to'],
-        \App\Models\Invoice::class => ['status', 'total', 'due_date', 'project_id'],
+        \App\Models\Invoice::class => [
+            'status',
+            'total',
+            'due_date',
+            'project_id',
+            'fiscal_status',
+            'fiscal_number',
+        ],
         \App\Models\Payment::class => ['amount', 'payment_date'],
         \App\Models\Task::class => ['status', 'priority', 'assigned_to', 'due_date'],
         \App\Models\CalendarEvent::class => ['title', 'start_at', 'end_at', 'assigned_to'],
         \App\Models\Client::class => ['name', 'status'],
         \App\Models\Project::class => ['name', 'status'],
+        \App\Models\Shooting\Shoot::class => [
+            'status',
+            'photographer_id',
+            'selected_slot_id',
+            'client_confirmation_status',
+            'client_confirmation_channel',
+            'client_notified_at',
+        ],
     ];
 
     public function log(
@@ -105,6 +120,15 @@ class AuditLogService
             return "{$userName} ha reimpostato la password per {$entityName}";
         }
 
+        if ($action === 'updated' && isset($newValues['fiscal_status'])) {
+            $fiscalStatus = \App\Enums\Finance\InvoiceFiscalStatus::tryFrom(
+                (string) $newValues['fiscal_status']
+            );
+            $label = $fiscalStatus?->label() ?? 'Aggiornato';
+
+            return "{$userName} ha impostato {$entityName} come '{$label}' sul piano fiscale";
+        }
+
         // Attachment actions (richiede override dal chiamante per dire _quale_ allegato, ma questo è un fallback utile)
         if ($action === 'uploaded_attachment') {
             return "{$userName} ha caricato un allegato su {$entityName}";
@@ -116,7 +140,7 @@ class AuditLogService
         if ($action === 'status_changed' || ($action === 'updated' && isset($newValues['status']))) {
             $statusRaw = $newValues['status'] ?? $auditable->status;
             $statusName = $this->translateStatus($statusRaw);
-            return "{$userName} ha aggiornato lo stato de {$entityName} a '{$statusName}'";
+            return "{$userName} ha impostato {$entityName} come '{$statusName}'";
         }
         
         if ($action === 'updated' && isset($newValues['assigned_to'])) {
@@ -136,6 +160,7 @@ class AuditLogService
         if ($model instanceof \App\Models\Task) return "il task \"{$model->title}\"";
         if ($model instanceof \App\Models\CalendarEvent) return "l'evento \"{$model->title}\"";
         if ($model instanceof \App\Models\User) return "l'utente {$model->name}";
+        if ($model instanceof \App\Models\Shooting\Shoot) return "lo shooting \"{$model->title}\"";
         return "l'entità";
     }
 
@@ -153,9 +178,16 @@ class AuditLogService
             'paid' => 'Saldata',
             'cancelled' => 'Annullata',
             'active' => 'Attivo',
+            'inactive' => 'Inattivo',
             'completed' => 'Completato',
             'paused' => 'In pausa',
             'blocked' => 'Bloccato',
+            'waiting_photographer' => 'In attesa del fotografo',
+            'photographer_rejected' => 'Rifiutato dal fotografo',
+            'waiting_client' => 'In attesa del cliente',
+            'client_rejected' => 'Rifiutato dal cliente',
+            'client_confirmed' => 'Confermato dal cliente',
+            'scheduled' => 'Pianificato',
         ];
 
         return $map[$status] ?? ucfirst(str_replace('_', ' ', $status ?? ''));

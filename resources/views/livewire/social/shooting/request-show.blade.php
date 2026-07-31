@@ -72,6 +72,103 @@
                     </div>
                 </div>
             </x-panel>
+
+            @if($shoot->status === \App\Enums\Shooting\ShootStatus::WaitingClient)
+                @can('confirmClient', $shoot)
+                    <x-panel title="Comunicazione e risposta cliente" dot="var(--yellow)">
+                        <div class="shooting-panel-inner">
+                            <p class="shooting-desc-text">
+                                Il fotografo ha confermato la propria disponibilità. Usa il messaggio preparato,
+                                registra il canale utilizzato e poi inserisci la risposta del cliente.
+                            </p>
+                            <x-shooting.client-contact-panel
+                                :shoot="$shoot"
+                                :communication="$communication"
+                                :client-channels="$clientChannels" />
+                        </div>
+                    </x-panel>
+                @endcan
+            @endif
+
+            @if(in_array($shoot->status, [
+                \App\Enums\Shooting\ShootStatus::PhotographerRejected,
+                \App\Enums\Shooting\ShootStatus::ClientRejected,
+            ], true))
+                @can('revise', $shoot)
+                    <x-panel title="Prepara una nuova proposta" dot="var(--yellow)">
+                        <div class="shooting-panel-inner">
+                        <p class="shooting-desc-text">
+                            Aggiorna il fotografo se necessario e inserisci nuove date. La nuova proposta
+                            riaprirà il flusso dalla conferma del fotografo.
+                        </p>
+
+                        <div class="shooting-revision-grid">
+                            <div class="form-g">
+                                <label class="form-lbl" for="revision-photographer">Fotografo *</label>
+                                <select id="revision-photographer"
+                                        wire:model="revisionPhotographerId"
+                                        class="form-sel @error('revisionPhotographerId') is-invalid @enderror">
+                                    <option value="">Seleziona fotografo...</option>
+                                    @foreach($photographers as $photographer)
+                                        <option value="{{ $photographer->id }}">{{ $photographer->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('revisionPhotographerId')
+                                    <div class="shooting-err-msg">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="shooting-revision-slots">
+                                @foreach($revisionSlots as $index => $slot)
+                                    <div class="shooting-revision-slot" wire:key="revision-slot-{{ $index }}">
+                                        <div class="form-g">
+                                            <label class="form-lbl">Nuova data *</label>
+                                            <input type="date"
+                                                   wire:model="revisionSlots.{{ $index }}.date"
+                                                   class="form-in @error('revisionSlots.'.$index.'.date') is-invalid @enderror">
+                                            @error('revisionSlots.'.$index.'.date')
+                                                <div class="shooting-err-msg">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="form-g">
+                                            <label class="form-lbl">Fascia oraria *</label>
+                                            <select wire:model="revisionSlots.{{ $index }}.period" class="form-sel">
+                                                <option value="morning">Mattina</option>
+                                                <option value="intermediate">Intermedio</option>
+                                                <option value="afternoon">Pomeriggio</option>
+                                                <option value="full_day">Giornata intera</option>
+                                            </select>
+                                        </div>
+                                        <button type="button"
+                                                wire:click="removeRevisionSlot({{ $index }})"
+                                                class="btn btn-g btn-sm"
+                                                @disabled(count($revisionSlots) === 1)>
+                                            Rimuovi
+                                        </button>
+                                    </div>
+                                @endforeach
+                                @error('revisionSlots')
+                                    <div class="shooting-err-msg">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="shooting-revision-actions">
+                            <button type="button" wire:click="addRevisionSlot" class="btn btn-g">
+                                Aggiungi data
+                            </button>
+                            <button type="button"
+                                    wire:click="reopenProposal"
+                                    wire:loading.attr="disabled"
+                                    wire:target="reopenProposal"
+                                    class="btn btn-p">
+                                Invia nuova proposta
+                            </button>
+                        </div>
+                        </div>
+                    </x-panel>
+                @endcan
+            @endif
             
             {{-- Slots --}}
             <x-panel title="Slot Temporali" dot="var(--blue)">
@@ -79,6 +176,23 @@
                     <x-shooting.slot-list :shoot="$shoot" :interactive="false" :showWarning="false" />
                 </div>
             </x-panel>
+
+            @if($shoot->calendarEvent || $shoot->task)
+                <x-panel title="Pianificazione creata" dot="var(--green)">
+                    <div class="shooting-panel-inner shooting-contact-actions">
+                        @if($shoot->calendarEvent)
+                            <a href="{{ route('calendar-events.show', $shoot->calendarEvent) }}" class="btn btn-g">
+                                Vedi evento nel calendario
+                            </a>
+                        @endif
+                        @if($shoot->task)
+                            <a href="{{ route('tasks.show', $shoot->task) }}" class="btn btn-g">
+                                Vedi task del fotografo
+                            </a>
+                        @endif
+                    </div>
+                </x-panel>
+            @endif
         </div>
         
         {{-- Sidebar --}}
@@ -89,18 +203,19 @@
                 </div>
             </x-panel>
             
-            {{-- Audit Log --}}
-            <div class="mt-panel">
-                <x-panel title="Storico Attività" dot="var(--gray)">
-                    <div class="shooting-panel-inner-sm">
-                        @forelse($shoot->auditLogs()->latest()->get() as $log)
-                            <x-audit-item :log="$log" />
-                        @empty
-                            <div class="shooting-empty-table">Nessuna attività registrata.</div>
-                        @endforelse
-                    </div>
-                </x-panel>
-            </div>
+            @can('system.admin')
+                <div class="mt-panel">
+                    <x-panel title="Storico attività" dot="var(--gray)">
+                        <div class="shooting-panel-inner-sm">
+                            @forelse($shoot->auditLogs()->latest()->get() as $log)
+                                <x-audit-item :log="$log" />
+                            @empty
+                                <div class="shooting-empty-table">Nessuna attività registrata.</div>
+                            @endforelse
+                        </div>
+                    </x-panel>
+                </div>
+            @endcan
         </div>
         
     </div>

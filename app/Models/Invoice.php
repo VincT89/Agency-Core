@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\Finance\InvoiceFiscalStatus;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Builder;
-use App\Models\User;
 
 class Invoice extends Model
 {
-    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use HasFactory;
 
     public const STATUSES = [
         'draft',
@@ -37,6 +38,12 @@ class Invoice extends Model
         'total',
         'paid_total',
         'notes',
+        'fiscal_status',
+        'fiscal_document_type',
+        'fiscal_number',
+        'fiscal_sequence_number',
+        'fiscal_locked_at',
+        'fiscal_snapshot',
     ];
 
     protected $casts = [
@@ -46,6 +53,10 @@ class Invoice extends Model
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
         'paid_total' => 'decimal:2',
+        'fiscal_status' => InvoiceFiscalStatus::class,
+        'fiscal_sequence_number' => 'integer',
+        'fiscal_locked_at' => 'datetime',
+        'fiscal_snapshot' => 'array',
     ];
 
     public function getResidualAttribute(): float
@@ -56,14 +67,34 @@ class Invoice extends Model
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
-            'draft' => 'Bozza',
-            'issued' => 'Emessa',
+            'draft' => 'Bozza gestionale',
+            'issued' => 'Da incassare',
             'partially_paid' => 'Pagamento parziale',
             'paid' => 'Pagata',
             'overdue' => 'Scaduta',
             'cancelled' => 'Annullata',
             default => ucfirst((string) $this->status),
         };
+    }
+
+    public function getFiscalStatusLabelAttribute(): string
+    {
+        return ($this->fiscal_status ?? InvoiceFiscalStatus::NotPrepared)->label();
+    }
+
+    public function getFiscalBadgeStatusAttribute(): string
+    {
+        return ($this->fiscal_status ?? InvoiceFiscalStatus::NotPrepared)->badgeStatus();
+    }
+
+    public function isFiscalEditable(): bool
+    {
+        return ($this->fiscal_status ?? InvoiceFiscalStatus::NotPrepared)->allowsEditing();
+    }
+
+    public function hasStartedFiscalTransmission(): bool
+    {
+        return ($this->fiscal_status ?? InvoiceFiscalStatus::NotPrepared)->hasLeftTheGestionale();
     }
 
     public function client(): BelongsTo

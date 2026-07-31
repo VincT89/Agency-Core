@@ -74,18 +74,20 @@ class ClientController extends Controller
 
             if (!empty($data['nextcloud_folder_name'])) {
                 $nextcloudService = app(NextcloudService::class);
-                $root = rtrim($nextcloudService->mediaRoot('photo'), '/');
-                $data['nextcloud_photos_path'] = $root . '/' . $data['nextcloud_folder_name'];
+                $mediaPaths = $nextcloudService->ensureClientMediaDirectories(
+                    $data['nextcloud_folder_name']
+                );
 
-                if (!$nextcloudService->ensureDirectoryExists($data['nextcloud_photos_path'])) {
-                    \Illuminate\Support\Facades\Log::warning('Unable to update client Nextcloud folder', [
+                if ($mediaPaths === null) {
+                    \Illuminate\Support\Facades\Log::warning('Unable to update client Nextcloud media directories', [
                         'folder' => $data['nextcloud_folder_name'],
-                        'path' => $data['nextcloud_photos_path'],
                     ]);
                     return back()->withInput()->withErrors([
-                        'nextcloud_folder_name' => 'Impossibile creare la nuova cartella su Nextcloud. Verifica la connessione o prova con un altro nome.'
+                        'nextcloud_folder_name' => 'Impossibile creare le nuove cartelle foto e video su Nextcloud. Verifica la connessione o prova con un altro nome.'
                     ]);
                 }
+
+                $data['nextcloud_photos_path'] = $mediaPaths['photo'];
             } else {
                 $data['nextcloud_photos_path'] = null;
             }

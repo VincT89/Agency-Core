@@ -2,6 +2,7 @@
 
 namespace App\Models\Shooting;
 
+use App\Models\Client;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\CalendarEvent;
@@ -33,6 +34,8 @@ class Shoot extends Model
         'client_confirmation_status',
         'client_confirmed_at',
         'client_confirmation_channel',
+        'client_notified_at',
+        'client_notification_recipient',
         'whatsapp_message_id',
         'calendar_event_id',
         'task_id',
@@ -43,6 +46,7 @@ class Shoot extends Model
     protected $casts = [
         'status' => ShootStatus::class,
         'client_confirmed_at' => 'datetime',
+        'client_notified_at' => 'datetime',
     ];
     protected static function booted()
     {
@@ -86,6 +90,11 @@ class Shoot extends Model
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
+    }
+
+    public function clientRecord(): ?Client
+    {
+        return $this->project?->client ?? $this->marketingCampaign?->client;
     }
 
     public function auditLogs(): MorphMany

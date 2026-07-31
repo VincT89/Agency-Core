@@ -2,10 +2,10 @@
 
 namespace App\Domain\Finance\Events;
 
+use App\Models\Payment;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Payment;
 
 class PaymentRecorded
 {

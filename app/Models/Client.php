@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\URL;
     'postal_code',
     'province',
     'country',
+    'country_code',
     'billing_email',
     'pec',
     'sdi_code',

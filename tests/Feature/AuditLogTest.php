@@ -22,8 +22,10 @@ class AuditLogTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::Admin, 'password_changed_at' => now()]);
         
         $this->mock(\App\Services\Integrations\Nextcloud\NextcloudService::class, function ($mock) {
-            $mock->shouldReceive('mediaRoot')->andReturn('/mock_root');
-            $mock->shouldReceive('ensureDirectoryExists')->andReturn(true);
+            $mock->shouldReceive('ensureClientMediaDirectories')->andReturn([
+                'photo' => '/mock_root/acme_test',
+                'video' => '/mock_video_root/acme_test',
+            ]);
         });
 
         $this->actingAs($admin)->post(route('clients.store'), [
@@ -57,7 +59,11 @@ class AuditLogTest extends TestCase
             ->first();
 
         $this->assertNotNull($updateLog);
-        $this->assertStringContainsString('ha aggiornato lo stato de il cliente Acme Test Srl a \'Inactive\'', $updateLog->description);
+        $this->assertStringContainsString("ha impostato il cliente Acme Test Srl come 'Inattivo'", $updateLog->description);
+        $this->assertSame(
+            'ha impostato il cliente Acme Test Srl come Inattivo.',
+            $updateLog->display_action_text
+        );
         
         // Verifica del filtro JSON
         $this->assertArrayHasKey('status', $updateLog->new_values);
@@ -92,6 +98,9 @@ class AuditLogTest extends TestCase
     {
         $admin = User::factory()->create(['role' => UserRole::Admin, 'password_changed_at' => now()]);
         $manager = User::factory()->create(['role' => UserRole::Administration, 'password_changed_at' => now()]);
+
+        $this->assertTrue($admin->canViewAuditLogs());
+        $this->assertFalse($manager->canViewAuditLogs());
         
         $this->actingAs($manager)
              ->get(route('audit-logs.index'))
@@ -100,5 +109,89 @@ class AuditLogTest extends TestCase
         $this->actingAs($admin)
              ->get(route('audit-logs.index'))
              ->assertOk();
+    }
+
+    public function test_audit_log_page_uses_clear_language_and_hides_raw_payloads(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin, 'password_changed_at' => now()]);
+        $actor = User::factory()->create(['role' => UserRole::Marketing, 'name' => 'Mario Marketing']);
+        $client = Client::factory()->createQuietly(['name' => 'Cliente Registro']);
+
+        AuditLog::query()->delete();
+        AuditLog::create([
+            'user_id' => $actor->id,
+            'action' => 'status_changed',
+            'auditable_type' => $client->getMorphClass(),
+            'auditable_id' => $client->id,
+            'old_values' => ['status' => 'active'],
+            'new_values' => ['status' => 'inactive'],
+            'description' => 'PAYLOAD_TECNICO_DA_NON_MOSTRARE',
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('audit-logs.index'))
+            ->assertOk()
+            ->assertSeeText('Registro attività')
+            ->assertSeeText('Mario Marketing')
+            ->assertSeeText('ha impostato il cliente Cliente Registro come Inattivo.')
+            ->assertDontSeeText('Mostra dettagli tecnici')
+            ->assertDontSeeText('PAYLOAD_TECNICO_DA_NON_MOSTRARE');
+    }
+
+    public function test_audit_log_filters_support_shootings_actions_users_and_dates(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin, 'password_changed_at' => now()]);
+        $shootingActor = User::factory()->create(['role' => UserRole::Marketing]);
+        $loginActor = User::factory()->create(['role' => UserRole::Developer]);
+
+        AuditLog::query()->delete();
+        AuditLog::create([
+            'user_id' => $shootingActor->id,
+            'action' => 'status_changed',
+            'auditable_type' => \App\Models\Shooting\Shoot::class,
+            'auditable_id' => 999,
+            'old_values' => ['status' => 'waiting_client'],
+            'new_values' => ['status' => 'scheduled'],
+            'created_at' => now(),
+        ]);
+        AuditLog::create([
+            'user_id' => $loginActor->id,
+            'action' => 'login',
+            'auditable_type' => User::class,
+            'auditable_id' => $loginActor->id,
+            'created_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('audit-logs.index', [
+                'auditable_type' => 'shootings',
+                'action' => 'status_changed',
+                'user_id' => $shootingActor->id,
+                'date_from' => today()->toDateString(),
+                'date_to' => today()->toDateString(),
+            ]))
+            ->assertOk()
+            ->assertSeeText('ha impostato lo shooting selezionato come Pianificato.')
+            ->assertDontSeeText("ha effettuato l'accesso.");
+    }
+
+    public function test_audit_log_navigation_is_visible_only_to_admin(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin, 'password_changed_at' => now()]);
+        $administration = User::factory()->create([
+            'role' => UserRole::Administration,
+            'password_changed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSeeText('Registro attività');
+
+        $this->actingAs($administration)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSeeText('Registro attività');
     }
 }

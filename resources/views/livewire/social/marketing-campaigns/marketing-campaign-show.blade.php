@@ -541,15 +541,15 @@
           
           <div class="u-flex u-gap-lg">
               <div class="form-g u-flex-1">
-                <label class="form-lbl">Numero Fattura</label>
-                <input type="text" class="form-in" wire:model="invoiceForm.number" placeholder="Es: FAT-001/26">
+                <label class="form-lbl">Riferimento interno</label>
+                <input type="text" class="form-in" wire:model="invoiceForm.number" placeholder="Es. BOZZA-2026-001">
                 @error('invoiceForm.number') <span class="form-err">{{ $message }}</span> @enderror
               </div>
           </div>
           
           <div class="u-flex u-gap-lg">
             <div class="form-g u-flex-1">
-                <label class="form-lbl">Data Emissione</label>
+                <label class="form-lbl">Data fattura</label>
                 <input type="date" class="form-in" wire:model="invoiceForm.issue_date">
                 @error('invoiceForm.issue_date') <span class="form-err">{{ $message }}</span> @enderror
             </div>
@@ -561,15 +561,18 @@
           </div>
           
           <div class="form-g">
-            <label class="form-lbl">Ammontare Tasse/IVA (€)</label>
-            <input type="number" step="0.01" class="form-in" wire:model="invoiceForm.tax_amount">
-            @error('invoiceForm.tax_amount') <span class="form-err">{{ $message }}</span> @enderror
+            <label class="form-lbl">Aliquota IVA per tutte le voci (%)</label>
+            <input type="number" min="0" max="100" step="0.01" class="form-in" wire:model="invoiceForm.vat_rate">
+            @error('invoiceForm.vat_rate') <span class="form-err">{{ $message }}</span> @enderror
+            <div class="u-text-meta">
+              Se servono aliquote diverse, genera la bozza e completa le singole voci dalla pagina fattura.
+            </div>
           </div>
           
         </div>
         <div class="lw-modal-ft">
           <button type="button" wire:click="closeInvoiceModal" class="btn btn-s">Annulla</button>
-          <button type="button" wire:click="generateInvoice" class="btn btn-p btn-green">Genera Fattura</button>
+          <button type="button" wire:click="generateInvoice" class="btn btn-p btn-green">Genera bozza fattura</button>
         </div>
       </div>
     </div>

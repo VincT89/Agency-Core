@@ -4,6 +4,7 @@ namespace App\Domain\Dashboard\Queries;
 
 use App\Models\User;
 use App\Models\Shooting\Shoot;
+use App\Models\Scopes\ProjectSupremacyScope;
 use App\Domain\Dashboard\DTOs\PhotographerDashboardData;
 use App\Domain\Dashboard\DTOs\WorkQueueItemData;
 use Illuminate\Support\Carbon;
@@ -15,7 +16,12 @@ class PhotographerDashboardQuery
         $today = Carbon::today();
 
         // Filtra solo shooting attivi assegnati al fotografo corrente
-        $baseQuery = Shoot::with(['project', 'calendarEvent', 'slots'])
+        $baseQuery = Shoot::with([
+            'project' => fn ($query) => $query->withoutGlobalScope(ProjectSupremacyScope::class),
+            'marketingCampaign',
+            'calendarEvent',
+            'slots',
+        ])
             ->where('photographer_id', $user->id)
             ->whereNotIn('status', ['archived', 'cancelled', 'completed', 'draft']);
 
@@ -46,7 +52,7 @@ class PhotographerDashboardQuery
                     shoot_id: $shoot->id,
                     shoot_code: $shoot->code,
                     shoot_name: $shoot->title,
-                    project_name: $shoot->project->name ?? 'Nessun progetto',
+                    project_name: $this->contextName($shoot),
                     status_label: 'Richiesta di disponibilità',
                     action_label: 'Rispondi',
                     action_url: route('photography.shooting.show', $shoot->id),
@@ -61,7 +67,7 @@ class PhotographerDashboardQuery
                     shoot_id: $shoot->id,
                     shoot_code: $shoot->code,
                     shoot_name: $shoot->title,
-                    project_name: $shoot->project->name ?? 'Nessun progetto',
+                    project_name: $this->contextName($shoot),
                     status_label: 'In attesa Cliente',
                     action_label: 'Apri',
                     action_url: route('photography.shooting.show', $shoot->id),
@@ -88,7 +94,7 @@ class PhotographerDashboardQuery
                         shoot_id: $shoot->id,
                         shoot_code: $shoot->code,
                         shoot_name: $shoot->title,
-                        project_name: $shoot->project->name ?? 'Nessun progetto',
+                        project_name: $this->contextName($shoot),
                         status_label: 'Shooting in Programma',
                         action_label: 'Apri',
                         action_url: route('photography.shooting.show', $shoot->id),
@@ -123,5 +129,12 @@ class PhotographerDashboardQuery
             queue_in_attesa_cliente: $queueInAttesaCliente,
             upcoming_tasks: $upcomingTasks
         );
+    }
+
+    private function contextName(Shoot $shoot): string
+    {
+        return $shoot->project?->name
+            ?? $shoot->marketingCampaign?->name
+            ?? 'Nessuna commessa collegata';
     }
 }

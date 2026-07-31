@@ -1450,58 +1450,237 @@ body.sody-loader-active {
     touch-action: none;
 }
 
-.cmp-regeneration-loader {
+.cmp-sody-loader {
     position: fixed;
     isolation: isolate;
     inset: 0;
-    top: 0;
-    left: 0;
-    width: 100%;
+    width: 100vw;
     height: 100dvh;
     z-index: 2147483647;
-    background: rgba(0, 0, 0, 0.72);
-    overflow: hidden;
+    padding: 24px;
+    background: rgba(5, 5, 6, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow-y: auto;
     overscroll-behavior: contain;
     touch-action: none;
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-    transition: opacity .2s ease;
+    transition: opacity .18s ease, visibility .18s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.cmp-regeneration-loader.is-visible {
+.cmp-sody-loader.is-visible {
     opacity: 1;
     pointer-events: auto;
     visibility: visible;
 }
 
-.cmp-loader-logo-wrap {
-    margin-bottom: 32px;
-    text-align: center;
-}
-
-.cmp-loader-logo {
-    height: 40px;
-    width: auto;
-    object-fit: contain;
-}
-
-.cmp-regeneration-loader-card {
-    width: min(560px, calc(100vw - 32px));
-    min-height: 220px;
-    padding: 40px;
-    background: #0a0a0a;
-    border: 1px solid #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+.cmp-sody-loader-card {
+    position: relative;
+    width: min(520px, 100%);
+    min-height: 360px;
+    padding: 42px 40px 36px;
+    color: #fff;
+    background:
+        radial-gradient(circle at 50% -20%, rgba(214, 36, 45, .24), transparent 46%),
+        #0b0b0d;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 20px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .5);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
+    outline: none;
+}
+
+.cmp-sody-loader-card:focus-visible {
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, .5),
+        0 0 0 3px rgba(255, 255, 255, .32);
+}
+
+.cmp-sody-loader-logo {
+    width: auto;
+    height: 34px;
+    margin-bottom: 28px;
+    object-fit: contain;
+}
+
+.cmp-sody-loader-indicator {
+    position: relative;
+    width: 62px;
+    height: 62px;
+    margin-bottom: 26px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(255, 255, 255, .12), var(--red), rgba(255, 255, 255, .12));
+    animation: sody-loader-rotate 1.15s linear infinite;
+}
+
+.cmp-sody-loader-indicator::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    background: #0b0b0d;
+}
+
+.cmp-sody-loader-indicator span {
+    position: absolute;
+    z-index: 1;
+    inset: 50% auto auto 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 16px rgba(255, 255, 255, .7);
+}
+
+.cmp-sody-loader.is-delayed .cmp-sody-loader-indicator {
+    background: conic-gradient(from 0deg, rgba(255, 255, 255, .12), #f59e0b, rgba(255, 255, 255, .12));
+}
+
+.cmp-sody-loader.is-error .cmp-sody-loader-indicator,
+.cmp-sody-loader.is-success .cmp-sody-loader-indicator {
+    animation: none;
+}
+
+.cmp-sody-loader.is-error .cmp-sody-loader-indicator {
+    background: rgba(214, 36, 45, .92);
+}
+
+.cmp-sody-loader.is-success .cmp-sody-loader-indicator {
+    background: #16a34a;
+}
+
+.cmp-sody-loader.is-error .cmp-sody-loader-indicator::after,
+.cmp-sody-loader.is-success .cmp-sody-loader-indicator::after {
+    display: none;
+}
+
+.cmp-sody-loader.is-error .cmp-sody-loader-indicator span {
+    inset: 15px auto auto 29px;
+    width: 4px;
+    height: 23px;
+    margin: 0;
+    border-radius: 3px;
+    background: #fff;
+    box-shadow: none;
+}
+
+.cmp-sody-loader.is-error .cmp-sody-loader-indicator span::after {
+    content: "";
+    position: absolute;
+    top: 29px;
+    left: 0;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.cmp-sody-loader.is-success .cmp-sody-loader-indicator span {
+    inset: 13px auto auto 22px;
+    width: 17px;
+    height: 30px;
+    margin: 0;
+    border: solid #fff;
+    border-width: 0 5px 5px 0;
+    border-radius: 2px;
+    background: transparent;
+    box-shadow: none;
+    transform: rotate(45deg);
+}
+
+.cmp-sody-loader-copy {
+    max-width: 420px;
+}
+
+.cmp-sody-loader-eyebrow {
+    margin: 0 0 8px;
+    color: rgba(255, 255, 255, .6);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.cmp-sody-loader-title {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(22px, 4vw, 28px);
+    line-height: 1.2;
+}
+
+.cmp-sody-loader-description {
+    min-height: 48px;
+    margin: 14px 0 0;
+    color: rgba(255, 255, 255, .76);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.cmp-sody-loader-progress {
+    position: relative;
+    width: min(280px, 80%);
+    height: 4px;
+    margin-top: 26px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+}
+
+.cmp-sody-loader-progress span {
+    position: absolute;
+    inset: 0 auto 0 -45%;
+    width: 45%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, var(--red), #fff, var(--red), transparent);
+    animation: sody-loader-progress 1.55s ease-in-out infinite;
+}
+
+.cmp-sody-loader-dismiss {
+    min-width: 190px;
+    margin-top: 26px;
+}
+
+@keyframes sody-loader-rotate {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes sody-loader-progress {
+    from { transform: translateX(0); }
+    to { transform: translateX(325%); }
+}
+
+@media (max-width: 520px) {
+    .cmp-sody-loader {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .cmp-sody-loader-card {
+        min-height: 390px;
+        padding: 36px 22px 30px;
+        border-radius: 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cmp-sody-loader {
+        transition: none;
+    }
+
+    .cmp-sody-loader-indicator,
+    .cmp-sody-loader-progress span {
+        animation: none;
+    }
 }
 
 .cmp-identity-activity-full.is-expanded {
@@ -1701,43 +1880,6 @@ body.sody-loader-active {
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-/* N8n Loader Shimmer */
-.mkt-loader-shimmer {
-    width: 300px;
-    height: 6px;
-    background-color: var(--line);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-    margin: 20px auto;
-}
-
-.mkt-loader-shimmer-bar {
-    position: absolute;
-    top: 0;
-    left: -100%;
-    height: 100%;
-    width: 50%;
-    background: linear-gradient(90deg, transparent, var(--red), transparent);
-    animation: mkt-shimmer 1.5s infinite ease-in-out;
-}
-
-@keyframes mkt-shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
-}
-
-.mkt-loader-text {
-    color: #ffffff;
-    font-size: 14px;
-    animation: mkt-pulse-text 2s infinite ease-in-out;
-}
-
-@keyframes mkt-pulse-text {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
-}
-
 .cmp-floating-particle { position: absolute; pointer-events: none; z-index: 1; animation-name: mkt-float-particle; animation-iteration-count: infinite; animation-timing-function: ease-in-out; animation-direction: alternate; filter: brightness(0) invert(1); opacity: 0.8; }
 @keyframes mkt-float-particle { 0% { transform: translate(0, 0) rotate(-10deg) scale(1); } 100% { transform: translate(var(--tx), var(--ty)) rotate(20deg) scale(1.1); } }
 
@@ -1906,6 +2048,28 @@ body.sody-loader-active {
 .shooting-btn-full-primary { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
 .shooting-2col-main-start { align-items: flex-start; }
 .shooting-col-gap12 { display: flex; flex-direction: column; gap: 12px; }
+.shooting-client-contact { display: flex; flex-direction: column; gap: 20px; }
+.shooting-contact-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.shooting-contact-message { position: relative; }
+.shooting-contact-textarea { width: 100%; min-height: 172px; resize: vertical; line-height: 1.5; }
+.shooting-copy-btn { margin-top: 8px; }
+.shooting-contact-actions,
+.shooting-client-response-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.shooting-contact-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.shooting-contact-register,
+.shooting-contact-recorded {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.shooting-contact-register .form-g { flex: 1 1 240px; max-width: 360px; }
+.shooting-revision-grid { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr); gap: 18px; }
+.shooting-revision-slots { display: flex; flex-direction: column; gap: 10px; }
+.shooting-revision-slot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .7fr) auto; gap: 10px; align-items: end; }
+.shooting-revision-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
 /* Shooting Components */
 .shooting-alert-warn { background: rgba(245,200,66,0.1); border: 1px solid rgba(245,200,66,0.3); padding: 12px; border-radius: var(--r2); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .shooting-alert-icon { width: 16px; height: 16px; color: var(--yellow); flex-shrink: 0; }
@@ -1947,12 +2111,6 @@ body.sody-loader-active {
 .shooting-timeline-desc { font-size: 13px; color: var(--text3); }
 .shooting-timeline-red-text { color: var(--red); font-weight: 600; }
 .shooting-timeline-sm-icon { width: 12px; height: 12px; display: inline-block; margin-right: 4px; vertical-align: middle; }
-
-/* Loader Cancel */
-.cmp-loader-cancel-btn {
-    margin-top: 24px;
-    min-width: 160px;
-}
 
 /* Sody Carousel Slide Classes */
 .slide-0 { transform: translateX(0); }

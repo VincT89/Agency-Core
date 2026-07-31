@@ -124,7 +124,7 @@
             </div>
 
             <div class="cal-wrapper-modern" x-show="viewMode === 'calendar'">
-                <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
+                <div id="js-error" class="u-alert-error u-mb-sm" role="alert" hidden></div>
                 <div id="fullcalendar" class="cal-full-height"></div>
             </div>
 
@@ -181,8 +181,16 @@
                 cleanupCalendarEvents();
                 try {
                     const jsErr = document.getElementById('js-error');
+                    if (jsErr) {
+                        jsErr.textContent = '';
+                        jsErr.hidden = true;
+                    }
+
                     if (typeof FullCalendar === 'undefined') {
-                        if (jsErr) jsErr.innerText = "ERRORE CRITICO: FullCalendar undefined.";
+                        if (jsErr) {
+                            jsErr.innerText = 'Il calendario non è disponibile in questo momento. Ricarica la pagina.';
+                            jsErr.hidden = false;
+                        }
                         return;
                     }
 
@@ -228,7 +236,10 @@
                             extraParams: { format: 'json', department: CURRENT_DEPT, scope: CURRENT_SCOPE },
                             failure: function (err) {
                                 console.error('Errore caricamento eventi calendario:', err);
-                                alert("Impossibile scaricare gli eventi dal database.");
+                                if (jsErr) {
+                                    jsErr.innerText = 'Non è stato possibile caricare gli eventi. Riprova tra poco.';
+                                    jsErr.hidden = false;
+                                }
                             }
                         },
 
@@ -298,8 +309,12 @@
                     // di aggiornare correttamente sia la vista FullCalendar che la vista Kanban (che è renderizzata via Blade).
 
                 } catch (err) {
+                    console.error('Errore inizializzazione calendario:', err);
                     const jsErr = document.getElementById('js-error');
-                    if (jsErr) jsErr.innerText = "JS Exception: " + err.message + "\nStack:\n" + err.stack;
+                    if (jsErr) {
+                        jsErr.innerText = 'Il calendario non è disponibile in questo momento. Ricarica la pagina.';
+                        jsErr.hidden = false;
+                    }
                 }
             }
 
@@ -444,7 +459,7 @@
                                         }
                                     } catch (e) {
                                         console.error('Failed to update event date', e);
-                                        alert('Errore durante l\'aggiornamento della data.');
+                                        alert('Non è stato possibile aggiornare la data. Riprova.');
                                         // Rollback visivo
                                         evt.from.insertBefore(itemEl, evt.from.children[evt.oldIndex]);
                                     }

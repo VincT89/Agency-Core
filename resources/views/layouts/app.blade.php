@@ -255,6 +255,8 @@
         @if(auth()->user()->canAccessFinance())
           <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
             :active="request()->routeIs('invoices.*')" :badge="$overdueInvoices ?? null" />
+          <x-nav-item href="{{ route('billing-profile.edit') }}" icon="landmark" label="Dati fiscali"
+            :active="request()->routeIs('billing-profile.*')" />
           <x-nav-item href="{{ route('expenses.index') }}" wire:navigate icon="receipt" label="Spese"
             :active="request()->routeIs('expenses.*')" />
           <x-nav-item href="{{ route('payments.index') }}" icon="credit-card" label="Pagamenti"
@@ -283,6 +285,8 @@
           <div class="nav-group-label">Admin</div>
           <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
             :active="request()->routeIs('users.*')" />
+          <x-nav-item href="{{ route('audit-logs.index') }}" icon="history" label="Registro attività"
+            :active="request()->routeIs('audit-logs.*')" />
         </div>
       @endcan
 

@@ -20,104 +20,20 @@
         }
     }
 @endphp
-<div>
+<div
+    x-data="{ sodyActionPending: {{ in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true) ? 'true' : 'false' }} }"
+    x-on:sody-processing-started.window="sodyActionPending = true"
+    x-on:sody-processing-failed.window="sodyActionPending = false"
+    x-on:sody-processing-completed.window="sodyActionPending = false"
+>
     @if(in_array($form['status'] ?? ($post->status->value ?? null), ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true))
         <div wire:poll.3500ms="checkRegenerationStatus" style="display: none;"></div>
     @endif
-    
-    <template x-teleport="body">
-        <div
-            wire:ignore
-            class="cmp-regeneration-loader"
-            :class="{ 'is-visible': sodyLoaderVisible }"
-            x-data="{
-                sodyLoaderVisible: {{ in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']) ? 'true' : 'false' }},
-                showCancel: false,
-                messages: [
-                    'Sody sta ragionando...',
-                    'Analisi del contesto in corso...',
-                    'Generazione dei contenuti...',
-                    'Ottimizzazione per i social...',
-                    'Quasi pronto...'
-                ],
-                currentMsg: 0,
 
-                showLoader() {
-                    window.scrollTo({ top: 0, behavior: 'instant' });
-                    this.sodyLoaderVisible = true;
-                    this.showCancel = false;
-                    document.documentElement.classList.add('sody-loader-active');
-                    document.body.classList.add('sody-loader-active');
-                },
+    <x-social.sody-processing-loader
+        :active="in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true)"
+    />
 
-                hideLoader() {
-                    this.sodyLoaderVisible = false;
-                    this.showCancel = false;
-                    document.documentElement.classList.remove('sody-loader-active');
-                    document.body.classList.remove('sody-loader-active');
-                },
-
-                init() {
-                    const showHandler = () => this.showLoader();
-                    const completeHandler = () => this.hideLoader();
-                    const cancelBtnHandler = () => { this.showCancel = true; };
-
-                    window.addEventListener('show-sody-loader', showHandler);
-                    window.addEventListener('marketing-post-regeneration-completed', completeHandler);
-                    window.addEventListener('marketing-post-regeneration-cancelled', completeHandler);
-                    window.addEventListener('show-sody-cancel-button', cancelBtnHandler);
-
-                    if (this.sodyLoaderVisible) {
-                        this.showLoader();
-                    }
-
-                    let interval = setInterval(() => {
-                        this.currentMsg = (this.currentMsg + 1) % this.messages.length;
-                    }, 3500);
-
-                    this.$cleanup(() => {
-                        clearInterval(interval);
-                        window.removeEventListener('show-sody-loader', showHandler);
-                        window.removeEventListener('marketing-post-regeneration-completed', completeHandler);
-                        window.removeEventListener('marketing-post-regeneration-cancelled', completeHandler);
-                        window.removeEventListener('show-sody-cancel-button', cancelBtnHandler);
-                        this.hideLoader();
-                    });
-                }
-            }"
-        >
-            <div class="cmp-regeneration-loader-card">
-                <div class="cmp-loader-logo-wrap">
-                    <img src="{{ asset('images/logo.png') }}" alt="Sodano Logo" class="cmp-loader-logo">
-                </div>
-
-                <div class="mkt-loader-shimmer">
-                    <div class="mkt-loader-shimmer-bar"></div>
-                </div>
-
-                <div class="u-mt-md u-text-center">
-                    <strong class="mkt-loader-text" x-text="messages[currentMsg]">Sody sta ragionando...</strong>
-                </div>
-
-                <template x-if="showCancel">
-                    <div>
-                        <div class="u-mt-md u-text-orange u-text-center mkt-info-box">
-                            L'operazione sta richiedendo più tempo del previsto. Puoi chiudere questa schermata, la generazione continuerà in background. Se Sody risponde, il post verrà aggiornato.
-                        </div>
-                        <div class="u-flex u-justify-center u-w-full">
-                            <button
-                                type="button"
-                                class="btn btn-sec cmp-loader-cancel-btn"
-                                @click="$wire.cancelRegeneration(); hideLoader();"
-                            >
-                                Interrompi
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </div>
-    </template>
     <div class="u-mb-lg">
         <a href="{{ route('marketing-campaigns.show', $campaign->id) }}"
             class="btn btn-g u-inline-flex-center u-gap-xs">
@@ -285,8 +201,8 @@
                                     </svg>
                                 </div>
                                 <div class="cmp-alert-content">
-                                    <h4 style="margin:0 0 4px 0; color: #b37700; font-weight: 600;">Simulazione TikTok Attiva</h4>
-                                    <p style="margin:0; font-size: 13px; color: #b37700;">TikTok è in modalità simulazione: il flusso di pubblicazione viene testato, ma nessun contenuto viene inviato realmente a TikTok.</p>
+                                    <h4 style="margin:0 0 4px 0; color: #b37700; font-weight: 600;">Pubblicazione TikTok in prova</h4>
+                                    <p style="margin:0; font-size: 13px; color: #b37700;">I controlli vengono eseguiti normalmente, ma nessun contenuto verrà pubblicato su TikTok.</p>
                                 </div>
                             </div>
                         @endif
@@ -462,7 +378,7 @@
                                                     @elseif($item['source'] === 'nextcloud')
                                                         <i data-lucide="cloud" class="u-icon-xs u-mr-xs"></i>(NC)
                                                     @elseif($item['source'] === 'existing')
-                                                        <i data-lucide="database" class="u-icon-xs u-mr-xs"></i>(Salvato)
+                                                        <i data-lucide="check" class="u-icon-xs u-mr-xs"></i>File salvato
                                                     @endif
                                                 </span>
                                             </div>
@@ -479,7 +395,7 @@
                                     <div class="cmp-media-source-options">
                                         <label class="cmp-radio-label">
                                             <input type="radio" wire:model.live="form.media_source" value="local">
-                                            Upload Locale
+                                            Carica dal computer
                                         </label>
                                         <label class="cmp-radio-label">
                                             <input type="radio" wire:model.live="form.media_source" value="nextcloud">
@@ -501,7 +417,7 @@
 
                                         <div class="u-mt-sm u-mb-md">
                                             <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
-                                                <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Upload in background (Livewire)...
+                                                <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Caricamento dei file in corso...
                                             </div>
                                             <div wire:loading.remove wire:target="media" class="u-bg-gray-50 u-border u-border-line u-p-sm u-flex u-gap-sm" style="border-radius: 6px;" x-show="Object.keys(localBlobUrls).length === 0">
                                                 <i data-lucide="info" class="u-icon-sm u-text-muted u-mt-xs"></i>
@@ -725,15 +641,29 @@
                                             @else
                                                 @if(!in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating']))
                                                     @if($post->canRegenerate())
-                                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('full')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                                                            <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera Tutto
-                                                        </button>
-                                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('caption')"
+                                                        <button type="button"
+                                                            x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
+                                                            x-bind:disabled="sodyActionPending"
+                                                            wire:loading.attr="disabled"
+                                                            wire:click="regeneratePost('full')"
                                                             class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                                                            <i data-lucide="type" class="u-icon-sm"></i> Rigenera Testo
+                                                            <i data-lucide="refresh-cw" class="u-icon-sm"></i> Rigenera tutto
                                                         </button>
-                                                        <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="regeneratePost('image')" class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                                                            <i data-lucide="image" class="u-icon-sm"></i> Rigenera Immagine
+                                                        <button type="button"
+                                                            x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
+                                                            x-bind:disabled="sodyActionPending"
+                                                            wire:loading.attr="disabled"
+                                                            wire:click="regeneratePost('caption')"
+                                                            class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                            <i data-lucide="type" class="u-icon-sm"></i> Rigenera testo
+                                                        </button>
+                                                        <button type="button"
+                                                            x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
+                                                            x-bind:disabled="sodyActionPending"
+                                                            wire:loading.attr="disabled"
+                                                            wire:click="regeneratePost('image')"
+                                                            class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                                                            <i data-lucide="image" class="u-icon-sm"></i> Rigenera immagine
                                                         </button>
                                                     @endif
                                                 @endif
@@ -787,6 +717,10 @@
                                 @endif
                             @endif
 
+                            @error('post')
+                                <div class="u-alert-error u-mt-lg">{{ $message }}</div>
+                            @enderror
+
                             <div class="u-mt-lg u-flex u-gap-sm">
                                 @if(session()->has('success'))
                                     <div class="u-text-green u-text-meta u-mr-sm u-flex-center">{{ session('success') }}</div>
@@ -814,21 +748,29 @@
                                             <span wire:loading wire:target="savePost">Salvataggio...</span>
                                         </button>
                                         @if(!$post->currentVersion)
-                                            <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('full')"
-                                                class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            <button type="button"
+                                                x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
+                                                wire:click="saveAndSubmitToN8n('full')"
+                                                class="btn btn-p u-flex-center u-gap-xs"
+                                                wire:loading.attr="disabled"
+                                                x-bind:disabled="isUploadingLocalMedia || sodyActionPending">
                                                 <i data-lucide="sparkles" class="u-icon-md"></i>
                                                 <span wire:loading.remove wire:target="saveAndSubmitToN8n('full')">
-                                                    {{ $post->status->value !== 'draft' ? 'Rigenera Tutto' : 'Genera Immagine e Testo' }}
+                                                    {{ $post->status->value !== 'draft' ? 'Rigenera tutto' : 'Genera immagine e testo' }}
                                                 </span>
-                                                <span wire:loading wire:target="saveAndSubmitToN8n('full')">Invio in corso...</span>
+                                                <span wire:loading wire:target="saveAndSubmitToN8n('full')">Avvio di Sody...</span>
                                             </button>
-                                            <button type="button" x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))" wire:click="saveAndSubmitToN8n('caption')"
-                                                class="btn btn-sec u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            <button type="button"
+                                                x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
+                                                wire:click="saveAndSubmitToN8n('caption')"
+                                                class="btn btn-sec u-flex-center u-gap-xs"
+                                                wire:loading.attr="disabled"
+                                                x-bind:disabled="isUploadingLocalMedia || sodyActionPending">
                                                 <i data-lucide="type" class="u-icon-md"></i>
                                                 <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
-                                                    Genera solo Testo
+                                                    Genera solo testo
                                                 </span>
-                                                <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Invio in corso...</span>
+                                                <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Avvio di Sody...</span>
                                             </button>
                                         @endif
                                     @else
@@ -896,44 +838,38 @@
                         </div>
                     </div>
 
-                    @if($post->n8n_request_id || $post->submitted_to_n8n_at || $post->n8n_completed_at || $post->n8n_error)
+                    @if($post->submitted_to_n8n_at || $post->n8n_completed_at || $post->n8n_error || in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true))
                         <div class="u-section-sep u-flex-col u-gap-md">
-                            @if($post->n8n_request_id)
+                            @if(in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true))
                                 <div class="u-flex-center u-gap-md">
-                                    <i data-lucide="cpu" class="u-icon-lg u-text-muted"></i>
+                                    <i data-lucide="loader-2" class="u-icon-lg u-text-blue mkt-spin"></i>
                                     <div class="u-flex-col">
-                                        <div class="u-text-label">ID Richiesta Sody</div>
-                                        <div class="u-text-mono">{{ $post->n8n_request_id }}</div>
+                                        <div class="u-text-label">Elaborazione Sody</div>
+                                        <div class="u-text-muted">Contenuto in preparazione. Il post si aggiornerà automaticamente.</div>
                                     </div>
                                 </div>
-                            @endif
-
-                            @if($post->submitted_to_n8n_at)
-                                <div class="u-flex-center u-gap-md">
-                                    <i data-lucide="send" class="u-icon-lg u-text-muted"></i>
-                                    <div class="u-flex-col">
-                                        <div class="u-text-label">Inviato il</div>
-                                        <div class="u-text-muted">{{ $post->submitted_to_n8n_at->format('d/m/Y H:i:s') }}</div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            @if($post->n8n_completed_at)
-                                <div class="u-flex-center u-gap-md">
-                                    <i data-lucide="check-circle" class="u-icon-lg u-text-muted"></i>
-                                    <div class="u-flex-col">
-                                        <div class="u-text-label">Completato il</div>
-                                        <div class="u-text-muted">{{ $post->n8n_completed_at->format('d/m/Y H:i:s') }}</div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            @if($post->n8n_error)
+                            @elseif($post->n8n_error)
                                 <div class="u-flex-center u-gap-md">
                                     <i data-lucide="alert-triangle" class="u-icon-lg u-text-red"></i>
                                     <div class="u-flex-col">
-                                        <div class="u-text-label u-text-red">Errore Sody</div>
-                                        <div class="u-text-red">{{ $post->n8n_error }}</div>
+                                        <div class="u-text-label u-text-red">Elaborazione non completata</div>
+                                        <div class="u-text-muted">Sody non ha completato questa richiesta. Controlla il post e riprova.</div>
+                                    </div>
+                                </div>
+                            @elseif($post->n8n_completed_at)
+                                <div class="u-flex-center u-gap-md">
+                                    <i data-lucide="check-circle" class="u-icon-lg u-text-green"></i>
+                                    <div class="u-flex-col">
+                                        <div class="u-text-label">Elaborazione completata</div>
+                                        <div class="u-text-muted">{{ $post->n8n_completed_at->format('d/m/Y H:i') }}</div>
+                                    </div>
+                                </div>
+                            @elseif($post->submitted_to_n8n_at)
+                                <div class="u-flex-center u-gap-md">
+                                    <i data-lucide="send" class="u-icon-lg u-text-muted"></i>
+                                    <div class="u-flex-col">
+                                        <div class="u-text-label">Richiesta inviata a Sody</div>
+                                        <div class="u-text-muted">{{ $post->submitted_to_n8n_at->format('d/m/Y H:i') }}</div>
                                     </div>
                                 </div>
                             @endif
@@ -971,15 +907,15 @@
                                     
                                     @if($platform === \App\Enums\Social\SocialPlatform::Tiktok->value)
                                         <div class="u-bg-gray-50 u-border u-border-gray-200 u-text-gray-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                            <strong>Nota:</strong> I post su TikTok vengono inviati in <em>Modalità Inbox</em>. Dovrai finalizzare e pubblicare il video direttamente dall'app TikTok sul tuo telefono.
+                                            <strong>Nota:</strong> il contenuto verrà inviato all'app TikTok. La pubblicazione dovrà essere completata dal telefono.
                                         </div>
                                     @endif
                                     
                                     @if($preflight && !$preflight->isPass)
                                         <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                            <strong>Verifica Preflight Fallita</strong>
+                                            <strong>Prima di pubblicare, correggi questi elementi</strong>
                                             <ul class="u-pl-sm u-mt-xs" style="list-style-type: disc; margin-left: 1rem;">
-                                                @foreach($preflight->errors as $err)
+                                                @foreach($preflight->userFacingErrors() as $err)
                                                     <li>{{ $err }}</li>
                                                 @endforeach
                                             </ul>
@@ -994,31 +930,19 @@
                                                 @else
                                                     Pubblicato il {{ $publication->published_at?->format('d/m/Y H:i') }}<br>
                                                 @endif
-                                                ID: {{ $publication->external_post_id ?: $publication->external_container_id }}
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Publishing || $publication->status === \App\Enums\Social\PublicationStatus::Pending)
                                             <div class="u-bg-blue-50 u-border u-border-blue-200 u-text-blue-700 u-rounded u-p-sm u-text-meta">
-                                                Pubblicazione in corso...
-                                                @if($publication->meta_processing_state)
-                                                <br>Stato Meta: {{ $publication->meta_processing_state }}
-                                                @endif
+                                                Pubblicazione in corso. Lo stato si aggiornerà automaticamente.
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
                                             <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                                <strong>Pubblicazione Fallita</strong><br>
-                                                {{ $publication->error_message }}
-                                                @if(auth()->user()->is_admin && $publication->provider_last_response)
-                                                    <div class="u-mt-xs">
-                                                        <details>
-                                                            <summary class="u-cursor-pointer u-text-xs">Raw Response (Admin)</summary>
-                                                            <pre class="u-text-xs u-mt-xs" style="white-space: pre-wrap; word-break: break-all;">{{ json_encode($publication->provider_last_response, JSON_PRETTY_PRINT) }}</pre>
-                                                        </details>
-                                                    </div>
-                                                @endif
+                                                <strong>Pubblicazione non completata</strong><br>
+                                                Controlla il collegamento dell'account e riprova. I dettagli sono stati registrati per l'assistenza.
                                             </div>
                                             <div class="u-flex u-gap-sm">
-                                                <button type="button" wire:confirm="Sei sicuro di voler forzare il riavvio? Potrebbe causare doppioni." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Forza Retry</button>
-                                                <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-sec btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Nuovo Tentativo</button>
+                                                <button type="button" wire:confirm="Vuoi riprovare la pubblicazione? Verifica prima che il tentativo precedente non sia già visibile sul social." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Riprova</button>
+                                                <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-sec btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Nuovo tentativo</button>
                                             </div>
                                         @endif
                                     @else

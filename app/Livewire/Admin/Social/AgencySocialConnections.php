@@ -21,7 +21,11 @@ class AgencySocialConnections extends Component
             if ($result->isSuccessful()) {
                 session()->flash('success', "Sincronizzazione completata: {$result->newCreated} nuovi, {$result->updated} aggiornati, {$result->revoked} rimossi.");
             } else {
-                session()->flash('error', "Errore durante la sincronizzazione: {$result->errorMessage}");
+                Log::warning('Agency social connection sync returned an error', [
+                    'connection_id' => $connectionId,
+                    'error' => $result->errorMessage,
+                ]);
+                session()->flash('error', 'Non è stato possibile aggiornare gli account collegati. Riprova tra poco.');
             }
         } catch (\Exception $e) {
             Log::error('AgencySocialConnections sync error', ['error' => $e->getMessage()]);

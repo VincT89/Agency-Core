@@ -68,6 +68,10 @@ pre {
 }
 
 @media (max-width: 1199px) {
+  .audit-log-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .kpi-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -78,6 +82,38 @@ pre {
 
   .dash-grid {
     grid-template-columns: minmax(0, 1fr) 280px;
+  }
+
+  .inv-fiscal-line {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .inv-line-desc {
+    grid-column: 1 / -1;
+  }
+
+  .inv-line-qty,
+  .inv-line-unit {
+    grid-column: span 1;
+  }
+
+  .inv-line-price,
+  .inv-line-vat {
+    grid-column: span 2;
+  }
+
+  .inv-line-nature {
+    grid-column: span 2;
+  }
+
+  .inv-line-reference {
+    grid-column: span 4;
+  }
+
+  .inv-line-remove {
+    grid-column: 1 / -1;
+    justify-self: end;
+    min-width: 140px;
   }
 }
 
@@ -184,6 +220,7 @@ pre {
   .dash-grid,
   .g-invoice,
   .g-shoot-detail,
+  .shooting-request-layout,
   .cmp-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -195,6 +232,74 @@ pre {
 }
 
 @media (max-width: 767px) {
+  .audit-log-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .audit-log-filter-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .audit-log-filter-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .shooting-contact-summary,
+  .shooting-revision-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shooting-contact-register,
+  .shooting-contact-recorded {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shooting-contact-register .form-g {
+    max-width: none;
+  }
+
+  .shooting-client-response-actions > *,
+  .shooting-contact-actions > * {
+    flex: 1 1 180px;
+    justify-content: center;
+  }
+
+  .shooting-revision-slot {
+    grid-template-columns: minmax(0, 1fr) minmax(130px, .7fr) auto;
+  }
+
+  .inv-fiscal-line {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inv-line-desc,
+  .inv-line-nature,
+  .inv-line-reference {
+    grid-column: 1 / -1;
+  }
+
+  .inv-line-qty,
+  .inv-line-unit,
+  .inv-line-price,
+  .inv-line-vat {
+    grid-column: span 1;
+  }
+
+  .inv-line-remove {
+    grid-column: 1 / -1;
+  }
+
+  .inv-filter-stack form {
+    align-self: stretch;
+    flex-wrap: wrap;
+  }
+
+  .inv-filter-stack .filter-search {
+    flex: 1 1 220px;
+  }
   .topbar {
     padding-right: 10px;
   }
@@ -624,10 +729,6 @@ pre {
     flex-wrap: wrap;
   }
 
-  .mkt-loader-shimmer {
-    width: min(300px, 80vw);
-  }
-
   .cmp-version-img {
     width: min(140px, 40vw);
     height: auto;
@@ -636,6 +737,54 @@ pre {
 }
 
 @media (max-width: 479px) {
+  .audit-timeline-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .audit-timeline-date {
+    white-space: normal;
+  }
+
+  .shooting-revision-slot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shooting-revision-slot .btn {
+    width: 100%;
+  }
+
+  .shooting-revision-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shooting-revision-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .inv-fiscal-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inv-line-desc,
+  .inv-line-qty,
+  .inv-line-unit,
+  .inv-line-price,
+  .inv-line-vat,
+  .inv-line-nature,
+  .inv-line-reference,
+  .inv-line-remove {
+    grid-column: 1 / -1;
+  }
+
+  .inv-line-remove {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
   .content {
     padding-left: 10px;
     padding-right: 10px;

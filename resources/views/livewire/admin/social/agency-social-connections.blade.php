@@ -14,7 +14,7 @@
             <div class="u-flex u-flex-col u-items-center u-gap-md social-empty-state">
                 <i data-lucide="share-2" class="social-empty-icon"></i>
                 <h3 class="u-text-strong social-empty-title">Nessuna connessione attiva</h3>
-                <p class="u-text-muted social-empty-text">Collega un account Meta aziendale per avviare la sincronizzazione automatica degli asset e renderli disponibili ai tuoi clienti.</p>
+                <p class="u-text-muted social-empty-text">Collega un account Meta aziendale per rendere disponibili pagine e profili social ai clienti.</p>
                 <a href="{{ route('admin.social.connections.meta.redirect') }}" class="btn btn-p u-mt-lg u-flex u-items-center u-gap-xs social-empty-btn">
                     <i data-lucide="plus" class="u-icon-sm"></i> Collega Meta Agenzia
                 </a>
@@ -34,7 +34,7 @@
                             </p>
                         </div>
                         <span class="badge {{ $connection->status->value === 'connected' && !$connection->requires_reauth ? 'badge-success' : 'badge-error' }}">
-                            {{ $connection->requires_reauth ? 'Richiede Autenticazione' : $connection->status->label() }}
+                            {{ $connection->requires_reauth ? 'Da ricollegare' : $connection->status->label() }}
                         </span>
                     </div>
 
@@ -43,18 +43,17 @@
                             <div class="u-flex u-gap-sm u-items-start">
                                 <i data-lucide="alert-triangle" class="u-icon-sm"></i>
                                 <div>
-                                    Il token di questa connessione è scaduto o revocato da Meta. <br>
-                                    <strong>Devi ricollegare l'account!</strong>
+                                    Il collegamento non è più valido. <br>
+                                    <strong>Ricollega l'account Meta per continuare.</strong>
                                 </div>
                             </div>
                         </div>
                     @endif
 
                     <div class="u-text-sm u-text-secondary u-mb-md">
-                        <p><strong>Asset Trovati:</strong> {{ $connection->assets->count() }}</p>
-                        <p><strong>Ultimo Sync:</strong> {{ $connection->last_sync_at ? $connection->last_sync_at->format('d/m/Y H:i') : 'Mai' }}</p>
-                        <p><strong>Scadenza Token:</strong> {{ $connection->token_expires_at ? $connection->token_expires_at->format('d/m/Y H:i') : 'Non scade / Non nota' }}</p>
-                        <p><strong>Ultimo Refresh Token:</strong> {{ $connection->last_token_refresh_at ? $connection->last_token_refresh_at->format('d/m/Y H:i') : 'Mai' }}</p>
+                        <p><strong>Profili disponibili:</strong> {{ $connection->assets->count() }}</p>
+                        <p><strong>Ultimo aggiornamento:</strong> {{ $connection->last_sync_at ? $connection->last_sync_at->format('d/m/Y H:i') : 'Mai' }}</p>
+                        <p><strong>Collegamento valido fino al:</strong> {{ $connection->token_expires_at ? $connection->token_expires_at->format('d/m/Y H:i') : 'Senza scadenza nota' }}</p>
                     </div>
 
                     <div class="u-flex u-justify-between u-items-center social-card-actions">
@@ -62,15 +61,15 @@
                                 wire:loading.attr="disabled"
                                 class="btn btn-outline btn-sm u-flex u-items-center u-gap-xs">
                             <span class="u-flex u-items-center u-gap-xs" wire:loading.remove wire:target="syncConnection({{ $connection->id }})">
-                                <i data-lucide="refresh-cw" class="u-icon-xs"></i> Sincronizza
+                                <i data-lucide="refresh-cw" class="u-icon-xs"></i> Aggiorna account
                             </span>
                             <span class="u-flex u-items-center u-gap-xs" wire:loading wire:target="syncConnection({{ $connection->id }})">
-                                <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Sync...
+                                <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Aggiornamento...
                             </span>
                         </button>
                         
                         <button type="button" 
-                                onclick="confirm('Sei sicuro di voler revocare questa connessione e rimuovere gli asset associati? L\'azione impatterà tutti i clienti ad essa collegati.') || event.stopImmediatePropagation()"
+                                onclick="confirm('Vuoi scollegare questo account? I profili associati non saranno più disponibili per i clienti collegati.') || event.stopImmediatePropagation()"
                                 wire:click="revokeConnection({{ $connection->id }})" 
                                 wire:loading.attr="disabled"
                                 class="btn btn-error btn-sm u-flex u-items-center u-gap-xs">
@@ -78,7 +77,7 @@
                                 <i data-lucide="trash-2" class="u-icon-xs"></i> Disconnetti
                             </span>
                             <span class="u-flex u-items-center u-gap-xs" wire:loading wire:target="revokeConnection({{ $connection->id }})">
-                                <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Revoca...
+                                <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Disconnessione...
                             </span>
                         </button>
                     </div>
@@ -87,14 +86,14 @@
         </div>
         
         <x-panel padded>
-            <h3 class="u-text-strong u-mb-md">Dettaglio Asset Sincronizzati</h3>
+            <h3 class="u-text-strong u-mb-md">Pagine e profili disponibili</h3>
             <div class="social-table-container">
                 <table class="t-table u-w-full">
                     <thead>
                         <tr>
-                            <th>Asset</th>
+                            <th>Profilo</th>
                             <th>Piattaforma</th>
-                            <th>Connessione Origine</th>
+                            <th>Account collegato</th>
                             <th>Stato</th>
                         </tr>
                     </thead>
@@ -110,7 +109,7 @@
                                         @endif
                                         <div>
                                             <div class="u-text-strong">{{ $asset->name }}</div>
-                                            <div class="u-text-xs u-text-muted">{{ $asset->username ? '@' . $asset->username : $asset->provider_asset_id }}</div>
+                                            <div class="u-text-xs u-text-muted">{{ $asset->username ? '@' . $asset->username : 'Nome utente non disponibile' }}</div>
                                         </div>
                                     </div>
                                 </td>
@@ -132,7 +131,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="u-text-center u-text-muted u-p-lg">Nessun asset presente.</td>
+                                <td colspan="4" class="u-text-center u-text-muted u-p-lg">Nessun profilo disponibile.</td>
                             </tr>
                         @endforelse
                     </tbody>

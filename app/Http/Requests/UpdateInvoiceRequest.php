@@ -2,16 +2,21 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Finance\VatNature;
+use App\Http\Requests\Concerns\ValidatesInvoiceLines;
+use App\Http\Requests\Concerns\ValidatesProjectOwnership;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Models\MarketingCampaign;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
-use App\Http\Requests\Concerns\ValidatesProjectOwnership;
 
 class UpdateInvoiceRequest extends FormRequest
 {
+    use ValidatesInvoiceLines;
     use ValidatesProjectOwnership;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('invoice'));
@@ -38,16 +43,21 @@ class UpdateInvoiceRequest extends FormRequest
 
             'status' => ['required', Rule::in(Invoice::STATUSES)],
             'currency' => ['required', 'string', 'size:3'],
+            'fiscal_document_type' => ['required', 'in:TD01'],
 
             'subtotal' => ['required', 'numeric', 'min:0'],
             'tax_amount' => ['required', 'numeric', 'min:0'],
             'paid_total' => ['nullable', 'numeric', 'min:0'],
 
-            'items'                  => ['nullable', 'array'],
-            'items.*.id'             => ['nullable', 'integer', 'exists:invoice_items,id'],
-            'items.*.description'    => ['required_with:items', 'string', 'max:255'],
-            'items.*.quantity'       => ['required_with:items', 'numeric', 'min:0.01'],
-            'items.*.unit_price'     => ['required_with:items', 'numeric', 'min:0'],
+            'items' => ['nullable', 'array'],
+            'items.*.id' => ['nullable', 'integer', 'exists:invoice_items,id'],
+            'items.*.description' => ['required_with:items', 'string', 'max:255'],
+            'items.*.quantity' => ['required_with:items', 'numeric', 'min:0.01'],
+            'items.*.unit_price' => ['required_with:items', 'numeric', 'min:0'],
+            'items.*.unit_of_measure' => ['nullable', 'string', 'max:10'],
+            'items.*.vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'items.*.vat_nature' => ['nullable', Rule::enum(VatNature::class)],
+            'items.*.vat_reference' => ['nullable', 'string', 'max:255'],
 
             'notes' => ['nullable', 'string'],
         ];
@@ -58,9 +68,10 @@ class UpdateInvoiceRequest extends FormRequest
         return [
             function (Validator $validator) {
                 $this->withProjectOwnershipCheck($validator);
+                $this->addInvoiceLineTaxErrors($validator);
 
                 if ($this->input('marketing_campaign_id') && $this->input('client_id')) {
-                    $exists = \App\Models\MarketingCampaign::query()
+                    $exists = MarketingCampaign::query()
                         ->where('id', $this->input('marketing_campaign_id'))
                         ->where('client_id', $this->input('client_id'))
                         ->exists();
@@ -85,6 +96,21 @@ class UpdateInvoiceRequest extends FormRequest
                         'Il totale incassato non può superare il totale fattura.'
                     );
                 }
+
+                $invoice = $this->route('invoice');
+
+                if (
+                    $invoice instanceof Invoice
+                    && filled($invoice->fiscal_number)
+                    && ! $validator->errors()->has('issue_date')
+                    && filled($this->input('issue_date'))
+                    && $invoice->issue_date?->format('Y') !== Carbon::parse($this->input('issue_date'))->format('Y')
+                ) {
+                    $validator->errors()->add(
+                        'issue_date',
+                        'Il numero fiscale è già riservato: la data deve restare nello stesso anno.'
+                    );
+                }
             },
         ];
     }
@@ -94,6 +120,7 @@ class UpdateInvoiceRequest extends FormRequest
         $this->merge([
             'currency' => strtoupper($this->input('currency', 'EUR')),
             'paid_total' => $this->input('paid_total', 0),
+            'fiscal_document_type' => strtoupper($this->input('fiscal_document_type', 'TD01')),
         ]);
     }
 }

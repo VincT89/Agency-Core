@@ -355,7 +355,8 @@ class MarketingCampaignPostMediaDeletionTest extends TestCase
         $this->assertDatabaseHas('marketing_campaign_post_publications', ['id' => $publication->id]);
         
         $errorArray = $component->errors()->get('post');
-        $this->assertStringContainsString('protected because it contains historical', $errorArray[0] ?? '');
+        $this->assertSame('Non è stato possibile eliminare il post. Riprova tra poco.', $errorArray[0] ?? '');
+        $this->assertStringNotContainsString('protected because it contains historical', $errorArray[0] ?? '');
         
         Storage::disk('public')->assertExists('test_media.jpg');
     }

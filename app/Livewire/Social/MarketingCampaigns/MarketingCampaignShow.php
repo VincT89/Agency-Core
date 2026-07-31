@@ -279,7 +279,12 @@ class MarketingCampaignShow extends Component
             $action->execute($extra);
             $this->dispatch('campaign-extra-deleted');
         } catch (\Exception $e) {
-            $this->addError('extraForm', $e->getMessage());
+            Log::warning('Unable to cancel marketing campaign extra', [
+                'campaign_id' => $this->campaign->id,
+                'extra_id' => $extraId,
+                'error' => $e->getMessage(),
+            ]);
+            $this->addError('extraForm', 'Non è stato possibile annullare questa voce. Riprova tra poco.');
         }
     }
 
@@ -297,7 +302,7 @@ class MarketingCampaignShow extends Component
             'number' => '',
             'issue_date' => now()->format('Y-m-d'),
             'due_date' => now()->addDays(30)->format('Y-m-d'),
-            'tax_amount' => 0,
+            'vat_rate' => 22,
             'period_ids' => $pendingPeriods->pluck('id')->toArray(),
             'extra_ids' => $pendingExtras->pluck('id')->toArray(),
         ];
@@ -332,7 +337,7 @@ class MarketingCampaignShow extends Component
             'invoiceForm.number' => 'required|string|unique:invoices,number',
             'invoiceForm.issue_date' => 'required|date',
             'invoiceForm.due_date' => 'nullable|date|after_or_equal:invoiceForm.issue_date',
-            'invoiceForm.tax_amount' => 'required|numeric|min:0',
+            'invoiceForm.vat_rate' => 'required|numeric|min:0|max:100',
             'customLines.*.description' => 'nullable|string|max:255',
             'customLines.*.quantity'    => 'nullable|numeric|min:0.01',
             'customLines.*.unit_price'  => 'nullable|numeric|min:0',
@@ -351,7 +356,11 @@ class MarketingCampaignShow extends Component
             $this->closeInvoiceModal();
             $this->dispatch('campaign-invoice-generated');
         } catch (\Exception $e) {
-            $this->addError('invoiceForm', $e->getMessage());
+            Log::error('Unable to generate marketing campaign invoice', [
+                'campaign_id' => $this->campaign->id,
+                'error' => $e->getMessage(),
+            ]);
+            $this->addError('invoiceForm', 'Non è stato possibile creare la fattura. Controlla i dati e riprova.');
         }
     }
     // ---------------------------------------------

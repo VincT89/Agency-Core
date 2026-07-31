@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -223,6 +224,16 @@ class MarketingCampaignPostShow extends Component
 
         if (! in_array($this->post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true)) {
             $this->dispatch('marketing-post-regeneration-completed');
+
+            if ($this->post->n8n_error) {
+                $this->dispatch(
+                    'sody-processing-failed',
+                    message: 'Sody non ha completato la richiesta. Controlla il post e riprova.'
+                );
+            } else {
+                $this->dispatch('sody-processing-completed');
+            }
+
             $this->regeneration_timeout = false;
             $this->regeneration_checks = 0;
 
@@ -232,7 +243,7 @@ class MarketingCampaignPostShow extends Component
         if (in_array($this->post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'])) {
             $this->regeneration_checks++;
             if ($this->regeneration_checks >= 10) {
-                $this->dispatch('show-sody-cancel-button');
+                $this->dispatch('sody-processing-delayed');
                 $this->regeneration_timeout = true;
             }
         } else {
@@ -746,7 +757,15 @@ class MarketingCampaignPostShow extends Component
                     $orderedMediaIds[] = $newRecord->id;
                     $newlyCreatedMediaIds[] = $newRecord->id;
                 } catch (NextcloudShareException $e) {
-                    $this->addError('form.nextcloud_path', $e->getMessage());
+                    Log::warning('Unable to prepare Nextcloud media for marketing post', [
+                        'post_id' => $this->post->id,
+                        'path' => $item['nextcloud_path'] ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $this->addError(
+                        'form.nextcloud_path',
+                        'Non riesco a preparare uno dei file selezionati da Nextcloud. Selezionalo di nuovo e riprova.'
+                    );
 
                     return false;
                 }
@@ -764,7 +783,7 @@ class MarketingCampaignPostShow extends Component
         $this->authorize('update', $this->post);
 
         if ($this->mediaResolutionFailed) {
-            $this->addError('media', 'Correggere l\'integrità dei media prima di continuare.');
+            $this->addError('media', 'Alcuni file del post non sono più disponibili. Rimuovili e selezionali di nuovo.');
 
             return;
         }
@@ -805,7 +824,14 @@ class MarketingCampaignPostShow extends Component
             try {
                 $locks = $ncService->acquireLocksForPaths($ncPaths);
             } catch (NextcloudShareException $e) {
-                $this->addError('form.nextcloud_path', $e->getMessage());
+                Log::warning('Unable to reserve Nextcloud media while saving marketing post', [
+                    'post_id' => $this->post->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $this->addError(
+                    'form.nextcloud_path',
+                    'I file selezionati da Nextcloud non sono disponibili in questo momento. Riprova tra poco.'
+                );
 
                 return;
             }
@@ -845,7 +871,7 @@ class MarketingCampaignPostShow extends Component
 
         } catch (StaleMarketingCampaignPostVersionException $e) {
             $this->cleanupCompensatoryFiles($newlyCreatedMediaPaths, $newlyCreatedNextcloudShares);
-            $this->addError('post', $e->getMessage());
+            $this->addError('post', 'Il post è stato modificato in un\'altra sessione. Ricarica la pagina prima di continuare.');
 
             return;
         } catch (MediaPreparationException $e) {
@@ -952,30 +978,58 @@ class MarketingCampaignPostShow extends Component
         $this->savePost();
     }
 
+    private function notifySodyFailure(string $message, ?string $field = null): void
+    {
+        if ($field !== null) {
+            $this->addError($field, $message);
+        }
+
+        $this->dispatch('sody-processing-failed', message: $message);
+    }
+
     public function saveAndSubmitToN8n(string $generationType = 'full')
     {
+        $this->dispatch('sody-processing-started');
+
         $submitAction = app(SubmitMarketingCampaignPostToN8nAction::class);
 
         if ($this->mediaResolutionFailed) {
-            $this->addError('media', 'Correggere l\'integrità dei media prima di continuare.');
+            $this->notifySodyFailure(
+                'Alcuni file del post non sono più disponibili. Rimuovili e selezionali di nuovo.',
+                'media'
+            );
 
             return;
         }
 
         if ($this->hasPendingLocalMedia()) {
-            $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+            $this->notifySodyFailure(
+                'Attendi che il caricamento dei file sia terminato prima di avviare Sody.',
+                'media'
+            );
 
             return;
         }
 
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            $this->notifySodyFailure('Controlla i campi evidenziati e riprova.');
+
+            throw $e;
+        }
 
         if (! $this->validateReelMedia()) {
+            $this->notifySodyFailure('Controlla i file selezionati per il Reel e riprova.');
+
             return;
         }
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
-            $this->addError('post', 'Impossibile inviare a N8n un post già pubblicato.');
+            $this->notifySodyFailure(
+                'Un post già pubblicato non può essere inviato nuovamente a Sody.',
+                'post'
+            );
 
             return;
         }
@@ -1004,7 +1058,14 @@ class MarketingCampaignPostShow extends Component
             try {
                 $locks = $service->acquireLocksForPaths($paths);
             } catch (NextcloudShareException $e) {
-                $this->addError('media', 'Impossibile acquisire il lock per i file su Nextcloud. Riprova più tardi.');
+                Log::warning('Unable to reserve Nextcloud media before Sody submission', [
+                    'post_id' => $this->post->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $this->notifySodyFailure(
+                    'I file selezionati da Nextcloud non sono disponibili in questo momento. Riprova tra poco.',
+                    'media'
+                );
 
                 return;
             }
@@ -1050,6 +1111,7 @@ class MarketingCampaignPostShow extends Component
                 [],
                 'public'
             );
+            $this->notifySodyFailure('Non riesco a preparare i file selezionati. Controllali e riprova.');
 
             return;
         } catch (\Exception $e) {
@@ -1059,7 +1121,14 @@ class MarketingCampaignPostShow extends Component
                 [],
                 'public'
             );
-            $this->addError('post', 'Errore durante il salvataggio: '.$e->getMessage());
+            Log::error('Unable to save marketing post before Sody submission', [
+                'post_id' => $this->post->id,
+                'error' => $e->getMessage(),
+            ]);
+            $this->notifySodyFailure(
+                'Non è stato possibile salvare il post. Riprova tra poco.',
+                'post'
+            );
 
             return;
         } finally {
@@ -1086,7 +1155,14 @@ class MarketingCampaignPostShow extends Component
             $submitAction->execute($this->post, $runtimeClientData);
             $this->dispatch('post-submitted-n8n');
         } catch (\Exception $e) {
-            Log::error('N8n dispatch error: '.$e->getMessage());
+            Log::error('Sody submission dispatch failed', [
+                'post_id' => $this->post->id,
+                'error' => $e->getMessage(),
+            ]);
+            $this->notifySodyFailure(
+                'Il post è stato salvato, ma Sody non è stata avviata. Riprova tra poco.',
+                'post'
+            );
         }
 
         $this->refreshPost();
@@ -1094,15 +1170,25 @@ class MarketingCampaignPostShow extends Component
 
     public function regeneratePost(string $type, RequestMarketingCampaignPostRegenerationAction $action)
     {
+        $this->dispatch('sody-processing-started');
         $this->authorize('update', $this->post);
 
         if ($this->post->status === MarketingCampaignPostStatus::Published) {
-            $this->addError('post', 'Impossibile rigenerare un post già pubblicato.');
+            $this->notifySodyFailure(
+                'Un post già pubblicato non può essere rigenerato.',
+                'post'
+            );
 
             return;
         }
 
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            $this->notifySodyFailure('Controlla i campi evidenziati e riprova.');
+
+            throw $e;
+        }
 
         $metadataToUpdate = [
             'title' => $this->form['title'] ?? null,
@@ -1125,7 +1211,10 @@ class MarketingCampaignPostShow extends Component
                 'error' => $e->getMessage(),
             ]);
 
-            $this->addError('post', 'Errore rigenerazione: '.$e->getMessage());
+            $this->notifySodyFailure(
+                'Sody non è stata avviata. Riprova tra poco.',
+                'post'
+            );
         }
     }
 
@@ -1145,7 +1234,11 @@ class MarketingCampaignPostShow extends Component
             $this->dispatch('post-sent-to-client');
             $this->refreshPost();
         } catch (\Exception $e) {
-            $this->addError('post', $e->getMessage());
+            Log::warning('Unable to send marketing post for client review', [
+                'post_id' => $this->post->id,
+                'error' => $e->getMessage(),
+            ]);
+            $this->addError('post', 'Non è stato possibile preparare il link di revisione. Riprova tra poco.');
         }
     }
 
@@ -1207,14 +1300,14 @@ class MarketingCampaignPostShow extends Component
             $account = $this->post->campaign->client->socialAccountFor($platform);
 
             if (! $platformEnum || ! $account) {
-                $this->addError('post', 'Impossibile determinare account o piattaforma.');
+                $this->addError('post', 'L\'account social selezionato non è collegato correttamente.');
 
                 return;
             }
 
             $version = $this->post->currentVersion;
             if (! $version) {
-                $this->addError('post', 'Impossibile trovare la versione corrente del post.');
+                $this->addError('post', 'Salva una versione del post prima di pubblicarlo.');
 
                 return;
             }
@@ -1225,11 +1318,11 @@ class MarketingCampaignPostShow extends Component
             // Dispatch async job
             ExecuteMarketingCampaignPostPublicationJob::dispatch($publication->id);
 
-            session()->flash("success_publish_{$platform}", "Pubblicazione in corso su {$platform}... Il job è stato accodato.");
+            session()->flash("success_publish_{$platform}", "Pubblicazione su {$platform} avviata.");
             $this->refreshPost();
         } catch (\Exception $e) {
             Log::error('Errore durante dispatch pubblicazione social', ['error' => $e->getMessage()]);
-            $this->addError('post', 'Errore di sistema: '.$e->getMessage());
+            $this->addError('post', 'Non è stato possibile avviare la pubblicazione. Controlla il collegamento dell\'account e riprova.');
         }
     }
 
@@ -1250,7 +1343,12 @@ class MarketingCampaignPostShow extends Component
             session()->flash("success_publish_{$publication->platform->value}", "Riavvio pubblicazione su {$publication->platform->value} in corso.");
             $this->refreshPost();
         } catch (\Exception $e) {
-            $this->addError('post', 'Errore durante il retry: '.$e->getMessage());
+            Log::error('Unable to retry social publication', [
+                'post_id' => $this->post->id,
+                'publication_id' => $publicationId,
+                'error' => $e->getMessage(),
+            ]);
+            $this->addError('post', 'Non è stato possibile riprovare la pubblicazione. Attendi qualche istante e riprova.');
         }
     }
 
@@ -1276,7 +1374,11 @@ class MarketingCampaignPostShow extends Component
         try {
             app(DeleteMarketingCampaignPostAction::class)->execute($this->post);
         } catch (\Exception $e) {
-            $this->addError('post', 'Impossibile eliminare il post: '.$e->getMessage());
+            Log::error('Unable to delete marketing post', [
+                'post_id' => $this->post->id,
+                'error' => $e->getMessage(),
+            ]);
+            $this->addError('post', 'Non è stato possibile eliminare il post. Riprova tra poco.');
 
             return;
         }

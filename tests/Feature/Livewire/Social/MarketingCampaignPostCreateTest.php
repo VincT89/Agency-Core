@@ -90,4 +90,23 @@ class MarketingCampaignPostCreateTest extends TestCase
             return !empty($job->post->n8n_request_id) && str_starts_with($job->post->n8n_request_id, 'cmp_');
         });
     }
+
+    public function test_sody_loader_is_available_and_resets_after_validation_error(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostCreate::class, ['campaign' => $campaign])
+            ->assertSee('Sody sta preparando il contenuto')
+            ->assertSee('Chiudi questo pannello')
+            ->assertDontSee('Interrompi')
+            ->set('form.content_type', 'unsupported')
+            ->call('saveAndSubmitToN8n')
+            ->assertHasErrors(['form.content_type'])
+            ->assertDispatched('sody-processing-started')
+            ->assertDispatched('sody-processing-failed');
+    }
 }

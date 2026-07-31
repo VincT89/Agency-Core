@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -582,36 +583,91 @@ class MarketingCampaignPostCreate extends Component
 
     public function save()
     {
-        return $this->executePostCreation(function ($post) {
-            return redirect()->route('marketing-campaigns.posts.show', [
-                'campaign' => $this->campaign->id,
-                'post' => $post->id,
+        try {
+            return $this->executePostCreation(function ($post) {
+                return redirect()->route('marketing-campaigns.posts.show', [
+                    'campaign' => $this->campaign->id,
+                    'post' => $post->id,
+                ]);
+            });
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Unable to create marketing post', [
+                'campaign_id' => $this->campaign->id,
+                'error' => $e->getMessage(),
             ]);
-        });
+            $this->addError('post', 'Non è stato possibile salvare il post. Riprova tra poco.');
+
+            return null;
+        }
     }
 
     public function saveAndSubmitToN8n(string $generationType = 'full')
     {
-        return $this->executePostCreation(function ($post) use ($generationType) {
-            $submitAction = app(SubmitMarketingCampaignPostToN8nAction::class);
+        $this->dispatch('sody-processing-started');
 
-            $runtimeClientData = [
-                'include_client_logo' => $this->include_client_logo,
-                'include_client_header' => $this->include_client_header,
-                'runtime_logo' => $this->runtime_logo,
-                'runtime_activity_description' => $this->runtime_activity_description,
-                'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
-                'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
-                'generation_type' => $generationType,
-            ];
+        try {
+            $result = $this->executePostCreation(function ($post) use ($generationType) {
+                $submitAction = app(SubmitMarketingCampaignPostToN8nAction::class);
 
-            $submitAction->execute($post, $runtimeClientData);
+                $runtimeClientData = [
+                    'include_client_logo' => $this->include_client_logo,
+                    'include_client_header' => $this->include_client_header,
+                    'runtime_logo' => $this->runtime_logo,
+                    'runtime_activity_description' => $this->runtime_activity_description,
+                    'save_runtime_logo_to_client' => $this->save_runtime_logo_to_client,
+                    'save_runtime_activity_to_client' => $this->save_runtime_activity_to_client,
+                    'generation_type' => $generationType,
+                ];
 
-            return redirect()->route('marketing-campaigns.posts.show', [
-                'campaign' => $this->campaign->id,
-                'post' => $post->id,
+                try {
+                    $submitAction->execute($post, $runtimeClientData);
+                } catch (\Throwable $e) {
+                    Log::error('Unable to submit newly created marketing post to Sody', [
+                        'campaign_id' => $this->campaign->id,
+                        'post_id' => $post->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    session()->flash(
+                        'error',
+                        'Il post è stato salvato, ma Sody non è stata avviata. Apri il post e riprova.'
+                    );
+                }
+
+                return redirect()->route('marketing-campaigns.posts.show', [
+                    'campaign' => $this->campaign->id,
+                    'post' => $post->id,
+                ]);
+            });
+
+            if ($result === null) {
+                $this->dispatch(
+                    'sody-processing-failed',
+                    message: 'Controlla i campi evidenziati e riprova.'
+                );
+            }
+
+            return $result;
+        } catch (ValidationException $e) {
+            $this->dispatch(
+                'sody-processing-failed',
+                message: 'Controlla i campi evidenziati e riprova.'
+            );
+
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Unable to create marketing post for Sody submission', [
+                'campaign_id' => $this->campaign->id,
+                'error' => $e->getMessage(),
             ]);
-        });
+
+            $message = 'Non è stato possibile salvare il post. Riprova tra poco.';
+            $this->addError('post', $message);
+            $this->dispatch('sody-processing-failed', message: $message);
+
+            return null;
+        }
     }
 
     public function getPendingMediaCountProperty(): int

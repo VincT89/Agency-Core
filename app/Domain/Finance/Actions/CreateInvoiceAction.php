@@ -2,11 +2,16 @@
 
 namespace App\Domain\Finance\Actions;
 
+use App\Domain\Finance\Services\InvoiceAmountsCalculator;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 
 class CreateInvoiceAction
 {
+    public function __construct(
+        private readonly InvoiceAmountsCalculator $amounts,
+    ) {}
+
     public function execute(array $data): Invoice
     {
         return DB::transaction(function () use ($data) {
@@ -17,16 +22,23 @@ class CreateInvoiceAction
             $invoice = Invoice::create($data);
 
             foreach ($data['items'] ?? [] as $line) {
-                $qty   = (float) $line['quantity'];
-                $price = (float) $line['unit_price'];
-                $invoice->items()->create([
-                    'billable_type' => null,
-                    'billable_id'   => null,
-                    'description'   => $line['description'],
-                    'quantity'      => $qty,
-                    'unit_price'    => $price,
-                    'total'         => $qty * $price,
-                ]);
+                $invoice->items()->create(array_merge(
+                    $this->amounts->lineAttributes($line),
+                    [
+                        'billable_type' => null,
+                        'billable_id' => null,
+                    ],
+                ));
+            }
+
+            $allLinesHaveVat = collect($data['items'] ?? [])
+                ->isNotEmpty()
+                && collect($data['items'])->every(
+                    fn (array $line): bool => filled($line['vat_rate'] ?? null)
+                );
+
+            if ($allLinesHaveVat) {
+                $this->amounts->recalculate($invoice);
             }
 
             return $invoice;

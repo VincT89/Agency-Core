@@ -25,13 +25,13 @@ class ClientAndNextcloudCharacterizationTest extends TestCase
         ]);
 
         $mockNextcloud = Mockery::mock(NextcloudService::class);
-        $mockNextcloud->shouldReceive('mediaRoot')
-            ->with('photo')
-            ->andReturn('/Media/Photos/');
-        
-        $mockNextcloud->shouldReceive('ensureDirectoryExists')
-            ->with('/Media/Photos/test-client-folder')
-            ->andReturn(true);
+        $mockNextcloud->shouldReceive('ensureClientMediaDirectories')
+            ->once()
+            ->with('test-client-folder')
+            ->andReturn([
+                'photo' => '/Media/Photos/test-client-folder',
+                'video' => '/Media/Videos/test-client-folder',
+            ]);
 
         $this->app->instance(NextcloudService::class, $mockNextcloud);
 
@@ -58,13 +58,10 @@ class ClientAndNextcloudCharacterizationTest extends TestCase
         ]);
 
         $mockNextcloud = Mockery::mock(NextcloudService::class);
-        $mockNextcloud->shouldReceive('mediaRoot')
-            ->with('photo')
-            ->andReturn('/Media/Photos/');
-        
-        $mockNextcloud->shouldReceive('ensureDirectoryExists')
-            ->with('/Media/Photos/fail-client-folder')
-            ->andReturn(false);
+        $mockNextcloud->shouldReceive('ensureClientMediaDirectories')
+            ->once()
+            ->with('fail-client-folder')
+            ->andReturn(null);
 
         $this->app->instance(NextcloudService::class, $mockNextcloud);
 
@@ -79,6 +76,44 @@ class ClientAndNextcloudCharacterizationTest extends TestCase
         $response->assertSessionHasErrors('nextcloud_folder_name');
         $this->assertDatabaseMissing('clients', [
             'name' => 'Fail Client NC',
+        ]);
+    }
+
+    public function test_changing_client_folder_provisions_photo_and_video_directories()
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+        $client = Client::factory()->create([
+            'name' => 'Existing Client',
+            'status' => 'active',
+            'nextcloud_folder_name' => 'old-folder',
+            'nextcloud_photos_path' => '/Media/Photos/old-folder',
+        ]);
+
+        $mockNextcloud = Mockery::mock(NextcloudService::class);
+        $mockNextcloud->shouldReceive('ensureClientMediaDirectories')
+            ->once()
+            ->with('new-folder')
+            ->andReturn([
+                'photo' => '/Media/Photos/new-folder',
+                'video' => '/Media/Videos/new-folder',
+            ]);
+
+        $this->app->instance(NextcloudService::class, $mockNextcloud);
+
+        $response = $this->actingAs($admin)->patch("/clients/{$client->id}", [
+            'name' => 'Existing Client',
+            'status' => 'active',
+            'nextcloud_folder_name' => 'new-folder',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+            'nextcloud_folder_name' => 'new-folder',
+            'nextcloud_photos_path' => '/Media/Photos/new-folder',
         ]);
     }
 }

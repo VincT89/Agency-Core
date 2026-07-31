@@ -37,7 +37,7 @@
                         <th>Cliente / Post</th>
                         <th>Piattaforma</th>
                         <th>Stato</th>
-                        <th>Errore / Info</th>
+                        <th>Esito</th>
                         <th class="u-text-right">Azioni</th>
                     </tr>
                 </thead>
@@ -71,34 +71,25 @@
                                 </span>
                             </td>
                             <td class="u-max-w-xs">
-                                <div class="u-text-sm u-text-red u-text-truncate" title="{{ $pub->error_message }}">
-                                    {{ $pub->error_message ?: 'Nessun messaggio di errore esplicito' }}
-                                </div>
-                                @if($pub->external_container_id || $pub->external_post_id || $pub->external_task_id)
-                                    <div class="u-text-meta muted u-mt-xs">
-                                        @if($pub->platform === \App\Enums\Social\SocialPlatform::Instagram && $pub->external_container_id)
-                                            Container: {{ $pub->external_container_id }}
-                                        @elseif($pub->platform === \App\Enums\Social\SocialPlatform::Tiktok && $pub->external_task_id)
-                                            Publish ID: {{ $pub->external_task_id }}
-                                        @elseif(!in_array($pub->platform, [\App\Enums\Social\SocialPlatform::Instagram, \App\Enums\Social\SocialPlatform::Tiktok]) && $pub->external_post_id)
-                                            Post ID: {{ $pub->external_post_id }}
-                                        @endif
-                                    </div>
+                                @if($pub->error_message || in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true))
+                                    <div class="u-text-sm u-text-red">Pubblicazione non completata. Controlla l'account collegato o riprova.</div>
+                                @else
+                                    <div class="u-text-sm u-text-muted">Nessun problema rilevato.</div>
                                 @endif
                             </td>
                             <td class="u-text-right">
                                 <div class="u-flex u-justify-end u-gap-xs">
                                     @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Publishing]))
-                                        <button wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Controlla stato asincrono">
-                                            <i class="fas fa-sync-alt"></i> Check Sync
+                                        <button wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Aggiorna lo stato della pubblicazione">
+                                            <i class="fas fa-sync-alt"></i> Aggiorna stato
                                         </button>
                                     @endif
                                     @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
                                         <button 
-                                            wire:confirm="ATTENZIONE: Questo creerà un NUOVO container scartando l'attuale. Se Meta stava ancora processando il vecchio, potresti causare un doppio post. Vuoi procedere da zero?"
+                                            wire:confirm="Verrà creato un nuovo tentativo. Prima di continuare, verifica che il contenuto non sia già visibile su Instagram per evitare duplicati."
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
-                                            Riprova IG da zero
+                                            Riprova su Instagram
                                         </button>
                                     @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Tiktok)
                                         <button 

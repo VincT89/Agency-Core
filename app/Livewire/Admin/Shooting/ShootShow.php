@@ -2,67 +2,92 @@
 
 namespace App\Livewire\Admin\Shooting;
 
-use App\Models\Shooting\Shoot;
-use Livewire\Component;
 use App\Domain\Shooting\Actions\ClientConfirmAction;
-use App\Domain\Shooting\Actions\PhotographerRespondAction;
+use App\Domain\Shooting\Actions\MarkClientInformedAction;
+use App\Domain\Shooting\Services\ShootingClientCommunicationService;
+use App\Enums\Shooting\ShootClientContactChannel;
+use App\Models\Shooting\Shoot;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\Rule;
+use Livewire\Component;
 
 class ShootShow extends Component
 {
     use AuthorizesRequests;
 
     public Shoot $shoot;
-    public $photographerNote = '';
 
-    public function mount(Shoot $shoot)
+    public string $clientChannel = 'whatsapp';
+
+    public function mount(Shoot $shoot): void
     {
-        if (!auth()->user()->canManageSystem()) {
+        if (! auth()->user()->canManageSystem()) {
             abort(403);
         }
 
         $this->authorize('view', $shoot);
-        $this->shoot = $shoot->load(['project', 'slots', 'photographer', 'calendarEvent', 'task']);
+        $this->shoot = $shoot;
+        $this->reloadShoot();
+
+        $client = $this->shoot->clientRecord();
+        $this->clientChannel = ($client?->normalized_phone || $client?->phone)
+            ? ShootClientContactChannel::Whatsapp->value
+            : ShootClientContactChannel::Email->value;
     }
 
-    public function acceptSlot($slotId)
-    {
-        $this->authorize('respond', $this->shoot);
-        
-        app(PhotographerRespondAction::class)->execute($this->shoot, $slotId, $this->photographerNote);
-        $this->shoot->refresh();
-        session()->flash('success', 'Hai accettato lo slot come admin.');
-    }
-    
-    public function rejectAllSlots()
-    {
-        $this->authorize('respond', $this->shoot);
-        
-        app(PhotographerRespondAction::class)->execute($this->shoot, null, $this->photographerNote);
-        $this->shoot->refresh();
-        session()->flash('success', 'Hai rifiutato la richiesta come admin.');
-    }
-
-    public function confirmForClient()
+    public function markClientInformed(MarkClientInformedAction $action): void
     {
         $this->authorize('confirmClient', $this->shoot);
-        
-        app(ClientConfirmAction::class)->execute($this->shoot, true, auth()->id());
-        $this->shoot->refresh();
-        session()->flash('success', 'Shooting confermato. Evento e Task creati.');
-    }
-    
-    public function rejectForClient()
-    {
-        $this->authorize('confirmClient', $this->shoot);
-        
-        app(ClientConfirmAction::class)->execute($this->shoot, false, auth()->id());
-        $this->shoot->refresh();
-        session()->flash('success', 'Shooting rifiutato dal cliente.');
+        $this->validate([
+            'clientChannel' => ['required', Rule::enum(ShootClientContactChannel::class)],
+        ]);
+
+        $action->execute(
+            $this->shoot,
+            ShootClientContactChannel::from($this->clientChannel)
+        );
+        $this->reloadShoot();
+
+        session()->flash('success', 'Comunicazione al cliente registrata.');
     }
 
-    public function render()
+    public function confirmForClient(ClientConfirmAction $action): void
     {
-        return view('livewire.admin.shooting.shoot-show')->layout('layouts.app');
+        $this->authorize('confirmClient', $this->shoot);
+        $action->execute($this->shoot, true, auth()->id());
+        $this->reloadShoot();
+
+        session()->flash('success', 'Shooting confermato. Evento e task creati.');
+    }
+
+    public function rejectForClient(ClientConfirmAction $action): void
+    {
+        $this->authorize('confirmClient', $this->shoot);
+        $action->execute($this->shoot, false, auth()->id());
+        $this->reloadShoot();
+
+        session()->flash('success', 'Rifiuto registrato. Il marketing può proporre nuove date.');
+    }
+
+    public function render(ShootingClientCommunicationService $communication)
+    {
+        return view('livewire.admin.shooting.shoot-show', [
+            'communication' => $communication->for($this->shoot),
+            'clientChannels' => ShootClientContactChannel::cases(),
+        ])->layout('layouts.app', ['title' => 'Dettaglio Shooting']);
+    }
+
+    private function reloadShoot(): void
+    {
+        $this->shoot->refresh()->load([
+            'project.client',
+            'marketingCampaign.client',
+            'slots',
+            'selectedSlot',
+            'photographer',
+            'creator',
+            'calendarEvent',
+            'task',
+        ]);
     }
 }

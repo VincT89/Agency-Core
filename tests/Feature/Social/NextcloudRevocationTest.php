@@ -84,7 +84,12 @@ class NextcloudRevocationTest extends TestCase
             ])
             ->call('savePost');
 
-        $component->assertHasErrors(['post' => 'Stale error']);
+        $component
+            ->assertHasErrors([
+                'post' => 'Il post è stato modificato in un\'altra sessione. Ricarica la pagina prima di continuare.',
+            ])
+            ->assertHasNoErrors(['post' => 'Stale error'])
+            ->assertHasNoErrors(['post' => 'Nextcloud API down']);
     }
 
     public function test_no_revocation_if_share_preexists()

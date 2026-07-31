@@ -103,7 +103,7 @@
 
         <main class="cal-gmain">
             <div class="cal-wrapper-modern">
-                <div id="js-error" class="u-text-red u-mb-sm u-font-mono u-whitespace-pre-wrap"></div>
+                <div id="js-error" class="u-alert-error u-mb-sm" role="alert" hidden></div>
                 <div wire:ignore class="cal-full-height">
                     <div id="marketing-global-calendar" class="cal-full-height"></div>
                 </div>
@@ -134,8 +134,16 @@
         cleanupMarketingGlobalCalendar();
 
         const jsErr = document.getElementById('js-error');
+        if (jsErr) {
+            jsErr.textContent = '';
+            jsErr.hidden = true;
+        }
+
         if (typeof FullCalendar === 'undefined') {
-            if(jsErr) jsErr.innerText = "ERRORE: FullCalendar non è stato caricato.";
+            if (jsErr) {
+                jsErr.innerText = 'Il calendario non è disponibile in questo momento. Ricarica la pagina.';
+                jsErr.hidden = false;
+            }
             return;
         }
 
@@ -246,7 +254,12 @@
         try {
             initMarketingGlobalCalendar(@this);
         } catch(err) {
-            document.getElementById('js-error').innerText = "JS Exception: " + err.message + "\n" + err.stack;
+            console.error('Errore inizializzazione calendario marketing:', err);
+            const jsErr = document.getElementById('js-error');
+            if (jsErr) {
+                jsErr.innerText = 'Il calendario non è disponibile in questo momento. Ricarica la pagina.';
+                jsErr.hidden = false;
+            }
         }
     });
 </script>

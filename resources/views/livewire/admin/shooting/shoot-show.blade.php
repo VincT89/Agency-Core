@@ -1,11 +1,16 @@
 <div>
     <div class="u-mb-sm">
-        <a href="{{ route('admin.shooting.index') }}" wire:navigate class="u-text-muted u-text-sm u-no-underline">← Torna agli shooting</a>
+        <a href="{{ route('admin.shooting.index') }}"
+           wire:navigate
+           class="u-text-muted u-text-sm u-no-underline">
+            Torna agli shooting
+        </a>
     </div>
 
     <x-page-header eyebrow="Amministrazione">
         <x-slot:title>
-            <strong>{{ $shoot->title }}</strong> <span class="u-text-base u-text-muted u-font-normal u-ml-sm">{{ $shoot->code }}</span>
+            <strong>{{ $shoot->title }}</strong>
+            <span class="u-text-base u-text-muted u-font-normal u-ml-sm">{{ $shoot->code }}</span>
         </x-slot:title>
         <x-slot name="actions">
             <x-shooting.status-badge :status="$shoot->status" context="admin" />
@@ -13,45 +18,51 @@
     </x-page-header>
 
     <div class="g-shoot-detail">
-        
-        {{-- Main Column --}}
         <div class="u-flex-col u-gap-md">
             <x-panel title="Dettagli Shooting" dot="var(--purple)">
                 <div class="u-p-lg">
                     <div class="g-shoot-2col">
                         <div>
-                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Progetto</div>
-                            <div class="u-text-strong u-text-primary">{{ $shoot->project->name }}</div>
+                            @if($shoot->project)
+                                <div class="shooting-lbl-caps">Progetto</div>
+                                <div class="shooting-text-val-bold">{{ $shoot->project->name }}</div>
+                            @elseif($shoot->marketingCampaign)
+                                <div class="shooting-lbl-caps">Campagna Marketing</div>
+                                <div class="shooting-text-val-bold">
+                                    {{ $shoot->marketingCampaign->client->name }}
+                                    · {{ $shoot->marketingCampaign->name }}
+                                </div>
+                            @endif
                         </div>
                         <div>
-                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Fotografo</div>
+                            <div class="shooting-lbl-caps">Fotografo</div>
                             @if($shoot->photographer)
-                                <div class="u-flex u-items-center u-gap-xs">
+                                <div class="shooting-flex-center-gap8">
                                     <div class="avatar-sm">{{ substr($shoot->photographer->name, 0, 1) }}</div>
-                                    <span class="u-text-md u-text-strong u-text-primary">{{ $shoot->photographer->name }}</span>
+                                    <span class="shooting-text-val-bold">{{ $shoot->photographer->name }}</span>
                                 </div>
                             @else
-                                <span class="u-text-muted u-text-md">Da definire</span>
+                                <span class="shooting-unassigned">Non assegnato</span>
                             @endif
                         </div>
                     </div>
-                    
+
                     @if($shoot->location)
-                        <div class="u-mb-lg">
-                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Location</div>
-                            <div class="u-text-md u-text-primary">{{ $shoot->location }}</div>
+                        <div class="shooting-mb-24">
+                            <div class="shooting-lbl-caps">Luogo</div>
+                            <div class="shooting-text-val">{{ $shoot->location }}</div>
                         </div>
                     @endif
-                    
-                    <div class="g-shoot-2col u-mb-0">
+
+                    <div class="g-shoot-2col shooting-mb-0">
                         <div>
-                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Note Cliente</div>
+                            <div class="shooting-lbl-caps">Note da comunicare al cliente</div>
                             <div class="shoot-note-box">
                                 {{ $shoot->client_notes ?: 'Nessuna nota per il cliente.' }}
                             </div>
                         </div>
                         <div>
-                            <div class="u-text-sm u-text-muted u-uppercase u-text-strong u-tracking-wide u-mb-xs">Note Interne</div>
+                            <div class="shooting-lbl-caps">Note interne</div>
                             <div class="shoot-note-box purple">
                                 {{ $shoot->internal_notes ?: 'Nessuna nota interna.' }}
                             </div>
@@ -59,65 +70,79 @@
                     </div>
                 </div>
             </x-panel>
-            
-            {{-- Azione Cliente --}}
-            @if($shoot->status->value === 'waiting_client')
-                <x-panel title="Conferma Cliente" dot="var(--yellow)">
+
+            @if($shoot->status === \App\Enums\Shooting\ShootStatus::WaitingClient)
+                <x-panel title="Comunicazione e risposta cliente" dot="var(--yellow)">
                     <div class="u-p-lg">
-                        <p class="u-text-sm u-text-secondary u-mb-md">
-                            Il fotografo ha accettato uno slot temporale. Attendi conferma dal cliente e seleziona l'esito.
+                        <p class="shooting-desc-text">
+                            Il fotografo ha confermato uno slot. Registra la comunicazione effettuata
+                            e poi la risposta ricevuta dal cliente.
                         </p>
-                        <div class="u-flex u-gap-sm">
-                            <button wire:click="confirmForClient" wire:confirm="Questa azione creerà evento e task." wire:loading.attr="disabled" class="btn btn-success">Cliente ha Accettato</button>
-                            <button wire:click="rejectForClient" wire:confirm="Questa azione riporterà gli slot in revisione." wire:loading.attr="disabled" class="btn btn-outline btn-outline-danger">Cliente ha Rifiutato</button>
-                        </div>
+                        <x-shooting.client-contact-panel
+                            :shoot="$shoot"
+                            :communication="$communication"
+                            :client-channels="$clientChannels" />
                     </div>
                 </x-panel>
             @endif
-            
-            {{-- Slots --}}
-            <x-panel title="Slot Temporali" dot="var(--blue)">
+
+            @if(in_array($shoot->status, [
+                \App\Enums\Shooting\ShootStatus::PhotographerRejected,
+                \App\Enums\Shooting\ShootStatus::ClientRejected,
+            ], true))
+                <x-panel title="Nuova proposta necessaria" dot="var(--yellow)">
+                    <div class="u-p-lg">
+                        <p class="shooting-desc-text">
+                            Il marketing deve aggiornare fotografo e date prima di riaprire la richiesta.
+                        </p>
+                        <a href="{{ route('social.shooting.show', $shoot) }}" class="btn btn-p">
+                            Rivedi la proposta
+                        </a>
+                    </div>
+                </x-panel>
+            @endif
+
+            <x-panel title="Date proposte" dot="var(--blue)">
                 <div class="u-p-lg">
-                    <x-shooting.slot-list 
-                        :shoot="$shoot" 
-                        :interactive="$shoot->status->value === 'waiting_photographer'" 
-                        :showWarning="false" 
-                    />
+                    @if($shoot->status === \App\Enums\Shooting\ShootStatus::WaitingPhotographer)
+                        <p class="shooting-desc-text">
+                            La risposta deve essere inserita dal fotografo assegnato.
+                        </p>
+                    @endif
+                    <x-shooting.slot-list
+                        :shoot="$shoot"
+                        :interactive="false"
+                        :showWarning="false" />
                 </div>
             </x-panel>
-            
+
             @if($shoot->calendarEvent || $shoot->task)
-                <x-panel title="Entità Collegate" dot="var(--gray)">
-                    <div class="u-p-lg">
+                <x-panel title="Pianificazione creata" dot="var(--green)">
+                    <div class="u-p-lg shooting-contact-actions">
                         @if($shoot->calendarEvent)
-                            <div class="u-mb-sm">
-                                <a href="{{ route('calendar-events.show', $shoot->calendarEvent) }}" class="btn btn-outline u-text-sm u-flex u-items-center u-gap-xs">
-                                    <i data-lucide="calendar" class="u-icon-xs"></i> Vedi Evento Calendario
-                                </a>
-                            </div>
+                            <a href="{{ route('calendar-events.show', $shoot->calendarEvent) }}" class="btn btn-g">
+                                Vedi evento nel calendario
+                            </a>
                         @endif
                         @if($shoot->task)
-                            <div>
-                                <a href="{{ route('tasks.show', $shoot->task) }}" class="btn btn-outline u-text-sm u-flex u-items-center u-gap-xs">
-                                    <i data-lucide="check-square" class="u-icon-xs"></i> Vedi Task
-                                </a>
-                            </div>
+                            <a href="{{ route('tasks.show', $shoot->task) }}" class="btn btn-g">
+                                Vedi task del fotografo
+                            </a>
                         @endif
                     </div>
                 </x-panel>
             @endif
         </div>
-        
-        {{-- Sidebar --}}
+
         <div>
             <x-panel title="Avanzamento" dot="var(--green)">
                 <div class="u-p-lg">
                     <x-shooting.workflow-timeline :shoot="$shoot" />
                 </div>
             </x-panel>
-            
+
             <div class="mt-panel">
-                <x-panel title="Storico Attività" dot="var(--gray)">
+                <x-panel title="Storico attività" dot="var(--gray)">
                     <div class="u-p-md">
                         @forelse($shoot->auditLogs()->latest()->get() as $log)
                             <x-audit-item :log="$log" />
@@ -128,6 +153,5 @@
                 </x-panel>
             </div>
         </div>
-        
     </div>
 </div>

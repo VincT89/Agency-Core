@@ -5,10 +5,12 @@ namespace App\Domain\Shooting\Actions;
 use App\Enums\Shooting\ShootingWorkflowEvent;
 use App\Enums\Shooting\ShootSlotPeriod;
 use App\Enums\Shooting\ShootStatus;
+use App\Enums\UserRole;
 use App\Helpers\ShootingRouteResolver;
 use App\Models\MarketingCampaign;
 use App\Models\Project;
 use App\Models\Shooting\Shoot;
+use App\Models\User;
 use App\Notifications\ShootingWorkflowNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -32,12 +34,23 @@ class CreateShootRequestAction
                 ]);
             }
 
+            $photographer = User::query()
+                ->whereKey($data['photographer_id'] ?? null)
+                ->where('role', UserRole::Photographer->value)
+                ->first();
+
+            if (! $photographer) {
+                throw ValidationException::withMessages([
+                    'photographer_id' => 'Seleziona un fotografo valido.',
+                ]);
+            }
+
             $defaultTitle = 'Shooting: '.($project ? $project->name : ($campaign ? $campaign->name : 'Nuovo'));
 
             $shoot = Shoot::create([
                 'project_id' => $data['project_id'] ?? null,
                 'marketing_campaign_id' => $data['marketing_campaign_id'] ?? null,
-                'photographer_id' => $data['photographer_id'] ?? null,
+                'photographer_id' => $photographer->id,
                 'created_by' => $creatorId,
                 'title' => $data['title'] ?? $defaultTitle,
                 'code' => 'SHT-'.strtoupper(Str::random(8)),
@@ -47,33 +60,34 @@ class CreateShootRequestAction
                 'status' => ShootStatus::WaitingPhotographer,
             ]);
 
-            if (! empty($data['slots'])) {
-                foreach ($data['slots'] as $slotData) {
-                    $period = ShootSlotPeriod::tryFrom($slotData['period']);
-                    if (! $period) {
-                        continue;
-                    }
-
-                    $shoot->slots()->create([
-                        'date' => $slotData['date'],
-                        'period' => $period,
-                        'starts_at' => $period->getStartTime(),
-                        'ends_at' => $period->getEndTime(),
-                    ]);
+            foreach ($data['slots'] ?? [] as $slotData) {
+                $period = ShootSlotPeriod::tryFrom((string) ($slotData['period'] ?? ''));
+                if (! $period || blank($slotData['date'] ?? null)) {
+                    continue;
                 }
+
+                $shoot->slots()->create([
+                    'date' => $slotData['date'],
+                    'period' => $period,
+                    'starts_at' => $period->getStartTime(),
+                    'ends_at' => $period->getEndTime(),
+                ]);
             }
 
-            // Avvisa il fotografo della nuova assegnazione
-            if ($shoot->photographer) {
-                $url = ShootingRouteResolver::showRouteFor($shoot->photographer, $shoot);
-                $shoot->photographer->notify(new ShootingWorkflowNotification(
-                    ShootingWorkflowEvent::RequestCreated,
-                    'Nuova Richiesta Shooting',
-                    "Sei stato assegnato a un nuovo shooting: {$defaultTitle}. Verifica gli slot.",
-                    $url,
-                    $shoot->id
-                ));
+            if ($shoot->slots()->doesntExist()) {
+                throw ValidationException::withMessages([
+                    'slots' => 'Aggiungi almeno una data completa.',
+                ]);
             }
+
+            $url = ShootingRouteResolver::showRouteFor($photographer, $shoot);
+            $photographer->notify(new ShootingWorkflowNotification(
+                ShootingWorkflowEvent::RequestCreated,
+                'Nuova richiesta shooting',
+                "Sei stato assegnato allo shooting \"{$shoot->title}\". Verifica le date proposte.",
+                $url,
+                $shoot->id
+            ));
 
             return $shoot;
         });

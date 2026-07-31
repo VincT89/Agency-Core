@@ -24,7 +24,9 @@ class NotificationDropdown extends Component
         $notification = auth()->user()->notifications()->where('id', $id)->first();
         if ($notification) {
             $notification->markAsRead();
-            $url = $notification->data['url'] ?? null;
+            $url = $notification->data['intended_url']
+                ?? $notification->data['url']
+                ?? null;
             if ($url) {
                 return $this->redirect($url, navigate: true);
             }

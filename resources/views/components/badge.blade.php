@@ -26,6 +26,8 @@ $map = [
     'paid'            => 'bg',
     'overdue'         => 'br',
     'cancelled'       => 'bd',
+    'pending'         => 'ba',
+    'processing'      => 'ba',
     // ticket type
     'bug'             => 'br',
     'support'         => 'bd',

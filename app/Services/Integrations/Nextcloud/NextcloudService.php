@@ -473,6 +473,27 @@ class NextcloudService
         };
     }
 
+    /**
+     * Predispone le directory foto e video dedicate a un cliente.
+     *
+     * @return array{photo: string, video: string}|null
+     */
+    public function ensureClientMediaDirectories(string $folderName): ?array
+    {
+        $paths = [
+            'photo' => rtrim($this->mediaRoot('photo'), '/').'/'.$folderName,
+            'video' => rtrim($this->mediaRoot('video'), '/').'/'.$folderName,
+        ];
+
+        foreach (array_unique($paths) as $path) {
+            if (! $this->ensureDirectoryExists($path)) {
+                return null;
+            }
+        }
+
+        return $paths;
+    }
+
     public function acquireLocksForPaths(array $paths, ?int $seconds = null): array
     {
         if ($seconds === null) {

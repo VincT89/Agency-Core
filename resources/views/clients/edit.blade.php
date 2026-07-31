@@ -50,7 +50,7 @@
             <div class="form-row">
                 <x-form-group label="Partita IVA" name="vat_number">
                     <input name="vat_number" class="form-in @error('vat_number') is-invalid @enderror"
-                           value="{{ old('vat_number', $client->vat_number) }}" placeholder="IT01234567890">
+                           value="{{ old('vat_number', $client->vat_number) }}" placeholder="11 cifre">
                 </x-form-group>
                 <x-form-group label="Codice Fiscale" name="tax_code">
                     <input name="tax_code" class="form-in @error('tax_code') is-invalid @enderror"
@@ -70,7 +70,7 @@
             <div class="form-row">
                 <x-form-group label="Codice SDI" name="sdi_code">
                     <input name="sdi_code" class="form-in @error('sdi_code') is-invalid @enderror"
-                           value="{{ old('sdi_code', $client->sdi_code) }}" placeholder="Es. XXXXXXX">
+                           value="{{ old('sdi_code', $client->sdi_code) }}" placeholder="6 o 7 caratteri">
                 </x-form-group>
                 <x-form-group label="Stato cliente" name="status">
                     <select name="status" class="form-sel @error('status') is-invalid @enderror">
@@ -102,6 +102,10 @@
                 <x-form-group label="Provincia" name="province">
                     <input name="province" class="form-in @error('province') is-invalid @enderror"
                            value="{{ old('province', $client->province) }}" placeholder="MI" maxlength="5">
+                </x-form-group>
+                <x-form-group label="Codice Stato" name="country_code">
+                    <input name="country_code" class="form-in @error('country_code') is-invalid @enderror"
+                           value="{{ old('country_code', $client->country_code) }}" placeholder="IT" maxlength="2">
                 </x-form-group>
                 <x-form-group label="Paese" name="country">
                     <input name="country" class="form-in @error('country') is-invalid @enderror"

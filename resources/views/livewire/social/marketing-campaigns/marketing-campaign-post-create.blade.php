@@ -1,4 +1,11 @@
-<div>
+<div
+    x-data="{ sodyActionPending: false }"
+    x-on:sody-processing-started.window="sodyActionPending = true"
+    x-on:sody-processing-failed.window="sodyActionPending = false"
+    x-on:sody-processing-completed.window="sodyActionPending = false"
+>
+  <x-social.sody-processing-loader />
+
   <div class="u-mb-lg">
       <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-g u-inline-flex-center u-gap-xs">
           <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna al progetto
@@ -54,6 +61,9 @@
         </div>
         <div class="u-p-lg relative">
           <form wire:submit.prevent class="form-stack">
+        @error('post')
+            <div class="u-alert-error">{{ $message }}</div>
+        @enderror
         
         {{-- Blocco 1: Piattaforme --}}
         <div class="panel cmp-panel-pad" x-data="{ platforms: $wire.entangle('form.publishing_platforms') }">
@@ -246,7 +256,7 @@
                 <div class="cmp-media-source-options">
                     <label class="cmp-radio-label">
                         <input type="radio" wire:model.live="form.media_source" value="local">
-                        Upload Locale
+                        Carica dal computer
                     </label>
                     <label class="cmp-radio-label">
                         <input type="radio" wire:model.live="form.media_source" value="nextcloud">
@@ -268,7 +278,7 @@
 
                     <div class="u-mt-sm u-mb-md">
                         <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
-                            <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Upload in background (Livewire)...
+                            <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Caricamento dei file in corso...
                         </div>
                         <div wire:loading.remove wire:target="media" class="u-bg-gray-50 u-border u-border-line u-p-sm u-flex u-gap-sm" style="border-radius: 6px;" x-show="Object.keys(localBlobUrls).length === 0">
                             <i data-lucide="info" class="u-icon-sm u-text-muted u-mt-xs"></i>
@@ -402,10 +412,15 @@
                   <span wire:loading.remove wire:target="save">Salva Bozza</span>
                   <span wire:loading wire:target="save">Salvataggio...</span>
                 </button>
-                <button type="button" wire:click="saveAndSubmitToN8n" class="btn btn-p u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                <button type="button"
+                    x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
+                    wire:click="saveAndSubmitToN8n"
+                    class="btn btn-p u-flex-center u-gap-xs"
+                    wire:loading.attr="disabled"
+                    x-bind:disabled="isUploadingLocalMedia || sodyActionPending">
                   <i data-lucide="sparkles" class="u-icon-md"></i>
-                  <span wire:loading.remove wire:target="saveAndSubmitToN8n">Salva e Invia a Sody</span>
-                  <span wire:loading wire:target="saveAndSubmitToN8n">Invio in corso...</span>
+                  <span wire:loading.remove wire:target="saveAndSubmitToN8n">Salva e avvia Sody</span>
+                  <span wire:loading wire:target="saveAndSubmitToN8n">Avvio di Sody...</span>
                 </button>
             @else
                 <button type="button" wire:click="save" class="btn btn-s u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
@@ -415,16 +430,16 @@
                 </button>
 
                 <button type="button"
-                    x-on:click="window.dispatchEvent(new CustomEvent('show-sody-loader'))"
+                    x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
                     wire:click="saveAndSubmitToN8n('caption')"
                     wire:loading.attr="disabled"
-                    :disabled="isUploadingLocalMedia"
+                    x-bind:disabled="isUploadingLocalMedia || sodyActionPending"
                     class="btn btn-p u-flex-center u-gap-xs">
                     <i data-lucide="type" class="u-icon-md"></i>
                     <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
                         Salva e genera solo testo
                     </span>
-                    <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Invio in corso...</span>
+                    <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Avvio di Sody...</span>
                 </button>
             @endif
           </div>

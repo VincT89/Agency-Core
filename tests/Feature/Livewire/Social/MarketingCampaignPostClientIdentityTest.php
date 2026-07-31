@@ -15,6 +15,7 @@ use App\Services\Integrations\Nextcloud\NextcloudService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -27,6 +28,7 @@ class MarketingCampaignPostClientIdentityTest extends TestCase
     {
         parent::setUp();
         $this->withoutExceptionHandling();
+        Queue::fake();
         Storage::fake('public');
         Storage::fake('social_media');
     }

@@ -24,7 +24,13 @@ class ShootQuery
     protected function base(): Builder
     {
         $query = Shoot::query()
-            ->with(['project', 'photographer', 'creator', 'selectedSlot']);
+            ->with([
+                'project.client',
+                'marketingCampaign.client',
+                'photographer',
+                'creator',
+                'selectedSlot',
+            ]);
             
         return $query;
     }

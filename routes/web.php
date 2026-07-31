@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Social\TikTokOAuthController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\FirstAccessController;
+use App\Http\Controllers\BillingProfileController;
 use App\Http\Controllers\CalendarEventController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\HostingServiceController;
 use App\Http\Controllers\HostingServiceInterventionController;
 use App\Http\Controllers\HostingServicePasswordController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceFiscalController;
 use App\Http\Controllers\InvoiceItemController;
 use App\Http\Controllers\NextcloudDownloadController;
 use App\Http\Controllers\NextcloudPreviewController;
@@ -220,8 +222,16 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('calendar-events', CalendarEventController::class);
     Route::patch('calendar-events/{calendar_event}/date', [CalendarEventController::class, 'updateDate'])->name('calendar-events.update-date');
     Route::resource('invoices', InvoiceController::class);
+    Route::post('invoices/{invoice}/fiscal/prepare', [InvoiceFiscalController::class, 'prepare'])
+        ->name('invoices.fiscal.prepare');
+    Route::post('invoices/{invoice}/fiscal/reopen', [InvoiceFiscalController::class, 'reopen'])
+        ->name('invoices.fiscal.reopen');
     Route::post('invoices/{invoice}/items', [InvoiceItemController::class, 'store'])->name('invoices.items.store');
     Route::delete('invoices/{invoice}/items/{item}', [InvoiceItemController::class, 'destroy'])->name('invoices.items.destroy');
+    Route::get('/billing-profile', [BillingProfileController::class, 'edit'])
+        ->name('billing-profile.edit');
+    Route::put('/billing-profile', [BillingProfileController::class, 'update'])
+        ->name('billing-profile.update');
     Route::resource('payments', PaymentController::class);
     Route::get('/economic-summary', EconomicSummaryController::class)->name('economic-summary.index');
 
@@ -250,7 +260,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         ->name('users.toggle-status');
 
     // Audit logs (solo admin)
-    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])
+        ->middleware('can:system.admin')
+        ->name('audit-logs.index');
 
     // Notifiche
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])

@@ -24,6 +24,7 @@ class NextcloudServiceTest extends TestCase
         config(['services.nextcloud.username' => 'testuser']);
         config(['services.nextcloud.password' => 'secret']);
         config(['services.nextcloud.photos_root' => '/Photos']);
+        config(['services.nextcloud.videos_root' => '/Videos']);
 
         $this->service = app(NextcloudService::class);
     }
@@ -53,6 +54,41 @@ class NextcloudServiceTest extends TestCase
         config(['services.nextcloud.base_url' => 'file:///etc']);
 
         $this->assertFalse(app(NextcloudService::class)->isConfigured());
+    }
+
+    public function test_ensure_client_media_directories_provisions_photo_and_video_paths()
+    {
+        $service = \Mockery::mock(NextcloudService::class)->makePartial();
+        $service->shouldReceive('ensureDirectoryExists')
+            ->once()
+            ->with('/Photos/acme')
+            ->andReturnTrue();
+        $service->shouldReceive('ensureDirectoryExists')
+            ->once()
+            ->with('/Videos/acme')
+            ->andReturnTrue();
+
+        $this->assertSame([
+            'photo' => '/Photos/acme',
+            'video' => '/Videos/acme',
+        ], $service->ensureClientMediaDirectories('acme'));
+    }
+
+    public function test_ensure_client_media_directories_fails_if_one_directory_cannot_be_created()
+    {
+        $service = \Mockery::mock(NextcloudService::class)->makePartial();
+        $service->shouldReceive('ensureDirectoryExists')
+            ->once()
+            ->with('/Photos/acme')
+            ->andReturnTrue();
+        $service->shouldReceive('ensureDirectoryExists')
+            ->once()
+            ->with('/Videos/acme')
+            ->andReturnFalse();
+
+        $this->assertNull(
+            $service->ensureClientMediaDirectories('acme')
+        );
     }
 
     public function test_list_files_handles_malformed_xml_gracefully()

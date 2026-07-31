@@ -88,7 +88,7 @@
                     <div class="form-lbl">Sede</div>
                     <div class="u-text-strong">
                         {{ $client->address ?? '—' }}<br>
-                        {{ trim(implode(' ', array_filter([$client->postal_code, $client->city, $client->province ? "({$client->province})" : null, $client->country]))) }}
+                        {{ trim(implode(' ', array_filter([$client->postal_code, $client->city, $client->province ? "({$client->province})" : null, $client->country, $client->country_code ? "[{$client->country_code}]" : null]))) }}
                     </div>
                 </div>
                 

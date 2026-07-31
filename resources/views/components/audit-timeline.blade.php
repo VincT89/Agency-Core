@@ -1,41 +1,40 @@
-@props(['logs' => []])
+@props([
+    'logs' => [],
+    'title' => 'Attività recenti',
+])
 
-@if(auth()->user()->canViewAuditLogs())
-<div class="audit-timeline-container">
-    <x-panel title="Attività Recenti" dot="var(--text3)" padded>
-        @if(count($logs))
-            <div class="audit-timeline-list">
-                @foreach($logs as $log)
-                <div class="audit-timeline-item">
-                    <div class="audit-timeline-dot"></div>
-                    <div class="audit-timeline-content">
-                        <div class="audit-timeline-text">
-                            {{ $log->description ?? ($log->user?->name . ' ha eseguito log di sistema: ' . $log->action) }}
-                        </div>
-                        <div class="audit-timeline-date">
-                            {{ $log->created_at->format('d/m/Y H:i') }}
-                        </div>
-                        
-                        @if(!empty($log->new_values) || !empty($log->old_values))
-                            <details class="audit-timeline-details">
-                                <summary class="audit-timeline-summary">Mostra dettagli tecnici</summary>
-                                <div class="audit-timeline-payload">
-                                    @if(!empty($log->old_values))
-                                        <div class="audit-timeline-payload-old"><strong>Prima:</strong> <span class="audit-timeline-mono">{{ json_encode($log->old_values, JSON_UNESCAPED_UNICODE) }}</span></div>
-                                    @endif
-                                    @if(!empty($log->new_values))
-                                        <div class="audit-timeline-payload-new"><strong>Dopo:</strong> <span class="audit-timeline-mono">{{ json_encode($log->new_values, JSON_UNESCAPED_UNICODE) }}</span></div>
-                                    @endif
+@can('system.admin')
+    <div class="audit-timeline-container">
+        <x-panel :title="$title" dot="var(--text3)" padded>
+            @if(count($logs))
+                <div class="audit-timeline-list">
+                    @foreach($logs as $log)
+                        <article class="audit-timeline-item">
+                            <div class="audit-timeline-dot" aria-hidden="true"></div>
+                            <div class="audit-timeline-content">
+                                <div class="audit-timeline-heading">
+                                    <span class="audit-timeline-action">{{ $log->display_action_label }}</span>
+                                    <time
+                                        class="audit-timeline-date"
+                                        datetime="{{ $log->created_at->toIso8601String() }}"
+                                        title="{{ $log->created_at->locale('it')->translatedFormat('d F Y, H:i') }}"
+                                    >
+                                        {{ $log->created_at->locale('it')->diffForHumans() }}
+                                    </time>
                                 </div>
-                            </details>
-                        @endif
-                    </div>
+                                <div class="audit-timeline-text">
+                                    <strong>{{ $log->user?->name ?? 'Sistema' }}</strong>
+                                    {{ $log->display_action_text }}
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
                 </div>
-                @endforeach
-            </div>
-        @else
-            <div class="audit-timeline-empty">Nessuna attività registrata.</div>
-        @endif
-    </x-panel>
-</div>
-@endif
+            @else
+                <div class="audit-timeline-empty">
+                    Nessuna attività registrata per i criteri selezionati.
+                </div>
+            @endif
+        </x-panel>
+    </div>
+@endcan

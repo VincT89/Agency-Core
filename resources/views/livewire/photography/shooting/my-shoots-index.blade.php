@@ -27,7 +27,11 @@
                         <td class="u-text-strong u-text-purple">{{ $shoot->code }}</td>
                         <td>
                             <div class="u-text-strong u-text-primary">{{ $shoot->title }}</div>
-                            <div class="u-text-sm u-text-muted">{{ $shoot->project->name }}</div>
+                            <div class="u-text-sm u-text-muted">
+                                {{ $shoot->project?->name
+                                    ?? $shoot->marketingCampaign?->name
+                                    ?? 'Nessun riferimento' }}
+                            </div>
                         </td>
                         <td>
                             <x-shooting.status-badge :status="$shoot->status" context="photography" />

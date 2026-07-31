@@ -32,13 +32,13 @@
         ],
         'posts_received' => [
             'icon' => 'check-circle',
-            'title' => 'Contenuti Ricevuti',
+            'title' => 'Contenuti ricevuti',
             'desc' => 'Sody ha elaborato con successo la richiesta e generato i post.',
             'theme' => 'success',
         ],
         default => [
             'icon' => 'info',
-            'title' => 'Stato Progetto',
+            'title' => 'Stato del progetto',
             'desc' => 'Il progetto si trova in uno stato avanzato o diverso da bozza.',
             'theme' => 'muted',
         ]
@@ -53,7 +53,7 @@
         <div class="cmp-n8n-header">
             <span>{{ $config['title'] }}</span>
             @if(in_array($status, ['submitted_to_n8n', 'n8n_failed', 'posts_received', 'queued_to_n8n']) && $updatedAt)
-                <span class="cmp-n8n-updated">Ultimo agg: {{ $updatedAt }}</span>
+                <span class="cmp-n8n-updated">Aggiornato: {{ $updatedAt }}</span>
             @endif
         </div>
         <div class="cmp-n8n-desc">

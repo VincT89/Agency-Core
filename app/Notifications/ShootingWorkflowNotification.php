@@ -2,10 +2,12 @@
 
 namespace App\Notifications;
 
+use App\Enums\Shooting\ShootingWorkflowEvent;
+use App\Helpers\ShootingRouteResolver;
+use App\Models\Shooting\Shoot;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-
-use App\Enums\Shooting\ShootingWorkflowEvent;
 
 class ShootingWorkflowNotification extends Notification
 {
@@ -33,25 +35,26 @@ class ShootingWorkflowNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
-        $shoot = \App\Models\Shooting\Shoot::find($this->shootId);
-        
+        $shoot = Shoot::find($this->shootId);
+
         $resolvedUrl = $this->url;
-        if ($notifiable instanceof \App\Models\User && $shoot) {
-            $resolvedUrl = \App\Helpers\ShootingRouteResolver::showRouteFor($notifiable, $shoot);
+        if ($notifiable instanceof User && $shoot) {
+            $resolvedUrl = ShootingRouteResolver::showRouteFor($notifiable, $shoot);
         }
 
         return [
             'type' => $this->event->value,
+            'category' => 'shooting',
             'title' => $this->title,
             'message' => $this->body,
-            'url' => url('/shoots/' . $this->shootId), // Usa il redirect controller per routing dinamico
-            'intended_url' => $resolvedUrl, // Salva la destinazione originaria intesa
-            'intended_route' => $resolvedUrl, // Duplicate as requested by user to ensure compatibility
+            'url' => $resolvedUrl,
+            'intended_url' => $resolvedUrl,
             'shoot_id' => $this->shootId,
             'meta' => $shoot ? [
                 'shoot_code' => $shoot->code,
                 'project_id' => $shoot->project_id,
-                'client_id' => $shoot->project->client_id ?? null,
+                'client_id' => $shoot->project?->client_id
+                    ?? $shoot->marketingCampaign?->client_id,
             ] : [],
         ];
     }

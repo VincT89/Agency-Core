@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Social\SocialAccessMethod;
 use App\Enums\Social\SocialConnectionMode;
+use App\Enums\Social\SocialConnectionStrategy;
 use App\Enums\Social\SocialPlatform;
 use App\Models\Scopes\ProjectSupremacyScope;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -171,8 +172,10 @@ class Client extends Model
             return false;
         }
 
-        $fbIsOauth = $fb->connection_mode === SocialConnectionMode::Oauth;
-        $igIsOauth = $ig->connection_mode === SocialConnectionMode::Oauth;
+        $fbIsOauth = $fb->connection_mode === SocialConnectionMode::Oauth
+            || $fb->connection_strategy === SocialConnectionStrategy::AgencyOauth;
+        $igIsOauth = $ig->connection_mode === SocialConnectionMode::Oauth
+            || $ig->connection_strategy === SocialConnectionStrategy::AgencyOauth;
 
         // Se entrambi sono connessi via OAuth e sono ready, sono ok
         if ($fbIsOauth && $igIsOauth) {

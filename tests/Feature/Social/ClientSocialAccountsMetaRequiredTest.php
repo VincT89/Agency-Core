@@ -2,11 +2,18 @@
 
 namespace Tests\Feature\Social;
 
-use App\Models\User;
-use App\Models\Client;
-use App\Enums\Social\SocialPlatform;
+use App\Enums\Social\AgencyConnectionStatus;
+use App\Enums\Social\PublishingStatus;
 use App\Enums\Social\SocialAccessMethod;
 use App\Enums\Social\SocialAccessStatus;
+use App\Enums\Social\SocialApiStatus;
+use App\Enums\Social\SocialAssetType;
+use App\Enums\Social\SocialConnectionMode;
+use App\Enums\Social\SocialConnectionStrategy;
+use App\Enums\Social\SocialPlatform;
+use App\Models\AgencySocialAsset;
+use App\Models\AgencySocialConnection;
+use App\Models\Client;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,6 +50,68 @@ class ClientSocialAccountsMetaRequiredTest extends TestCase
         ]);
 
         $this->assertTrue($client->refresh()->isMetaReady());
+    }
+
+    public function test_client_is_meta_ready_with_active_agency_oauth_assets(): void
+    {
+        $client = Client::factory()->create();
+        $connection = AgencySocialConnection::forceCreate([
+            'provider' => 'facebook',
+            'access_token' => 'agency-token',
+            'status' => AgencyConnectionStatus::Connected,
+            'requires_reauth' => false,
+        ]);
+        $facebookAsset = AgencySocialAsset::forceCreate([
+            'agency_social_connection_id' => $connection->id,
+            'provider' => 'facebook',
+            'platform' => SocialPlatform::Facebook->value,
+            'asset_type' => SocialAssetType::FacebookPage,
+            'provider_asset_id' => 'page-123',
+            'facebook_page_id' => 'page-123',
+            'page_access_token' => 'page-token',
+            'status' => AgencyConnectionStatus::Connected,
+            'publishing_status' => PublishingStatus::Ready,
+            'is_active' => true,
+            'is_assignable' => true,
+        ]);
+        $instagramAsset = AgencySocialAsset::forceCreate([
+            'agency_social_connection_id' => $connection->id,
+            'parent_asset_id' => $facebookAsset->id,
+            'provider' => 'facebook',
+            'platform' => SocialPlatform::Instagram->value,
+            'asset_type' => SocialAssetType::InstagramBusinessAccount,
+            'provider_asset_id' => 'instagram-123',
+            'instagram_business_account_id' => 'instagram-123',
+            'status' => AgencyConnectionStatus::Connected,
+            'publishing_status' => PublishingStatus::Ready,
+            'is_active' => true,
+            'is_assignable' => true,
+        ]);
+
+        $facebook = $client->socialAccounts()->create([
+            'platform' => SocialPlatform::Facebook->value,
+            'connection_mode' => SocialConnectionMode::Manual,
+            'connection_strategy' => SocialConnectionStrategy::AgencyOauth,
+            'agency_social_asset_id' => $facebookAsset->id,
+            'api_status' => SocialApiStatus::Connected,
+        ]);
+        $instagram = $client->socialAccounts()->create([
+            'platform' => SocialPlatform::Instagram->value,
+            'connection_mode' => SocialConnectionMode::Manual,
+            'connection_strategy' => SocialConnectionStrategy::AgencyOauth,
+            'agency_social_asset_id' => $instagramAsset->id,
+            'api_status' => SocialApiStatus::Connected,
+        ]);
+
+        $this->assertFalse($facebook->isApiConnected());
+        $this->assertFalse($instagram->isApiConnected());
+        $this->assertTrue($facebook->isReadyToPublish());
+        $this->assertTrue($instagram->isReadyToPublish());
+        $this->assertTrue($client->refresh()->isMetaReady());
+
+        $connection->update(['requires_reauth' => true]);
+
+        $this->assertFalse($client->refresh()->isMetaReady());
     }
 
     public function test_client_is_not_meta_ready_if_business_managers_differ()

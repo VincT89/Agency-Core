@@ -87,6 +87,8 @@ presso il provider: un invio interrotto può avere un esito ambiguo.
 - Coda asincrona operativa.
 - Worker sulle code `social-publishing` e `social-reconciliation`.
 - Scheduler Laravel attivo ogni minuto.
+- Su hosting senza supervisore, il worker breve pianificato in
+  `routes/console.php` deve comparire tra le attivita dello scheduler.
 - Heartbeat recente per tutte le code monitorate.
 - Disco `social_media` privato per media locali e generati da n8n.
 - URL firmati raggiungibili dai provider per il tempo necessario.

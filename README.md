@@ -94,6 +94,11 @@ generico. Per provare pubblicazione e monitoraggio devono essere avviati anche
 worker che ascoltino `chatbot`, `social-publishing` e
 `social-reconciliation`.
 
+In produzione, quando non e disponibile un supervisore dedicato, lo scheduler
+Laravel avvia ogni minuto un worker breve che elabora `social-publishing`,
+`social-reconciliation`, `chatbot` e `default`, quindi termina quando le code
+sono vuote. In questo caso lo scheduler deve essere realmente attivo sul server.
+
 Non eseguire `php artisan db:seed` in produzione senza indicare una classe: il
 `DatabaseSeeder` richiama `DemoDataSeeder`, che crea utenti e dati
 dimostrativi. Il seeder dedicato alla pulizia è descritto in

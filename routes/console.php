@@ -50,6 +50,14 @@ Schedule::command('system:dispatch-queue-heartbeats')
     ->everyMinute()
     ->withoutOverlapping(5)
     ->onOneServer();
+
+Schedule::command('queue:work --queue=social-publishing,social-reconciliation,chatbot,default --stop-when-empty --tries=3 --timeout=600')
+    ->everyMinute()
+    ->name('process-agency-core-queues')
+    ->withoutOverlapping(15)
+    ->onOneServer()
+    ->environments(['production']);
+
 Schedule::command('system:prune-operational-logs')
     ->dailyAt('02:30')
     ->withoutOverlapping(120)

@@ -13,18 +13,31 @@ use Laravel\Socialite\Facades\Socialite;
 
 class AgencyMetaOAuthController extends Controller
 {
+    private const OAUTH_SCOPES = [
+        'pages_manage_posts',
+        'pages_read_engagement',
+        'pages_show_list',
+        'business_management',
+        'instagram_basic',
+        'instagram_content_publish',
+    ];
+
     public function redirect()
     {
+        $configId = trim((string) config('services.meta.config_id'));
+
+        if ($configId === '') {
+            Log::warning('Agency Meta OAuth configuration missing', [
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('admin.social.connections.index')
+                ->with('error', 'Il collegamento Meta non è configurato.');
+        }
+
         return $this->provider()
-            ->scopes([
-                'pages_manage_posts',
-                'pages_read_engagement',
-                'pages_show_list',
-                'pages_manage_metadata',
-                'business_management',
-                'instagram_basic',
-                'instagram_content_publish',
-            ])
+            ->setScopes(self::OAUTH_SCOPES)
+            ->with(['config_id' => $configId])
             ->redirect();
     }
 
@@ -101,17 +114,21 @@ class AgencyMetaOAuthController extends Controller
 
     private function provider()
     {
-        return Socialite::driver('facebook')->setHttpClient(
-            new HttpClient([
-                'connect_timeout' => max(
-                    1,
-                    (int) config('services.meta.connect_timeout', 5)
-                ),
-                'timeout' => max(
-                    1,
-                    (int) config('services.meta.timeout', 15)
-                ),
-            ])
-        );
+        $graphVersion = trim((string) config('services.meta.graph_version', 'v25.0'));
+
+        return Socialite::driver('facebook')
+            ->usingGraphVersion($graphVersion !== '' ? $graphVersion : 'v25.0')
+            ->setHttpClient(
+                new HttpClient([
+                    'connect_timeout' => max(
+                        1,
+                        (int) config('services.meta.connect_timeout', 5)
+                    ),
+                    'timeout' => max(
+                        1,
+                        (int) config('services.meta.timeout', 15)
+                    ),
+                ])
+            );
     }
 }

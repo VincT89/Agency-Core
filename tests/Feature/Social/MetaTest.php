@@ -41,7 +41,11 @@ class MetaTest extends TestCase
     {
         parent::setUp();
 
-        config(['social.publishing.dry_run' => false]);
+        config([
+            'services.meta.config_id' => 'test-meta-config-id',
+            'services.meta.graph_version' => 'v25.0',
+            'social.publishing.dry_run' => false,
+        ]);
     }
 
     protected function tearDown(): void
@@ -54,8 +58,26 @@ class MetaTest extends TestCase
     public function test_meta_redirect_oauth_correctly_forms_url(): void
     {
         $mockProvider = Mockery::mock(FacebookProvider::class);
+        $mockProvider->shouldReceive('usingGraphVersion')
+            ->once()
+            ->with('v25.0')
+            ->andReturnSelf();
         $mockProvider->shouldReceive('setHttpClient')->once()->andReturnSelf();
-        $mockProvider->shouldReceive('scopes')->andReturnSelf();
+        $mockProvider->shouldReceive('setScopes')
+            ->once()
+            ->with([
+                'pages_manage_posts',
+                'pages_read_engagement',
+                'pages_show_list',
+                'business_management',
+                'instagram_basic',
+                'instagram_content_publish',
+            ])
+            ->andReturnSelf();
+        $mockProvider->shouldReceive('with')
+            ->once()
+            ->with(['config_id' => 'test-meta-config-id'])
+            ->andReturnSelf();
         $mockProvider->shouldReceive('redirect')->andReturn(redirect('https://facebook.com/v19.0/dialog/oauth'));
 
         Socialite::shouldReceive('driver')->with('facebook')->andReturn($mockProvider);
@@ -65,6 +87,19 @@ class MetaTest extends TestCase
 
         $this->assertTrue($response->isRedirect());
         $this->assertStringContainsString('facebook.com', $response->getTargetUrl());
+    }
+
+    public function test_meta_redirect_stops_when_business_login_configuration_is_missing(): void
+    {
+        config(['services.meta.config_id' => null]);
+
+        Socialite::shouldReceive('driver')->never();
+
+        $controller = app(AgencyMetaOAuthController::class);
+        $response = $controller->redirect();
+
+        $this->assertTrue($response->isRedirect());
+        $this->assertStringContainsString('non è configurato', session('error'));
     }
 
     public function test_meta_callback_processes_authorization_code_successfully(): void
@@ -79,6 +114,10 @@ class MetaTest extends TestCase
         $mockUser->approvedScopes = ['pages_manage_posts'];
 
         $mockProvider = Mockery::mock(FacebookProvider::class);
+        $mockProvider->shouldReceive('usingGraphVersion')
+            ->once()
+            ->with('v25.0')
+            ->andReturnSelf();
         $mockProvider->shouldReceive('setHttpClient')->once()->andReturnSelf();
         $mockProvider->shouldReceive('user')->andReturn($mockUser);
 

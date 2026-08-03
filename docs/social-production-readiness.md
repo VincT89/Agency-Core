@@ -101,6 +101,7 @@ Variabili già supportate:
 ```dotenv
 META_CLIENT_ID=
 META_CLIENT_SECRET=
+META_CONFIG_ID=
 META_REDIRECT_URI=https://gestionale.example.it/admin/social/connections/meta/callback
 META_GRAPH_VERSION=v25.0
 META_CONNECT_TIMEOUT=5
@@ -111,15 +112,21 @@ META_MAX_SYNC_PAGES=25
 Il redirect deve coincidere esattamente con quello configurato nel pannello
 Meta, inclusi schema HTTPS, dominio, percorso e slash finali.
 
+`META_CONFIG_ID` deve contenere l'ID della configurazione creata in Facebook
+Login for Business. Il flusso implementato usa un token di accesso dell'utente.
+
 Il codice richiede durante OAuth:
 
 - `pages_manage_posts`;
 - `pages_read_engagement`;
 - `pages_show_list`;
-- `pages_manage_metadata`;
 - `business_management`;
 - `instagram_basic`;
 - `instagram_content_publish`.
+
+Il flusso non richiede `email` né `pages_manage_metadata`: il primo non è
+necessario per il collegamento degli asset e il secondo serve ai webhook delle
+Pagine, che questa implementazione non utilizza.
 
 Prima della produzione verificare nel pannello Meta quali permessi richiedono
 accesso avanzato, App Review, verifica aziendale o ulteriori adempimenti per lo

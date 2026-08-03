@@ -7,6 +7,7 @@
 .u-flex-between    { display: flex; align-items: center; justify-content: space-between; }
 .u-flex-end        { display: flex; justify-content: flex-end; }
 .u-flex-1          { flex: 1; }
+.u-flex-wrap       { flex-wrap: wrap; }
 .u-gap-xs          { gap: 6px; }
 .u-gap-sm          { gap: 8px; }
 .u-gap-md          { gap: 12px; }

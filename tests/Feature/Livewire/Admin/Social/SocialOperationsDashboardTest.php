@@ -34,6 +34,48 @@ class SocialOperationsDashboardTest extends TestCase
         ]);
     }
 
+    public function test_all_filter_includes_active_and_published_publications(): void
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::create([
+            'client_id' => $client->id,
+            'name' => 'Operations Campaign',
+            'status' => 'active',
+        ]);
+        $post = MarketingCampaignPost::create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Approved->value,
+        ]);
+
+        $pending = MarketingCampaignPostPublication::create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => 'facebook',
+            'status' => PublicationStatus::Pending->value,
+            'correlation_id' => 'pending-publication',
+        ]);
+        $published = MarketingCampaignPostPublication::create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => 'facebook',
+            'status' => PublicationStatus::Published->value,
+            'correlation_id' => 'published-publication',
+            'external_permalink' => 'https://www.facebook.com/example/posts/1',
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(SocialOperationsDashboard::class)
+            ->assertSee("#{$pending->id}", false)
+            ->assertSee("#{$published->id}", false)
+            ->assertSee('Apri sul social');
+
+        $component
+            ->set('filter', 'active')
+            ->assertSee("#{$pending->id}", false)
+            ->assertDontSee("#{$published->id}", false)
+            ->set('filter', 'published')
+            ->assertDontSee("#{$pending->id}", false)
+            ->assertSee("#{$published->id}", false);
+    }
+
     public function test_retry_ig_manual_review_creates_new_publication()
     {
         $client = Client::factory()->create();

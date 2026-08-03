@@ -569,6 +569,30 @@ pre {
     min-width: 100%;
   }
 
+  /* Quando esiste gia un wrapper, deve esserci un solo livello di scroll. */
+  .table-responsive > .t-table,
+  .t-table-wrap > .t-table,
+  .social-table-container > .t-table,
+  .attachments-table-wrap > .t-table {
+    display: table;
+    width: max-content;
+    min-width: 100%;
+    max-width: none;
+    overflow: visible;
+  }
+
+  .table-responsive > .t-table thead,
+  .table-responsive > .t-table tbody,
+  .t-table-wrap > .t-table thead,
+  .t-table-wrap > .t-table tbody,
+  .social-table-container > .t-table thead,
+  .social-table-container > .t-table tbody,
+  .attachments-table-wrap > .t-table thead,
+  .attachments-table-wrap > .t-table tbody {
+    width: auto;
+    min-width: 0;
+  }
+
   .t-table thead th,
   .t-table tbody td {
     padding-left: 12px;

@@ -65,6 +65,7 @@
                  if (!files.length) return;
 
                  this.isUploadingLocalMedia = true;
+                 event.target.value = '';
 
                  const newMeta = [];
                  
@@ -87,13 +88,28 @@
                          'media',
                          files,
                          () => { this.isUploadingLocalMedia = false; },
-                         () => { this.isUploadingLocalMedia = false; this.clearLocalPreviews(); }
+                         () => { this.failLocalUpload(newMeta.map(item => item.uid)); }
                      );
+                 });
+             },
+             failLocalUpload(uids) {
+                 this.isUploadingLocalMedia = false;
+                 this.forgetLocalPreviews(uids);
+                 $wire.failedLocalMediaUpload(uids);
+             },
+             forgetLocalPreviews(uids) {
+                 uids.forEach(uid => {
+                     const url = this.localBlobUrls[uid];
+                     if (url) URL.revokeObjectURL(url);
+                     delete this.localBlobUrls[uid];
                  });
              },
              clearLocalPreviews() {
                  Object.values(this.localBlobUrls).forEach(url => URL.revokeObjectURL(url));
                  this.localBlobUrls = {};
+             },
+             destroy() {
+                 this.clearLocalPreviews();
              }
          }">
 
@@ -318,19 +334,29 @@
                                                         <i data-lucide="loader-2" class="u-icon-md mkt-spin"></i>
                                                     </div>
                                                 </template>
-                                            @elseif($item['source'] === 'local' || $item['source'] === 'existing')
+                                            @elseif($item['source'] === 'local')
                                                 @php
-                                                    $url = null;
-                                                    if ($item['source'] === 'local') {
-                                                        $m = $this->all_local_media[$item['local_index']] ?? null;
-                                                        if ($m) {
-                                                            $url = $item['type'] === 'video' ? $this->temporaryVideoPreviewUrl($m) . '#t=0.001' : $m->temporaryUrl();
-                                                        }
-                                                    } else {
-                                                        $url = $item['preview_url'] ?? null;
-                                                        if ($item['type'] === 'video' && $url) {
-                                                            $url .= '#t=0.001';
-                                                        }
+                                                    $m = $this->all_local_media[$item['local_index']] ?? null;
+                                                    $url = $m
+                                                        ? ($item['type'] === 'video'
+                                                            ? $this->temporaryVideoPreviewUrl($m) . '#t=0.001'
+                                                            : $m->temporaryUrl())
+                                                        : null;
+                                                @endphp
+                                                @if($url)
+                                                    @if($item['type'] === 'video')
+                                                        <video x-bind:src="localBlobUrls[@js($item['uid'])] || @js($url)" class="cmp-media-preview-video cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                                                    @else
+                                                        <img x-bind:src="localBlobUrls[@js($item['uid'])] || @js($url)" class="cmp-media-preview-img cmp-local-preview-img">
+                                                    @endif
+                                                @else
+                                                    <div class="marketing-media-placeholder"><i data-lucide="image" class="u-icon-md"></i></div>
+                                                @endif
+                                            @elseif($item['source'] === 'existing')
+                                                @php
+                                                    $url = $item['preview_url'] ?? null;
+                                                    if ($item['type'] === 'video' && $url) {
+                                                        $url .= '#t=0.001';
                                                     }
                                                 @endphp
                                                 @if($url)
@@ -370,7 +396,7 @@
                                                     @endif
                                                 </span>
                                             </div>
-                                            <button type="button" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
+                                            <button type="button" x-on:click="forgetLocalPreviews([@js($item['uid'])])" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
                                         </div>
                                     @endforeach
                                 </div>
@@ -400,7 +426,6 @@
                                             class="form-in p-2 text-sm"
                                             accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
                                             x-on:change="handleLocalFiles($event)"
-                                            x-on:livewire-upload-error="clearLocalPreviews()"
                                         >
 
                                         <div class="u-mt-sm u-mb-md">
@@ -709,15 +734,6 @@
                                 @endif
 
                                 @if($post->status->isManuallyEditable())
-                                    @if(!$post->currentVersion && in_array($post->status->value, ['draft', 'client_changes_requested', 'generated']))
-                                        <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
-                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                            <i data-lucide="check-circle" class="u-icon-sm"></i>
-                                            <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
-                                            <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
-                                        </button>
-                                        <div class="u-flex-1"></div>
-                                    @endif
                                     @if($form['ai_analysis_enabled'])
                                         <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
                                             wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
@@ -753,13 +769,11 @@
                                             </button>
                                         @endif
                                     @else
-                                        <button type="button" wire:click="savePost" class="btn btn-p u-flex-center u-gap-xs"
+                                        <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
                                             wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                                            <i data-lucide="save" class="u-icon-md"></i>
-                                            <span wire:loading.remove wire:target="savePost">
-                                                {{ $post->status->value !== 'draft' ? 'Salva Modifiche' : 'Salva Post' }}
-                                            </span>
-                                            <span wire:loading wire:target="savePost">Salvataggio...</span>
+                                            <i data-lucide="check-circle" class="u-icon-md"></i>
+                                            <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
+                                            <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
                                         </button>
                                     @endif
                                 @endif
@@ -956,14 +970,15 @@
                             <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ min(count($previewMedia), 10) }} }" @endif>
                                 @if(count($previewMedia) > 0)
                                 @if(count($previewMedia) == 1)
-                                    @if($previewMedia[0]['source'] === 'local_pending')
-                                        <template x-if="localBlobUrls['{{ $previewMedia[0]['uid'] }}']">
+                                    @if(in_array($previewMedia[0]['source'], ['local_pending', 'local'], true))
+                                        @php($localPreviewFallback = $previewMedia[0]['url'] ?? '')
+                                        <template x-if="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)">
                                             <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                                 <template x-if="'{{ $previewMedia[0]['type'] }}' === 'video'">
-                                                    <video :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" controls muted playsinline preload="metadata" class="cmp-ig-preview-local-media"></video>
+                                                    <video x-bind:src="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)" controls muted playsinline preload="metadata" class="cmp-ig-preview-local-media"></video>
                                                 </template>
                                                 <template x-if="'{{ $previewMedia[0]['type'] }}' === 'image'">
-                                                    <img :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" class="cmp-ig-preview-local-media">
+                                                    <img x-bind:src="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)" class="cmp-ig-preview-local-media">
                                                 </template>
                                             </div>
                                         </template>
@@ -978,14 +993,15 @@
                                     <div class="cmp-carousel-inner" :style="`transform: translateX(-${currentSlide * 100}%); display: flex; transition: transform 0.3s ease;`">
                                         @foreach($previewMedia as $index => $item)
                                             <div class="cmp-carousel-item" style="flex: 0 0 100%; width: 100%;">
-                                                @if($item['source'] === 'local_pending')
-                                                    <template x-if="localBlobUrls['{{ $item['uid'] }}']">
+                                                @if(in_array($item['source'], ['local_pending', 'local'], true))
+                                                    @php($localPreviewFallback = $item['url'] ?? '')
+                                                    <template x-if="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)">
                                                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                                             <template x-if="'{{ $item['type'] }}' === 'video'">
-                                                                <video :src="localBlobUrls['{{ $item['uid'] }}']" controls muted playsinline preload="metadata"></video>
+                                                                <video x-bind:src="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)" controls muted playsinline preload="metadata"></video>
                                                             </template>
                                                             <template x-if="'{{ $item['type'] }}' === 'image'">
-                                                                <img :src="localBlobUrls['{{ $item['uid'] }}']" alt="Preview Media {{ $index + 1 }}">
+                                                                <img x-bind:src="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)" alt="Preview Media {{ $index + 1 }}">
                                                             </template>
                                                         </div>
                                                     </template>

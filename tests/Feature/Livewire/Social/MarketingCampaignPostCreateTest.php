@@ -3,12 +3,15 @@
 namespace Tests\Feature\Livewire\Social;
 
 use App\Enums\Social\MarketingCampaignPostStatus;
+use App\Enums\Social\MarketingCampaignPostVersionSource;
 use App\Livewire\Social\MarketingCampaigns\MarketingCampaignPostCreate;
 use App\Models\Client;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
@@ -109,5 +112,56 @@ class MarketingCampaignPostCreateTest extends TestCase
             ->assertHasErrors(['form.content_type'])
             ->assertDispatched('sody-processing-started')
             ->assertDispatched('sody-processing-failed');
+    }
+
+    public function test_manual_ready_button_is_only_visible_when_sody_is_disabled(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostCreate::class, ['campaign' => $campaign])
+            ->assertDontSee('Salva come pronto senza Sody')
+            ->set('form.ai_analysis_enabled', false)
+            ->assertSee('Salva come pronto senza Sody')
+            ->assertDontSee('Salva e genera solo testo');
+    }
+
+    public function test_manual_ready_creation_keeps_uploaded_media_and_creates_manual_version(): void
+    {
+        Storage::fake('social_media');
+
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $image = UploadedFile::fake()->image('manual-image.jpg');
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostCreate::class, ['campaign' => $campaign])
+            ->set('form.title', 'Post manuale')
+            ->set('form.description', 'Testo scritto senza Sody')
+            ->set('form.content_type', 'post')
+            ->set('form.status', 'draft')
+            ->set('form.media_source', 'local')
+            ->set('media', [$image])
+            ->assertSee('manual-image.jpg')
+            ->set('form.ai_analysis_enabled', false)
+            ->assertSee('manual-image.jpg')
+            ->call('saveAsManualVersion')
+            ->assertHasNoErrors()
+            ->assertRedirect();
+
+        $post = MarketingCampaignPost::query()
+            ->where('marketing_campaign_id', $campaign->id)
+            ->firstOrFail();
+
+        $this->assertSame(MarketingCampaignPostStatus::Generated, $post->status);
+        $this->assertNotNull($post->current_version_id);
+        $this->assertSame(MarketingCampaignPostVersionSource::Manual, $post->currentVersion->source);
+        $this->assertCount(1, $post->currentVersion->mediaItems);
+        Storage::disk('social_media')->assertExists($post->currentVersion->mediaItems->first()->path);
     }
 }

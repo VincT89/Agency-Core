@@ -27,6 +27,7 @@
                if (files.length === 0) return;
 
                this.isUploadingLocalMedia = true;
+               event.target.value = '';
 
                const meta = files.map(file => {
                    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|avi)$/i.test(file.name);
@@ -44,13 +45,28 @@
                        'media',
                        files,
                        () => { this.isUploadingLocalMedia = false; },
-                       () => { this.isUploadingLocalMedia = false; this.clearLocalPreviews(); }
+                       () => { this.failLocalUpload(meta.map(item => item.uid)); }
                    );
+               });
+           },
+           failLocalUpload(uids) {
+               this.isUploadingLocalMedia = false;
+               this.forgetLocalPreviews(uids);
+               $wire.failedLocalMediaUpload(uids);
+           },
+           forgetLocalPreviews(uids) {
+               uids.forEach(uid => {
+                   const url = this.localBlobUrls[uid];
+                   if (url) URL.revokeObjectURL(url);
+                   delete this.localBlobUrls[uid];
                });
            },
            clearLocalPreviews() {
                Object.values(this.localBlobUrls).forEach(url => URL.revokeObjectURL(url));
                this.localBlobUrls = {};
+           },
+           destroy() {
+               this.clearLocalPreviews();
            }
        }">
     {{-- Colonna Sinistra (2fr): Modulo di modifica --}}
@@ -232,12 +248,17 @@
                     @elseif($item['source'] === 'local')
                         @php
                             $m = $this->all_local_media[$item['local_index']] ?? null;
+                            $localPreviewUrl = $m
+                                ? ($item['type'] === 'video'
+                                    ? $this->temporaryVideoPreviewUrl($m) . '#t=0.001'
+                                    : $m->temporaryUrl())
+                                : '';
                         @endphp
                         @if($m)
-                            @if(\Illuminate\Support\Str::startsWith($m->getMimeType(), 'video/'))
-                                <video src="{{ $this->temporaryVideoPreviewUrl($m) }}#t=0.001" class="cmp-media-preview-img cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                            @if($item['type'] === 'video')
+                                <video x-bind:src="localBlobUrls[@js($item['uid'])] || @js($localPreviewUrl)" class="cmp-media-preview-img cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
                             @else
-                                <img src="{{ $m->temporaryUrl() }}" class="cmp-media-preview-img cmp-local-preview-img">
+                                <img x-bind:src="localBlobUrls[@js($item['uid'])] || @js($localPreviewUrl)" class="cmp-media-preview-img cmp-local-preview-img">
                             @endif
                         @endif
                     @elseif($item['source'] === 'nextcloud')
@@ -249,7 +270,7 @@
                     @endif
 
                     <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="{{ $item['name'] }}">{{ $index + 1 }}. {{ $item['name'] }}</div>
-                    <button type="button" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
+                    <button type="button" x-on:click="forgetLocalPreviews([@js($item['uid'])])" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
                 </div>
                 @endforeach
             </div>
@@ -277,7 +298,6 @@
                         class="form-in p-2 text-sm"
                         accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
                         x-on:change="handleLocalFiles($event)"
-                        x-on:livewire-upload-error="clearLocalPreviews()"
                     >
 
                     <div class="u-mt-sm u-mb-md">
@@ -419,23 +439,14 @@
                   <span wire:loading wire:target="saveAndSubmitToN8n">Avvio di Sody...</span>
                 </button>
             @else
-                <button type="button" wire:click="save" class="btn btn-s u-flex-center u-gap-xs" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
-                    <i data-lucide="save" class="u-icon-md"></i>
-                    <span wire:loading.remove wire:target="save">Salva Bozza</span>
-                    <span wire:loading wire:target="save">Salvataggio...</span>
-                </button>
-
                 <button type="button"
-                    x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
-                    wire:click="saveAndSubmitToN8n('caption')"
+                    wire:click="saveAsManualVersion"
                     wire:loading.attr="disabled"
-                    x-bind:disabled="isUploadingLocalMedia || sodyActionPending"
-                    class="btn btn-p u-flex-center u-gap-xs">
-                    <i data-lucide="type" class="u-icon-md"></i>
-                    <span wire:loading.remove wire:target="saveAndSubmitToN8n('caption')">
-                        Salva e genera solo testo
-                    </span>
-                    <span wire:loading wire:target="saveAndSubmitToN8n('caption')">Avvio di Sody...</span>
+                    x-bind:disabled="isUploadingLocalMedia"
+                    class="btn btn-purple u-flex-center u-gap-xs">
+                    <i data-lucide="check-circle" class="u-icon-md"></i>
+                    <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
+                    <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
                 </button>
             @endif
           </div>
@@ -470,14 +481,15 @@
                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;" @if(count($previewMedia) > 1) x-data="{ currentSlide: 0, slides: {{ min(count($previewMedia), 10) }} }" @endif>
                             @if(count($previewMedia) > 0)
                             @if(count($previewMedia) == 1)
-                                @if($previewMedia[0]['source'] === 'local_pending')
-                                    <template x-if="localBlobUrls['{{ $previewMedia[0]['uid'] }}']">
+                                @if(in_array($previewMedia[0]['source'], ['local_pending', 'local'], true))
+                                    @php($localPreviewFallback = $previewMedia[0]['url'] ?? '')
+                                    <template x-if="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)">
                                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                             <template x-if="'{{ $previewMedia[0]['type'] }}' === 'video'">
-                                                <video :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" controls muted playsinline preload="metadata" class="cmp-ig-preview-local-media"></video>
+                                                <video x-bind:src="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)" controls muted playsinline preload="metadata" class="cmp-ig-preview-local-media"></video>
                                             </template>
                                             <template x-if="'{{ $previewMedia[0]['type'] }}' === 'image'">
-                                                <img :src="localBlobUrls['{{ $previewMedia[0]['uid'] }}']" class="cmp-ig-preview-local-media">
+                                                <img x-bind:src="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)" class="cmp-ig-preview-local-media">
                                             </template>
                                         </div>
                                     </template>
@@ -492,14 +504,15 @@
                                 <div class="cmp-carousel-inner" :style="`transform: translateX(-${currentSlide * 100}%); display: flex; transition: transform 0.3s ease;`">
                                     @foreach($previewMedia as $index => $item)
                                         <div class="cmp-carousel-item" style="flex: 0 0 100%; width: 100%;">
-                                            @if($item['source'] === 'local_pending')
-                                                <template x-if="localBlobUrls['{{ $item['uid'] }}']">
+                                            @if(in_array($item['source'], ['local_pending', 'local'], true))
+                                                @php($localPreviewFallback = $item['url'] ?? '')
+                                                <template x-if="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)">
                                                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                                         <template x-if="'{{ $item['type'] }}' === 'video'">
-                                                            <video :src="localBlobUrls['{{ $item['uid'] }}']" controls muted playsinline preload="metadata"></video>
+                                                            <video x-bind:src="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)" controls muted playsinline preload="metadata"></video>
                                                         </template>
                                                         <template x-if="'{{ $item['type'] }}' === 'image'">
-                                                            <img :src="localBlobUrls['{{ $item['uid'] }}']" alt="Preview Media {{ $index + 1 }}">
+                                                            <img x-bind:src="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)" alt="Preview Media {{ $index + 1 }}">
                                                         </template>
                                                     </div>
                                                 </template>

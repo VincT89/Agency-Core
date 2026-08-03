@@ -384,7 +384,11 @@ class MarketingCampaignPostShow extends Component
 
         $this->selected_media_items = array_values(array_filter($this->selected_media_items, fn ($i) => $i['uid'] !== $uid));
 
-        // Legacy sync for nextcloud files
+        $this->syncLegacyPropertiesFromUnified();
+    }
+
+    private function syncLegacyPropertiesFromUnified(): void
+    {
         $this->selected_nextcloud_files = [];
         foreach ($this->selected_media_items as $i) {
             if ($i['source'] === 'nextcloud') {
@@ -706,7 +710,9 @@ class MarketingCampaignPostShow extends Component
             if ($item['source'] === 'local') {
                 $uploadedFile = $this->all_local_media[$item['local_index']] ?? null;
                 if (! $uploadedFile) {
-                    continue;
+                    $this->addError('media', 'Un file locale non è più disponibile. Rimuovilo e caricalo di nuovo.');
+
+                    return false;
                 }
 
                 $filename = Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME))
@@ -790,6 +796,12 @@ class MarketingCampaignPostShow extends Component
 
         if ($this->hasPendingLocalMedia()) {
             $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
+
+            return;
+        }
+
+        if (empty($this->selected_media_items)) {
+            $this->addError('media', 'Aggiungi almeno un media prima di salvare il post come pronto.');
 
             return;
         }
@@ -975,6 +987,12 @@ class MarketingCampaignPostShow extends Component
 
     public function saveAsManualVersion(): void
     {
+        if ((bool) ($this->form['ai_analysis_enabled'] ?? true)) {
+            $this->addError('post', 'Disattiva Richiedi Analisi Sody per salvare il post senza Sody.');
+
+            return;
+        }
+
         $this->savePost();
     }
 
@@ -1476,6 +1494,25 @@ class MarketingCampaignPostShow extends Component
                 'local_index' => null,
             ];
         }
+    }
+
+    public function failedLocalMediaUpload(array $uids): void
+    {
+        $failedUids = array_fill_keys(
+            array_values(array_filter($uids, fn ($uid) => is_string($uid))),
+            true
+        );
+
+        $this->selected_media_items = array_values(array_filter(
+            $this->selected_media_items,
+            fn ($item) => ! isset($failedUids[$item['uid'] ?? ''])
+        ));
+        $this->media = [];
+        $this->syncLegacyPropertiesFromUnified();
+        $this->addError(
+            'media',
+            'Caricamento non riuscito. Controlla formato e dimensione del file e riprova.'
+        );
     }
 
     public function updatedMedia()

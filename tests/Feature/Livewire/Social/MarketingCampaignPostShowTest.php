@@ -562,4 +562,27 @@ class MarketingCampaignPostShowTest extends TestCase
         
         $this->assertDatabaseCount('marketing_campaign_post_versions', 2);
     }
+
+    public function test_manual_ready_button_is_only_visible_when_sody_is_disabled(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Draft->value,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+            'ai_analysis_enabled' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post,
+        ])
+            ->assertDontSee('Salva come pronto senza Sody')
+            ->set('form.ai_analysis_enabled', false)
+            ->assertSee('Salva come pronto senza Sody');
+    }
 }

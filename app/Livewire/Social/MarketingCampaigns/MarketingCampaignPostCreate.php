@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Social\MarketingCampaigns;
 
+use App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction;
 use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
+use App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData;
 use App\Domain\Social\Services\MediaIntegrityMetadataReader;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostType;
@@ -350,6 +352,25 @@ class MarketingCampaignPostCreate extends Component
         }
     }
 
+    public function failedLocalMediaUpload(array $uids): void
+    {
+        $failedUids = array_fill_keys(
+            array_values(array_filter($uids, fn ($uid) => is_string($uid))),
+            true
+        );
+
+        $this->selected_media_items = array_values(array_filter(
+            $this->selected_media_items,
+            fn ($item) => ! isset($failedUids[$item['uid'] ?? ''])
+        ));
+        $this->media = [];
+        $this->syncLegacyPropertiesFromUnified();
+        $this->addError(
+            'media',
+            'Caricamento non riuscito. Controlla formato e dimensione del file e riprova.'
+        );
+    }
+
     public function updatedMedia()
     {
         if (! is_array($this->media)) {
@@ -474,7 +495,7 @@ class MarketingCampaignPostCreate extends Component
             ->contains(fn ($item) => ($item['source'] ?? null) === 'local_pending');
     }
 
-    private function executePostCreation(\Closure $onSuccess)
+    private function executePostCreation(\Closure $onSuccess, bool $createManualVersion = false)
     {
         if ($this->hasPendingLocalMedia()) {
             $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
@@ -485,6 +506,10 @@ class MarketingCampaignPostCreate extends Component
         $this->validate();
 
         $data = $this->form;
+        if ($createManualVersion) {
+            $data['ai_analysis_enabled'] = false;
+            $data['status'] = MarketingCampaignPostStatus::Draft->value;
+        }
         $data['marketing_campaign_id'] = $this->campaign->id;
         $data['created_by'] = auth()->id();
 
@@ -520,7 +545,7 @@ class MarketingCampaignPostCreate extends Component
             $logoUpdated = false;
             $activityUpdated = false;
 
-            $post = DB::transaction(function () use ($data, $storedMedia, &$newlyCreatedClientIdentityPaths, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
+            $post = DB::transaction(function () use ($data, $storedMedia, $createManualVersion, &$newlyCreatedClientIdentityPaths, &$oldLogoPathToClean, &$logoUpdated, &$activityUpdated) {
                 $client = $this->campaign->client()->lockForUpdate()->first();
                 $clientUpdates = $this->prepareClientIdentity($newlyCreatedClientIdentityPaths);
 
@@ -539,6 +564,26 @@ class MarketingCampaignPostCreate extends Component
                 $post = MarketingCampaignPost::create($data);
                 if (! empty($storedMedia)) {
                     $post->mediaItems()->createMany($storedMedia);
+                }
+
+                if ($createManualVersion) {
+                    $orderedMediaIds = $post->mediaItems()
+                        ->orderBy('sort_order')
+                        ->orderBy('id')
+                        ->pluck('id')
+                        ->all();
+
+                    app(CreateManualMarketingCampaignPostVersionAction::class)->execute(
+                        $post,
+                        new CreateManualMarketingCampaignPostVersionData(
+                            expected_current_version_id: null,
+                            title: $data['title'] ?? null,
+                            caption: $data['description'] ?? null,
+                            hashtags: null,
+                            ordered_media_ids: $orderedMediaIds,
+                            author_id: auth()->id()
+                        )
+                    );
                 }
 
                 return $post;
@@ -598,6 +643,40 @@ class MarketingCampaignPostCreate extends Component
                 'error' => $e->getMessage(),
             ]);
             $this->addError('post', 'Non è stato possibile salvare il post. Riprova tra poco.');
+
+            return null;
+        }
+    }
+
+    public function saveAsManualVersion()
+    {
+        if ((bool) ($this->form['ai_analysis_enabled'] ?? true)) {
+            $this->addError('post', 'Disattiva Richiedi Analisi Sody per salvare il post senza Sody.');
+
+            return null;
+        }
+
+        if (empty($this->selected_media_items)) {
+            $this->addError('media', 'Aggiungi almeno un media prima di salvare il post come pronto.');
+
+            return null;
+        }
+
+        try {
+            return $this->executePostCreation(function ($post) {
+                return redirect()->route('marketing-campaigns.posts.show', [
+                    'campaign' => $this->campaign->id,
+                    'post' => $post->id,
+                ]);
+            }, createManualVersion: true);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Unable to create manual marketing post version', [
+                'campaign_id' => $this->campaign->id,
+                'error' => $e->getMessage(),
+            ]);
+            $this->addError('post', 'Non è stato possibile salvare il post come pronto. Riprova tra poco.');
 
             return null;
         }
@@ -745,7 +824,9 @@ class MarketingCampaignPostCreate extends Component
             if ($item['source'] === 'local') {
                 $uploadedFile = $this->all_local_media[$item['local_index']] ?? null;
                 if (! $uploadedFile) {
-                    continue;
+                    $this->addError('media', 'Un file locale non è più disponibile. Rimuovilo e caricalo di nuovo.');
+
+                    return false;
                 }
 
                 $filename = Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME))

@@ -176,13 +176,45 @@ class ExecuteMarketingCampaignPostPublicationAction
             );
         }
 
-        $transition = DB::transaction(function () use ($publication, $result) {
+        $simulationSnapshot = $result->responseSnapshot ?? [];
+        $isSimulation = ($simulationSnapshot['dry_run'] ?? false) === true
+            || ($simulationSnapshot['should_not_count_as_real_publication'] ?? false) === true;
+        $simulationMessage = 'Simulazione completata: nessun contenuto è stato inviato al social. Disattiva SOCIAL_PUBLISHING_DRY_RUN e riprova.';
+
+        if ($isSimulation && filled($result->externalPostId)) {
+            $simulationSnapshot['simulation_reference'] = $result->externalPostId;
+        }
+
+        $transition = DB::transaction(function () use (
+            $publication,
+            $result,
+            $isSimulation,
+            $simulationSnapshot,
+            $simulationMessage
+        ) {
             $locked = MarketingCampaignPostPublication::whereKey($publication->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             if ($locked->status !== PublicationStatus::Publishing) {
                 return ['applied' => false, 'poll_platform' => null];
+            }
+
+            if ($isSimulation) {
+                $locked->update([
+                    'status' => PublicationStatus::NeedsManualReview->value,
+                    'external_post_id' => null,
+                    'external_container_id' => null,
+                    'external_task_id' => null,
+                    'external_permalink' => null,
+                    'published_at' => null,
+                    'error_message' => $simulationMessage,
+                    'failure_classification' => PublicationFailureClassification::ManualReview->value,
+                    'response_snapshot' => $simulationSnapshot,
+                    'provider_last_response' => $simulationSnapshot,
+                ]);
+
+                return ['applied' => true, 'poll_platform' => null];
             }
 
             if ($result->success) {
@@ -262,6 +294,14 @@ class ExecuteMarketingCampaignPostPublicationAction
         $current = MarketingCampaignPostPublication::find($publication->id);
         if ($current?->post) {
             $this->syncAction->execute($current->post);
+        }
+
+        if ($isSimulation) {
+            return PublicationExecutionOutcome::failure(
+                $simulationMessage,
+                PublicationFailureClassification::ManualReview,
+                $simulationSnapshot
+            );
         }
 
         return $result->success

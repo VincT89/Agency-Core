@@ -94,7 +94,9 @@ jobs:
         DB_PASSWORD: root
 
     - name: Verify production caches
-      run: php artisan optimize
+      run: |
+        php artisan optimize
+        php artisan optimize:clear
       env:
         DB_CONNECTION: mysql
         DB_DATABASE: testing

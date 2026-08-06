@@ -12,6 +12,7 @@ use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData;
 use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
+use App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
 use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
 use App\Domain\Social\Services\MediaIntegrityMetadataReader;
@@ -151,11 +152,7 @@ class MarketingCampaignPostShow extends Component
             'form.publishing_platforms' => 'nullable|array',
             'form.publishing_platforms.*' => 'string|in:instagram,facebook,tiktok',
             'media' => ['nullable', 'array', 'max:10'],
-            'media.*' => [
-                'file',
-                'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime',
-                'max:204800',
-            ],
+            'media.*' => MarketingCampaignPostMediaUploadPolicy::validationRules(),
             'runtime_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'runtime_activity_description' => 'nullable|string|max:1000',
         ];
@@ -1520,6 +1517,11 @@ class MarketingCampaignPostShow extends Component
         if (! is_array($this->media)) {
             return;
         }
+
+        $this->validate([
+            'media' => ['nullable', 'array', 'max:10'],
+            'media.*' => MarketingCampaignPostMediaUploadPolicy::validationRules(),
+        ]);
 
         foreach ($this->media as $uploadedFile) {
             $this->all_local_media[] = $uploadedFile;

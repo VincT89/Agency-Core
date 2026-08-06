@@ -417,6 +417,9 @@
                                         </label>
                                     </div>
                                 </div>
+                                <div class="u-text-meta u-text-muted u-mb-sm">
+                                    Massimo 10 media per post. Dal computer: massimo 200 MB per file. Foto: JPG, PNG, WEBP. Video: MP4, WEBM, MOV. Il social può applicare requisiti più restrittivi.
+                                </div>
 
                                 @if($form['media_source'] === 'local')
                                     <div>

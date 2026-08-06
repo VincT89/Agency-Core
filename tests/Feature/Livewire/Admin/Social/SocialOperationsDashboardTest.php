@@ -65,6 +65,7 @@ class SocialOperationsDashboardTest extends TestCase
             ->test(SocialOperationsDashboard::class)
             ->assertSee("#{$pending->id}", false)
             ->assertSee("#{$published->id}", false)
+            ->assertSee('Dettagli post')
             ->assertSee('Apri sul social');
 
         $component

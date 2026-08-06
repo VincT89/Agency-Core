@@ -1966,7 +1966,7 @@ body.sody-loader-active {
 /* Marketing Forms & Show */
 .mkt-text-primary { color: var(--text); }
 .mkt-form-err-bold { margin-bottom: 16px; font-weight: bold; }
-.mkt-panel-lg { max-width: 800px; padding: 32px; }
+.mkt-panel-lg { width: 100%; max-width: none; padding: 32px; box-sizing: border-box; }
 .mkt-form-col-gap24 { display: flex; flex-direction: column; gap: 24px; }
 .mkt-text-red { color: var(--red); }
 .mkt-flex-gap16 { display: flex; gap: 16px; }

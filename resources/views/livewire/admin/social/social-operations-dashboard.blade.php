@@ -75,9 +75,6 @@
                             <td class="u-max-w-xs">
                                 @if($pub->status === \App\Enums\Social\PublicationStatus::Published)
                                     <div class="u-text-sm u-text-green">Pubblicata correttamente.</div>
-                                    @if($pub->external_permalink)
-                                        <a href="{{ $pub->external_permalink }}" target="_blank" rel="noopener noreferrer" class="u-text-meta u-text-accent u-no-underline">Apri sul social</a>
-                                    @endif
                                 @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Pending, \App\Enums\Social\PublicationStatus::Publishing], true))
                                     <div class="u-text-sm u-text-blue">Elaborazione in corso.</div>
                                 @elseif($pub->error_message || in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true))
@@ -88,6 +85,23 @@
                             </td>
                             <td class="u-text-right">
                                 <div class="u-flex u-flex-wrap u-justify-end u-gap-xs">
+                                    @if($pub->post && $pub->post->campaign)
+                                        <a
+                                            href="{{ route('marketing-campaigns.posts.show', ['campaign' => $pub->post->campaign->id, 'post' => $pub->post_id ?? $pub->marketing_campaign_post_id]) }}"
+                                            class="btn btn-sec btn-xs"
+                                            wire:navigate>
+                                            Dettagli post
+                                        </a>
+                                    @endif
+                                    @if($pub->external_permalink)
+                                        <a
+                                            href="{{ $pub->external_permalink }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="btn btn-p btn-xs">
+                                            Apri sul social
+                                        </a>
+                                    @endif
                                     @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Publishing]))
                                         <button wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Aggiorna lo stato della pubblicazione">
                                             <i class="fas fa-sync-alt"></i> Aggiorna stato

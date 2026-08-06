@@ -260,12 +260,10 @@ class MetaPublisher implements SocialPublisherInterface
             }
 
             $endpoint = "{$baseEndpoint}/feed";
-            foreach ($attachedMedia as $index => $photoId) {
-                $payload["attached_media[{$index}]"] = json_encode(
-                    ['media_fbid' => $photoId],
-                    JSON_THROW_ON_ERROR
-                );
-            }
+            $payload['attached_media'] = array_map(
+                fn (string $photoId): array => ['media_fbid' => $photoId],
+                $attachedMedia
+            );
         } elseif (count($mediaDescriptors) === 1) {
             $media = $mediaDescriptors[0];
             if (strtolower($media['type'] ?? '') === 'video') {

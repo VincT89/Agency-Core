@@ -94,16 +94,10 @@ class ProviderCompletenessTest extends TestCase
         });
         Http::assertSent(function (Request $request): bool {
             return str_ends_with($request->url(), '/page-1/feed')
-                && json_decode(
-                    $request['attached_media[0]'],
-                    true,
-                    flags: JSON_THROW_ON_ERROR
-                ) === ['media_fbid' => 'photo-1']
-                && json_decode(
-                    $request['attached_media[1]'],
-                    true,
-                    flags: JSON_THROW_ON_ERROR
-                ) === ['media_fbid' => 'photo-2'];
+                && $request['attached_media'] === [
+                    ['media_fbid' => 'photo-1'],
+                    ['media_fbid' => 'photo-2'],
+                ];
         });
     }
 

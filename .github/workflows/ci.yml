@@ -106,7 +106,22 @@ jobs:
         DB_PASSWORD: root
 
     - name: Execute tests
-      run: php artisan test
+      shell: bash
+      run: |
+        set +e
+        php artisan test --colors=never --stop-on-error 2>&1 | tee "$RUNNER_TEMP/phpunit-output.log"
+        status=${PIPESTATUS[0]}
+        set -e
+
+        if [ "$status" -ne 0 ]; then
+          details="$(tail -n 80 "$RUNNER_TEMP/phpunit-output.log")"
+          details="${details//'%'/'%25'}"
+          details="${details//$'\r'/'%0D'}"
+          details="${details//$'\n'/'%0A'}"
+          echo "::error title=PHPUnit failed with exit code ${status}::${details}"
+        fi
+
+        exit "$status"
       env:
         DB_CONNECTION: mysql
         DB_DATABASE: testing

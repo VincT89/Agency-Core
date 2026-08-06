@@ -38,6 +38,9 @@ jobs:
     - name: Copy .env
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
+    - name: Prepare Laravel runtime directories
+      run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
+
     - name: Install Dependencies (PHP)
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 

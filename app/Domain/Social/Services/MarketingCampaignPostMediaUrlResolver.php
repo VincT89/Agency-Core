@@ -38,6 +38,12 @@ class MarketingCampaignPostMediaUrlResolver
     public function previewUrl(MarketingCampaignPostMedia $media): ?string
     {
         if ($media->source === 'nextcloud') {
+            if ($media->isVideo() && filled($media->nextcloud_path)) {
+                return URL::route('nextcloud.download', [
+                    'path' => $media->nextcloud_path,
+                ]);
+            }
+
             return $media->nextcloud_share_url ? rtrim($media->nextcloud_share_url, '/').'/preview' : null;
         }
 

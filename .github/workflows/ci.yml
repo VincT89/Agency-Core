@@ -59,8 +59,9 @@ jobs:
     - name: Build Assets
       run: npm run build
 
-    - name: Generate key
-      run: php artisan key:generate --env=testing
+    - name: Generate CI application key
+      shell: bash
+      run: echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
 
     - name: Run Migrations
       run: php artisan migrate:fresh --env=testing

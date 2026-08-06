@@ -40,14 +40,34 @@ class MetaSnapshotPreflightRules
                     'image/webp',
                 ], true);
             $validVideo = $type === 'video'
-                && in_array($mime, [
-                    'video/mp4',
-                    'video/quicktime',
-                    'video/webm',
-                ], true);
+                && ($platform === SocialPlatform::Instagram
+                    ? InstagramPublishingMediaPolicy::supportsVideo(
+                        $mime,
+                        $item['path'] ?? null
+                    )
+                    : in_array($mime, [
+                        'video/mp4',
+                        'video/quicktime',
+                        'video/webm',
+                    ], true));
 
             if (! $validImage && ! $validVideo) {
-                $errors[] = 'Meta media format is not supported.';
+                $errors[] = $platform === SocialPlatform::Instagram
+                    && $type === 'video'
+                    ? 'Instagram videos must use MP4 or MOV.'
+                    : 'Meta media format is not supported.';
+
+                break;
+            }
+
+            if (
+                $platform === SocialPlatform::Instagram
+                && $type === 'video'
+                && InstagramPublishingMediaPolicy::exceedsVideoSizeLimit(
+                    $item['size_bytes'] ?? null
+                )
+            ) {
+                $errors[] = 'Instagram videos cannot exceed 1 GB.';
 
                 break;
             }

@@ -11,6 +11,7 @@ use App\Domain\Social\Actions\SendMarketingCampaignPostToClientAction;
 use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData;
+use App\Domain\Social\Exceptions\HistoricalPostProtectedException;
 use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
@@ -317,6 +318,7 @@ class MarketingCampaignPostShow extends Component
                 'type' => $isVid ? 'video' : 'image',
                 'name' => $existing['original_name'],
                 'preview_url' => $existing['preview_url'],
+                'mime_type' => $existing['mime_type'],
             ];
         }
 
@@ -1386,8 +1388,27 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('delete', $this->post);
 
+        if (! $this->getCanDeletePostProperty()) {
+            $this->addError(
+                'post',
+                'Questo post contiene versioni salvate o pubblicazioni social e non può essere eliminato. La rimozione dai social va gestita separatamente.'
+            );
+
+            return;
+        }
+
         try {
             app(DeleteMarketingCampaignPostAction::class)->execute($this->post);
+        } catch (HistoricalPostProtectedException $e) {
+            Log::notice('Historical marketing post deletion blocked', [
+                'post_id' => $this->post->id,
+            ]);
+            $this->addError(
+                'post',
+                'Questo post contiene versioni salvate o pubblicazioni social e non può essere eliminato. La rimozione dai social va gestita separatamente.'
+            );
+
+            return;
         } catch (\Exception $e) {
             Log::error('Unable to delete marketing post', [
                 'post_id' => $this->post->id,
@@ -1399,6 +1420,13 @@ class MarketingCampaignPostShow extends Component
         }
 
         return redirect()->route('marketing-campaigns.show', $this->campaign);
+    }
+
+    #[Computed]
+    public function getCanDeletePostProperty(): bool
+    {
+        return ! $this->post->versions()->exists()
+            && ! $this->post->publications()->exists();
     }
 
     private function prepareClientIdentity(&$newlyCreatedClientIdentityPaths)
@@ -1558,7 +1586,9 @@ class MarketingCampaignPostShow extends Component
                 if ($item['source'] === 'existing') {
                     return [
                         'uid' => $item['uid'],
+                        'id' => $item['existing_id'],
                         'type' => $item['type'],
+                        'mime_type' => $item['mime_type'] ?? null,
                         'source' => 'existing',
                         'url' => $item['preview_url'],
                     ];

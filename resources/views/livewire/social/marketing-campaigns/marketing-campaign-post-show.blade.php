@@ -1,21 +1,32 @@
 @php
-    $versionImages = [];
+    $versionMedia = [];
     if (!empty($existing_media)) {
         foreach ($existing_media as $media) {
             if ($media['preview_url']) {
-                $versionImages[] = $media['preview_url'];
+                $isVideo = ($media['media_type'] ?? null) === 'video'
+                    || str_starts_with($media['mime_type'] ?? '', 'video/');
+
+                $versionMedia[] = [
+                    'id' => $media['id'],
+                    'type' => $isVideo ? 'video' : 'image',
+                    'url' => $media['preview_url'],
+                    'mime_type' => $media['mime_type'] ?? null,
+                ];
             }
         }
     }
 
     $previewMedia = $this->previewMedia;
-    
-    if (empty($previewMedia) && count($versionImages) > 0) {
-        foreach($versionImages as $vImg) {
+
+    if (empty($previewMedia) && count($versionMedia) > 0) {
+        foreach ($versionMedia as $versionItem) {
             $previewMedia[] = [
-                'type' => 'image',
-                'url' => $vImg,
-                'source' => 'version'
+                'uid' => 'version:'.$versionItem['id'],
+                'id' => $versionItem['id'],
+                'type' => $versionItem['type'],
+                'mime_type' => $versionItem['mime_type'],
+                'url' => $versionItem['url'],
+                'source' => 'existing',
             ];
         }
     }
@@ -47,14 +58,28 @@
         </x-slot:title>
         <x-slot:actions>
             <x-badge :status="$post->status->value" :label="$post->status->label()" />
-            <x-delete-modal wireClick="deletePost" title="Elimina Post"
-                message="Sei sicuro di voler eliminare questo post?">
-                <button type="button" class="btn btn-d btn-sm u-inline-flex-center u-gap-xs">
-                    <i data-lucide="trash-2" class="u-icon-sm"></i> Elimina
-                </button>
-            </x-delete-modal>
+            @if($this->canDeletePost)
+                <x-delete-modal wireClick="deletePost" title="Elimina Post"
+                    message="Sei sicuro di voler eliminare questo post?">
+                    <button type="button" class="btn btn-d btn-sm u-inline-flex-center u-gap-xs">
+                        <i data-lucide="trash-2" class="u-icon-sm"></i> Elimina
+                    </button>
+                </x-delete-modal>
+            @else
+                <div class="u-inline-flex-center u-gap-xs" data-post-delete-protected="true"
+                    title="Il post contiene versioni salvate o pubblicazioni social e deve essere conservato nello storico.">
+                    <button type="button" class="btn btn-d btn-sm u-inline-flex-center u-gap-xs" disabled aria-disabled="true">
+                        <i data-lucide="trash-2" class="u-icon-sm"></i> Elimina
+                    </button>
+                    <span class="u-text-meta u-text-muted">Post storico: non eliminabile da questa schermata.</span>
+                </div>
+            @endif
         </x-slot:actions>
     </x-page-header>
+
+    @error('post')
+        <div class="u-alert-error u-mb-md">{{ $message }}</div>
+    @enderror
 
     <div class="cmp-post-detail-layout relative"
          x-data="{
@@ -273,20 +298,44 @@
                                 @error('form.title') <span class="form-err">{{ $message }}</span> @enderror
                             </div>
 
-                            @if($post->currentVersion && count($versionImages) > 0)
+                            @if($post->currentVersion && count($versionMedia) > 0)
                                 <div class="cmp-section-label mb-2 u-mt-md">Media Sody (Attivo)</div>
                                 <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md">
-                                    @foreach($versionImages as $idx => $vImg)
-                                        <div class="cmp-media-preview-item">
-                                            <img src="{{ $vImg }}" class="cmp-media-preview-img cmp-local-preview-img">
-                                            <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="Immagine Sody">Sody (v{{ $post->currentVersion->version_number }}) - {{ $idx + 1 }}</div>
+                                    @foreach($versionMedia as $idx => $versionItem)
+                                        <div class="cmp-media-preview-item" wire:key="active-version-media-{{ $versionItem['id'] }}">
+                                            @if($versionItem['type'] === 'video')
+                                                @php
+                                                    $versionVideoUrl = $versionItem['url'].'#t=0.001';
+                                                @endphp
+                                                <div x-data="{ videoFailed: false }" class="u-w-full">
+                                                    <video
+                                                        wire:key="active-version-video-{{ $versionItem['id'] }}"
+                                                        data-persisted-video="{{ $versionItem['id'] }}"
+                                                        class="cmp-media-preview-video cmp-local-preview-img"
+                                                        controls
+                                                        muted
+                                                        playsinline
+                                                        preload="metadata"
+                                                        x-show="!videoFailed"
+                                                        x-on:error="videoFailed = true"
+                                                    >
+                                                        <source src="{{ $versionVideoUrl }}" type="{{ $versionItem['mime_type'] ?: 'video/mp4' }}">
+                                                    </video>
+                                                    <div x-show="videoFailed" class="marketing-media-placeholder" x-cloak>
+                                                        <span class="u-text-meta">Anteprima video non disponibile.</span>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <img src="{{ $versionItem['url'] }}" class="cmp-media-preview-img cmp-local-preview-img" alt="Media Sody {{ $idx + 1 }}">
+                                            @endif
+                                            <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="Media Sody">Sody (v{{ $post->currentVersion->version_number }}) - {{ $idx + 1 }}</div>
                                         </div>
                                     @endforeach
                                 </div>
                             @endif
 
                             {{-- Wrapper Media Sorgente --}}
-                            @if($post->currentVersion && count($versionImages) > 0)
+                            @if($post->currentVersion && count($versionMedia) > 0)
                                 <div x-data="{ showOriginals: false }" class="u-mt-md u-border-t u-border-line u-pt-md">
                                     <div class="u-flex u-align-center u-gap-md u-mb-sm u-cursor-pointer" @click="showOriginals = !showOriginals">
                                         <div class="cmp-section-label mb-0">Media Originali (Sorgente)</div>
@@ -358,10 +407,28 @@
                                                     if ($item['type'] === 'video' && $url) {
                                                         $url .= '#t=0.001';
                                                     }
+                                                    $savedVideoMime = $item['mime_type'] ?? 'video/mp4';
                                                 @endphp
                                                 @if($url)
                                                     @if($item['type'] === 'video')
-                                                        <video src="{{ $url }}" class="cmp-media-preview-video cmp-local-preview-img" controls muted playsinline preload="metadata"></video>
+                                                        <div x-data="{ videoFailed: false }" class="u-w-full">
+                                                            <video
+                                                                wire:key="selected-saved-video-{{ $item['existing_id'] }}"
+                                                                data-persisted-video="{{ $item['existing_id'] }}"
+                                                                class="cmp-media-preview-video cmp-local-preview-img"
+                                                                controls
+                                                                muted
+                                                                playsinline
+                                                                preload="metadata"
+                                                                x-show="!videoFailed"
+                                                                x-on:error="videoFailed = true"
+                                                            >
+                                                                <source src="{{ $url }}" type="{{ $savedVideoMime }}">
+                                                            </video>
+                                                            <div x-show="videoFailed" class="marketing-media-placeholder" x-cloak>
+                                                                <span class="u-text-meta">Anteprima video non disponibile.</span>
+                                                            </div>
+                                                        </div>
                                                     @else
                                                         <img src="{{ $url }}" class="cmp-media-preview-img cmp-local-preview-img">
                                                     @endif
@@ -418,7 +485,7 @@
                                     </div>
                                 </div>
                                 <div class="u-text-meta u-text-muted u-mb-sm">
-                                    Massimo 10 media per post. Dal computer: foto massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::IMAGE_MAX_MEGABYTES }} MB (JPG, PNG, WEBP) e video massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::VIDEO_MAX_MEGABYTES }} MB (MP4, WEBM, MOV), nei limiti consentiti dal server. Per file di grandi dimensioni, caricali prima su Nextcloud e seleziona "Da Nextcloud". Il social può applicare requisiti più restrittivi.
+                                    Massimo 10 media per post. Dal computer: foto massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::IMAGE_MAX_MEGABYTES }} MB (JPG, PNG, WEBP) e video massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::VIDEO_MAX_MEGABYTES }} MB (MP4, WEBM, MOV), nei limiti consentiti dal server. Per file di grandi dimensioni, caricali prima su Nextcloud e seleziona "Da Nextcloud". Instagram accetta video MP4 o MOV fino a 1 GB; un singolo video viene pubblicato come Reel.
                                 </div>
 
                                 @if($form['media_source'] === 'local')
@@ -462,7 +529,7 @@
                                 @endif
                             </div>
 
-                            @if($post->currentVersion && count($versionImages) > 0)
+                            @if($post->currentVersion && count($versionMedia) > 0)
                                     </div> {{-- chiusura x-show="showOriginals" --}}
                                 </div> {{-- chiusura wrapper x-data --}}
                             @endif
@@ -974,7 +1041,9 @@
                                 @if(count($previewMedia) > 0)
                                 @if(count($previewMedia) == 1)
                                     @if(in_array($previewMedia[0]['source'], ['local_pending', 'local'], true))
-                                        @php($localPreviewFallback = $previewMedia[0]['url'] ?? '')
+                                        @php
+                                            $localPreviewFallback = $previewMedia[0]['url'] ?? '';
+                                        @endphp
                                         <template x-if="localBlobUrls[@js($previewMedia[0]['uid'])] || @js($localPreviewFallback)">
                                             <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                                 <template x-if="'{{ $previewMedia[0]['type'] }}' === 'video'">
@@ -987,7 +1056,33 @@
                                         </template>
                                     @else
                                         @if($previewMedia[0]['type'] === 'video')
-                                            <video src="{{ $previewMedia[0]['url'] }}" controls muted playsinline preload="metadata"></video>
+                                            @php
+                                                $previewVideoId = $previewMedia[0]['id'] ?? $previewMedia[0]['uid'];
+                                                $previewVideoUrl = $previewMedia[0]['url'];
+                                                if (($previewMedia[0]['source'] ?? null) === 'existing' && !str_contains($previewVideoUrl, '#')) {
+                                                    $previewVideoUrl .= '#t=0.001';
+                                                }
+                                                $previewVideoMime = $previewMedia[0]['mime_type'] ?? 'video/mp4';
+                                            @endphp
+                                            <div x-data="{ videoFailed: false }" class="u-w-full u-h-full u-flex-center">
+                                                <video
+                                                    wire:key="post-preview-video-{{ $previewVideoId }}"
+                                                    data-persisted-video="{{ $previewVideoId }}"
+                                                    controls
+                                                    muted
+                                                    playsinline
+                                                    preload="metadata"
+                                                    class="cmp-ig-preview-local-media"
+                                                    x-show="!videoFailed"
+                                                    x-on:error="videoFailed = true"
+                                                >
+                                                    <source src="{{ $previewVideoUrl }}" type="{{ $previewVideoMime }}">
+                                                </video>
+                                                <div x-show="videoFailed" class="cmp-ig-preview-placeholder" x-cloak>
+                                                    <i data-lucide="video-off" class="u-icon-lg u-text-muted"></i>
+                                                    <div class="u-mt-xs">Anteprima video non disponibile</div>
+                                                </div>
+                                            </div>
                                         @else
                                             <img src="{{ $previewMedia[0]['url'] }}" alt="Preview Media">
                                         @endif
@@ -997,7 +1092,9 @@
                                         @foreach($previewMedia as $index => $item)
                                             <div class="cmp-carousel-item" style="flex: 0 0 100%; width: 100%;">
                                                 @if(in_array($item['source'], ['local_pending', 'local'], true))
-                                                    @php($localPreviewFallback = $item['url'] ?? '')
+                                                    @php
+                                                        $localPreviewFallback = $item['url'] ?? '';
+                                                    @endphp
                                                     <template x-if="localBlobUrls[@js($item['uid'])] || @js($localPreviewFallback)">
                                                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                                             <template x-if="'{{ $item['type'] }}' === 'video'">
@@ -1010,7 +1107,32 @@
                                                     </template>
                                                 @else
                                                     @if($item['type'] === 'video')
-                                                        <video src="{{ $item['url'] }}" controls muted playsinline preload="metadata"></video>
+                                                        @php
+                                                            $carouselVideoId = $item['id'] ?? $item['uid'];
+                                                            $carouselVideoUrl = $item['url'];
+                                                            if (($item['source'] ?? null) === 'existing' && !str_contains($carouselVideoUrl, '#')) {
+                                                                $carouselVideoUrl .= '#t=0.001';
+                                                            }
+                                                            $carouselVideoMime = $item['mime_type'] ?? 'video/mp4';
+                                                        @endphp
+                                                        <div x-data="{ videoFailed: false }" class="u-w-full u-h-full u-flex-center">
+                                                            <video
+                                                                wire:key="carousel-preview-video-{{ $carouselVideoId }}"
+                                                                data-persisted-video="{{ $carouselVideoId }}"
+                                                                controls
+                                                                muted
+                                                                playsinline
+                                                                preload="metadata"
+                                                                x-show="!videoFailed"
+                                                                x-on:error="videoFailed = true"
+                                                            >
+                                                                <source src="{{ $carouselVideoUrl }}" type="{{ $carouselVideoMime }}">
+                                                            </video>
+                                                            <div x-show="videoFailed" class="cmp-ig-preview-placeholder" x-cloak>
+                                                                <i data-lucide="video-off" class="u-icon-lg u-text-muted"></i>
+                                                                <div class="u-mt-xs">Anteprima video non disponibile</div>
+                                                            </div>
+                                                        </div>
                                                     @else
                                                         <img src="{{ $item['url'] }}" alt="Preview Media {{ $index + 1 }}">
                                                     @endif

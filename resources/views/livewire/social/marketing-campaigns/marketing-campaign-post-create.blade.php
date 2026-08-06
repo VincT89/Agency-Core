@@ -290,7 +290,7 @@
                 </div>
             </div>
             <div class="u-text-meta u-text-muted u-mb-sm">
-                Massimo 10 media per post. Dal computer: foto massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::IMAGE_MAX_MEGABYTES }} MB (JPG, PNG, WEBP) e video massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::VIDEO_MAX_MEGABYTES }} MB (MP4, WEBM, MOV), nei limiti consentiti dal server. Per file di grandi dimensioni, caricali prima su Nextcloud e seleziona "Da Nextcloud". Il social può applicare requisiti più restrittivi.
+                Massimo 10 media per post. Dal computer: foto massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::IMAGE_MAX_MEGABYTES }} MB (JPG, PNG, WEBP) e video massimo {{ \App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy::VIDEO_MAX_MEGABYTES }} MB (MP4, WEBM, MOV), nei limiti consentiti dal server. Per file di grandi dimensioni, caricali prima su Nextcloud e seleziona "Da Nextcloud". Instagram accetta video MP4 o MOV fino a 1 GB; un singolo video viene pubblicato come Reel.
             </div>
 
             @if($form['media_source'] === 'local')

@@ -147,6 +147,149 @@ class ProviderCompletenessTest extends TestCase
         );
     }
 
+    public function test_instagram_single_video_post_creates_a_reels_container(): void
+    {
+        config([
+            'services.meta.graph_version' => 'v25.0',
+            'social.publishing.dry_run' => false,
+        ]);
+        Http::fake([
+            'https://graph.facebook.com/*' => Http::response([
+                'id' => 'ig-video-container-1',
+            ], 200),
+        ]);
+
+        $delivery = $this->mock(PublicationMediaDeliveryService::class);
+        $delivery->shouldReceive('deliver')->once()->andReturn([
+            new PublicationMediaDeliveryResult(
+                true,
+                'https://media.example/video.mp4',
+                [],
+                'video'
+            ),
+        ]);
+
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Instagram,
+            'api_status' => SocialApiStatus::Connected,
+            'connection_strategy' => SocialConnectionStrategy::PlatformOauth,
+            'provider_account_id' => 'ig-user-1',
+            'instagram_business_account_id' => 'ig-user-1',
+            'access_token' => 'token',
+        ]);
+        $publication = MarketingCampaignPostPublication::factory()->create([
+            'client_social_account_id' => $account->id,
+            'platform' => SocialPlatform::Instagram,
+            'payload_snapshot' => [
+                'caption' => 'Single video',
+                'hashtags' => [],
+                'target' => [
+                    'external_id' => 'ig-user-1',
+                    'publication_type' => 'post',
+                    'privacy_options' => [],
+                ],
+                'media' => [[
+                    'media_id' => 1,
+                    'media_type' => 'video',
+                ]],
+            ],
+        ]);
+
+        $result = app(MetaPublisher::class)->publish(
+            $publication,
+            $account,
+            'corr-instagram-video'
+        );
+
+        $this->assertTrue($result->isProcessing());
+        $this->assertSame(
+            'ig-video-container-1',
+            $result->externalContainerId
+        );
+        Http::assertSentCount(1);
+        Http::assertSent(function (Request $request): bool {
+            return str_ends_with($request->url(), '/ig-user-1/media')
+                && $request['media_type'] === 'REELS'
+                && $request['video_url'] === 'https://media.example/video.mp4';
+        });
+    }
+
+    public function test_instagram_carousel_video_child_keeps_video_media_type(): void
+    {
+        config([
+            'services.meta.graph_version' => 'v25.0',
+            'social.publishing.dry_run' => false,
+        ]);
+        Http::fakeSequence()
+            ->push(['id' => 'ig-image-child-1'], 200)
+            ->push(['id' => 'ig-video-child-1'], 200);
+
+        $delivery = $this->mock(PublicationMediaDeliveryService::class);
+        $delivery->shouldReceive('deliver')->once()->andReturn([
+            new PublicationMediaDeliveryResult(
+                true,
+                'https://media.example/image.jpg',
+                [],
+                'image'
+            ),
+            new PublicationMediaDeliveryResult(
+                true,
+                'https://media.example/video.mp4',
+                [],
+                'video'
+            ),
+        ]);
+
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Instagram,
+            'api_status' => SocialApiStatus::Connected,
+            'connection_strategy' => SocialConnectionStrategy::PlatformOauth,
+            'provider_account_id' => 'ig-user-2',
+            'instagram_business_account_id' => 'ig-user-2',
+            'access_token' => 'token',
+        ]);
+        $publication = MarketingCampaignPostPublication::factory()->create([
+            'client_social_account_id' => $account->id,
+            'platform' => SocialPlatform::Instagram,
+            'payload_snapshot' => [
+                'caption' => 'Mixed carousel',
+                'hashtags' => [],
+                'target' => [
+                    'external_id' => 'ig-user-2',
+                    'publication_type' => 'post',
+                    'privacy_options' => [],
+                ],
+                'media' => [
+                    [
+                        'media_id' => 1,
+                        'media_type' => 'image',
+                    ],
+                    [
+                        'media_id' => 2,
+                        'media_type' => 'video',
+                    ],
+                ],
+            ],
+        ]);
+
+        $result = app(MetaPublisher::class)->publish(
+            $publication,
+            $account,
+            'corr-instagram-carousel'
+        );
+
+        $this->assertTrue($result->isProcessing());
+        Http::assertSentCount(2);
+        Http::assertSent(function (Request $request): bool {
+            $data = $request->data();
+
+            return str_ends_with($request->url(), '/ig-user-2/media')
+                && ($data['media_type'] ?? null) === 'VIDEO'
+                && ($data['video_url'] ?? null) === 'https://media.example/video.mp4'
+                && ($data['is_carousel_item'] ?? null) === 'true';
+        });
+    }
+
     public function test_meta_snapshot_preflight_rejects_unsupported_media_formats(): void
     {
         $result = app(MetaSnapshotPreflightRules::class)->validate([
@@ -186,6 +329,59 @@ class ProviderCompletenessTest extends TestCase
         $this->assertTrue(
             $result->isPass,
             implode(', ', $result->errors)
+        );
+    }
+
+    public function test_meta_snapshot_preflight_rejects_instagram_webm_video(): void
+    {
+        $result = app(MetaSnapshotPreflightRules::class)->validate([
+            'platform' => SocialPlatform::Instagram->value,
+            'caption' => 'Unsupported Instagram video',
+            'target' => ['publication_type' => 'post'],
+            'media' => [[
+                'media_type' => 'video',
+                'mime_type' => 'video/webm',
+                'path' => 'video.webm',
+            ]],
+        ]);
+
+        $this->assertFalse($result->isPass);
+        $this->assertContains(
+            'Instagram videos must use MP4 or MOV.',
+            $result->errors
+        );
+    }
+
+    public function test_meta_snapshot_preflight_enforces_instagram_one_gigabyte_video_limit(): void
+    {
+        $atLimit = app(MetaSnapshotPreflightRules::class)->validate([
+            'platform' => SocialPlatform::Instagram->value,
+            'caption' => 'Video at limit',
+            'target' => ['publication_type' => 'post'],
+            'media' => [[
+                'media_type' => 'video',
+                'mime_type' => 'video/mp4',
+                'path' => 'video.mp4',
+                'size_bytes' => 1024 * 1024 * 1024,
+            ]],
+        ]);
+        $overLimit = app(MetaSnapshotPreflightRules::class)->validate([
+            'platform' => SocialPlatform::Instagram->value,
+            'caption' => 'Video over limit',
+            'target' => ['publication_type' => 'post'],
+            'media' => [[
+                'media_type' => 'video',
+                'mime_type' => 'video/mp4',
+                'path' => 'video.mp4',
+                'size_bytes' => (1024 * 1024 * 1024) + 1,
+            ]],
+        ]);
+
+        $this->assertTrue($atLimit->isPass);
+        $this->assertFalse($overLimit->isPass);
+        $this->assertContains(
+            'Instagram videos cannot exceed 1 GB.',
+            $overLimit->errors
         );
     }
 

@@ -585,4 +585,93 @@ class MarketingCampaignPostShowTest extends TestCase
             ->set('form.ai_analysis_enabled', false)
             ->assertSee('Salva come pronto senza Sody');
     }
+
+    public function test_saved_video_keeps_its_type_and_mime_in_the_persisted_preview(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('social_media');
+        \Illuminate\Support\Facades\Storage::disk('social_media')->put('marketing/campaign-posts/saved-video.mp4', 'video-content');
+
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Generated->value,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+        $media = \App\Models\MarketingCampaignPostMedia::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'source' => 'local',
+            'disk' => 'social_media',
+            'path' => 'marketing/campaign-posts/saved-video.mp4',
+            'media_type' => 'video',
+            'mime_type' => 'video/mp4',
+            'original_name' => 'saved-video.mp4',
+        ]);
+        $version = \App\Models\MarketingCampaignPostVersion::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'version_number' => 1,
+        ]);
+        $version->mediaItems()->attach($media->id, ['sort_order' => 0]);
+        $post->update(['current_version_id' => $version->id]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post->fresh(),
+        ])
+            ->assertSet('selected_media_items.0.type', 'video')
+            ->assertSet('selected_media_items.0.mime_type', 'video/mp4')
+            ->assertSeeHtml('data-persisted-video="'.$media->id.'"')
+            ->assertSeeHtml('type="video/mp4"')
+            ->assertSee('Anteprima video non disponibile.');
+    }
+
+    public function test_historical_post_explains_why_delete_is_unavailable(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Generated->value,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+        \App\Models\MarketingCampaignPostVersion::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'version_number' => 1,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post,
+        ])
+            ->assertSeeHtml('data-post-delete-protected="true"')
+            ->assertSee('Post storico: non eliminabile da questa schermata.')
+            ->assertDontSee('Sei sicuro di voler eliminare questo post?');
+    }
+
+    public function test_post_without_history_keeps_the_delete_confirmation(): void
+    {
+        $user = User::factory()->create(['role' => \App\Enums\UserRole::Admin->value]);
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+            'status' => MarketingCampaignPostStatus::Draft->value,
+            'content_type' => \App\Enums\Social\MarketingCampaignPostType::Post->value,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post,
+        ])
+            ->assertSee('Sei sicuro di voler eliminare questo post?')
+            ->assertDontSee('Post storico: non eliminabile da questa schermata.');
+    }
 }

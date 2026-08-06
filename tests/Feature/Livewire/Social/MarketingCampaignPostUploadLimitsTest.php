@@ -39,7 +39,9 @@ class MarketingCampaignPostUploadLimitsTest extends TestCase
             ->assertSee('foto massimo 200 MB')
             ->assertSee('video massimo 500 MB')
             ->assertSee('nei limiti consentiti dal server')
-            ->assertSee('caricali prima su Nextcloud');
+            ->assertSee('caricali prima su Nextcloud')
+            ->assertSee('Instagram accetta video MP4 o MOV fino a 1 GB')
+            ->assertSee('un singolo video viene pubblicato come Reel');
 
         Livewire::actingAs($user)
             ->test(MarketingCampaignPostShow::class, ['campaign' => $campaign, 'post' => $post])
@@ -47,7 +49,9 @@ class MarketingCampaignPostUploadLimitsTest extends TestCase
             ->assertSee('foto massimo 200 MB')
             ->assertSee('video massimo 500 MB')
             ->assertSee('nei limiti consentiti dal server')
-            ->assertSee('caricali prima su Nextcloud');
+            ->assertSee('caricali prima su Nextcloud')
+            ->assertSee('Instagram accetta video MP4 o MOV fino a 1 GB')
+            ->assertSee('un singolo video viene pubblicato come Reel');
     }
 
     public function test_media_upload_policy_enforces_separate_image_and_video_limits(): void

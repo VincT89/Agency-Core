@@ -384,11 +384,7 @@ class MetaPublisher implements SocialPublisherInterface
             ];
 
             if ($media['type'] === 'video') {
-                $containerPayload['media_type'] = in_array(
-                    $contentTypeStr,
-                    ['post', 'reel'],
-                    true
-                ) ? 'REELS' : 'VIDEO';
+                $containerPayload['media_type'] = 'REELS';
                 $containerPayload['video_url'] = $media['url'];
             } else {
                 $containerPayload['image_url'] = $media['url'];

@@ -147,7 +147,7 @@ class ProviderCompletenessTest extends TestCase
         );
     }
 
-    public function test_instagram_single_video_post_creates_a_reels_container(): void
+    public function test_instagram_single_video_legacy_type_creates_a_reels_container(): void
     {
         config([
             'services.meta.graph_version' => 'v25.0',
@@ -185,7 +185,7 @@ class ProviderCompletenessTest extends TestCase
                 'hashtags' => [],
                 'target' => [
                     'external_id' => 'ig-user-1',
-                    'publication_type' => 'post',
+                    'publication_type' => 'video',
                     'privacy_options' => [],
                 ],
                 'media' => [[

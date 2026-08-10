@@ -63,6 +63,12 @@ Route::get('/', function () {
         : redirect()->route('login');
 });
 
+Route::view('/privacy-policy', 'legal.privacy-policy')
+    ->name('legal.privacy-policy');
+
+Route::view('/terms-of-service', 'legal.terms-of-service')
+    ->name('legal.terms-of-service');
+
 // Route pubbliche per Clienti
 Route::get('/client/marketing-campaign-posts/{token}', MarketingCampaignPostReview::class)
     ->name('public.marketing-campaign-posts.review')

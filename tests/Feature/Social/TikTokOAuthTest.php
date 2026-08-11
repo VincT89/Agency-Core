@@ -118,4 +118,89 @@ class TikTokOAuthTest extends TestCase
         $this->assertEquals(SocialApiStatus::Connected, $account->api_status);
         $this->assertContains('video.upload', $account->scopes ?? []);
     }
+
+    public function test_callback_surfaces_oauth_error_returned_with_http_200_without_saving_tokens()
+    {
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Tiktok,
+            'api_status' => SocialApiStatus::NotConfigured,
+            'access_token' => null,
+            'refresh_token' => null,
+            'tiktok_open_id' => null,
+        ]);
+
+        $this->withSession([
+            'tiktok_oauth_account_id' => $account->id,
+            'tiktok_oauth_client_id' => $account->client_id,
+            'tiktok_oauth_expected_platform' => SocialPlatform::Tiktok->value,
+            'tiktok_oauth_state' => 'valid_state_123',
+        ]);
+
+        Http::fake([
+            'open.tiktokapis.com/v2/oauth/token/*' => Http::response([
+                'error' => 'invalid_client',
+                'error_description' => 'Client authentication failed: client_secret=should-not-leak',
+                'log_id' => 'oauth-log-123',
+            ], 200),
+        ]);
+
+        $response = $this->get(route('admin.social.tiktok.callback', [
+            'state' => 'valid_state_123',
+            'code' => 'dummy_code',
+        ]));
+
+        $response->assertRedirect(route('clients.show', $account->client_id));
+        $response->assertSessionHas('error', function (string $message): bool {
+            return str_contains($message, '(invalid_client)')
+                && str_contains($message, '[REDACTED]')
+                && str_contains($message, 'oauth-log-123')
+                && ! str_contains($message, 'should-not-leak');
+        });
+
+        $account->refresh();
+        $this->assertNull($account->access_token);
+        $this->assertNull($account->refresh_token);
+        $this->assertNull($account->tiktok_open_id);
+        $this->assertEquals(SocialApiStatus::NotConfigured, $account->api_status);
+    }
+
+    public function test_callback_rejects_incomplete_success_response_without_saving_tokens()
+    {
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Tiktok,
+            'api_status' => SocialApiStatus::NotConfigured,
+            'access_token' => null,
+            'refresh_token' => null,
+            'tiktok_open_id' => null,
+        ]);
+
+        $this->withSession([
+            'tiktok_oauth_account_id' => $account->id,
+            'tiktok_oauth_client_id' => $account->client_id,
+            'tiktok_oauth_expected_platform' => SocialPlatform::Tiktok->value,
+            'tiktok_oauth_state' => 'valid_state_123',
+        ]);
+
+        Http::fake([
+            'open.tiktokapis.com/v2/oauth/token/*' => Http::response([
+                'access_token' => 'must_not_be_saved',
+                'refresh_token' => 'must_not_be_saved',
+                'scope' => 'user.info.basic,video.upload',
+            ], 200),
+        ]);
+
+        $response = $this->get(route('admin.social.tiktok.callback', [
+            'state' => 'valid_state_123',
+            'code' => 'dummy_code',
+        ]));
+
+        $response->assertRedirect(route('clients.show', $account->client_id));
+        $response->assertSessionHas('error', 'TikTok ha restituito una risposta incompleta. Nessun dato è stato salvato.');
+
+        $account->refresh();
+        $this->assertNull($account->access_token);
+        $this->assertNull($account->refresh_token);
+        $this->assertNull($account->tiktok_open_id);
+        $this->assertEquals(SocialApiStatus::NotConfigured, $account->api_status);
+    }
 }

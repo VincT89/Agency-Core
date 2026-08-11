@@ -138,6 +138,47 @@ class TikTokOAuthController extends Controller
         }
 
         $data = $response->json();
+
+        $oauthError = is_array($data) ? ($data['error'] ?? null) : null;
+        $oauthErrorCode = is_string($oauthError)
+            ? $oauthError
+            : (is_array($oauthError) ? ($oauthError['code'] ?? null) : null);
+        $oauthErrorDescription = is_array($data)
+            ? ($data['error_description'] ?? (is_array($oauthError) ? ($oauthError['message'] ?? null) : null))
+            : null;
+        $oauthLogId = is_array($data)
+            ? ($data['log_id'] ?? (is_array($oauthError) ? ($oauthError['log_id'] ?? null) : null))
+            : null;
+
+        if (is_scalar($oauthErrorCode) && trim((string) $oauthErrorCode) !== '') {
+            $safeErrorCode = ProviderErrorSanitizer::safeText((string) $oauthErrorCode);
+            $safeErrorDescription = is_scalar($oauthErrorDescription)
+                ? ProviderErrorSanitizer::safeText((string) $oauthErrorDescription)
+                : '';
+            $safeLogId = is_scalar($oauthLogId)
+                ? ProviderErrorSanitizer::safeText((string) $oauthLogId)
+                : '';
+
+            Log::error('TikTok Token Exchange OAuth Error', [
+                'account_id' => $account->id,
+                'status' => $response->status(),
+                'error' => $safeErrorCode,
+                'error_description' => $safeErrorDescription !== '' ? $safeErrorDescription : null,
+                'provider_log_id' => $safeLogId !== '' ? $safeLogId : null,
+            ]);
+
+            $message = "TikTok OAuth ha rifiutato il collegamento ({$safeErrorCode}).";
+            if ($safeErrorDescription !== '') {
+                $message .= " Dettaglio: {$safeErrorDescription}";
+            }
+            if ($safeLogId !== '') {
+                $message .= " Riferimento TikTok: {$safeLogId}.";
+            }
+
+            return redirect()->route('clients.show', $account->client_id)
+                ->with('error', $message);
+        }
+
         $accessToken = $data['access_token'] ?? null;
         $openId = $data['open_id'] ?? null;
 
@@ -149,8 +190,10 @@ class TikTokOAuthController extends Controller
         ) {
             Log::error('TikTok Token Exchange Invalid Response', [
                 'account_id' => $account->id,
+                'status' => $response->status(),
                 'has_access_token' => filled($accessToken),
                 'has_open_id' => filled($openId),
+                'response_keys' => is_array($data) ? array_keys($data) : [],
             ]);
 
             return redirect()->route('clients.show', $account->client_id)

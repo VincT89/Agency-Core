@@ -32,18 +32,18 @@
         <div class="social-grid">
             @foreach($connections as $connection)
                 <x-panel padded class="social-card {{ $connection->status->value === 'connected' ? 'is-connected' : '' }}">
-                    <div class="u-flex u-justify-between u-items-start u-mb-md">
-                        <div>
+                    <div class="social-card-header">
+                        <div class="social-card-title-row">
                             <h3 class="u-text-strong social-card-title">
                                 {{ $connection->provider_user_name ?? 'Account Sconosciuto' }}
                             </h3>
-                            <p class="u-text-sm u-text-muted social-card-provider">
-                                <i data-lucide="facebook" class="u-icon-xs"></i> Connessione Meta
-                            </p>
+                            <span class="badge {{ $connection->status->value === 'connected' && !$connection->requires_reauth ? 'badge-success' : 'badge-error' }}">
+                                {{ $connection->requires_reauth ? 'Da ricollegare' : $connection->status->label() }}
+                            </span>
                         </div>
-                        <span class="badge {{ $connection->status->value === 'connected' && !$connection->requires_reauth ? 'badge-success' : 'badge-error' }}">
-                            {{ $connection->requires_reauth ? 'Da ricollegare' : $connection->status->label() }}
-                        </span>
+                        <p class="u-text-sm u-text-muted social-card-provider">
+                            <i data-lucide="facebook" class="u-icon-xs"></i> Connessione Meta
+                        </p>
                     </div>
 
                     @if($connection->requires_reauth)
@@ -58,11 +58,20 @@
                         </div>
                     @endif
 
-                    <div class="u-text-sm u-text-secondary u-mb-md">
-                        <p><strong>Profili disponibili:</strong> {{ $connection->assets->count() }}</p>
-                        <p><strong>Ultimo aggiornamento:</strong> {{ $connection->last_sync_at ? $connection->last_sync_at->format('d/m/Y H:i') : 'Mai' }}</p>
-                        <p><strong>Collegamento valido fino al:</strong> {{ $connection->token_expires_at ? $connection->token_expires_at->format('d/m/Y H:i') : 'Senza scadenza nota' }}</p>
-                    </div>
+                    <dl class="social-card-metadata">
+                        <div>
+                            <dt>Profili disponibili</dt>
+                            <dd>{{ $connection->assets->count() }}</dd>
+                        </div>
+                        <div>
+                            <dt>Ultimo aggiornamento</dt>
+                            <dd>{{ $connection->last_sync_at ? $connection->last_sync_at->format('d/m/Y H:i') : 'Mai' }}</dd>
+                        </div>
+                        <div>
+                            <dt>Collegamento valido fino al</dt>
+                            <dd>{{ $connection->token_expires_at ? $connection->token_expires_at->format('d/m/Y H:i') : 'Senza scadenza nota' }}</dd>
+                        </div>
+                    </dl>
 
                     <div class="u-flex u-justify-between u-items-center social-card-actions">
                         <button wire:click="syncConnection({{ $connection->id }})" 
@@ -95,8 +104,8 @@
         
         <x-panel padded>
             <h3 class="u-text-strong u-mb-md">Pagine Facebook e profili Instagram disponibili</h3>
-            <div class="social-table-container">
-                <table class="t-table u-w-full">
+            <div class="social-table-container social-assets-table-container">
+                <table class="t-table u-w-full social-assets-table">
                     <thead>
                         <tr>
                             <th>Profilo</th>
@@ -107,8 +116,8 @@
                     </thead>
                     <tbody>
                         @forelse($connections->flatMap->assets as $asset)
-                            <tr>
-                                <td>
+                            <tr class="social-assets-row">
+                                <td class="social-assets-profile" data-label="Profilo">
                                     <div class="u-flex u-items-center u-gap-sm">
                                         @if(isset($asset->raw_payload['picture']['data']['url']) || isset($asset->raw_payload['profile_picture_url']))
                                             <img src="{{ $asset->raw_payload['profile_picture_url'] ?? $asset->raw_payload['picture']['data']['url'] }}" alt="" class="social-asset-img">
@@ -121,15 +130,15 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td data-label="Piattaforma">
                                     <span class="badge badge-info">
                                         {{ $asset->asset_type->label() }}
                                     </span>
                                 </td>
-                                <td class="u-text-secondary">
+                                <td class="u-text-secondary" data-label="Account collegato">
                                     {{ $asset->connection->provider_user_name ?? 'Sconosciuto' }}
                                 </td>
-                                <td>
+                                <td data-label="Stato">
                                     @if($asset->is_active)
                                         <span class="badge badge-success">Attivo</span>
                                     @else
@@ -138,7 +147,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
+                            <tr class="social-assets-empty-row">
                                 <td colspan="4" class="u-text-center u-text-muted u-p-lg">Nessun profilo disponibile.</td>
                             </tr>
                         @endforelse

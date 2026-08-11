@@ -88,6 +88,7 @@ class ClientSocialAccountFormTest extends TestCase
             ->assertSee('Bozze abilitate')
             ->assertSee('Salva note TikTok')
             ->assertSee('Scollega TikTok')
+            ->assertSeeHtml('class="btn btn-outline-danger"')
             ->assertDontSee('Il profilo esiste già?')
             ->assertDontSee('Link pubblico');
     }

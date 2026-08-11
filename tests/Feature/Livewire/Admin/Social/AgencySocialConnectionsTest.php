@@ -43,6 +43,9 @@ class AgencySocialConnectionsTest extends TestCase
             ->test(AgencySocialConnections::class)
             ->assertSee('Aggiungi account Meta')
             ->assertSee('Sincronizza profili')
-            ->assertSee('Revoca connessione');
+            ->assertSee('Revoca connessione')
+            ->assertSeeHtml('class="social-card-header"')
+            ->assertSeeHtml('class="social-card-metadata"')
+            ->assertSeeHtml('class="t-table u-w-full social-assets-table"');
     }
 }

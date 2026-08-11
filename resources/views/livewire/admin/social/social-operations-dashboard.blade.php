@@ -21,18 +21,18 @@
         </div>
     @endif
 
-    <div class="u-flex u-flex-wrap u-gap-md u-mb-md">
-        <button wire:click="$set('filter', 'all')" class="btn {{ $filter === 'all' ? 'btn-p' : 'btn-sec' }}">Tutti</button>
-        <button wire:click="$set('filter', 'active')" class="btn {{ $filter === 'active' ? 'btn-blue' : 'btn-sec' }}">In corso</button>
-        <button wire:click="$set('filter', 'published')" class="btn {{ $filter === 'published' ? 'btn-p' : 'btn-sec' }}">Pubblicate</button>
-        <button wire:click="$set('filter', 'needs_manual_review')" class="btn {{ $filter === 'needs_manual_review' ? 'btn-orange' : 'btn-sec' }}">Da revisionare</button>
-        <button wire:click="$set('filter', 'failed')" class="btn {{ $filter === 'failed' ? 'btn-red' : 'btn-sec' }}">Fallite</button>
-        <button wire:click="$set('filter', 'stale_publishing')" class="btn {{ $filter === 'stale_publishing' ? 'btn-blue' : 'btn-sec' }}">Bloccate</button>
+    <div class="social-operation-filters" role="group" aria-label="Filtra le pubblicazioni social">
+        <button type="button" wire:click="$set('filter', 'all')" aria-pressed="{{ $filter === 'all' ? 'true' : 'false' }}" class="btn {{ $filter === 'all' ? 'btn-p' : 'btn-sec' }}">Tutti</button>
+        <button type="button" wire:click="$set('filter', 'active')" aria-pressed="{{ $filter === 'active' ? 'true' : 'false' }}" class="btn {{ $filter === 'active' ? 'btn-blue' : 'btn-sec' }}">In corso</button>
+        <button type="button" wire:click="$set('filter', 'published')" aria-pressed="{{ $filter === 'published' ? 'true' : 'false' }}" class="btn {{ $filter === 'published' ? 'btn-p' : 'btn-sec' }}">Pubblicate</button>
+        <button type="button" wire:click="$set('filter', 'needs_manual_review')" aria-pressed="{{ $filter === 'needs_manual_review' ? 'true' : 'false' }}" class="btn {{ $filter === 'needs_manual_review' ? 'btn-orange' : 'btn-sec' }}">Da revisionare</button>
+        <button type="button" wire:click="$set('filter', 'failed')" aria-pressed="{{ $filter === 'failed' ? 'true' : 'false' }}" class="btn {{ $filter === 'failed' ? 'btn-red' : 'btn-sec' }}">Fallite</button>
+        <button type="button" wire:click="$set('filter', 'stale_publishing')" aria-pressed="{{ $filter === 'stale_publishing' ? 'true' : 'false' }}" class="btn {{ $filter === 'stale_publishing' ? 'btn-blue' : 'btn-sec' }}">Bloccate</button>
     </div>
 
-    <div class="panel">
-        <div class="table-responsive">
-            <table class="t-table u-w-full">
+    <div class="panel social-operations-panel">
+        <div class="table-responsive social-operations-table-container">
+            <table class="t-table u-w-full social-operations-table">
                 <thead>
                     <tr>
                         <th>ID / Data</th>
@@ -45,12 +45,12 @@
                 </thead>
                 <tbody>
                     @forelse($publications as $pub)
-                        <tr>
-                            <td>
+                        <tr class="social-operation-row">
+                            <td class="social-operation-id" data-label="ID / Data">
                                 <strong>#{{ $pub->id }}</strong><br>
                                 <span class="u-text-meta muted">{{ $pub->created_at->format('d/m/Y H:i') }}</span>
                             </td>
-                            <td>
+                            <td class="social-operation-post" data-label="Cliente / Post">
                                 @if($pub->post && $pub->post->campaign && $pub->post->campaign->client)
                                     <div class="u-text-sm u-fw-bold">{{ $pub->post->campaign->client->name }}</div>
                                 @endif
@@ -64,15 +64,15 @@
                                     </span>
                                 @endif
                             </td>
-                            <td>
+                            <td class="social-operation-platform" data-label="Piattaforma">
                                 <span class="u-text-transform-capitalize badge badge-subtle">{{ $pub->platform->value }}</span>
                             </td>
-                            <td>
+                            <td class="social-operation-status" data-label="Stato">
                                 <span class="badge {{ $pub->status->badgeClass() }}">
                                     {{ $pub->status->label() }}
                                 </span>
                             </td>
-                            <td class="u-max-w-xs">
+                            <td class="u-max-w-xs social-operation-result" data-label="Esito">
                                 @if($pub->status === \App\Enums\Social\PublicationStatus::Published)
                                     <div class="u-text-sm u-text-green">Pubblicata correttamente.</div>
                                 @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Pending, \App\Enums\Social\PublicationStatus::Publishing], true))
@@ -83,8 +83,8 @@
                                     <div class="u-text-sm u-text-muted">Nessun problema rilevato.</div>
                                 @endif
                             </td>
-                            <td class="u-text-right">
-                                <div class="u-flex u-flex-wrap u-justify-end u-gap-xs">
+                            <td class="u-text-right social-operation-actions" data-label="Azioni">
+                                <div class="u-flex u-flex-wrap u-justify-end u-gap-xs social-operation-actions-list">
                                     @if($pub->post && $pub->post->campaign)
                                         <a
                                             href="{{ route('marketing-campaigns.posts.show', ['campaign' => $pub->post->campaign->id, 'post' => $pub->post_id ?? $pub->marketing_campaign_post_id]) }}"
@@ -141,8 +141,8 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="6" class="u-text-center u-p-lg u-text-muted">
+                        <tr class="social-operation-empty-row">
+                            <td colspan="6" class="u-text-center u-p-lg u-text-muted social-operation-empty">
                                 Nessuna pubblicazione corrisponde al filtro selezionato.
                             </td>
                         </tr>

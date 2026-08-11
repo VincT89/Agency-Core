@@ -29,7 +29,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="g-2col u-mb-lg">
+    <div class="g-2col u-mb-lg client-summary-grid">
         <x-panel title="Info Base" dot="var(--teal)" padded>
             <div class="u-flex u-flex-col u-gap-md">
                 

@@ -151,6 +151,6 @@ class SocialOperationsDashboard extends Component
 
         return view('livewire.admin.social.social-operations-dashboard', [
             'publications' => $publications,
-        ])->layout('layouts.app', ['title' => 'Social Operations']);
+        ])->layout('layouts.app', ['title' => 'Coda Social']);
     }
 }

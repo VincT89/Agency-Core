@@ -150,7 +150,7 @@
                     <button
                         type="button"
                         wire:click="disconnectOauth('{{ $platformValue }}')"
-                        class="btn btn-red"
+                        class="btn btn-outline-danger"
                         wire:confirm="Scollegare definitivamente questo account TikTok?"
                     >
                         Scollega TikTok
@@ -294,7 +294,7 @@
                         <button
                             type="button"
                             wire:click="disconnect('{{ $platformValue }}')"
-                            class="btn btn-red"
+                            class="btn btn-outline-danger"
                             wire:loading.attr="disabled"
                             wire:confirm="Rimuovere il profilo social assegnato a questo cliente?"
                         >

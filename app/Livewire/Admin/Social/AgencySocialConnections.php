@@ -2,10 +2,18 @@
 
 namespace App\Livewire\Admin\Social;
 
-use Livewire\Component;
-use App\Models\AgencySocialConnection;
+use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Domain\Social\Actions\SyncMetaAssetsAction;
+use App\Enums\Social\AgencyConnectionStatus;
+use App\Enums\Social\PublicationStatus;
+use App\Enums\Social\SocialApiStatus;
+use App\Models\AgencySocialConnection;
+use App\Models\ClientSocialAccount;
+use App\Models\MarketingCampaignPost;
+use App\Models\MarketingCampaignPostPublication;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component;
 
 class AgencySocialConnections extends Component
 {
@@ -38,40 +46,40 @@ class AgencySocialConnections extends Component
         $this->authorize('manage_social_operations');
         $connection = AgencySocialConnection::findOrFail($connectionId);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($connection) {
+        DB::transaction(function () use ($connection) {
             $assetIds = $connection->assets()->pluck('id')->toArray();
-            
-            if (!empty($assetIds)) {
-                $clientAccounts = \App\Models\ClientSocialAccount::whereIn('agency_social_asset_id', $assetIds)->get();
+
+            if (! empty($assetIds)) {
+                $clientAccounts = ClientSocialAccount::whereIn('agency_social_asset_id', $assetIds)->get();
                 $clientAccountIds = $clientAccounts->pluck('id')->toArray();
-                
-                if (!empty($clientAccountIds)) {
-                    $publicationsToFail = \App\Models\MarketingCampaignPostPublication::whereIn('client_social_account_id', $clientAccountIds)
+
+                if (! empty($clientAccountIds)) {
+                    $publicationsToFail = MarketingCampaignPostPublication::whereIn('client_social_account_id', $clientAccountIds)
                         ->whereIn('status', [
-                            \App\Enums\Social\PublicationStatus::Pending->value, 
-                            \App\Enums\Social\PublicationStatus::Publishing->value
+                            PublicationStatus::Pending->value,
+                            PublicationStatus::Publishing->value,
                         ])->get();
 
                     if ($publicationsToFail->isNotEmpty()) {
-                        \App\Models\MarketingCampaignPostPublication::whereIn('id', $publicationsToFail->pluck('id'))
+                        MarketingCampaignPostPublication::whereIn('id', $publicationsToFail->pluck('id'))
                             ->update([
-                                'status' => \App\Enums\Social\PublicationStatus::Failed->value,
+                                'status' => PublicationStatus::Failed->value,
                                 'error_message' => 'Pubblicazione annullata: la connessione agenzia Meta è stata revocata.',
                             ]);
-                            
+
                         $postIds = $publicationsToFail->pluck('marketing_campaign_post_id')->unique();
                         foreach ($postIds as $postId) {
-                            $post = \App\Models\MarketingCampaignPost::find($postId);
+                            $post = MarketingCampaignPost::find($postId);
                             if ($post) {
-                                app(\App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction::class)->execute($post);
+                                app(SyncMarketingCampaignPostPublicationStatusAction::class)->execute($post);
                             }
                         }
                     }
                 }
 
-                \App\Models\ClientSocialAccount::whereIn('agency_social_asset_id', $assetIds)->update([
+                ClientSocialAccount::whereIn('agency_social_asset_id', $assetIds)->update([
                     'agency_social_asset_id' => null,
-                    'api_status' => \App\Enums\Social\SocialApiStatus::NotConfigured,
+                    'api_status' => SocialApiStatus::NotConfigured,
                     'is_ready_to_publish' => false,
                     'last_api_error' => 'Connessione agenzia Meta revocata.',
                     'connected_at' => null,
@@ -86,7 +94,7 @@ class AgencySocialConnections extends Component
             ]);
 
             $connection->update([
-                'status' => \App\Enums\Social\AgencyConnectionStatus::Revoked,
+                'status' => AgencyConnectionStatus::Revoked,
                 'requires_reauth' => true,
                 'last_api_error' => 'Connessione revocata manualmente da pannello admin.',
             ]);
@@ -99,6 +107,6 @@ class AgencySocialConnections extends Component
     {
         return view('livewire.admin.social.agency-social-connections', [
             'connections' => AgencySocialConnection::with('assets', 'connectedBy')->get(),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app', ['title' => 'Connessioni Social']);
     }
 }

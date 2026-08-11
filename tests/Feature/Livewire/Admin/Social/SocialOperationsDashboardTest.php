@@ -66,7 +66,11 @@ class SocialOperationsDashboardTest extends TestCase
             ->assertSee("#{$pending->id}", false)
             ->assertSee("#{$published->id}", false)
             ->assertSee('Dettagli post')
-            ->assertSee('Apri sul social');
+            ->assertSee('Apri sul social')
+            ->assertSeeHtml('class="social-operation-filters"')
+            ->assertSeeHtml('aria-pressed="true"')
+            ->assertSeeHtml('class="t-table u-w-full social-operations-table"')
+            ->assertSeeHtml('data-label="Azioni"');
 
         $component
             ->set('filter', 'active')

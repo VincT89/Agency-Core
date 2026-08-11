@@ -876,6 +876,13 @@ pre {
   }
 }
 
+@media (max-width: 899px) {
+  .client-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
 @media (pointer: coarse) {
   .btn,
   .btn-icon,

@@ -66,11 +66,14 @@ class ClientSocialAccountForm extends Component
 
     public function save(string $platform, CreateOrUpdateClientSocialAccountAction $action)
     {
-        $this->authorize('viewAny', ClientSocialAccount::class);
-
         if (! isset($this->forms[$platform])) {
             return;
         }
+
+        $account = $this->client->socialAccountFor($platform);
+        $account
+            ? $this->authorize('update', $account)
+            : $this->authorize('create', ClientSocialAccount::class);
 
         $data = $this->forms[$platform];
 
@@ -102,7 +105,11 @@ class ClientSocialAccountForm extends Component
 
     public function validateAssetAssignment(string $platform, int $assetId, ValidateAgencyAssetAssignmentAction $action)
     {
-        $this->authorize('viewAny', ClientSocialAccount::class);
+        $account = $this->client->socialAccountFor($platform);
+        $account
+            ? $this->authorize('update', $account)
+            : $this->authorize('create', ClientSocialAccount::class);
+
         $asset = AgencySocialAsset::find($assetId);
         if ($asset) {
             $result = $action->execute($asset, $this->client->id, $platform);
@@ -119,9 +126,10 @@ class ClientSocialAccountForm extends Component
 
     public function disconnect(string $platform)
     {
-        $this->authorize('viewAny', ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
         if ($account) {
+            $this->authorize('update', $account);
+
             $account->update([
                 'agency_social_asset_id' => null,
                 'api_status' => SocialApiStatus::NotConfigured,
@@ -138,9 +146,10 @@ class ClientSocialAccountForm extends Component
 
     public function disconnectOauth(string $platform)
     {
-        $this->authorize('viewAny', ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
         if ($account) {
+            $this->authorize('delete', $account);
+
             if ($platform === 'tiktok' && $account->access_token) {
                 $apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
                 SocialProviderHttp::tiktok()->asForm()->post("{$apiBase}/v2/oauth/revoke/", [
@@ -168,7 +177,6 @@ class ClientSocialAccountForm extends Component
 
     public function startTikTokOauth(string $platform)
     {
-        $this->authorize('viewAny', ClientSocialAccount::class);
         $account = $this->client->socialAccountFor($platform);
 
         if (! $account || $platform !== 'tiktok') {
@@ -176,6 +184,8 @@ class ClientSocialAccountForm extends Component
 
             return;
         }
+
+        $this->authorize('update', $account);
 
         // Salviamo dati di contesto estesi per validazione cross-tab
         session([

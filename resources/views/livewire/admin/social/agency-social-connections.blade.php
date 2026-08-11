@@ -1,22 +1,30 @@
 <div>
-    <x-page-header eyebrow="Social Media" title="Connessioni Social Agenzia">
+    <x-page-header eyebrow="Social Media" title="Connessioni Meta dell'agenzia">
         @if($connections->isNotEmpty())
         <x-slot name="actions">
             <a href="{{ route('admin.social.connections.meta.redirect') }}" class="btn btn-p u-flex u-items-center u-gap-xs">
-                <i data-lucide="plus" class="u-icon-sm"></i> Collega Meta Agenzia
+                <i data-lucide="plus" class="u-icon-sm"></i> Aggiungi account Meta
             </a>
         </x-slot>
         @endif
     </x-page-header>
 
+    <div class="social-context-strip">
+        <div>
+            <strong>Qui si gestiscono soltanto le connessioni Meta condivise dall'agenzia.</strong>
+            <span>Facebook e Instagram vengono sincronizzati qui e poi assegnati ai clienti. TikTok viene invece collegato dalla scheda del singolo cliente.</span>
+        </div>
+        <a href="{{ route('clients.index') }}" class="btn btn-g btn-sm">Apri elenco clienti</a>
+    </div>
+
     @if($connections->isEmpty())
         <x-panel padded class="u-text-center u-p-xl">
             <div class="u-flex u-flex-col u-items-center u-gap-md social-empty-state">
                 <i data-lucide="share-2" class="social-empty-icon"></i>
-                <h3 class="u-text-strong social-empty-title">Nessuna connessione attiva</h3>
-                <p class="u-text-muted social-empty-text">Collega un account Meta aziendale per rendere disponibili pagine e profili social ai clienti.</p>
+                <h3 class="u-text-strong social-empty-title">Nessuna connessione Meta attiva</h3>
+                <p class="u-text-muted social-empty-text">Collega un account Meta aziendale per sincronizzare pagine Facebook e account Instagram Business.</p>
                 <a href="{{ route('admin.social.connections.meta.redirect') }}" class="btn btn-p u-mt-lg u-flex u-items-center u-gap-xs social-empty-btn">
-                    <i data-lucide="plus" class="u-icon-sm"></i> Collega Meta Agenzia
+                    <i data-lucide="plus" class="u-icon-sm"></i> Collega account Meta
                 </a>
             </div>
         </x-panel>
@@ -30,7 +38,7 @@
                                 {{ $connection->provider_user_name ?? 'Account Sconosciuto' }}
                             </h3>
                             <p class="u-text-sm u-text-muted social-card-provider">
-                                <i data-lucide="{{ $connection->provider }}" class="u-icon-xs"></i> {{ $connection->provider }}
+                                <i data-lucide="facebook" class="u-icon-xs"></i> Connessione Meta
                             </p>
                         </div>
                         <span class="badge {{ $connection->status->value === 'connected' && !$connection->requires_reauth ? 'badge-success' : 'badge-error' }}">
@@ -61,20 +69,20 @@
                                 wire:loading.attr="disabled"
                                 class="btn btn-outline btn-sm u-flex u-items-center u-gap-xs">
                             <span class="u-flex u-items-center u-gap-xs" wire:loading.remove wire:target="syncConnection({{ $connection->id }})">
-                                <i data-lucide="refresh-cw" class="u-icon-xs"></i> Aggiorna account
+                                <i data-lucide="refresh-cw" class="u-icon-xs"></i> Sincronizza profili
                             </span>
                             <span class="u-flex u-items-center u-gap-xs" wire:loading wire:target="syncConnection({{ $connection->id }})">
                                 <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Aggiornamento...
                             </span>
                         </button>
                         
-                        <button type="button" 
-                                onclick="confirm('Vuoi scollegare questo account? I profili associati non saranno più disponibili per i clienti collegati.') || event.stopImmediatePropagation()"
+                        <button type="button"
+                                wire:confirm="Revocare questa connessione Meta? I profili associati non saranno più disponibili per i clienti collegati."
                                 wire:click="revokeConnection({{ $connection->id }})" 
                                 wire:loading.attr="disabled"
-                                class="btn btn-error btn-sm u-flex u-items-center u-gap-xs">
+                                class="btn btn-red btn-sm u-flex u-items-center u-gap-xs">
                             <span class="u-flex u-items-center u-gap-xs" wire:loading.remove wire:target="revokeConnection({{ $connection->id }})">
-                                <i data-lucide="trash-2" class="u-icon-xs"></i> Disconnetti
+                                <i data-lucide="unlink" class="u-icon-xs"></i> Revoca connessione
                             </span>
                             <span class="u-flex u-items-center u-gap-xs" wire:loading wire:target="revokeConnection({{ $connection->id }})">
                                 <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Disconnessione...
@@ -86,7 +94,7 @@
         </div>
         
         <x-panel padded>
-            <h3 class="u-text-strong u-mb-md">Pagine e profili disponibili</h3>
+            <h3 class="u-text-strong u-mb-md">Pagine Facebook e profili Instagram disponibili</h3>
             <div class="social-table-container">
                 <table class="t-table u-w-full">
                     <thead>

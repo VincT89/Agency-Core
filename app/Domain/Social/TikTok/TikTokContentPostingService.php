@@ -35,28 +35,103 @@ class TikTokContentPostingService
             $cacheKey,
             max(0, (int) config('services.tiktok.creator_info_ttl_seconds', 300)),
             function () use ($accessToken) {
-                $response = SocialProviderHttp::tiktok(retrySafe: true)->withToken($accessToken)
-                    ->post("{$this->apiBase}/v2/post/publish/creator_info/query/");
+                $response = SocialProviderHttp::tiktok(retrySafe: true)
+                    ->withToken($accessToken)
+                    ->withHeaders([
+                        'Content-Type' => 'application/json; charset=UTF-8',
+                    ])
+                    ->send(
+                        'POST',
+                        "{$this->apiBase}/v2/post/publish/creator_info/query/"
+                    );
 
-                if (! $response->successful()) {
+                $responseData = $response->json();
+                $responseData = is_array($responseData) ? $responseData : [];
+                $errorCodeValue = data_get($responseData, 'error.code');
+                $errorCode = is_scalar($errorCodeValue)
+                    ? trim((string) $errorCodeValue)
+                    : null;
+                $errorMessageValue = data_get($responseData, 'error.message');
+                $errorMessage = is_string($errorMessageValue)
+                    ? ProviderErrorSanitizer::safeText($errorMessageValue)
+                    : null;
+                $requestIdValue = $response->header('X-Tt-Logid')
+                    ?: data_get($responseData, 'error.log_id')
+                    ?: data_get($responseData, 'error.logid')
+                    ?: $response->header('X-Request-Id');
+                $requestId = is_scalar($requestIdValue)
+                    ? ProviderErrorSanitizer::safeText((string) $requestIdValue)
+                    : null;
+                $requestId = $requestId !== '' ? $requestId : null;
+
+                if (! $response->successful() || $errorCode !== 'ok') {
+                    $safeMessage = $this->creatorInfoFailureMessage(
+                        $errorCode ?: 'invalid_response',
+                        $errorMessage,
+                        $requestId
+                    );
+
                     Log::error('TikTok queryCreatorInfo failed', [
                         'status' => $response->status(),
-                        'error_code' => $response->json('error.code'),
-                        'error_message' => $response->json('error.message'),
+                        'error_code' => $errorCode,
+                        'error_message' => $errorMessage,
+                        'request_id' => $requestId,
                     ]);
-                    throw new TikTokApiException('Impossibile recuperare info dal creator TikTok: '.$response->json('error.message', 'Errore sconosciuto'));
+
+                    throw new TikTokApiException(
+                        $safeMessage,
+                        requestId: $requestId,
+                        httpStatus: $response->status(),
+                        responseData: ProviderErrorSanitizer::payload($response)
+                    );
                 }
 
-                $data = $response->json('data');
+                $data = $responseData['data'] ?? null;
                 if (! is_array($data)) {
                     throw new TikTokApiException(
-                        'TikTok creator info response non valida.'
+                        $this->creatorInfoFailureMessage(
+                            'invalid_response',
+                            'La risposta non contiene i dati del profilo.',
+                            $requestId
+                        ),
+                        requestId: $requestId,
+                        httpStatus: $response->status(),
+                        responseData: ProviderErrorSanitizer::payload($response)
                     );
                 }
 
                 return $data;
             }
         );
+    }
+
+    private function creatorInfoFailureMessage(
+        string $errorCode,
+        ?string $providerMessage,
+        ?string $requestId
+    ): string {
+        $message = match ($errorCode) {
+            'access_token_invalid' => 'Il token TikTok non è valido o è scaduto. Ricollega l\'account.',
+            'scope_not_authorized' => 'TikTok non ha autorizzato la pubblicazione diretta per questo account. Ricollega l\'account dopo aver verificato lo scope video.publish.',
+            'rate_limit_exceeded' => 'TikTok ha applicato un limite temporaneo alle richieste. Attendi e riprova.',
+            'reached_active_user_cap' => 'TikTok ha raggiunto il limite di utenti attivi consentiti per questa app.',
+            'spam_risk_too_many_posts' => 'TikTok ha raggiunto il limite giornaliero di pubblicazioni per questo profilo.',
+            'spam_risk_user_banned_from_posting' => 'TikTok non consente a questo profilo di creare nuovi post.',
+            'invalid_response' => 'TikTok ha restituito una risposta Creator Info incompleta.',
+            default => 'TikTok non ha restituito le opzioni del profilo.',
+        };
+
+        $message .= " Codice TikTok: {$errorCode}.";
+
+        if (is_string($providerMessage) && $providerMessage !== '') {
+            $message .= " Dettaglio: {$providerMessage}.";
+        }
+
+        if (is_string($requestId) && $requestId !== '') {
+            $message .= " Riferimento TikTok: {$requestId}.";
+        }
+
+        return ProviderErrorSanitizer::safeText($message);
     }
 
     /**

@@ -707,6 +707,30 @@ class MarketingCampaignPostShowTest extends TestCase
             ->assertSet('tiktokDirectOptions.consent', false);
     }
 
+    public function test_tiktok_direct_post_surfaces_safe_creator_info_error(): void
+    {
+        [$user, $campaign, $post] = $this->directTikTokPostFixture(
+            creatorInfoResponse: [
+                'data' => [],
+                'error' => [
+                    'code' => 'reached_active_user_cap',
+                    'message' => 'Sandbox active user limit reached',
+                    'log_id' => 'safe-log-reference-123',
+                ],
+            ]
+        );
+        $this->actingAs($user);
+
+        Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post,
+        ])
+            ->call('refreshTikTokDirectOptions')
+            ->assertSee('TikTok ha raggiunto il limite di utenti attivi consentiti per questa app.')
+            ->assertSee('Codice TikTok: reached_active_user_cap.')
+            ->assertSee('Riferimento TikTok: safe-log-reference-123.');
+    }
+
     public function test_tiktok_direct_post_requires_explicit_privacy_and_consent(): void
     {
         [$user, $campaign, $post] = $this->directTikTokPostFixture();
@@ -795,8 +819,10 @@ class MarketingCampaignPostShowTest extends TestCase
     /**
      * @return array{0: User, 1: MarketingCampaign, 2: MarketingCampaignPost, 3: ClientSocialAccount}
      */
-    private function directTikTokPostFixture(array $creatorInfoOverrides = []): array
-    {
+    private function directTikTokPostFixture(
+        array $creatorInfoOverrides = [],
+        ?array $creatorInfoResponse = null
+    ): array {
         config([
             'services.tiktok.delivery_mode' => 'direct',
             'services.tiktok.direct_publish_enabled' => true,
@@ -816,11 +842,16 @@ class MarketingCampaignPostShowTest extends TestCase
             'max_video_post_duration_sec' => 600,
         ], $creatorInfoOverrides);
 
+        $creatorInfoResponse ??= [
+            'data' => $creatorInfo,
+            'error' => ['code' => 'ok', 'message' => ''],
+        ];
+
         Http::fake([
-            '*open.tiktokapis.com/v2/post/publish/creator_info/query/*' => Http::response([
-                'data' => $creatorInfo,
-                'error' => ['code' => 'ok', 'message' => ''],
-            ], 200),
+            '*open.tiktokapis.com/v2/post/publish/creator_info/query/*' => Http::response(
+                $creatorInfoResponse,
+                200
+            ),
         ]);
 
         Storage::fake('social_media');

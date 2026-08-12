@@ -30,12 +30,14 @@ use App\Enums\Social\SocialPlatform;
 use App\Exceptions\NextcloudShareException;
 use App\Exceptions\Social\MediaPreparationException;
 use App\Exceptions\Social\StaleMarketingCampaignPostVersionException;
+use App\Exceptions\Social\TikTokApiException;
 use App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob;
 use App\Models\ClientSocialAccount;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostMedia;
 use App\Services\Integrations\Nextcloud\NextcloudService;
+use App\Support\Http\ProviderErrorSanitizer;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -1440,6 +1442,19 @@ class MarketingCampaignPostShow extends Component
                 'api_metadata' => $apiMetadata,
                 'last_api_check_at' => now(),
             ]);
+        } catch (TikTokApiException $exception) {
+            $safeMessage = ProviderErrorSanitizer::safeText(
+                $exception->getMessage()
+            );
+
+            Log::warning('Impossibile preparare le opzioni TikTok Direct Post', [
+                'account_id' => $account->id,
+                'exception' => $exception::class,
+                'http_status' => $exception->httpStatus,
+                'request_id' => $exception->requestId,
+                'error' => $safeMessage,
+            ]);
+            $this->tiktokDirectOptionsError = $safeMessage;
         } catch (\Throwable $exception) {
             Log::warning('Impossibile preparare le opzioni TikTok Direct Post', [
                 'account_id' => $account->id,

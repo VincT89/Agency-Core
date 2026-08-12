@@ -11,6 +11,7 @@ use App\Domain\Social\TikTok\TikTokVideoValidationService;
 use App\Enums\Social\PublicationFailureClassification;
 use App\Enums\Social\SocialConnectionStrategy;
 use App\Enums\Social\SocialPlatform;
+use App\Exceptions\Social\TikTokApiException;
 use App\Models\ClientSocialAccount;
 use App\Models\MarketingCampaignPostPublication;
 use Illuminate\Support\Facades\Cache;
@@ -160,7 +161,7 @@ class TikTokPublisher implements SocialPublisherInterface
         $postData = [
             'privacy_level' => $privacyOptions['privacy_level']
                 ?? $platformOptions['privacy_level']
-                ?? 'SELF_ONLY',
+                ?? null,
             'disable_comment' => (bool) (
                 $privacyOptions['disable_comment']
                 ?? $platformOptions['disable_comment']
@@ -265,31 +266,89 @@ class TikTokPublisher implements SocialPublisherInterface
             $account->refresh();
 
             if (config('services.tiktok.delivery_mode') === 'direct') {
-                $supportedPrivacyLevels = $account
-                    ->publishing_capabilities['tiktok']['privacy_levels_supported']
+                if (
+                    ($platformOptions['delivery_mode'] ?? null) !== 'direct'
+                    || ($platformOptions['creator_consent_confirmed'] ?? false) !== true
+                ) {
+                    return PublishResult::failure(
+                        'Il Direct Post TikTok richiede opzioni esplicite e consenso del creator.',
+                        PublicationFailureClassification::ManualReview
+                    );
+                }
+
+                $scopes = is_array($account->scopes) ? $account->scopes : [];
+                if (! in_array('video.publish', $scopes, true)) {
+                    return PublishResult::failure(
+                        'L\'account TikTok deve essere ricollegato autorizzando video.publish.',
+                        PublicationFailureClassification::ManualReview
+                    );
+                }
+
+                try {
+                    $creatorInfo = $this->contentService->queryCreatorInfo(
+                        $account->access_token,
+                        (string) $account->id,
+                        true
+                    );
+                } catch (TikTokApiException $exception) {
+                    return PublishResult::failure(
+                        'Impossibile aggiornare le opzioni del creator TikTok prima della pubblicazione: '.$exception->getMessage(),
+                        PublicationFailureClassification::Temporary
+                    );
+                }
+
+                $supportedPrivacyLevels = $creatorInfo['privacy_level_options']
                     ?? [];
                 $requestedPrivacy = $postData['privacy_level'];
 
                 if (
-                    is_array($supportedPrivacyLevels)
-                    && $supportedPrivacyLevels !== []
-                    && ! in_array($requestedPrivacy, $supportedPrivacyLevels, true)
+                    ! is_array($supportedPrivacyLevels)
+                    || $supportedPrivacyLevels === []
                 ) {
+                    return PublishResult::failure(
+                        'TikTok non ha restituito le opzioni privacy aggiornate del creator.',
+                        PublicationFailureClassification::ManualReview
+                    );
+                }
+
+                if (! in_array($requestedPrivacy, $supportedPrivacyLevels, true)) {
                     return PublishResult::failure(
                         "Privacy TikTok non disponibile per il creator: {$requestedPrivacy}.",
                         PublicationFailureClassification::Permanent
                     );
                 }
 
-                if (
-                    (! is_array($supportedPrivacyLevels) || $supportedPrivacyLevels === [])
-                    && $requestedPrivacy !== 'SELF_ONLY'
-                ) {
-                    return PublishResult::failure(
-                        'Le opzioni creator TikTok non sono aggiornate; è consentita solo la modalità SELF_ONLY.',
-                        PublicationFailureClassification::ManualReview
-                    );
-                }
+                $postData['disable_comment'] = (bool) (
+                    ($creatorInfo['comment_disabled'] ?? false)
+                    || $postData['disable_comment']
+                );
+                $postData['disable_duet'] = (bool) (
+                    ($creatorInfo['duet_disabled'] ?? false)
+                    || $postData['disable_duet']
+                );
+                $postData['disable_stitch'] = (bool) (
+                    ($creatorInfo['stitch_disabled'] ?? false)
+                    || $postData['disable_stitch']
+                );
+
+                $publishingCapabilities = $account->publishing_capabilities ?? [];
+                $publishingCapabilities['tiktok'] = array_merge(
+                    $publishingCapabilities['tiktok'] ?? [],
+                    [
+                        'can_direct_publish_video' => true,
+                        'can_publish_video' => true,
+                        'privacy_levels_supported' => $supportedPrivacyLevels,
+                        'max_video_duration' => $creatorInfo['max_video_post_duration_sec'] ?? null,
+                    ]
+                );
+                $apiMetadata = $account->api_metadata ?? [];
+                $apiMetadata['content_posting_info'] = $creatorInfo;
+
+                $account->update([
+                    'publishing_capabilities' => $publishingCapabilities,
+                    'api_metadata' => $apiMetadata,
+                    'last_api_check_at' => now(),
+                ]);
             }
 
             // Scegliamo la strategia di upload basandoci sulla config

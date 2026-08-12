@@ -133,12 +133,16 @@
                     } elseif (!$hasVideo && !$hasPhoto) {
                         $tiktokTitle = 'Richiede un video o delle foto per TikTok';
                         $tiktokLabelMeta = '(Richiede media)';
-                    } else {
-                        $canSelectTikTok = true;
-                        if ($hasPhoto) {
-                            $tiktokLabelMeta = '(Slideshow Fotografico)';
-                        }
-                    }
+            } else {
+                $canSelectTikTok = true;
+                if ($hasPhoto) {
+                    $tiktokLabelMeta = '(Slideshow Fotografico)';
+                } elseif (config('services.tiktok.delivery_mode') === 'direct') {
+                    $tiktokLabelMeta = '(Pubblicazione diretta)';
+                } else {
+                    $tiktokLabelMeta = '(Bozza TikTok)';
+                }
+            }
                 @endphp
                 <label class="cmp-platform-option {{ $canSelectTikTok ? '' : 'disabled' }}" title="{{ $tiktokTitle }}" x-bind:class="(platforms || []).includes('tiktok') ? 'active' : ''">
                     <input type="checkbox" wire:model="form.publishing_platforms" value="tiktok" class="hidden" {{ $canSelectTikTok ? '' : 'disabled' }}>

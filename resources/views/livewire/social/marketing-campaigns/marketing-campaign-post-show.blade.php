@@ -216,6 +216,10 @@
                                         $canSelectTikTok = true;
                                         if ($hasPhoto) {
                                             $tiktokLabelMeta = '(Slideshow Fotografico)';
+                                        } elseif (config('services.tiktok.delivery_mode') === 'direct') {
+                                            $tiktokLabelMeta = '(Pubblicazione diretta)';
+                                        } else {
+                                            $tiktokLabelMeta = '(Bozza TikTok)';
                                         }
                                     }
                                 @endphp
@@ -951,25 +955,270 @@
                             <div class="u-text-meta u-text-muted">Nessuna piattaforma selezionata per questo post.</div>
                         @else
                             @foreach($form['publishing_platforms'] as $platform)
+                                @php
+                                    $publication = \App\Models\MarketingCampaignPostPublication::where('marketing_campaign_post_id', $post->id)
+                                        ->where('platform', $platform)
+                                        ->orderBy('created_at', 'desc')
+                                        ->first();
+                                    $preflight = $this->getPreflightResult($platform);
+                                    $isTikTok = $platform === \App\Enums\Social\SocialPlatform::Tiktok->value;
+                                    $isTikTokDirect = $isTikTok
+                                        && config('services.tiktok.delivery_mode') === 'direct';
+                                    $snapshotDeliveryMode = $publication
+                                        ? data_get($publication->payload_snapshot, 'platform_options.delivery_mode')
+                                        : null;
+                                    $isDirectRetry = $isTikTok && $snapshotDeliveryMode === 'direct';
+                                    $canPublish = (!$preflight || $preflight->isPass)
+                                        && !($isTikTok && config('services.tiktok.mock_publishing', true));
+                                    $privacyLevels = $tiktokCreatorInfo['privacy_level_options'] ?? [];
+                                    $selectedPrivacy = $tiktokDirectOptions['privacy_level'] ?? '';
+                                    $commercialContent = (bool) ($tiktokDirectOptions['commercial_content'] ?? false);
+                                    $brandOrganic = (bool) ($tiktokDirectOptions['brand_organic_toggle'] ?? false);
+                                    $brandContent = (bool) ($tiktokDirectOptions['brand_content_toggle'] ?? false);
+                                    $hasDirectConsent = (bool) ($tiktokDirectOptions['consent'] ?? false);
+                                    $brandVisibilityAllowed = in_array($selectedPrivacy, [
+                                        'PUBLIC_TO_EVERYONE',
+                                        'MUTUAL_FOLLOW_FRIENDS',
+                                    ], true);
+                                    $commercialSelectionComplete = !$commercialContent
+                                        || $brandOrganic
+                                        || $brandContent;
+                                    $directOptionsReady = $tiktokDirectOptionsError === null
+                                        && in_array($selectedPrivacy, $privacyLevels, true)
+                                        && $commercialSelectionComplete
+                                        && (!$brandContent || $brandVisibilityAllowed)
+                                        && $hasDirectConsent;
+                                    $canStartPublication = $canPublish
+                                        && (!$isTikTokDirect || $directOptionsReady);
+                                    $canRetryPublication = $canPublish
+                                        && (!$isDirectRetry || $hasDirectConsent);
+                                    $showTikTokDirectEditor = $isTikTokDirect
+                                        && (!$publication || $publication->status === \App\Enums\Social\PublicationStatus::Failed);
+                                    $retryUsesBrandedContent = $isDirectRetry
+                                        && (bool) data_get($publication?->payload_snapshot, 'platform_options.brand_content_toggle', false);
+                                    $consentRequiresBrandedPolicy = $brandContent || $retryUsesBrandedContent;
+                                @endphp
                                 <div class="u-border u-border-line u-rounded u-p-md u-flex-col u-gap-sm">
                                     <div class="u-flex u-justify-between u-align-center">
-                                        <strong class="u-text-transform-capitalize">{{ $platform }}</strong>
+                                        <div class="u-flex u-align-center u-gap-sm u-flex-wrap">
+                                            <strong class="u-text-transform-capitalize">{{ $platform }}</strong>
+                                            @if($isTikTok)
+                                                <span class="cmp-tiktok-mode-badge {{ $isTikTokDirect ? 'is-direct' : 'is-draft' }}">
+                                                    {{ $isTikTokDirect ? 'Direct Post' : 'Bozza' }}
+                                                </span>
+                                            @endif
+                                        </div>
                                         @if(session()->has("success_publish_{$platform}"))
                                             <span class="u-text-green u-text-meta"><i data-lucide="check" class="u-icon-sm"></i> Inviato</span>
                                         @endif
                                     </div>
                                     
-                                    @php
-                                        $publication = \App\Models\MarketingCampaignPostPublication::where('marketing_campaign_post_id', $post->id)
-                                            ->where('platform', $platform)
-                                            ->orderBy('created_at', 'desc')
-                                            ->first();
-                                        $preflight = $this->getPreflightResult($platform);
-                                        $canPublish = (!$preflight || $preflight->isPass)
-                                            && !($platform === \App\Enums\Social\SocialPlatform::Tiktok->value
-                                                && config('services.tiktok.mock_publishing', true));
-                                    @endphp
-                                    
+                                    @if($showTikTokDirectEditor)
+                                        <section class="cmp-tiktok-direct-card" data-tiktok-direct-post>
+                                            <div class="cmp-tiktok-direct-header">
+                                                <div class="cmp-tiktok-creator">
+                                                    @if(!empty($tiktokCreatorInfo['creator_avatar_url']))
+                                                        <img
+                                                            src="{{ $tiktokCreatorInfo['creator_avatar_url'] }}"
+                                                            alt="Profilo TikTok di {{ $tiktokCreatorInfo['creator_nickname'] ?? '' }}"
+                                                            class="cmp-tiktok-creator-avatar"
+                                                        >
+                                                    @else
+                                                        <div class="cmp-tiktok-creator-avatar is-placeholder" aria-hidden="true">
+                                                            <i data-lucide="user" class="u-icon-md"></i>
+                                                        </div>
+                                                    @endif
+                                                    <div>
+                                                        <div class="cmp-tiktok-direct-title">Pubblicazione diretta su TikTok</div>
+                                                        <div class="u-text-muted">
+                                                            Account:
+                                                            <strong>{{ $tiktokCreatorInfo['creator_nickname'] ?? 'da aggiornare' }}</strong>
+                                                            @if(!empty($tiktokCreatorInfo['creator_username']))
+                                                                <span>({{ '@'.$tiktokCreatorInfo['creator_username'] }})</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sec btn-sm"
+                                                    wire:click="refreshTikTokDirectOptions"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="refreshTikTokDirectOptions"
+                                                >
+                                                    <span wire:loading.remove wire:target="refreshTikTokDirectOptions">Aggiorna opzioni</span>
+                                                    <span wire:loading wire:target="refreshTikTokDirectOptions">Aggiornamento...</span>
+                                                </button>
+                                            </div>
+
+                                            @if($tiktokDirectOptionsError)
+                                                <div class="cmp-tiktok-direct-alert is-error">
+                                                    <strong>Opzioni TikTok non disponibili</strong>
+                                                    <span>{{ $tiktokDirectOptionsError }}</span>
+                                                </div>
+                                            @else
+                                                <div class="cmp-tiktok-direct-alert is-info">
+                                                    Se l'app TikTok non ha ancora superato l'audit, TikTok limita i Direct Post alla visibilità “Solo io”.
+                                                </div>
+
+                                                <div class="form-row cmp-tiktok-direct-fields">
+                                                    <div class="form-g">
+                                                        <label class="form-lbl" for="tiktok-privacy-level">Visibilità su TikTok</label>
+                                                        <select
+                                                            id="tiktok-privacy-level"
+                                                            class="form-sel"
+                                                            wire:model.live="tiktokDirectOptions.privacy_level"
+                                                        >
+                                                            <option value="">Seleziona manualmente</option>
+                                                            @foreach($privacyLevels as $privacyLevel)
+                                                                @php
+                                                                    $privacyLabel = match($privacyLevel) {
+                                                                        'PUBLIC_TO_EVERYONE' => 'Tutti',
+                                                                        'MUTUAL_FOLLOW_FRIENDS' => 'Amici',
+                                                                        'FOLLOWER_OF_CREATOR' => 'Follower',
+                                                                        'SELF_ONLY' => 'Solo io',
+                                                                        default => $privacyLevel,
+                                                                    };
+                                                                @endphp
+                                                                <option
+                                                                    value="{{ $privacyLevel }}"
+                                                                    {{ $brandContent && $privacyLevel === 'SELF_ONLY' ? 'disabled' : '' }}
+                                                                >{{ $privacyLabel }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        @error('tiktokDirectOptions.privacy_level')
+                                                            <span class="form-err">{{ $message }}</span>
+                                                        @enderror
+                                                    </div>
+                                                    <div class="form-g">
+                                                        <span class="form-lbl">Profilo verificato per questo invio</span>
+                                                        <div class="cmp-tiktok-profile-summary">
+                                                            <span>{{ $tiktokCreatorInfo['creator_nickname'] ?? 'Profilo TikTok' }}</span>
+                                                            @if(!empty($tiktokCreatorInfo['max_video_post_duration_sec']) && $this->hasVideoMedia())
+                                                                <small>Durata massima comunicata da TikTok: {{ $tiktokCreatorInfo['max_video_post_duration_sec'] }} secondi</small>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="cmp-tiktok-direct-group">
+                                                    <div class="form-lbl">Interazioni consentite</div>
+                                                    <div class="cmp-tiktok-option-grid">
+                                                        <label class="cmp-tiktok-option {{ ($tiktokCreatorInfo['comment_disabled'] ?? false) ? 'is-disabled' : '' }}">
+                                                            <input
+                                                                type="checkbox"
+                                                                wire:model.live="tiktokDirectOptions.allow_comment"
+                                                                {{ ($tiktokCreatorInfo['comment_disabled'] ?? false) ? 'disabled' : '' }}
+                                                            >
+                                                            <span>
+                                                                <strong>Commenti</strong>
+                                                                <small>{{ ($tiktokCreatorInfo['comment_disabled'] ?? false) ? 'Disabilitati nelle impostazioni del profilo' : 'Consenti agli utenti di commentare' }}</small>
+                                                            </span>
+                                                        </label>
+                                                        @if($this->hasVideoMedia())
+                                                            <label class="cmp-tiktok-option {{ ($tiktokCreatorInfo['duet_disabled'] ?? false) ? 'is-disabled' : '' }}">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    wire:model.live="tiktokDirectOptions.allow_duet"
+                                                                    {{ ($tiktokCreatorInfo['duet_disabled'] ?? false) ? 'disabled' : '' }}
+                                                                >
+                                                                <span>
+                                                                    <strong>Duet</strong>
+                                                                    <small>{{ ($tiktokCreatorInfo['duet_disabled'] ?? false) ? 'Disabilitato nelle impostazioni del profilo' : 'Consenti la creazione di Duet' }}</small>
+                                                                </span>
+                                                            </label>
+                                                            <label class="cmp-tiktok-option {{ ($tiktokCreatorInfo['stitch_disabled'] ?? false) ? 'is-disabled' : '' }}">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    wire:model.live="tiktokDirectOptions.allow_stitch"
+                                                                    {{ ($tiktokCreatorInfo['stitch_disabled'] ?? false) ? 'disabled' : '' }}
+                                                                >
+                                                                <span>
+                                                                    <strong>Stitch</strong>
+                                                                    <small>{{ ($tiktokCreatorInfo['stitch_disabled'] ?? false) ? 'Disabilitato nelle impostazioni del profilo' : 'Consenti la creazione di Stitch' }}</small>
+                                                                </span>
+                                                            </label>
+                                                        @endif
+                                                    </div>
+                                                </div>
+
+                                                <div class="cmp-tiktok-direct-group">
+                                                    <label class="cmp-tiktok-disclosure-toggle">
+                                                        <input type="checkbox" wire:model.live="tiktokDirectOptions.commercial_content">
+                                                        <span>
+                                                            <strong>Contenuto commerciale</strong>
+                                                            <small>Il contenuto promuove un brand, un prodotto o un servizio.</small>
+                                                        </span>
+                                                    </label>
+
+                                                    @if($commercialContent)
+                                                        <div class="cmp-tiktok-option-grid u-mt-sm">
+                                                            <label class="cmp-tiktok-option">
+                                                                <input type="checkbox" wire:model.live="tiktokDirectOptions.brand_organic_toggle">
+                                                                <span>
+                                                                    <strong>Il tuo brand</strong>
+                                                                    <small>Verrà etichettato come contenuto promozionale.</small>
+                                                                </span>
+                                                            </label>
+                                                            <label class="cmp-tiktok-option {{ $brandVisibilityAllowed ? '' : 'is-disabled' }}">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    wire:model.live="tiktokDirectOptions.brand_content_toggle"
+                                                                    {{ $brandVisibilityAllowed ? '' : 'disabled' }}
+                                                                >
+                                                                <span>
+                                                                    <strong>Brand di terzi</strong>
+                                                                    <small>{{ $brandVisibilityAllowed ? 'Verrà etichettato come partnership retribuita.' : 'Prima scegli una visibilità pubblica o Amici.' }}</small>
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                        @error('tiktokDirectOptions.commercial_content')
+                                                            <span class="form-err u-mt-xs">{{ $message }}</span>
+                                                        @enderror
+                                                        @error('tiktokDirectOptions.brand_content_toggle')
+                                                            <span class="form-err u-mt-xs">{{ $message }}</span>
+                                                        @enderror
+                                                    @endif
+                                                </div>
+
+                                                <label class="cmp-tiktok-disclosure-toggle">
+                                                    <input type="checkbox" wire:model.live="tiktokDirectOptions.is_aigc">
+                                                    <span>
+                                                        <strong>Contenuto generato o modificato con IA</strong>
+                                                        <small>Attiva questa indicazione quando applicabile al contenuto.</small>
+                                                    </span>
+                                                </label>
+
+                                                <label class="cmp-tiktok-consent">
+                                                    <input type="checkbox" wire:model.live="tiktokDirectOptions.consent">
+                                                    <span>
+                                                        @if($consentRequiresBrandedPolicy)
+                                                            Pubblicando, accetti la
+                                                            <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener">Branded Content Policy</a>
+                                                            e la
+                                                            <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener">Music Usage Confirmation</a>
+                                                            di TikTok.
+                                                        @else
+                                                            Pubblicando, accetti la
+                                                            <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener">Music Usage Confirmation</a>
+                                                            di TikTok.
+                                                        @endif
+                                                    </span>
+                                                </label>
+                                                @error('tiktokDirectOptions.consent')
+                                                    <span class="form-err">{{ $message }}</span>
+                                                @enderror
+                                                @error('tiktokDirectOptions')
+                                                    <span class="form-err">{{ $message }}</span>
+                                                @enderror
+
+                                                <div class="u-text-muted u-text-sm">
+                                                    Dopo l'invio, TikTok può impiegare alcuni minuti per elaborare e mostrare il contenuto sul profilo.
+                                                </div>
+                                            @endif
+                                        </section>
+                                    @endif
+
                                     @if($preflight && !$preflight->isPass)
                                         <div class="u-bg-orange-50 u-border u-border-orange-200 u-text-orange-700 u-rounded u-p-sm u-text-meta u-mb-sm">
                                             <strong>Elementi da correggere</strong>
@@ -984,7 +1233,9 @@
                                     @if($publication)
                                         @if($publication->status === \App\Enums\Social\PublicationStatus::Published)
                                             <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-rounded u-p-sm u-text-meta">
-                                                @if($publication->delivery_state === 'delivered_to_tiktok')
+                                                @if($isTikTok && $snapshotDeliveryMode === 'direct')
+                                                    Pubblicato direttamente su TikTok il {{ $publication->published_at?->format('d/m/Y H:i') }}.<br>
+                                                @elseif($publication->delivery_state === 'delivered_to_tiktok')
                                                     Inviato a TikTok il {{ $publication->published_at?->format('d/m/Y H:i') }} (da completare in app)<br>
                                                 @else
                                                     Pubblicato il {{ $publication->published_at?->format('d/m/Y H:i') }}<br>
@@ -992,20 +1243,28 @@
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Publishing || $publication->status === \App\Enums\Social\PublicationStatus::Pending)
                                             <div class="u-bg-blue-50 u-border u-border-blue-200 u-text-blue-700 u-rounded u-p-sm u-text-meta">
-                                                Pubblicazione in corso. Lo stato si aggiornerà automaticamente.
+                                                {{ $isTikTokDirect ? 'TikTok sta elaborando il Direct Post.' : 'Pubblicazione in corso.' }} Lo stato si aggiornerà automaticamente.
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
                                             <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
                                                 <strong>Pubblicazione non completata</strong>
                                             </div>
-                                            <div class="u-flex u-gap-sm">
-                                                <button type="button" wire:confirm="Vuoi riprovare la pubblicazione? Verifica prima che il tentativo precedente non sia già visibile sul social." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Riprova</button>
-                                                <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-sec btn-sm u-flex-grow" {{ !$canPublish ? 'disabled' : '' }}>Nuovo tentativo</button>
+                                            <div class="cmp-social-publication-actions">
+                                                <button type="button" wire:confirm="Vuoi riprovare lo stesso invio? Verifica prima che il tentativo precedente non sia già visibile sul social." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canRetryPublication ? 'disabled' : '' }}>Riprova stesso invio</button>
+                                                <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-sec btn-sm u-flex-grow" {{ !$canStartPublication ? 'disabled' : '' }}>Crea nuovo tentativo</button>
                                             </div>
                                         @endif
                                     @else
-                                        <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full" wire:loading.attr="disabled" {{ !$canPublish ? 'disabled' : '' }}>
-                                            <span wire:loading.remove wire:target="publishToSocial('{{ $platform }}')">Pubblica Ora</span>
+                                        <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-p btn-sm u-w-full" wire:loading.attr="disabled" {{ !$canStartPublication ? 'disabled' : '' }}>
+                                            <span wire:loading.remove wire:target="publishToSocial('{{ $platform }}')">
+                                                @if($isTikTokDirect)
+                                                    Pubblica direttamente su TikTok
+                                                @elseif($isTikTok)
+                                                    Invia bozza a TikTok
+                                                @else
+                                                    Pubblica ora
+                                                @endif
+                                            </span>
                                             <span wire:loading wire:target="publishToSocial('{{ $platform }}')">Pubblicazione in corso...</span>
                                         </button>
                                     @endif

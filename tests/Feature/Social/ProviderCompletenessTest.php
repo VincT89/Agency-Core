@@ -454,7 +454,10 @@ class ProviderCompletenessTest extends TestCase
 
         app(TikTokContentPostingService::class)->initializeVideoPost(
             'token',
-            ['video_url' => 'https://verified.example/video.mp4'],
+            [
+                'video_url' => 'https://verified.example/video.mp4',
+                'privacy_level' => 'SELF_ONLY',
+            ],
             new PullFromUrlStrategy
         );
     }
@@ -477,7 +480,10 @@ class ProviderCompletenessTest extends TestCase
 
         app(TikTokContentPostingService::class)->initializeVideoPost(
             'token',
-            ['video_url' => 'https://verified.example/video.mp4'],
+            [
+                'video_url' => 'https://verified.example/video.mp4',
+                'privacy_level' => 'SELF_ONLY',
+            ],
             new PullFromUrlStrategy
         );
     }

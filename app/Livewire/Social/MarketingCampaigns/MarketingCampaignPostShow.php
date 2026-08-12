@@ -20,6 +20,7 @@ use App\Domain\Social\Services\MediaIntegrityMetadataReader;
 use App\Domain\Social\Services\MetaPreflightService;
 use App\Domain\Social\Services\PreflightResult;
 use App\Domain\Social\Services\TikTokPreflightService;
+use App\Domain\Social\TikTok\TikTokContentPostingService;
 use App\Enums\Social\MarketingCampaignPostCommentType;
 use App\Enums\Social\MarketingCampaignPostCommentVisibility;
 use App\Enums\Social\MarketingCampaignPostStatus;
@@ -30,6 +31,7 @@ use App\Exceptions\NextcloudShareException;
 use App\Exceptions\Social\MediaPreparationException;
 use App\Exceptions\Social\StaleMarketingCampaignPostVersionException;
 use App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob;
+use App\Models\ClientSocialAccount;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostMedia;
@@ -52,6 +54,13 @@ use Livewire\WithFileUploads;
 class MarketingCampaignPostShow extends Component
 {
     use AuthorizesRequests, WithFileUploads;
+
+    private const TIKTOK_PRIVACY_LEVELS = [
+        'PUBLIC_TO_EVERYONE',
+        'MUTUAL_FOLLOW_FRIENDS',
+        'FOLLOWER_OF_CREATOR',
+        'SELF_ONLY',
+    ];
 
     public MarketingCampaign $campaign;
 
@@ -114,6 +123,22 @@ class MarketingCampaignPostShow extends Component
     public ?string $nextcloud_error = null;
 
     public array $preflightResults = [];
+
+    public array $tiktokDirectOptions = [
+        'privacy_level' => '',
+        'allow_comment' => false,
+        'allow_duet' => false,
+        'allow_stitch' => false,
+        'commercial_content' => false,
+        'brand_organic_toggle' => false,
+        'brand_content_toggle' => false,
+        'is_aigc' => false,
+        'consent' => false,
+    ];
+
+    public array $tiktokCreatorInfo = [];
+
+    public ?string $tiktokDirectOptionsError = null;
 
     // Regeneration state
     public bool $regeneration_timeout = false;
@@ -184,6 +209,7 @@ class MarketingCampaignPostShow extends Component
             'publishing_platforms' => $post->publishing_platforms ?? [],
         ];
 
+        $this->loadTikTokDirectOptions();
         $this->refreshPreflight();
     }
 
@@ -1296,6 +1322,233 @@ class MarketingCampaignPostShow extends Component
         $this->refreshPost();
     }
 
+    public function refreshTikTokDirectOptions(): void
+    {
+        $this->authorize('update', $this->post);
+        $this->resetValidation();
+        $this->loadTikTokDirectOptions(forceRefresh: true);
+    }
+
+    public function updatedTiktokDirectOptions(mixed $value, string $key): void
+    {
+        if ($key === 'commercial_content' && ! (bool) $value) {
+            $this->tiktokDirectOptions['brand_organic_toggle'] = false;
+            $this->tiktokDirectOptions['brand_content_toggle'] = false;
+        }
+
+        if (
+            $key === 'privacy_level'
+            && ! in_array((string) $value, [
+                'PUBLIC_TO_EVERYONE',
+                'MUTUAL_FOLLOW_FRIENDS',
+            ], true)
+        ) {
+            $this->tiktokDirectOptions['brand_content_toggle'] = false;
+        }
+    }
+
+    private function loadTikTokDirectOptions(bool $forceRefresh = false): void
+    {
+        $this->tiktokDirectOptions = [
+            'privacy_level' => '',
+            'allow_comment' => false,
+            'allow_duet' => false,
+            'allow_stitch' => false,
+            'commercial_content' => false,
+            'brand_organic_toggle' => false,
+            'brand_content_toggle' => false,
+            'is_aigc' => false,
+            'consent' => false,
+        ];
+        $this->tiktokCreatorInfo = [];
+        $this->tiktokDirectOptionsError = null;
+
+        if (
+            config('services.tiktok.delivery_mode') !== 'direct'
+            || ! in_array(SocialPlatform::Tiktok->value, $this->form['publishing_platforms'] ?? [], true)
+        ) {
+            return;
+        }
+
+        if (! config('services.tiktok.direct_publish_enabled', false)) {
+            $this->tiktokDirectOptionsError = 'La pubblicazione diretta TikTok non è abilitata sul server.';
+
+            return;
+        }
+
+        $account = $this->campaign->client->socialAccountFor(SocialPlatform::Tiktok->value);
+        if (! $account || ! $account->isApiConnected()) {
+            $this->tiktokDirectOptionsError = 'Collega nuovamente l\'account TikTok prima di pubblicare.';
+
+            return;
+        }
+
+        $scopes = is_array($account->scopes) ? $account->scopes : [];
+        if (! in_array('video.publish', $scopes, true)) {
+            $this->tiktokDirectOptionsError = 'L\'account TikTok deve essere ricollegato autorizzando la pubblicazione diretta.';
+
+            return;
+        }
+
+        try {
+            $creatorInfo = app(TikTokContentPostingService::class)->queryCreatorInfo(
+                $account->access_token,
+                (string) $account->id,
+                $forceRefresh
+            );
+
+            $privacyLevels = array_values(array_filter(
+                $creatorInfo['privacy_level_options'] ?? [],
+                fn (mixed $level): bool => is_string($level)
+                    && in_array($level, self::TIKTOK_PRIVACY_LEVELS, true)
+            ));
+            $creatorNickname = trim((string) ($creatorInfo['creator_nickname'] ?? ''));
+
+            if ($privacyLevels === [] || $creatorNickname === '') {
+                throw new \UnexpectedValueException('TikTok non ha restituito tutte le informazioni del creator.');
+            }
+
+            $this->tiktokCreatorInfo = [
+                'creator_nickname' => $creatorNickname,
+                'creator_username' => (string) ($creatorInfo['creator_username'] ?? ''),
+                'creator_avatar_url' => (string) ($creatorInfo['creator_avatar_url'] ?? ''),
+                'privacy_level_options' => $privacyLevels,
+                'comment_disabled' => (bool) ($creatorInfo['comment_disabled'] ?? false),
+                'duet_disabled' => (bool) ($creatorInfo['duet_disabled'] ?? false),
+                'stitch_disabled' => (bool) ($creatorInfo['stitch_disabled'] ?? false),
+                'max_video_post_duration_sec' => is_numeric($creatorInfo['max_video_post_duration_sec'] ?? null)
+                    ? (int) $creatorInfo['max_video_post_duration_sec']
+                    : null,
+            ];
+
+            $publishingCapabilities = $account->publishing_capabilities ?? [];
+            $publishingCapabilities['tiktok'] = array_merge(
+                $publishingCapabilities['tiktok'] ?? [],
+                [
+                    'can_direct_publish_video' => true,
+                    'can_publish_video' => true,
+                    'privacy_levels_supported' => $privacyLevels,
+                    'max_video_duration' => $this->tiktokCreatorInfo['max_video_post_duration_sec'],
+                    'delivery_mode' => 'direct',
+                ]
+            );
+            $apiMetadata = $account->api_metadata ?? [];
+            $apiMetadata['content_posting_info'] = $this->tiktokCreatorInfo;
+
+            $account->update([
+                'publishing_capabilities' => $publishingCapabilities,
+                'api_metadata' => $apiMetadata,
+                'last_api_check_at' => now(),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Impossibile preparare le opzioni TikTok Direct Post', [
+                'account_id' => $account->id,
+                'exception' => $exception::class,
+            ]);
+            $this->tiktokDirectOptionsError = 'Non è stato possibile aggiornare le opzioni dal profilo TikTok. Riprova prima di pubblicare.';
+        }
+    }
+
+    private function buildTikTokDirectSnapshotOptions(ClientSocialAccount $account): array
+    {
+        if (
+            config('services.tiktok.delivery_mode') !== 'direct'
+            || ! config('services.tiktok.direct_publish_enabled', false)
+        ) {
+            throw ValidationException::withMessages([
+                'tiktokDirectOptions' => 'La pubblicazione diretta TikTok non è configurata correttamente.',
+            ]);
+        }
+
+        if ($this->tiktokDirectOptionsError !== null) {
+            throw ValidationException::withMessages([
+                'tiktokDirectOptions' => $this->tiktokDirectOptionsError,
+            ]);
+        }
+
+        $account->refresh();
+        $creatorInfo = $account->api_metadata['content_posting_info'] ?? [];
+        $privacyLevels = array_values(array_filter(
+            $account->publishing_capabilities['tiktok']['privacy_levels_supported'] ?? [],
+            fn (mixed $level): bool => is_string($level)
+                && in_array($level, self::TIKTOK_PRIVACY_LEVELS, true)
+        ));
+
+        if ($privacyLevels === [] || empty($creatorInfo['creator_nickname'])) {
+            throw ValidationException::withMessages([
+                'tiktokDirectOptions' => 'Aggiorna le opzioni del profilo TikTok prima di pubblicare.',
+            ]);
+        }
+
+        $this->validate([
+            'tiktokDirectOptions.privacy_level' => ['required', 'string', Rule::in($privacyLevels)],
+            'tiktokDirectOptions.allow_comment' => ['boolean'],
+            'tiktokDirectOptions.allow_duet' => ['boolean'],
+            'tiktokDirectOptions.allow_stitch' => ['boolean'],
+            'tiktokDirectOptions.commercial_content' => ['boolean'],
+            'tiktokDirectOptions.brand_organic_toggle' => ['boolean'],
+            'tiktokDirectOptions.brand_content_toggle' => ['boolean'],
+            'tiktokDirectOptions.is_aigc' => ['boolean'],
+            'tiktokDirectOptions.consent' => ['accepted'],
+        ], [
+            'tiktokDirectOptions.privacy_level.required' => 'Seleziona manualmente chi può vedere il contenuto su TikTok.',
+            'tiktokDirectOptions.privacy_level.in' => 'La visibilità scelta non è disponibile per questo profilo TikTok.',
+            'tiktokDirectOptions.consent.accepted' => 'Conferma le dichiarazioni TikTok prima di pubblicare.',
+        ]);
+
+        $commercialContent = (bool) $this->tiktokDirectOptions['commercial_content'];
+        $brandOrganic = $commercialContent
+            && (bool) $this->tiktokDirectOptions['brand_organic_toggle'];
+        $brandContent = $commercialContent
+            && (bool) $this->tiktokDirectOptions['brand_content_toggle'];
+
+        if ($commercialContent && ! $brandOrganic && ! $brandContent) {
+            throw ValidationException::withMessages([
+                'tiktokDirectOptions.commercial_content' => 'Indica se il contenuto promuove il tuo brand, un soggetto terzo o entrambi.',
+            ]);
+        }
+
+        if (
+            $brandContent
+            && ! in_array($this->tiktokDirectOptions['privacy_level'], [
+                'PUBLIC_TO_EVERYONE',
+                'MUTUAL_FOLLOW_FRIENDS',
+            ], true)
+        ) {
+            throw ValidationException::withMessages([
+                'tiktokDirectOptions.brand_content_toggle' => 'I contenuti sponsorizzati da terzi non possono usare questa visibilità.',
+            ]);
+        }
+
+        $isVideoPost = $this->hasVideoMedia();
+        $privacyOptions = [
+            'privacy_level' => $this->tiktokDirectOptions['privacy_level'],
+            'disable_comment' => (bool) ($creatorInfo['comment_disabled'] ?? false)
+                || ! (bool) $this->tiktokDirectOptions['allow_comment'],
+            'disable_duet' => ! $isVideoPost
+                || (bool) ($creatorInfo['duet_disabled'] ?? false)
+                || ! (bool) $this->tiktokDirectOptions['allow_duet'],
+            'disable_stitch' => ! $isVideoPost
+                || (bool) ($creatorInfo['stitch_disabled'] ?? false)
+                || ! (bool) $this->tiktokDirectOptions['allow_stitch'],
+        ];
+        $platformOptions = [
+            'delivery_mode' => 'direct',
+            'commercial_content_disclosed' => $commercialContent,
+            'brand_content_toggle' => $brandContent,
+            'brand_organic_toggle' => $brandOrganic,
+            'is_aigc' => (bool) $this->tiktokDirectOptions['is_aigc'],
+            'creator_consent_confirmed' => true,
+            'creator_consent_policy' => $brandContent
+                ? 'branded_content_and_music_usage'
+                : 'music_usage',
+            'creator_nickname' => (string) $creatorInfo['creator_nickname'],
+            'creator_info_checked_at' => $account->last_api_check_at?->toIso8601String(),
+        ];
+
+        return [$privacyOptions, $platformOptions];
+    }
+
     public function publishToSocial(string $platform)
     {
         $this->authorize('update', $this->post);
@@ -1329,14 +1582,39 @@ class MarketingCampaignPostShow extends Component
                 return;
             }
 
+            $privacyOptions = [];
+            $platformOptions = [];
+
+            if ($platformEnum === SocialPlatform::Tiktok) {
+                $platformOptions['delivery_mode'] = (string) config('services.tiktok.delivery_mode', 'disabled');
+
+                if ($platformOptions['delivery_mode'] === 'direct') {
+                    [$privacyOptions, $platformOptions] = $this->buildTikTokDirectSnapshotOptions($account);
+                }
+            }
+
             $createAction = app(CreateMarketingCampaignPostPublicationAction::class);
-            $publication = $createAction->execute($this->post, $version, $platformEnum, $account);
+            $publication = $createAction->execute(
+                post: $this->post,
+                version: $version,
+                platform: $platformEnum,
+                account: $account,
+                privacyOptions: $privacyOptions,
+                publicationType: 'publish',
+                platformOptions: $platformOptions
+            );
 
             // Dispatch async job
             ExecuteMarketingCampaignPostPublicationJob::dispatch($publication->id);
 
+            if ($platformEnum === SocialPlatform::Tiktok && ($platformOptions['delivery_mode'] ?? null) === 'direct') {
+                $this->tiktokDirectOptions['consent'] = false;
+            }
+
             session()->flash("success_publish_{$platform}", "Pubblicazione su {$platform} avviata.");
             $this->refreshPost();
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (\Exception $e) {
             Log::error('Errore durante dispatch pubblicazione social', ['error' => $e->getMessage()]);
             $this->addError('post', 'Non è stato possibile avviare la pubblicazione. Controlla il collegamento dell\'account e riprova.');
@@ -1352,11 +1630,31 @@ class MarketingCampaignPostShow extends Component
             return;
         }
 
+        $isTikTokDirectRetry = $publication->platform === SocialPlatform::Tiktok
+            && data_get($publication->payload_snapshot, 'platform_options.delivery_mode') === 'direct';
+
+        if ($isTikTokDirectRetry) {
+            if (config('services.tiktok.delivery_mode') !== 'direct') {
+                $this->addError('post', 'Questo tentativo usa Direct Post, ma il server TikTok non è più in modalità diretta.');
+
+                return;
+            }
+
+            $this->validate([
+                'tiktokDirectOptions.consent' => ['accepted'],
+            ], [
+                'tiktokDirectOptions.consent.accepted' => 'Conferma le dichiarazioni TikTok prima di riprovare.',
+            ]);
+        }
+
         try {
             $retryAction = app(RetryMarketingCampaignPostPublicationAction::class);
             $newPublication = $retryAction->execute($publication);
 
             ExecuteMarketingCampaignPostPublicationJob::dispatch($newPublication->id);
+            if ($isTikTokDirectRetry) {
+                $this->tiktokDirectOptions['consent'] = false;
+            }
             session()->flash("success_publish_{$publication->platform->value}", "Riavvio pubblicazione su {$publication->platform->value} in corso.");
             $this->refreshPost();
         } catch (\Exception $e) {

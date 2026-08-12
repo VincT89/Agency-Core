@@ -52,6 +52,73 @@ class TikTokOAuthTest extends TestCase
         $response->assertSessionHas('error');
     }
 
+    public function test_redirect_requests_upload_scope_in_draft_mode(): void
+    {
+        config(['services.tiktok.delivery_mode' => 'draft']);
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Tiktok,
+        ]);
+
+        $response = $this->withSession([
+            'tiktok_oauth_account_id' => $account->id,
+            'tiktok_oauth_client_id' => $account->client_id,
+            'tiktok_oauth_expected_platform' => SocialPlatform::Tiktok->value,
+        ])->get(route('admin.social.tiktok.redirect'));
+
+        $response->assertRedirect();
+        parse_str(
+            (string) parse_url($response->headers->get('Location'), PHP_URL_QUERY),
+            $query
+        );
+
+        $this->assertSame('user.info.basic,video.upload', $query['scope']);
+    }
+
+    public function test_redirect_requests_publish_scope_in_direct_mode(): void
+    {
+        config([
+            'services.tiktok.delivery_mode' => 'direct',
+            'services.tiktok.direct_publish_enabled' => true,
+        ]);
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Tiktok,
+        ]);
+
+        $response = $this->withSession([
+            'tiktok_oauth_account_id' => $account->id,
+            'tiktok_oauth_client_id' => $account->client_id,
+            'tiktok_oauth_expected_platform' => SocialPlatform::Tiktok->value,
+        ])->get(route('admin.social.tiktok.redirect'));
+
+        $response->assertRedirect();
+        parse_str(
+            (string) parse_url($response->headers->get('Location'), PHP_URL_QUERY),
+            $query
+        );
+
+        $this->assertSame('user.info.basic,video.publish', $query['scope']);
+    }
+
+    public function test_redirect_blocks_direct_mode_when_feature_flag_is_disabled(): void
+    {
+        config([
+            'services.tiktok.delivery_mode' => 'direct',
+            'services.tiktok.direct_publish_enabled' => false,
+        ]);
+        $account = ClientSocialAccount::factory()->create([
+            'platform' => SocialPlatform::Tiktok,
+        ]);
+
+        $response = $this->withSession([
+            'tiktok_oauth_account_id' => $account->id,
+            'tiktok_oauth_client_id' => $account->client_id,
+            'tiktok_oauth_expected_platform' => SocialPlatform::Tiktok->value,
+        ])->get(route('admin.social.tiktok.redirect'));
+
+        $response->assertRedirect(route('clients.show', $account->client_id));
+        $response->assertSessionHas('error');
+    }
+
     public function test_callback_fails_with_invalid_state()
     {
         $account = ClientSocialAccount::factory()->create([

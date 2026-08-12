@@ -19,10 +19,17 @@ class TikTokContentPostingService
         $this->apiBase = config('services.tiktok.api_base', 'https://open.tiktokapis.com');
     }
 
-    public function queryCreatorInfo(string $accessToken, ?string $accountId = null): array
-    {
+    public function queryCreatorInfo(
+        string $accessToken,
+        ?string $accountId = null,
+        bool $forceRefresh = false
+    ): array {
         // Creator info must be recent because privacy and interaction options can change.
         $cacheKey = 'tiktok_creator_info_'.($accountId ?: md5($accessToken));
+
+        if ($forceRefresh) {
+            Cache::forget($cacheKey);
+        }
 
         return Cache::remember(
             $cacheKey,
@@ -122,10 +129,15 @@ class TikTokContentPostingService
             throw new TikTokApiException('TikTok direct publish disabilitato. Usa TIKTOK_DELIVERY_MODE=draft.');
         }
 
+        $privacyLevel = $postData['privacy_level'] ?? null;
+        if (! is_string($privacyLevel) || $privacyLevel === '') {
+            throw new TikTokApiException('TikTok Direct Post richiede una visibilità scelta esplicitamente.');
+        }
+
         $basePayload = [
             'post_info' => [
                 'title' => mb_substr($postData['title'] ?? '', 0, 2200),
-                'privacy_level' => $postData['privacy_level'] ?? 'SELF_ONLY',
+                'privacy_level' => $privacyLevel,
                 'disable_comment' => $postData['disable_comment'] ?? false,
                 'disable_duet' => $postData['disable_duet'] ?? true,
                 'disable_stitch' => $postData['disable_stitch'] ?? true,

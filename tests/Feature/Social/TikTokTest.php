@@ -86,7 +86,21 @@ class TikTokTest extends TestCase
         $publication = MarketingCampaignPostPublication::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'platform' => SocialPlatform::Tiktok->value,
-            'payload_snapshot' => ['media' => [['media_id' => 1, 'media_type' => 'video', 'path' => 'video.mp4']]],
+            'payload_snapshot' => [
+                'target' => [
+                    'privacy_options' => [
+                        'privacy_level' => 'SELF_ONLY',
+                        'disable_comment' => true,
+                        'disable_duet' => true,
+                        'disable_stitch' => true,
+                    ],
+                ],
+                'platform_options' => [
+                    'delivery_mode' => 'direct',
+                    'creator_consent_confirmed' => true,
+                ],
+                'media' => [['media_id' => 1, 'media_type' => 'video', 'path' => 'video.mp4']],
+            ],
         ]);
 
         $publisher = app(TikTokPublisher::class);
@@ -96,7 +110,7 @@ class TikTokTest extends TestCase
         $this->assertStringContainsString("L'account non ha i permessi (capability) per pubblicare video su TikTok", $result->errorMessage);
     }
 
-    public function test_tiktok_publisher_successfully_posts_a_video_to_inbox_draft(): void
+    public function test_tiktok_publisher_successfully_starts_direct_video_post(): void
     {
         $post = MarketingCampaignPost::factory()->create();
         MarketingCampaignPostMedia::factory()->create(['marketing_campaign_post_id' => $post->id, 'media_type' => 'video']);
@@ -107,7 +121,13 @@ class TikTokTest extends TestCase
             'access_token' => 'valid_token',
             'token_expires_at' => now()->addDays(1),
             'connection_strategy' => SocialConnectionStrategy::PlatformOauth->value,
-            'publishing_capabilities' => ['tiktok' => ['can_publish_video' => true]],
+            'scopes' => ['user.info.basic', 'video.publish'],
+            'publishing_capabilities' => [
+                'tiktok' => [
+                    'can_direct_publish_video' => true,
+                    'can_publish_video' => true,
+                ],
+            ],
         ]);
 
         $mockMediaDeliveryService = Mockery::mock(PublicationMediaDeliveryService::class);
@@ -116,6 +136,15 @@ class TikTokTest extends TestCase
         $this->app->instance(PublicationMediaDeliveryService::class, $mockMediaDeliveryService);
 
         $mockContentService = Mockery::mock(TikTokContentPostingService::class);
+        $mockContentService->shouldReceive('queryCreatorInfo')
+            ->once()
+            ->with('valid_token', (string) $account->id, true)
+            ->andReturn([
+                'privacy_level_options' => ['SELF_ONLY'],
+                'comment_disabled' => false,
+                'duet_disabled' => true,
+                'stitch_disabled' => true,
+            ]);
         $mockContentService->shouldReceive('initializeVideoPost')
             ->once()
             ->andReturn(['publish_id' => 'v.g.123']);
@@ -124,7 +153,21 @@ class TikTokTest extends TestCase
         $publication = MarketingCampaignPostPublication::factory()->create([
             'marketing_campaign_post_id' => $post->id,
             'platform' => SocialPlatform::Tiktok->value,
-            'payload_snapshot' => ['media' => [['media_id' => 1, 'media_type' => 'video', 'path' => 'video.mp4']]],
+            'payload_snapshot' => [
+                'target' => [
+                    'privacy_options' => [
+                        'privacy_level' => 'SELF_ONLY',
+                        'disable_comment' => true,
+                        'disable_duet' => true,
+                        'disable_stitch' => true,
+                    ],
+                ],
+                'platform_options' => [
+                    'delivery_mode' => 'direct',
+                    'creator_consent_confirmed' => true,
+                ],
+                'media' => [['media_id' => 1, 'media_type' => 'video', 'path' => 'video.mp4']],
+            ],
         ]);
 
         $publisher = app(TikTokPublisher::class);
@@ -148,6 +191,7 @@ class TikTokTest extends TestCase
             'access_token' => 'valid_token',
             'token_expires_at' => now()->addDays(1),
             'connection_strategy' => SocialConnectionStrategy::PlatformOauth->value,
+            'scopes' => ['user.info.basic', 'video.upload'],
             'publishing_capabilities' => ['tiktok' => ['can_publish_photo' => true]],
         ]);
 

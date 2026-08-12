@@ -168,8 +168,17 @@ class ClientSocialAccount extends Model
             return false;
         }
 
-        return (isset($this->publishing_capabilities['tiktok']['can_upload_video_draft']) && $this->publishing_capabilities['tiktok']['can_upload_video_draft'] === true)
-            || (isset($this->publishing_capabilities['tiktok']['can_publish_video']) && $this->publishing_capabilities['tiktok']['can_publish_video'] === true);
+        $capabilities = $this->publishing_capabilities['tiktok'] ?? [];
+        $scopes = is_array($this->scopes) ? $this->scopes : [];
+
+        return match ((string) config('services.tiktok.delivery_mode', 'disabled')) {
+            'draft' => in_array('video.upload', $scopes, true)
+                && ($capabilities['can_upload_video_draft'] ?? false) === true,
+            'direct' => (bool) config('services.tiktok.direct_publish_enabled', false)
+                && in_array('video.publish', $scopes, true)
+                && ($capabilities['can_direct_publish_video'] ?? false) === true,
+            default => false,
+        };
     }
 
     public function canPublishTikTokPhoto(): bool
@@ -178,8 +187,19 @@ class ClientSocialAccount extends Model
             return false;
         }
 
-        return (isset($this->publishing_capabilities['tiktok']['can_publish_photo']) && $this->publishing_capabilities['tiktok']['can_publish_photo'] === true)
-            || (isset($this->publishing_capabilities['tiktok']['supports_photo_mode']) && $this->publishing_capabilities['tiktok']['supports_photo_mode'] === true);
+        $capabilities = $this->publishing_capabilities['tiktok'] ?? [];
+        if (($capabilities['can_publish_photo'] ?? false) !== true) {
+            return false;
+        }
+
+        $scopes = is_array($this->scopes) ? $this->scopes : [];
+
+        return match ((string) config('services.tiktok.delivery_mode', 'disabled')) {
+            'draft' => in_array('video.upload', $scopes, true),
+            'direct' => (bool) config('services.tiktok.direct_publish_enabled', false)
+                && in_array('video.publish', $scopes, true),
+            default => false,
+        };
     }
 
     public function verifyPublishingReadiness(): void

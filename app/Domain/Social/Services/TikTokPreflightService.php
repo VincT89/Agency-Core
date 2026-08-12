@@ -2,11 +2,11 @@
 
 namespace App\Domain\Social\Services;
 
-use App\Models\MarketingCampaignPost;
-use App\Models\ClientSocialAccount;
+use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
 use App\Domain\Social\Publishing\TikTokPublisher;
+use App\Models\ClientSocialAccount;
+use App\Models\MarketingCampaignPost;
 use Illuminate\Support\Facades\Cache;
-use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
 
 class TikTokPreflightService
 {
@@ -23,6 +23,7 @@ class TikTokPreflightService
 
         if ($account->platform->value !== 'tiktok') {
             $result->addCheck('platform', false, 'Piattaforma non valida per TikTokPreflightService.');
+
             return $result;
         }
 
@@ -30,27 +31,52 @@ class TikTokPreflightService
         $isTokenValid = $this->tokenRefreshService->ensureValidToken($account);
         $result->addCheck('token_valid', $isTokenValid, $isTokenValid ? null : 'Token TikTok scaduto o non valido e refresh fallito. Ricollegare l\'account.');
 
-        if (!$isTokenValid) {
+        if (! $isTokenValid) {
             return $result;
         }
 
-        // 2. Validazione Capabilities (con Cache per non abusare dell'API)
+        // 2. Verifica dello scope richiesto dalla modalità configurata.
+        $deliveryMode = (string) config('services.tiktok.delivery_mode', 'disabled');
+        $requiredScope = match ($deliveryMode) {
+            'draft' => 'video.upload',
+            'direct' => 'video.publish',
+            default => null,
+        };
+        $scopes = is_array($account->scopes) ? $account->scopes : [];
+        $hasRequiredScope = $requiredScope !== null
+            && in_array($requiredScope, $scopes, true);
+        $result->addCheck(
+            'publishing_scope',
+            $hasRequiredScope,
+            $hasRequiredScope
+                ? null
+                : ($requiredScope
+                    ? "Account TikTok privo del permesso {$requiredScope}. Ricollegare l'account."
+                    : 'Modalità di pubblicazione TikTok non configurata.')
+        );
+
+        if (! $hasRequiredScope) {
+            return $result;
+        }
+
+        // 3. Validazione Capabilities (con Cache per non abusare dell'API)
         $hasCapabilities = $this->publisher->verifyAccountCapabilities($account);
         $result->addCheck('account_capabilities', $hasCapabilities, $hasCapabilities ? null : 'Account non configurato per la pubblicazione API o capabilities mancanti.');
 
-        if (!$hasCapabilities) {
+        if (! $hasCapabilities) {
             return $result;
         }
 
-        // 3. Controllo Media
+        // 4. Controllo Media
         try {
             $mediaItems = $this->mediaResolver->resolveForPost($post)->mediaItems;
-        } catch (\App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException $e) {
-            $result->addCheck('media_resolution', false, "Impossibile risolvere i media per il post: " . $e->getMessage());
+        } catch (MarketingCampaignPostMediaResolutionException $e) {
+            $result->addCheck('media_resolution', false, 'Impossibile risolvere i media per il post: '.$e->getMessage());
+
             return $result;
         }
         $hasMedia = $mediaItems->count() > 0;
-        
+
         $result->addCheck('media_present', $hasMedia, $hasMedia ? null : 'TikTok richiede almeno un file multimediale (Video o Foto).');
 
         if ($hasMedia) {
@@ -62,7 +88,7 @@ class TikTokPreflightService
             });
 
             // No mixed media
-            $result->addCheck('no_mixed_media', !($hasVideo && $hasPhoto), !($hasVideo && $hasPhoto) ? null : 'TikTok non supporta media misti. Carica solo un video o un set di foto.');
+            $result->addCheck('no_mixed_media', ! ($hasVideo && $hasPhoto), ! ($hasVideo && $hasPhoto) ? null : 'TikTok non supporta media misti. Carica solo un video o un set di foto.');
 
             if ($hasVideo) {
                 $result->addCheck('single_video_only', $mediaItems->count() === 1, $mediaItems->count() === 1 ? null : 'TikTok supporta solo 1 video per post.');
@@ -70,11 +96,11 @@ class TikTokPreflightService
                 $media = $mediaItems->first();
                 $ext = strtolower(pathinfo($media->path ?? '', PATHINFO_EXTENSION));
                 $mime = $media->mime_type ?? '';
-                
+
                 // Formati ammessi da TikTok API (MP4, WebM)
                 $isValidVideoFormat = in_array($ext, ['mp4', 'webm', 'mov']) || in_array($mime, ['video/mp4', 'video/webm', 'video/quicktime']);
-                $result->addCheck('video_format', $isValidVideoFormat, $isValidVideoFormat ? null : "Formato video non supportato da TikTok. Richiesto MP4 o WebM.");
-                
+                $result->addCheck('video_format', $isValidVideoFormat, $isValidVideoFormat ? null : 'Formato video non supportato da TikTok. Richiesto MP4 o WebM.');
+
                 // Limite peso 500MB (pratico per PullFromUrl)
                 $sizeMB = ($media->source_size_bytes ?? 0) / 1024 / 1024;
                 $isUnderVideoLimit = $sizeMB <= 500;
@@ -93,7 +119,7 @@ class TikTokPreflightService
                     $this->mediaUrlService->getValidatedPublicUrl($media);
                     $result->addCheck("media_url_{$media->id}", true);
                 } catch (\Exception $e) {
-                    $result->addCheck("media_url_{$media->id}", false, "Errore risoluzione media '{$media->original_name}': " . $e->getMessage());
+                    $result->addCheck("media_url_{$media->id}", false, "Errore risoluzione media '{$media->original_name}': ".$e->getMessage());
                 }
             }
         }

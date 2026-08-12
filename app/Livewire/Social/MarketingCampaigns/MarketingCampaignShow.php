@@ -8,6 +8,7 @@ use App\Models\MarketingCampaign;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Domain\Social\Services\MarketingCampaignPostVersionMediaResolver;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
+use App\Domain\Social\Services\MarketingCampaignPostCalendarDateResolver;
 use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
 use Illuminate\Support\Facades\Log;
 
@@ -17,16 +18,19 @@ class MarketingCampaignShow extends Component
 
     public MarketingCampaign $campaign;
     public string $calendarDate;
-    
+
     private MarketingCampaignPostVersionMediaResolver $mediaResolver;
     private MarketingCampaignPostMediaUrlResolver $urlResolver;
+    private MarketingCampaignPostCalendarDateResolver $calendarDateResolver;
 
     public function boot(
         MarketingCampaignPostVersionMediaResolver $mediaResolver,
-        MarketingCampaignPostMediaUrlResolver $urlResolver
+        MarketingCampaignPostMediaUrlResolver $urlResolver,
+        MarketingCampaignPostCalendarDateResolver $calendarDateResolver
     ): void {
         $this->mediaResolver = $mediaResolver;
         $this->urlResolver = $urlResolver;
+        $this->calendarDateResolver = $calendarDateResolver;
     }
 
     public function mount(MarketingCampaign $campaign)
@@ -82,22 +86,23 @@ class MarketingCampaignShow extends Component
     public function fetchEvents()
     {
         $posts = $this->campaign->posts()
-            ->with('currentVersion')
-            ->whereNotNull('scheduled_date')
+            ->with(['currentVersion', 'successfulPublications'])
+            ->calendarEligible()
             ->where('status', '!=', \App\Enums\Social\MarketingCampaignPostStatus::Cancelled)
             ->get();
 
         return $posts->map(function ($post) {
-            $date = $post->scheduled_date->format('Y-m-d');
-            $startStr = $date;
-            if ($post->scheduled_time) {
-                $startStr .= 'T' . date('H:i:s', strtotime($post->scheduled_time));
+            $eventDate = $this->calendarDateResolver->resolve($post);
+
+            if (! $eventDate) {
+                return null;
             }
+
             return [
                 'id' => $post->id,
                 'title' => $post->title ?: 'Senza Titolo',
-                'start' => $startStr,
-                'allDay' => empty($post->scheduled_time),
+                'start' => $eventDate->format('Y-m-d\TH:i:s'),
+                'allDay' => false,
                 'url' => route('marketing-campaigns.posts.show', ['campaign' => $this->campaign->id, 'post' => $post->id]),
                 'backgroundColor' => $post->status->color(),
                 'borderColor' => $post->status->color(),
@@ -106,16 +111,18 @@ class MarketingCampaignShow extends Component
                     'status' => $post->status->label(),
                 ]
             ];
-        })->toArray();
+        })->filter()->values()->toArray();
     }
 
     private function publishedDates()
     {
         return $this->campaign->posts()
-            ->whereNotNull('scheduled_date')
+            ->with('successfulPublications')
+            ->calendarEligible()
             ->where('status', '!=', \App\Enums\Social\MarketingCampaignPostStatus::Cancelled)
-            ->pluck('scheduled_date')
-            ->map(fn($date) => $date->format('Y-m-d'))
+            ->get()
+            ->map(fn ($post) => $this->calendarDateResolver->resolve($post)?->format('Y-m-d'))
+            ->filter()
             ->unique()
             ->values()
             ->all();
@@ -149,7 +156,7 @@ class MarketingCampaignShow extends Component
     public function saveCampaign(\App\Domain\Social\Actions\UpdateMarketingCampaignAction $action)
     {
         $this->authorize('update', $this->campaign);
-        
+
         $this->validate([
             'campaignForm.name' => 'required|string|max:255',
             'campaignForm.monthly_fee' => 'nullable|numeric|min:0',
@@ -165,7 +172,7 @@ class MarketingCampaignShow extends Component
     public function openExtendModal()
     {
         $this->authorize('update', $this->campaign);
-        
+
         // Suggeriamo come "from_date" il giorno successivo all'ends_at attuale, se c'è
         $suggestedFrom = $this->campaign->ends_at ? clone $this->campaign->ends_at : now();
         if ($this->campaign->ends_at) {
@@ -189,7 +196,7 @@ class MarketingCampaignShow extends Component
     public function extendCampaign(\App\Domain\Social\Actions\ExtendMarketingCampaignAction $action)
     {
         $this->authorize('update', $this->campaign);
-        
+
         $this->validate([
             'extendForm.from_date' => 'required|date',
             'extendForm.to_date' => 'nullable|date|after_or_equal:extendForm.from_date',
@@ -205,7 +212,7 @@ class MarketingCampaignShow extends Component
     public function openRenewModal()
     {
         $this->authorize('update', $this->campaign);
-        
+
         $this->renewForm = [
             'starts_at' => now()->format('Y-m-d'),
             'from_date' => now()->format('Y-m-d'),
@@ -291,10 +298,10 @@ class MarketingCampaignShow extends Component
     public function openInvoiceModal()
     {
         $this->authorize('update', $this->campaign);
-        
+
         $pendingPeriods = $this->campaign->periods()->whereNull('invoice_id')->get();
         $pendingExtras = $this->campaign->extras()->whereNull('invoice_id')->where('status', \App\Enums\Social\MarketingCampaignExtraStatus::Pending)->get();
-        
+
         $this->pendingPeriodsForInvoice = $pendingPeriods->map(fn($p) => ['id' => $p->id, 'description' => $p->description, 'amount' => $p->amount])->toArray();
         $this->pendingExtrasForInvoice = $pendingExtras->map(fn($e) => ['id' => $e->id, 'description' => $e->description, 'amount' => $e->amount])->toArray();
 
@@ -306,7 +313,7 @@ class MarketingCampaignShow extends Component
             'period_ids' => $pendingPeriods->pluck('id')->toArray(),
             'extra_ids' => $pendingExtras->pluck('id')->toArray(),
         ];
-        
+
         $this->customLines = [
             ['description' => '', 'quantity' => 1, 'unit_price' => ''],
         ];
@@ -349,10 +356,10 @@ class MarketingCampaignShow extends Component
 
         try {
             $action->execute($this->campaign, $this->invoiceForm);
-            
+
             $this->campaign->refresh();
             $this->campaign->load(['periods', 'extras', 'invoices.items']);
-            
+
             $this->closeInvoiceModal();
             $this->dispatch('campaign-invoice-generated');
         } catch (\Exception $e) {
@@ -377,7 +384,7 @@ class MarketingCampaignShow extends Component
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
-        
+
         $firstDayOfMonth = $currentDate->copy()->startOfMonth();
         $daysInMonth = $firstDayOfMonth->daysInMonth;
         $startDayOfWeek = $firstDayOfMonth->dayOfWeekIso;

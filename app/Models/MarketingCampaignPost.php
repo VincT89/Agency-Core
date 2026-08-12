@@ -6,6 +6,8 @@ use App\Domain\Social\Exceptions\HistoricalPostProtectedException;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostType;
+use App\Enums\Social\PublicationStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +24,7 @@ class MarketingCampaignPost extends Model
 
     protected $casts = [
         'scheduled_date' => 'date',
+        'published_at' => 'datetime',
         'ai_analysis_enabled' => 'boolean',
         'submitted_to_n8n_at' => 'datetime',
         'approved_payload_snapshot' => 'array',
@@ -179,6 +182,23 @@ class MarketingCampaignPost extends Model
     public function publications()
     {
         return $this->hasMany(MarketingCampaignPostPublication::class, 'marketing_campaign_post_id');
+    }
+
+    public function successfulPublications(): HasMany
+    {
+        return $this->publications()
+            ->where('status', PublicationStatus::Published->value)
+            ->whereNotNull('published_at');
+    }
+
+    public function scopeCalendarEligible(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query) {
+            $query
+                ->whereNotNull('scheduled_date')
+                ->orWhereNotNull('published_at')
+                ->orWhereHas('successfulPublications');
+        });
     }
 
     public function getResolvedCaptionAttribute(): string

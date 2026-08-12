@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Social;
 
+use App\Domain\Social\Services\MarketingCampaignPostCalendarDateResolver;
 use App\Enums\Shooting\ShootStatus;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Models\Client;
@@ -13,6 +14,8 @@ use Livewire\Component;
 
 class MarketingCampaignCalendar extends Component
 {
+    private MarketingCampaignPostCalendarDateResolver $calendarDateResolver;
+
     public $clientFilter = '';
 
     public $campaignFilter = '';
@@ -20,6 +23,11 @@ class MarketingCampaignCalendar extends Component
     public $platformFilter = '';
 
     public string $calendarDate;
+
+    public function boot(MarketingCampaignPostCalendarDateResolver $calendarDateResolver): void
+    {
+        $this->calendarDateResolver = $calendarDateResolver;
+    }
 
     public function mount()
     {
@@ -66,7 +74,7 @@ class MarketingCampaignCalendar extends Component
     private function baseQuery()
     {
         $query = MarketingCampaignPost::query()
-            ->whereNotNull('scheduled_date')
+            ->calendarEligible()
             ->where('status', '!=', MarketingCampaignPostStatus::Cancelled);
 
         // Applica i filtri impostati dall'utente
@@ -93,17 +101,21 @@ class MarketingCampaignCalendar extends Component
     public function fetchEvents()
     {
         $posts = $this->baseQuery()
-            ->with(['campaign.client', 'currentVersion'])
+            ->with(['campaign.client', 'currentVersion', 'successfulPublications'])
             ->get();
 
         $events = $posts->map(function ($post) {
-            $date = $post->scheduled_date->format('Y-m-d');
-            $time = $post->scheduled_time ? date('H:i:s', strtotime($post->scheduled_time)) : '12:00:00';
+            $eventDate = $this->calendarDateResolver->resolve($post);
+
+            if (! $eventDate) {
+                return null;
+            }
 
             return [
                 'id' => 'post_'.$post->id,
                 'title' => $post->title ?? 'Post senza titolo',
-                'start' => $date.'T'.$time,
+                'start' => $eventDate->format('Y-m-d\TH:i:s'),
+                'allDay' => false,
                 'url' => route('marketing-campaigns.posts.show', [
                     'campaign' => $post->marketing_campaign_id,
                     'post' => $post->id,
@@ -118,7 +130,7 @@ class MarketingCampaignCalendar extends Component
                     'status' => $post->status->label(),
                 ],
             ];
-        })->toArray();
+        })->filter()->values()->toArray();
 
         // Fetch Shoots
         $shootsQuery = Shoot::query()
@@ -195,8 +207,10 @@ class MarketingCampaignCalendar extends Component
         $clients = Client::query()->visibleTo(auth()->user())->orderBy('name')->get();
 
         $publishedDates = $this->baseQuery()
-            ->pluck('scheduled_date')
-            ->map(fn ($date) => $date->format('Y-m-d'))
+            ->with('successfulPublications')
+            ->get()
+            ->map(fn (MarketingCampaignPost $post) => $this->calendarDateResolver->resolve($post)?->format('Y-m-d'))
+            ->filter()
             ->unique()
             ->values()
             ->all();

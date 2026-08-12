@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Admin\Social;
 
+use App\Domain\Social\Actions\ArchiveMarketingCampaignPostAction;
 use App\Domain\Social\Actions\RefreshPublicationStatusAction;
 use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\RestoreMarketingCampaignPostAction;
+use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Enums\Social\PublicationStatus;
 use App\Enums\Social\SocialPlatform;
@@ -18,7 +21,7 @@ class SocialOperationsDashboard extends Component
 {
     use WithPagination;
 
-    public string $filter = 'all'; // all, active, published, needs_manual_review, failed, stale_publishing
+    public string $filter = 'all'; // all, active, published, needs_manual_review, failed, stale_publishing, attempt_history, archived
 
     public function mount()
     {
@@ -35,6 +38,12 @@ class SocialOperationsDashboard extends Component
         $this->authorize('manage_social_operations');
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
+
+        if ($publication->post?->isArchived()) {
+            session()->flash('error', 'Ripristina il post prima di avviare un nuovo tentativo.');
+
+            return;
+        }
 
         try {
             $retryAction = app(RetryMarketingCampaignPostPublicationAction::class);
@@ -55,6 +64,12 @@ class SocialOperationsDashboard extends Component
         $this->authorize('manage_social_operations');
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
+
+        if ($publication->post?->isArchived()) {
+            session()->flash('error', 'Ripristina il post prima di aggiornarne la pubblicazione.');
+
+            return;
+        }
 
         if (in_array($publication->status, [
             PublicationStatus::Published,
@@ -100,6 +115,12 @@ class SocialOperationsDashboard extends Component
 
         $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
 
+        if ($publication->post?->isArchived()) {
+            session()->flash('error', 'Ripristina il post prima di modificarne lo stato.');
+
+            return;
+        }
+
         if (in_array($publication->status, [
             PublicationStatus::Published,
             PublicationStatus::Cancelled,
@@ -122,13 +143,67 @@ class SocialOperationsDashboard extends Component
         session()->flash('success', 'Pubblicazione marcata come Fallita definitivamente.');
     }
 
+    public function archivePost(int $publicationId, ArchiveMarketingCampaignPostAction $action): void
+    {
+        $this->authorize('manage_social_operations');
+
+        $publication = MarketingCampaignPostPublication::query()
+            ->with('post.publications')
+            ->findOrFail($publicationId);
+        $post = $publication->post;
+
+        if (! $post) {
+            session()->flash('error', 'Il post collegato non è disponibile.');
+
+            return;
+        }
+
+        $this->authorize('update', $post);
+
+        try {
+            $action->execute($post, auth()->user());
+            session()->flash('success', 'Post archiviato localmente. Nessun contenuto è stato eliminato dai social.');
+            $this->resetPage();
+        } catch (MarketingCampaignPostArchiveException $exception) {
+            session()->flash('error', 'Il post non può essere archiviato perché è pubblicato, parzialmente pubblicato o ancora in elaborazione.');
+        }
+    }
+
+    public function restorePost(int $publicationId, RestoreMarketingCampaignPostAction $action): void
+    {
+        $this->authorize('manage_social_operations');
+
+        $publication = MarketingCampaignPostPublication::query()
+            ->with('post')
+            ->findOrFail($publicationId);
+        $post = $publication->post;
+
+        if (! $post || ! $post->isArchived()) {
+            session()->flash('error', 'Il post non risulta archiviato.');
+
+            return;
+        }
+
+        $this->authorize('update', $post);
+        $action->execute($post);
+        session()->flash('success', 'Post ripristinato nelle viste operative.');
+        $this->resetPage();
+    }
+
     public function render()
     {
         $query = MarketingCampaignPostPublication::with([
             'post.campaign.client',
+            'post.publications',
             'socialAccount.agencyAsset.connection',
         ])
             ->orderBy('updated_at', 'desc');
+
+        if ($this->filter === 'archived') {
+            $query->whereHas('post', fn ($postQuery) => $postQuery->onlyArchived());
+        } else {
+            $query->whereHas('post', fn ($postQuery) => $postQuery->notArchived());
+        }
 
         if ($this->filter === 'active') {
             $query->whereIn('status', [
@@ -145,6 +220,16 @@ class SocialOperationsDashboard extends Component
             $maxLifecycle = config('services.meta.instagram.max_container_lifecycle', 15);
             $query->whereIn('status', [PublicationStatus::Publishing->value, PublicationStatus::Pending->value])
                 ->where('updated_at', '<', now()->subMinutes($maxLifecycle));
+        } elseif ($this->filter === 'attempt_history') {
+            $query->whereIn('status', [
+                PublicationStatus::Superseded->value,
+                PublicationStatus::Abandoned->value,
+            ]);
+        } elseif ($this->filter === 'all') {
+            $query->whereNotIn('status', [
+                PublicationStatus::Superseded->value,
+                PublicationStatus::Abandoned->value,
+            ]);
         }
 
         $publications = $query->paginate(20);

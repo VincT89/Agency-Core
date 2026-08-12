@@ -4,14 +4,17 @@ namespace App\Livewire\Social\MarketingCampaigns;
 
 use App\Domain\Social\Actions\CreateManualMarketingCampaignPostVersionAction;
 use App\Domain\Social\Actions\CreateMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\ArchiveMarketingCampaignPostAction;
 use App\Domain\Social\Actions\DeleteMarketingCampaignPostAction;
 use App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction;
 use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\RestoreMarketingCampaignPostAction;
 use App\Domain\Social\Actions\SendMarketingCampaignPostToClientAction;
 use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Domain\Social\DTOs\CreateManualMarketingCampaignPostVersionData;
 use App\Domain\Social\Exceptions\HistoricalPostProtectedException;
+use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use App\Domain\Social\Exceptions\MarketingCampaignPostMediaResolutionException;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUploadPolicy;
 use App\Domain\Social\Services\MarketingCampaignPostMediaUrlResolver;
@@ -193,7 +196,7 @@ class MarketingCampaignPostShow extends Component
         $this->campaign = $campaign;
 
         // Eager load related data
-        $post->load(['currentVersion', 'comments.user']);
+        $post->load(['currentVersion', 'comments.user', 'publications']);
         $this->post = $post;
         $this->expectedCurrentVersionId = $this->post->current_version_id;
         $this->loadExistingMedia();
@@ -224,7 +227,7 @@ class MarketingCampaignPostShow extends Component
     public function refreshPost()
     {
         $this->post->refresh();
-        $this->post->load(['currentVersion', 'currentVersion.mediaItems', 'comments.user']);
+        $this->post->load(['currentVersion', 'currentVersion.mediaItems', 'comments.user', 'publications']);
         $this->expectedCurrentVersionId = $this->post->current_version_id;
         $this->loadExistingMedia();
         $this->form['status'] = $this->post->status->value;
@@ -1568,6 +1571,12 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('update', $this->post);
 
+        if ($this->post->isArchived()) {
+            $this->addError('post', 'Ripristina il post prima di avviare una pubblicazione.');
+
+            return;
+        }
+
         if (! in_array($this->post->status, [
             MarketingCampaignPostStatus::Approved,
             MarketingCampaignPostStatus::Failed,
@@ -1640,6 +1649,12 @@ class MarketingCampaignPostShow extends Component
     {
         $this->authorize('update', clone $this->post);
 
+        if ($this->post->isArchived()) {
+            $this->addError('post', 'Ripristina il post prima di riprovare una pubblicazione.');
+
+            return;
+        }
+
         $publication = $this->post->publications()->whereKey($publicationId)->first();
         if (! $publication) {
             return;
@@ -1685,6 +1700,12 @@ class MarketingCampaignPostShow extends Component
     public function forceFailPublication(int $publicationId)
     {
         $this->authorize('update', clone $this->post);
+
+        if ($this->post->isArchived()) {
+            $this->addError('post', 'Ripristina il post prima di modificarne la pubblicazione.');
+
+            return;
+        }
 
         $publication = $this->post->publications()->whereKey($publicationId)->first();
         // forceFailPublication is redundant if already failed, but kept for compatibility
@@ -1733,6 +1754,34 @@ class MarketingCampaignPostShow extends Component
         }
 
         return redirect()->route('marketing-campaigns.show', $this->campaign);
+    }
+
+    public function archivePost(ArchiveMarketingCampaignPostAction $action): void
+    {
+        $this->authorize('update', $this->post);
+
+        try {
+            $this->post = $action->execute($this->post, auth()->user());
+            $this->refreshPost();
+            session()->flash('success', 'Post archiviato localmente. Lo storico è conservato e nessun contenuto è stato eliminato dai social.');
+        } catch (MarketingCampaignPostArchiveException $exception) {
+            $this->addError('post', 'Il post non può essere archiviato perché è pubblicato, parzialmente pubblicato o ancora in elaborazione.');
+        }
+    }
+
+    public function restorePost(RestoreMarketingCampaignPostAction $action): void
+    {
+        $this->authorize('update', $this->post);
+
+        $this->post = $action->execute($this->post);
+        $this->refreshPost();
+        session()->flash('success', 'Post ripristinato nelle viste operative.');
+    }
+
+    #[Computed]
+    public function getCanArchivePostProperty(): bool
+    {
+        return $this->post->canBeArchived();
     }
 
     #[Computed]

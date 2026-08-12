@@ -2,9 +2,11 @@
 
 namespace App\Domain\Social\Actions;
 
+use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use App\Domain\Social\Services\MarketingCampaignPostPublicationIntegrityVerifier;
 use App\Enums\Social\PublicationStatus;
 use App\Models\MarketingCampaignPostPublication;
+use App\Models\MarketingCampaignPost;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,7 +20,12 @@ class RetryMarketingCampaignPostPublicationAction
     public function execute(MarketingCampaignPostPublication $originalPublication): MarketingCampaignPostPublication
     {
         $verifiedOriginal = MarketingCampaignPostPublication::query()
+            ->with('post')
             ->findOrFail($originalPublication->getKey());
+
+        if ($verifiedOriginal->post?->isArchived()) {
+            throw MarketingCampaignPostArchiveException::alreadyArchived($verifiedOriginal->post);
+        }
 
         if ($verifiedOriginal->snapshot_schema_version === null) {
             throw new \Exception('Impossibile riprovare una publication legacy priva di snapshot canonico.');
@@ -36,6 +43,15 @@ class RetryMarketingCampaignPostPublicationAction
         try {
             return DB::transaction(function () use ($verifiedOriginal, $verifiedFingerprint) {
                 $rootPublicationId = $verifiedOriginal->retry_of_publication_id ?? $verifiedOriginal->id;
+
+                $lockedPost = MarketingCampaignPost::query()
+                    ->whereKey($verifiedOriginal->marketing_campaign_post_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($lockedPost->isArchived()) {
+                    throw MarketingCampaignPostArchiveException::alreadyArchived($lockedPost);
+                }
 
                 $lockedRoot = MarketingCampaignPostPublication::query()
                     ->whereKey($rootPublicationId)

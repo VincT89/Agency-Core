@@ -17,6 +17,7 @@ class SyncChatbotMarketingPostsAction
         // Ultimi post del cliente (ritenzione controllata da costante)
         $latestPosts = MarketingCampaignPost::query()
             ->with('campaign')
+            ->notArchived()
             ->whereHas('campaign', function ($q) use ($client) {
                 $q->where('client_id', $client->id);
             })

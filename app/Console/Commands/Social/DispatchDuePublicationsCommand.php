@@ -45,6 +45,7 @@ class DispatchDuePublicationsCommand extends Command
             );
             $posts = MarketingCampaignPost::query()
                 ->with(['campaign.client', 'currentVersion'])
+                ->notArchived()
                 ->whereHas('campaign', function ($query): void {
                     $query->where('publication_mode', PublicationMode::Automatic)
                         ->where('status', MarketingCampaignStatus::Active);
@@ -138,7 +139,12 @@ class DispatchDuePublicationsCommand extends Command
     ): int {
         $post = MarketingCampaignPost::query()
             ->with(['campaign.client', 'currentVersion'])
-            ->findOrFail($post->id);
+            ->notArchived()
+            ->find($post->id);
+
+        if (! $post) {
+            return 0;
+        }
 
         if (
             $post->campaign->publication_mode !== PublicationMode::Automatic

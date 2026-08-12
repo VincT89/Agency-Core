@@ -80,10 +80,12 @@ class AdminDashboardQuery
                 \App\Enums\Social\MarketingCampaignPostStatus::ClientApproved,
                 \App\Enums\Social\MarketingCampaignPostStatus::Approved
             ])
+            ->notArchived()
             ->whereNull('scheduled_date')
             ->count();
             
         $socialScheduledThisWeek = \App\Models\MarketingCampaignPost::whereNotNull('scheduled_date')
+            ->notArchived()
             ->whereNotIn('status', [
                 \App\Enums\Social\MarketingCampaignPostStatus::Published, 
                 \App\Enums\Social\MarketingCampaignPostStatus::Cancelled
@@ -92,6 +94,7 @@ class AdminDashboardQuery
             ->count();
             
         $socialPublishToday = \App\Models\MarketingCampaignPost::whereNotNull('scheduled_date')
+            ->notArchived()
             ->whereNotIn('status', [
                 \App\Enums\Social\MarketingCampaignPostStatus::Published, 
                 \App\Enums\Social\MarketingCampaignPostStatus::Cancelled
@@ -101,6 +104,7 @@ class AdminDashboardQuery
 
         // Segnala post non pubblicati nei tempi previsti
         $pastDuePosts = \App\Models\MarketingCampaignPost::with('campaign')
+            ->notArchived()
             ->whereNotNull('scheduled_date')
             ->whereNotIn('status', [
                 \App\Enums\Social\MarketingCampaignPostStatus::Published, 

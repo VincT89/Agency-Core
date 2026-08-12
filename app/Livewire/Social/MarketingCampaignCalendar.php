@@ -74,6 +74,7 @@ class MarketingCampaignCalendar extends Component
     private function baseQuery()
     {
         $query = MarketingCampaignPost::query()
+            ->notArchived()
             ->calendarEligible()
             ->where('status', '!=', MarketingCampaignPostStatus::Cancelled);
 

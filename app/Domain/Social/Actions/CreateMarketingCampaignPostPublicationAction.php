@@ -3,6 +3,7 @@
 namespace App\Domain\Social\Actions;
 
 use App\Domain\Social\Services\CanonicalJsonEncoder;
+use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use App\Domain\Social\Services\MarketingCampaignPostPublicationSnapshotBuilder;
 use App\Domain\Social\Services\MediaIntegrityMetadataReader;
 use App\Enums\Social\PublicationStatus;
@@ -40,6 +41,10 @@ class CreateMarketingCampaignPostPublicationAction
         string $publicationType = 'publish',
         array $platformOptions = []
     ): MarketingCampaignPostPublication {
+
+        if ($post->isArchived()) {
+            throw MarketingCampaignPostArchiveException::alreadyArchived($post);
+        }
 
         // Logical check before lock
         if ($version->marketing_campaign_post_id !== $post->id) {
@@ -153,6 +158,11 @@ class CreateMarketingCampaignPostPublicationAction
 
                 // Lock records explicitly
                 $post = MarketingCampaignPost::where('id', $post->id)->lockForUpdate()->firstOrFail();
+
+                if ($post->isArchived()) {
+                    throw MarketingCampaignPostArchiveException::alreadyArchived($post);
+                }
+
                 $version = $post->versions()->where('id', $version->id)->lockForUpdate()->firstOrFail();
                 $account = ClientSocialAccount::where('id', $account->id)->lockForUpdate()->firstOrFail();
                 $lockedAsset = null;

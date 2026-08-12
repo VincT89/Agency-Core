@@ -36,16 +36,36 @@
     </x-slot>
   </x-page-header>
 
+  @if (session()->has('success'))
+    <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-p-sm u-rounded u-mb-md">
+      {{ session('success') }}
+    </div>
+  @endif
+  @if (session()->has('error'))
+    <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-p-sm u-rounded u-mb-md">
+      {{ session('error') }}
+    </div>
+  @endif
+
   <div class="cmp-campaign-page">
     
     {{-- Tabella Post --}}
-    <x-panel title="Post in Programma" dot="var(--accent)">
+    <x-panel title="{{ $postFilter === 'archived' ? 'Post archiviati' : 'Post in programma' }}" dot="var(--accent)">
         <x-slot:headerActions>
-            <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate.hover class="btn btn-p btn-sm u-flex-center u-gap-xs">
-                <i data-lucide="plus" class="u-icon-sm"></i> Nuovo Post
-            </a>
+            <div class="u-flex u-flex-wrap u-gap-xs">
+              <button type="button" wire:click="$set('postFilter', 'active')" class="btn btn-sm {{ $postFilter === 'active' ? 'btn-p' : 'btn-sec' }}">
+                In elenco ({{ $totalPostsCount }})
+              </button>
+              <button type="button" wire:click="$set('postFilter', 'archived')" class="btn btn-sm {{ $postFilter === 'archived' ? 'btn-p' : 'btn-sec' }}">
+                Archiviati ({{ $archivedPostsCount }})
+              </button>
+              <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate.hover class="btn btn-p btn-sm u-flex-center u-gap-xs">
+                  <i data-lucide="plus" class="u-icon-sm"></i> Nuovo Post
+              </a>
+            </div>
         </x-slot:headerActions>
-        <table class="t-table">
+        <div class="table-responsive">
+        <table class="t-table u-w-full">
           <thead>
             <tr>
               <th>Data Pub.</th>
@@ -53,17 +73,17 @@
               <th>Preview</th>
               <th>Titolo</th>
               <th>Stato</th>
+              <th class="u-text-right">Azioni</th>
             </tr>
           </thead>
           <tbody>
             @forelse($posts as $post)
-              <tr class="relative hover:bg-gray-50 transition-colors group cursor-pointer" @click="Livewire.navigate('{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $post->id]) }}')">
-                <td class="font-mono">
-                    <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $post->id]) }}" wire:navigate.hover class="absolute inset-0 z-10" title="Apri post"></a>
+              <tr wire:key="campaign-post-{{ $post->id }}">
+                <td class="font-mono" data-label="Data Pub.">
                     {{ $post->scheduled_date ? $post->scheduled_date->format('d/m/Y') : 'Da def.' }}
                 </td>
-                <td><span class="cmp-post-type-badge">{{ $post->content_type->label() }}</span></td>
-                <td>
+                <td data-label="Tipo"><span class="cmp-post-type-badge">{{ $post->content_type->label() }}</span></td>
+                <td data-label="Preview">
                   @php
                       $previewUrl = $resolvedPostPreviews[$post->id] ?? null;
                   @endphp
@@ -78,16 +98,39 @@
                     <div class="cmp-post-thumb-empty"><i data-lucide="image" class="w-5 h-5"></i></div>
                   @endif
                 </td>
-                <td class="font-semibold">{{ $post->currentVersion?->title ?: ($post->title ?: 'Senza Titolo') }}</td>
-                <td><x-badge :status="$post->status->value" :label="$post->status->label()" /></td>
+                <td class="font-semibold" data-label="Titolo">
+                  <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $post->id]) }}" wire:navigate.hover class="u-text-accent u-no-underline">
+                    {{ $post->currentVersion?->title ?: ($post->title ?: 'Senza Titolo') }}
+                  </a>
+                </td>
+                <td data-label="Stato">
+                  @if($post->isArchived())
+                    <span class="badge bd">Archiviato</span>
+                  @else
+                    <x-badge :status="$post->status->value" :label="$post->status->label()" />
+                  @endif
+                </td>
+                <td class="u-text-right" data-label="Azioni">
+                  <div class="u-flex u-flex-wrap u-justify-end u-gap-xs">
+                    <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $post->id]) }}" wire:navigate class="btn btn-sec btn-xs">Dettagli</a>
+                    @if($post->isArchived())
+                      <button type="button" wire:click="restorePost({{ $post->id }})" wire:confirm="Ripristinare questo post nelle viste operative?" class="btn btn-p btn-xs">Ripristina</button>
+                    @elseif($post->canBeArchived())
+                      <button type="button" wire:click="archivePost({{ $post->id }})" wire:confirm="Il post verrà nascosto dalle viste operative, ma lo storico resterà conservato. Verifica prima che il contenuto non sia già visibile sul social: nessun contenuto remoto verrà eliminato. Procedere?" class="btn btn-red btn-xs">Archivia</button>
+                    @endif
+                  </div>
+                </td>
               </tr>
             @empty
               <tr>
-                <td colspan="5" class="text-center text-gray-500 py-8">Nessun post in programma.</td>
+                <td colspan="6" class="text-center text-gray-500 py-8">
+                  {{ $postFilter === 'archived' ? 'Nessun post archiviato.' : 'Nessun post in programma.' }}
+                </td>
               </tr>
             @endforelse
           </tbody>
         </table>
+        </div>
     </x-panel>
 
     <div class="cal-gshell" id="mkt-calendar-wrapper">

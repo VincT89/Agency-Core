@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Social\MarketingCampaigns;
 
+use App\Domain\Social\Actions\ArchiveMarketingCampaignPostAction;
+use App\Domain\Social\Actions\RestoreMarketingCampaignPostAction;
+use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\MarketingCampaign;
@@ -18,6 +21,7 @@ class MarketingCampaignShow extends Component
 
     public MarketingCampaign $campaign;
     public string $calendarDate;
+    public string $postFilter = 'active';
 
     private MarketingCampaignPostVersionMediaResolver $mediaResolver;
     private MarketingCampaignPostMediaUrlResolver $urlResolver;
@@ -87,6 +91,7 @@ class MarketingCampaignShow extends Component
     {
         $posts = $this->campaign->posts()
             ->with(['currentVersion', 'successfulPublications'])
+            ->notArchived()
             ->calendarEligible()
             ->where('status', '!=', \App\Enums\Social\MarketingCampaignPostStatus::Cancelled)
             ->get();
@@ -118,6 +123,7 @@ class MarketingCampaignShow extends Component
     {
         return $this->campaign->posts()
             ->with('successfulPublications')
+            ->notArchived()
             ->calendarEligible()
             ->where('status', '!=', \App\Enums\Social\MarketingCampaignPostStatus::Cancelled)
             ->get()
@@ -126,6 +132,34 @@ class MarketingCampaignShow extends Component
             ->unique()
             ->values()
             ->all();
+    }
+
+    public function archivePost(int $postId, ArchiveMarketingCampaignPostAction $action): void
+    {
+        $post = $this->campaign->posts()
+            ->with('publications')
+            ->findOrFail($postId);
+
+        $this->authorize('update', $post);
+
+        try {
+            $action->execute($post, auth()->user());
+            session()->flash('success', 'Post archiviato. È stato nascosto dalle viste operative, senza eliminare contenuti social o storico tecnico.');
+        } catch (MarketingCampaignPostArchiveException $exception) {
+            session()->flash('error', 'Il post non può essere archiviato perché è pubblicato, parzialmente pubblicato o ancora in elaborazione.');
+        }
+    }
+
+    public function restorePost(int $postId, RestoreMarketingCampaignPostAction $action): void
+    {
+        $post = $this->campaign->posts()
+            ->onlyArchived()
+            ->findOrFail($postId);
+
+        $this->authorize('update', $post);
+
+        $action->execute($post);
+        session()->flash('success', 'Post ripristinato nelle viste operative.');
     }
 
     // --- NUOVI METODI LIFECYCLE CAMPAGNA ---
@@ -376,8 +410,16 @@ class MarketingCampaignShow extends Component
     {
         $currentDate = \Carbon\Carbon::parse($this->calendarDate);
 
-        $allPosts = $this->campaign->posts()
-            ->with(['currentVersion', 'currentVersion.mediaItems', 'mediaItems'])
+        $allPostsQuery = $this->campaign->posts()
+            ->with(['currentVersion', 'currentVersion.mediaItems', 'mediaItems', 'publications']);
+
+        if ($this->postFilter === 'archived') {
+            $allPostsQuery->onlyArchived();
+        } else {
+            $allPostsQuery->notArchived();
+        }
+
+        $allPosts = $allPostsQuery
             ->orderByRaw('scheduled_date IS NULL')
             ->orderBy('scheduled_date', 'desc')
             ->orderBy('scheduled_time', 'desc')
@@ -425,7 +467,8 @@ class MarketingCampaignShow extends Component
         return view('livewire.social.marketing-campaigns.marketing-campaign-show', [
             'posts' => $allPosts,
             'resolvedPostPreviews' => $resolvedPostPreviews,
-            'totalPostsCount' => $this->campaign->posts()->count(),
+            'totalPostsCount' => $this->campaign->posts()->notArchived()->count(),
+            'archivedPostsCount' => $this->campaign->posts()->onlyArchived()->count(),
             'currentDate' => $currentDate,
             'days' => $days,
             'prevMonth' => $prevMonth,

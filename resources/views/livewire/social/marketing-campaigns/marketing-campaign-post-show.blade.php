@@ -58,7 +58,16 @@
         </x-slot:title>
         <x-slot:actions>
             <x-badge :status="$post->status->value" :label="$post->status->label()" />
-            @if($this->canDeletePost)
+            @if($post->isArchived())
+                <span class="badge bd">Archiviato</span>
+                <button type="button" wire:click="restorePost" wire:confirm="Ripristinare questo post nelle viste operative?" class="btn btn-p btn-sm">
+                    Ripristina
+                </button>
+            @elseif($this->canArchivePost)
+                <button type="button" wire:click="archivePost" wire:confirm="Il post verrà nascosto dalle viste operative, ma lo storico resterà conservato. Verifica prima che il contenuto non sia già visibile sul social: nessun contenuto remoto verrà eliminato. Procedere?" class="btn btn-d btn-sm">
+                    Archivia
+                </button>
+            @elseif($this->canDeletePost)
                 <x-delete-modal wireClick="deletePost" title="Elimina Post"
                     message="Sei sicuro di voler eliminare questo post?">
                     <button type="button" class="btn btn-d btn-sm u-inline-flex-center u-gap-xs">
@@ -80,6 +89,18 @@
     @error('post')
         <div class="u-alert-error u-mb-md">{{ $message }}</div>
     @enderror
+
+    @if (session()->has('success'))
+        <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-p-sm u-rounded u-mb-md">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($post->isArchived())
+        <div class="u-bg-blue-50 u-border u-border-blue-200 u-text-blue-700 u-p-sm u-rounded u-mb-md">
+            Questo post è archiviato nel gestionale. Resta consultabile, ma non può essere pubblicato o riprovato finché non viene ripristinato.
+        </div>
+    @endif
 
     <div class="cmp-post-detail-layout relative"
          x-data="{
@@ -988,11 +1009,14 @@
                                         && $commercialSelectionComplete
                                         && (!$brandContent || $brandVisibilityAllowed)
                                         && $hasDirectConsent;
-                                    $canStartPublication = $canPublish
+                                    $canStartPublication = !$post->isArchived()
+                                        && $canPublish
                                         && (!$isTikTokDirect || $directOptionsReady);
-                                    $canRetryPublication = $canPublish
+                                    $canRetryPublication = !$post->isArchived()
+                                        && $canPublish
                                         && (!$isDirectRetry || $hasDirectConsent);
-                                    $showTikTokDirectEditor = $isTikTokDirect
+                                    $showTikTokDirectEditor = !$post->isArchived()
+                                        && $isTikTokDirect
                                         && (!$publication || $publication->status === \App\Enums\Social\PublicationStatus::Failed);
                                     $retryUsesBrandedContent = $isDirectRetry
                                         && (bool) data_get($publication?->payload_snapshot, 'platform_options.brand_content_toggle', false);

@@ -21,6 +21,7 @@ class MarketingCampaignPostObserver
             'content_type',
             'publishing_platforms',
             'published_at',
+            'archived_at',
             'nextcloud_path',
             'nextcloud_share_url',
             'nextcloud_file_id'

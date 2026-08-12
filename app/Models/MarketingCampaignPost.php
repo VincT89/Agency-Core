@@ -25,6 +25,7 @@ class MarketingCampaignPost extends Model
     protected $casts = [
         'scheduled_date' => 'date',
         'published_at' => 'datetime',
+        'archived_at' => 'datetime',
         'ai_analysis_enabled' => 'boolean',
         'submitted_to_n8n_at' => 'datetime',
         'approved_payload_snapshot' => 'array',
@@ -56,6 +57,11 @@ class MarketingCampaignPost extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function archivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'archived_by');
     }
 
     public function versions(): HasMany
@@ -189,6 +195,55 @@ class MarketingCampaignPost extends Model
         return $this->publications()
             ->where('status', PublicationStatus::Published->value)
             ->whereNotNull('published_at');
+    }
+
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return $query->whereNull('archived_at');
+    }
+
+    public function scopeOnlyArchived(Builder $query): Builder
+    {
+        return $query->whereNotNull('archived_at');
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    public function canBeArchived(): bool
+    {
+        if ($this->isArchived() || ! in_array($this->status, [
+            MarketingCampaignPostStatus::Failed,
+            MarketingCampaignPostStatus::NeedsManualReview,
+            MarketingCampaignPostStatus::Cancelled,
+        ], true)) {
+            return false;
+        }
+
+        $blockingStatuses = [
+            PublicationStatus::Pending,
+            PublicationStatus::Publishing,
+            PublicationStatus::Published,
+        ];
+
+        if ($this->relationLoaded('publications')) {
+            return ! $this->publications->contains(
+                fn (MarketingCampaignPostPublication $publication) => in_array(
+                    $publication->status,
+                    $blockingStatuses,
+                    true
+                )
+            );
+        }
+
+        return ! $this->publications()
+            ->whereIn('status', array_map(
+                fn (PublicationStatus $status) => $status->value,
+                $blockingStatuses
+            ))
+            ->exists();
     }
 
     public function scopeCalendarEligible(Builder $query): Builder

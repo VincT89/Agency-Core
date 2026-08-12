@@ -1,7 +1,7 @@
 <div>
     <x-page-header eyebrow="Amministrazione Social">
         <x-slot:title><strong>Coda Social</strong> Pubblicazioni</x-slot:title>
-        <div class="u-text-sm u-text-muted u-mt-xs">Monitora tutte le pubblicazioni, incluse quelle in corso e completate.
+        <div class="u-text-sm u-text-muted u-mt-xs">Monitora le pubblicazioni operative. I post archiviati localmente restano consultabili nel filtro dedicato.
         </div>
     </x-page-header>
 
@@ -22,12 +22,14 @@
     @endif
 
     <div class="social-operation-filters" role="group" aria-label="Filtra le pubblicazioni social">
-        <button type="button" wire:click="$set('filter', 'all')" aria-pressed="{{ $filter === 'all' ? 'true' : 'false' }}" class="btn {{ $filter === 'all' ? 'btn-p' : 'btn-sec' }}">Tutti</button>
+        <button type="button" wire:click="$set('filter', 'all')" aria-pressed="{{ $filter === 'all' ? 'true' : 'false' }}" class="btn {{ $filter === 'all' ? 'btn-p' : 'btn-sec' }}">Operative</button>
         <button type="button" wire:click="$set('filter', 'active')" aria-pressed="{{ $filter === 'active' ? 'true' : 'false' }}" class="btn {{ $filter === 'active' ? 'btn-blue' : 'btn-sec' }}">In corso</button>
         <button type="button" wire:click="$set('filter', 'published')" aria-pressed="{{ $filter === 'published' ? 'true' : 'false' }}" class="btn {{ $filter === 'published' ? 'btn-p' : 'btn-sec' }}">Pubblicate</button>
         <button type="button" wire:click="$set('filter', 'needs_manual_review')" aria-pressed="{{ $filter === 'needs_manual_review' ? 'true' : 'false' }}" class="btn {{ $filter === 'needs_manual_review' ? 'btn-orange' : 'btn-sec' }}">Da revisionare</button>
         <button type="button" wire:click="$set('filter', 'failed')" aria-pressed="{{ $filter === 'failed' ? 'true' : 'false' }}" class="btn {{ $filter === 'failed' ? 'btn-red' : 'btn-sec' }}">Fallite</button>
         <button type="button" wire:click="$set('filter', 'stale_publishing')" aria-pressed="{{ $filter === 'stale_publishing' ? 'true' : 'false' }}" class="btn {{ $filter === 'stale_publishing' ? 'btn-blue' : 'btn-sec' }}">Bloccate</button>
+        <button type="button" wire:click="$set('filter', 'attempt_history')" aria-pressed="{{ $filter === 'attempt_history' ? 'true' : 'false' }}" class="btn {{ $filter === 'attempt_history' ? 'btn-p' : 'btn-sec' }}">Storico tentativi</button>
+        <button type="button" wire:click="$set('filter', 'archived')" aria-pressed="{{ $filter === 'archived' ? 'true' : 'false' }}" class="btn {{ $filter === 'archived' ? 'btn-p' : 'btn-sec' }}">Archiviate</button>
     </div>
 
     <div class="panel social-operations-panel">
@@ -110,21 +112,21 @@
                                             <i class="fas fa-sync-alt"></i> Aggiorna stato
                                         </button>
                                     @endif
-                                    @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
+                                    @if(!$pub->post?->isArchived() && in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Instagram)
                                         <button 
                                             wire:confirm="Verrà creato un nuovo tentativo. Prima di continuare, verifica che il contenuto non sia già visibile su Instagram per evitare duplicati."
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
                                             Riprova su Instagram
                                         </button>
-                                    @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Tiktok)
+                                    @elseif(!$pub->post?->isArchived() && in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true) && $pub->platform === \App\Enums\Social\SocialPlatform::Tiktok)
                                         <button 
                                             wire:confirm="Verrà creato un nuovo tentativo di pubblicazione e il precedente sarà archiviato come superato. Procedere?"
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
                                             Riprova TikTok
                                         </button>
-                                    @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true))
+                                    @elseif(!$pub->post?->isArchived() && in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true))
                                         <button 
                                             wire:click="retryPublication({{ $pub->id }})" 
                                             class="btn btn-p btn-xs">
@@ -132,7 +134,25 @@
                                         </button>
                                     @endif
 
-                                    @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Pending, \App\Enums\Social\PublicationStatus::Publishing], true))
+                                    @if($pub->post?->isArchived())
+                                        <button
+                                            type="button"
+                                            wire:confirm="Ripristinare il post e tutti i suoi tentativi nelle viste operative?"
+                                            wire:click="restorePost({{ $pub->id }})"
+                                            class="btn btn-p btn-xs">
+                                            Ripristina post
+                                        </button>
+                                    @elseif($pub->post?->canBeArchived())
+                                        <button
+                                            type="button"
+                                            wire:confirm="Il post e i tentativi collegati verranno nascosti dalle viste operative. Lo storico resterà conservato e nessun contenuto remoto verrà eliminato. Verifica prima che il contenuto non sia già visibile sul social. Procedere?"
+                                            wire:click="archivePost({{ $pub->id }})"
+                                            class="btn btn-red btn-xs">
+                                            Archivia post
+                                        </button>
+                                    @endif
+
+                                    @if(!$pub->post?->isArchived() && in_array($pub->status, [\App\Enums\Social\PublicationStatus::Pending, \App\Enums\Social\PublicationStatus::Publishing], true))
                                     <button 
                                         wire:confirm="Sei sicuro di voler forzare il fallimento definitivo di questa pubblicazione?"
                                         wire:click="forceFailPublication({{ $pub->id }})" 

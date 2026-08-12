@@ -6,6 +6,7 @@ use App\Domain\Social\Actions\RequestMarketingCampaignPostRegenerationAction;
 use App\Domain\Social\Actions\SubmitMarketingCampaignPostToN8nAction;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\MarketingCampaignPostType;
+use App\Enums\Social\PublicationStatus;
 use App\Enums\Social\SocialAccessStatus;
 use App\Enums\Social\SocialApiStatus;
 use App\Enums\Social\SocialPlatform;
@@ -729,6 +730,40 @@ class MarketingCampaignPostShowTest extends TestCase
             ->assertSee('TikTok ha raggiunto il limite di utenti attivi consentiti per questa app.')
             ->assertSee('Codice TikTok: reached_active_user_cap.')
             ->assertSee('Riferimento TikTok: safe-log-reference-123.');
+    }
+
+    public function test_tiktok_manual_review_shows_safe_saved_diagnostic(): void
+    {
+        [$user, $campaign, $post, $account] = $this->directTikTokPostFixture();
+        $this->actingAs($user);
+
+        MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'marketing_campaign_post_version_id' => $post->current_version_id,
+            'client_social_account_id' => $account->id,
+            'platform' => SocialPlatform::Tiktok,
+            'status' => PublicationStatus::NeedsManualReview,
+            'external_task_id' => 'hidden-publish-id',
+            'error_message' => 'Timeout polling TikTok: errore temporaneo. refresh_token=hidden-secret',
+            'provider_last_response' => [
+                'status' => 'transport_error',
+                'http_status' => 503,
+                'request_id' => 'safe-detail-reference-456',
+            ],
+        ]);
+
+        Livewire::test(MarketingCampaignPostShow::class, [
+            'campaign' => $campaign,
+            'post' => $post,
+        ])
+            ->assertSee('Timeout polling TikTok: errore temporaneo. refresh_token=[REDACTED]', false)
+            ->assertSee('Accettata da TikTok')
+            ->assertSee('Errore di collegamento durante il controllo')
+            ->assertSee('transport_error')
+            ->assertSee('safe-detail-reference-456')
+            ->assertSee('un nuovo invio potrebbe creare un duplicato')
+            ->assertDontSee('hidden-publish-id')
+            ->assertDontSee('hidden-secret');
     }
 
     public function test_tiktok_direct_post_requires_explicit_privacy_and_consent(): void

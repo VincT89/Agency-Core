@@ -78,7 +78,10 @@
                                 @elseif(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Pending, \App\Enums\Social\PublicationStatus::Publishing], true))
                                     <div class="u-text-sm u-text-blue">Elaborazione in corso.</div>
                                 @elseif($pub->error_message || in_array($pub->status, [\App\Enums\Social\PublicationStatus::Failed, \App\Enums\Social\PublicationStatus::NeedsManualReview], true))
-                                    <div class="u-text-sm u-text-red">Pubblicazione non completata. Controlla l'account collegato o riprova.</div>
+                                    @include('components.social.publication-diagnostic', [
+                                        'publication' => $pub,
+                                        'panel' => false,
+                                    ])
                                 @else
                                     <div class="u-text-sm u-text-muted">Nessun problema rilevato.</div>
                                 @endif

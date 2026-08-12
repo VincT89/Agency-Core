@@ -201,7 +201,7 @@ class SocialOperationsDashboardTest extends TestCase
         $this->assertEquals(PublicationStatus::Superseded->value, $publication->refresh()->status->value);
     }
 
-    public function test_tiktok_provider_reference_is_not_exposed_in_the_interface(): void
+    public function test_tiktok_diagnostic_is_visible_without_exposing_publish_id_or_secrets(): void
     {
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::create([
@@ -223,14 +223,33 @@ class SocialOperationsDashboardTest extends TestCase
             'marketing_campaign_post_id' => $post->id,
             'client_social_account_id' => $socialAccount->id,
             'platform' => 'tiktok',
-            'status' => PublicationStatus::Failed->value,
+            'status' => PublicationStatus::NeedsManualReview->value,
             'external_task_id' => 'publish-task-123',
             'correlation_id' => 'tiktok-correlation',
+            'error_message' => 'TikTok Fetch Status fallito: token scaduto. access_token=secret-token',
+            'provider_last_response' => [
+                'status' => 'API_ERROR',
+                'http_status' => 401,
+                'request_id' => 'safe-request-reference-123',
+                'response_data' => [
+                    'error' => [
+                        'code' => 'access_token_invalid',
+                        'message' => 'Expired',
+                    ],
+                    'access_token' => 'secret-token',
+                ],
+            ],
         ]);
 
         Livewire::actingAs($this->user)
             ->test(SocialOperationsDashboard::class)
-            ->assertSee('Pubblicazione non completata. Controlla l\'account collegato o riprova.', false)
-            ->assertDontSee('publish-task-123');
+            ->assertSee('TikTok Fetch Status fallito: token scaduto. access_token=[REDACTED]', false)
+            ->assertSee('Accettata da TikTok')
+            ->assertSee('Errore API durante il controllo')
+            ->assertSee('API_ERROR')
+            ->assertSee('access_token_invalid')
+            ->assertSee('safe-request-reference-123')
+            ->assertDontSee('publish-task-123')
+            ->assertDontSee('secret-token');
     }
 }

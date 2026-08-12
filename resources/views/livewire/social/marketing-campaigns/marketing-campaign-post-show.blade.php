@@ -1230,6 +1230,16 @@
                                         </div>
                                     @endif
                                     
+                                    @if($publication && in_array($publication->status, [
+                                        \App\Enums\Social\PublicationStatus::Failed,
+                                        \App\Enums\Social\PublicationStatus::NeedsManualReview,
+                                    ], true))
+                                        @include('components.social.publication-diagnostic', [
+                                            'publication' => $publication,
+                                            'panel' => true,
+                                        ])
+                                    @endif
+
                                     @if($publication)
                                         @if($publication->status === \App\Enums\Social\PublicationStatus::Published)
                                             <div class="u-bg-green-50 u-border u-border-green-200 u-text-green-700 u-rounded u-p-sm u-text-meta">
@@ -1246,9 +1256,6 @@
                                                 {{ $isTikTokDirect ? 'TikTok sta elaborando il Direct Post.' : 'Pubblicazione in corso.' }} Lo stato si aggiornerà automaticamente.
                                             </div>
                                         @elseif($publication->status === \App\Enums\Social\PublicationStatus::Failed)
-                                            <div class="u-bg-red-50 u-border u-border-red-200 u-text-red-700 u-rounded u-p-sm u-text-meta u-mb-sm">
-                                                <strong>Pubblicazione non completata</strong>
-                                            </div>
                                             <div class="cmp-social-publication-actions">
                                                 <button type="button" wire:confirm="Vuoi riprovare lo stesso invio? Verifica prima che il tentativo precedente non sia già visibile sul social." wire:click="retryPublication({{ $publication->id }})" class="btn btn-p btn-sm u-flex-grow" {{ !$canRetryPublication ? 'disabled' : '' }}>Riprova stesso invio</button>
                                                 <button type="button" wire:click="publishToSocial('{{ $platform }}')" class="btn btn-sec btn-sm u-flex-grow" {{ !$canStartPublication ? 'disabled' : '' }}>Crea nuovo tentativo</button>

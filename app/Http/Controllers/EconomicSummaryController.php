@@ -15,8 +15,13 @@ class EconomicSummaryController extends Controller
         // Blocca l'accesso ai profili operativi non autorizzati all'area finance
         abort_if(! $user->canAccessFinance(), 403);
 
-        $from = $request->string('from')->toString() ?: null;
-        $to = $request->string('to')->toString() ?: null;
+        $filters = $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
+        $from = $filters['from'] ?? null;
+        $to = $filters['to'] ?? null;
 
         $globalSummary = $economicSummaryService->globalSummary($user, $from, $to);
         $summaryByClient = $economicSummaryService->summaryByClient($user, $from, $to);

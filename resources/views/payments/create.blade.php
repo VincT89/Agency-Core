@@ -14,19 +14,19 @@
             @csrf
             
             <div class="form-row">
-                <x-form-group label="Data Pagamento" name="payment_date" required>
+                <x-form-group label="Data pagamento" name="payment_date" required>
                     <input type="date" name="payment_date" class="form-in @error('payment_date') is-invalid @enderror"
-                           value="{{ old('payment_date', now()->toDateString()) }}">
+                           value="{{ old('payment_date', now()->toDateString()) }}" required>
                 </x-form-group>
-                <x-form-group label="Importo" name="amount" required>
-                    <input type="number" step="0.01" name="amount" class="form-in @error('amount') is-invalid @enderror"
-                           value="{{ old('amount') }}" placeholder="Es. 1500.00">
+                <x-form-group label="Importo (€)" name="amount" required>
+                    <input type="number" min="0.01" step="0.01" name="amount" class="form-in @error('amount') is-invalid @enderror"
+                           value="{{ old('amount') }}" placeholder="Es. 1500,00" required>
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Metodo" name="method" required>
-                    <select name="method" class="form-sel @error('method') is-invalid @enderror">
+                    <select name="method" class="form-sel @error('method') is-invalid @enderror" required>
                         @foreach($methods as $m)
                             <option value="{{ $m }}" {{ old('method', 'bank_transfer') == $m ? 'selected' : '' }}>{{ (new \App\Models\Payment(['method' => $m]))->method_label }}</option>
                         @endforeach
@@ -39,9 +39,9 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Fattura di Riferimento" name="invoice_id" required>
+                <x-form-group label="Fattura di riferimento" name="invoice_id" required>
                     <select name="invoice_id" id="invoice_select"
-                            class="form-sel @error('invoice_id') is-invalid @enderror">
+                            class="form-sel @error('invoice_id') is-invalid @enderror" required @disabled($invoices->isEmpty())>
                         <option value="">Seleziona fattura...</option>
                         @foreach($invoices as $invoice)
                             <option value="{{ $invoice->id }}"
@@ -51,8 +51,11 @@
                             </option>
                         @endforeach
                     </select>
+                    @if($invoices->isEmpty())
+                        <div class="u-alert-info u-mt-sm" role="status">Non ci sono fatture con un importo residuo da incassare.</div>
+                    @endif
                 </x-form-group>
-                <div class="u-pt-28">
+                <div class="u-pt-28 payment-info-column">
                     <div class="u-info-box">
                         <span class="u-text-strong">Info:</span> Il Cliente e il Progetto verranno automaticamente derivati dalla fattura selezionata.
                     </div>
@@ -72,7 +75,7 @@
 
             <div class="modal-ft u-section-sep">
                 <a href="{{ route('payments.index') }}" class="btn btn-g">Annulla</a>
-                <button type="submit" class="btn btn-p">Salva Pagamento</button>
+                <button type="submit" class="btn btn-p" @disabled($invoices->isEmpty())>Salva pagamento</button>
             </div>
         </form>
     </x-panel>

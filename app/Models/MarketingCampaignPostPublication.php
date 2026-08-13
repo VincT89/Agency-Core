@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MarketingCampaignPostPublication extends Model
@@ -79,7 +80,111 @@ class MarketingCampaignPostPublication extends Model
         return $this->belongsTo(self::class, 'retry_of_publication_id');
     }
 
-    protected static function booted()
+    protected function resolvedExternalPermalink(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            $storedUrl = $this->safeExternalUrl($this->external_permalink);
+            if ($storedUrl) {
+                return $storedUrl;
+            }
+
+            foreach ([$this->provider_last_response, $this->response_snapshot] as $payload) {
+                $providerUrl = $this->findProviderUrl($payload);
+                if ($providerUrl) {
+                    return $providerUrl;
+                }
+            }
+
+            $postId = trim((string) $this->external_post_id);
+            if ($postId === '') {
+                $postId = (string) ($this->findProviderValue(
+                    [$this->provider_last_response, $this->response_snapshot],
+                    ['publicaly_available_post_id', 'publicly_available_post_id']
+                ) ?? '');
+            }
+
+            if ($postId === '') {
+                return null;
+            }
+
+            if ($this->platform === \App\Enums\Social\SocialPlatform::Facebook) {
+                if (str_contains($postId, '_')) {
+                    [$pageId, $storyId] = explode('_', $postId, 2);
+
+                    return 'https://www.facebook.com/'.rawurlencode($pageId).'/posts/'.rawurlencode($storyId);
+                }
+
+                return 'https://www.facebook.com/'.rawurlencode($postId);
+            }
+
+            if ($this->platform === \App\Enums\Social\SocialPlatform::Tiktok) {
+                $username = ltrim(trim((string) ($this->socialAccount?->username ?? '')), '@');
+
+                return $username !== ''
+                    ? 'https://www.tiktok.com/@'.rawurlencode($username).'/video/'.rawurlencode($postId)
+                    : null;
+            }
+
+            return null;
+        });
+    }
+
+    private function findProviderUrl(mixed $payload): ?string
+    {
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        foreach ($payload as $key => $value) {
+            if (in_array($key, ['permalink', 'permalink_url', 'share_url'], true)) {
+                $url = $this->safeExternalUrl($value);
+                if ($url) {
+                    return $url;
+                }
+            }
+
+            if (is_array($value) && ($nested = $this->findProviderUrl($value))) {
+                return $nested;
+            }
+        }
+
+        return null;
+    }
+
+    private function findProviderValue(mixed $payload, array $keys): mixed
+    {
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        foreach ($payload as $key => $value) {
+            if (in_array($key, $keys, true)) {
+                return is_array($value) ? ($value[0] ?? null) : $value;
+            }
+
+            if (is_array($value)) {
+                $nested = $this->findProviderValue($value, $keys);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function safeExternalUrl(mixed $value): ?string
+    {
+        if (! is_string($value) || ! filter_var($value, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        return in_array(parse_url($value, PHP_URL_SCHEME), ['http', 'https'], true)
+            ? $value
+            : null;
+    }
+
+    protected static function booted(): void
     {
         static::updating(function ($publication) {
             $immutableFields = [

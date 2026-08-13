@@ -19,9 +19,16 @@
                 Ecco la nuova password per <strong>{{ session('temp_password')['user'] }}</strong>.
             </div>
             <span class="u-text-sm u-text-muted">Mostra questa password all'utente. Non verrà mostrata di nuovo.</span>
-            <br>
-            <div class="new-password-display">
-                {{ session('temp_password')['password'] }}
+            <div
+                class="secret-reveal"
+                data-secret-reveal
+                data-secret="{{ session('temp_password')['password'] }}"
+                data-visible="false"
+            >
+                <span class="secret-reveal-value" data-secret-value aria-label="Password temporanea nascosta">••••••••</span>
+                <button type="button" class="btn btn-g btn-sm" data-secret-toggle aria-pressed="false" aria-label="Mostra password temporanea">Mostra</button>
+                <button type="button" class="btn btn-g btn-sm" data-secret-copy aria-label="Copia password temporanea">Copia</button>
+                <span class="sr-only" data-secret-status role="status" aria-live="polite">Password temporanea nascosta.</span>
             </div>
         </div>
     @endif

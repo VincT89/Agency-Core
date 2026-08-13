@@ -273,6 +273,28 @@
     .cal-gshell {
         grid-template-columns: 1fr;
         height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .cal-gmain {
+        height: auto;
+        min-height: 620px;
+        overflow: visible;
+    }
+
+    .cal-wrapper-modern,
+    .cal-full-height,
+    #fullcalendar {
+        min-height: 560px;
+    }
+
+    .cal-wrapper-modern {
+        overflow-x: auto;
+    }
+
+    .fc .fc-view-harness {
+        min-height: 480px;
     }
 }
 
@@ -353,6 +375,10 @@
     border-radius: 50%;
     font-weight: 500;
     position: relative;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
 }
 
 .cal-mini-day:hover {

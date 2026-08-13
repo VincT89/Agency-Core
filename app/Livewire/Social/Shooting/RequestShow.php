@@ -99,7 +99,12 @@ class RequestShow extends Component
     {
         $this->authorize('revise', $this->shoot);
         $this->validate([
-            'revisionPhotographerId' => 'required|exists:users,id',
+            'revisionPhotographerId' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'photographer')
+                    ->where('status', 'active')),
+            ],
             'revisionSlots' => 'required|array|min:1',
             'revisionSlots.*.date' => 'required|date|after_or_equal:today',
             'revisionSlots.*.period' => 'required|in:morning,intermediate,afternoon,full_day',
@@ -123,6 +128,7 @@ class RequestShow extends Component
             'communication' => $communication->for($this->shoot),
             'clientChannels' => ShootClientContactChannel::cases(),
             'photographers' => User::where('role', 'photographer')
+                ->where('status', 'active')
                 ->orderBy('name')
                 ->get(),
         ])->layout('layouts.app', ['title' => 'Dettaglio Shooting']);

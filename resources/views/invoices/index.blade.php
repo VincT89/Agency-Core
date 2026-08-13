@@ -75,9 +75,11 @@
             @if($currentFiscalStatus)
                 <input type="hidden" name="fiscal_status" value="{{ $currentFiscalStatus }}">
             @endif
-            <input type="text" name="search" value="{{ request('search') }}"
+            <label for="invoices-search" class="sr-only">Cerca fatture</label>
+            <input id="invoices-search" type="search" name="search" value="{{ request('search') }}"
                    placeholder="Riferimento, numero fiscale o cliente"
                    class="form-in form-in-sm filter-search">
+            <button type="submit" class="btn btn-p btn-sm">Cerca</button>
             @if(request('search') || $currentStatus || $currentFiscalStatus)
                 <a href="{{ route('invoices.index') }}" class="btn btn-g btn-sm">Azzera filtri</a>
             @endif
@@ -103,6 +105,9 @@
                 @forelse($invoices as $invoice)
                     <tr x-data
                         @click="window.Livewire.navigate('{{ route('invoices.show', $invoice) }}')"
+                        @keydown.enter.self.prevent="window.Livewire.navigate('{{ route('invoices.show', $invoice) }}')"
+                        @keydown.space.self.prevent="window.Livewire.navigate('{{ route('invoices.show', $invoice) }}')"
+                        tabindex="0" role="link" aria-label="Apri fattura {{ $invoice->number }}"
                         class="u-cursor-pointer hover-bg">
                         <td class="name-col">{{ $invoice->number }}</td>
                         <td class="mono-col">{{ $invoice->fiscal_number ?? 'Non assegnato' }}</td>

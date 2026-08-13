@@ -100,7 +100,7 @@
                     <textarea wire:model="commentBody" rows="3" class="form-ta" placeholder="Es: Cambiamo il colore dello sfondo, accorciamo il testo..."></textarea>
                     @error('commentBody') <span class="form-err">{{ $message }}</span> @enderror
                     
-                    <button wire:click="requestChanges" wire:loading.attr="disabled" class="btn btn-g cr-btn">
+                    <button type="button" wire:click="requestChanges" wire:loading.attr="disabled" class="btn btn-g cr-btn">
                         <span wire:loading.remove wire:target="requestChanges">Invia Richiesta di Modifica</span>
                         <span wire:loading wire:target="requestChanges">Invio in corso...</span>
                     </button>
@@ -110,7 +110,7 @@
                     <h3>Approva Post</h3>
                     <p>Se il contenuto è pronto e perfetto, clicca il pulsante qui sotto per approvarlo definitivamente.</p>
                     
-                    <button wire:click="approve" wire:loading.attr="disabled" class="btn btn-p cr-btn cr-btn-approve">
+                    <button type="button" wire:click="approve" wire:loading.attr="disabled" class="btn btn-p cr-btn cr-btn-approve">
                         <span wire:loading.remove wire:target="approve" class="cr-btn-approve-inner">
                             <i data-lucide="check" class="cr-icon-sm"></i> Approva Definitivamente
                         </span>

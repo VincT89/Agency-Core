@@ -159,4 +159,16 @@ class EconomicSummaryTest extends TestCase
         $responseFeb->assertSee('500,00'); // Incasso
         $responseFeb->assertSee('0,00');   // Fatturato
     }
+
+    public function test_invalid_date_range_is_rejected_with_clear_feedback(): void
+    {
+        $this->actingAs($this->admin)
+            ->from(route('economic-summary.index'))
+            ->get(route('economic-summary.index', [
+                'from' => '2026-08-13',
+                'to' => '2026-08-12',
+            ]))
+            ->assertRedirect(route('economic-summary.index'))
+            ->assertSessionHasErrors('to');
+    }
 }

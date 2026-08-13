@@ -48,6 +48,7 @@ class ExpenseShow extends Component
 
     public function render()
     {
-        return view('livewire.expenses.expense-show')->layout('layouts.app');
+        return view('livewire.expenses.expense-show')
+            ->layout('layouts.app', ['title' => 'Spesa: '.$this->expense->title]);
     }
 }

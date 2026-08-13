@@ -194,4 +194,21 @@ class AuditLogTest extends TestCase
             ->assertOk()
             ->assertDontSeeText('Registro attività');
     }
+
+    public function test_audit_log_rejects_an_inverted_date_range(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin,
+            'password_changed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('audit-logs.index'))
+            ->get(route('audit-logs.index', [
+                'date_from' => '2026-08-13',
+                'date_to' => '2026-08-12',
+            ]))
+            ->assertRedirect(route('audit-logs.index'))
+            ->assertSessionHasErrors('date_to');
+    }
 }

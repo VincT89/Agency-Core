@@ -14,7 +14,10 @@
 
     <div class="filter-bar justify-end">
         <form method="GET" action="{{ route('clients.index') }}" class="u-flex u-gap-sm">
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca cliente (nome, email, p.iva)..." class="form-in form-in-sm u-w-250">
+            <label for="clients-search" class="sr-only">Cerca clienti</label>
+            <input id="clients-search" type="search" name="search" value="{{ request('search') }}"
+                   placeholder="Nome, email o partita IVA" class="form-in form-in-sm u-w-250">
+            <button type="submit" class="btn btn-p btn-sm">Cerca</button>
             @if(request('search'))
                 <a href="{{ route('clients.index') }}" class="btn btn-g btn-sm">Reset</a>
             @endif
@@ -35,7 +38,11 @@
             </thead>
             <tbody>
                 @forelse($clients as $client)
-                <tr x-data @click="window.Livewire.navigate('{{ route('clients.show', $client) }}')" class="u-cursor-pointer hover-bg">
+                <tr x-data @click="window.Livewire.navigate('{{ route('clients.show', $client) }}')"
+                    @keydown.enter.self.prevent="window.Livewire.navigate('{{ route('clients.show', $client) }}')"
+                    @keydown.space.self.prevent="window.Livewire.navigate('{{ route('clients.show', $client) }}')"
+                    tabindex="0" role="link" aria-label="Apri cliente {{ $client->name }}"
+                    class="u-cursor-pointer hover-bg">
                     <td class="name-col">{{ $client->name }}</td>
                     <td class="mono-col">{{ $client->projects_count }}</td>
                     <td class="mono-col">{{ $client->tickets_count }}</td>

@@ -16,19 +16,19 @@
             <div class="form-row">
                 <x-form-group label="Nome Completo" name="name" required>
                     <input name="name" class="form-in @error('name') is-invalid @enderror"
-                           value="{{ old('name') }}" placeholder="Es. Mario Rossi">
+                           value="{{ old('name') }}" placeholder="Es. Mario Rossi" required autocomplete="name">
                 </x-form-group>
                 <x-form-group label="Email" name="email" required>
                     <input type="email" name="email" class="form-in @error('email') is-invalid @enderror"
-                           value="{{ old('email') }}" placeholder="mario.rossi@sodanoconsulting.it">
+                           value="{{ old('email') }}" placeholder="mario.rossi@sodanoconsulting.it" required autocomplete="email">
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Ruolo" name="role" required>
-                    <select name="role" class="form-sel @error('role') is-invalid @enderror">
+                    <select name="role" class="form-sel @error('role') is-invalid @enderror" required>
                         @foreach($roles as $role)
-                            <option value="{{ $role->value }}" {{ old('role', 'developer') == $role->value ? 'selected' : '' }}>{{ ucfirst($role->value) }}</option>
+                            <option value="{{ $role->value }}" {{ old('role', 'developer') == $role->value ? 'selected' : '' }}>{{ $role->label() }}</option>
                         @endforeach
                     </select>
                 </x-form-group>
@@ -46,11 +46,11 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Password Temporanea" name="password" required>
-                    <input type="password" name="password" class="form-in @error('password') is-invalid @enderror" required>
+                <x-form-group label="Password temporanea" name="password" required>
+                    <x-password-input id="password" name="password" :class="$errors->has('password') ? 'is-invalid' : ''" required autocomplete="new-password" />
                 </x-form-group>
-                <x-form-group label="Conferma Password Temporanea" name="password_confirmation" required>
-                    <input type="password" name="password_confirmation" class="form-in" required>
+                <x-form-group label="Conferma password temporanea" name="password_confirmation" required>
+                    <x-password-input id="password_confirmation" name="password_confirmation" required autocomplete="new-password" />
                 </x-form-group>
             </div>
 

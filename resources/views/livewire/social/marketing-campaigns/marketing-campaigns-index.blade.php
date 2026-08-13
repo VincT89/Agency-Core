@@ -21,7 +21,7 @@
           @endforeach
         </select>
         @if($search || $clientId || $status)
-            <button wire:click="$set('search', ''); $set('clientId', ''); $set('status', '')" class="btn btn-g mkt-reset-btn">Reset</button>
+            <button type="button" wire:click="$set('search', ''); $set('clientId', ''); $set('status', '')" class="btn btn-g mkt-reset-btn">Azzera filtri</button>
         @endif
     </div>
 

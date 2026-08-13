@@ -3,8 +3,8 @@
     @method('put')
 
     <div class="form-row full">
-        <x-form-group label="Password Attuale" name="current_password" required>
-            <input id="update_password_current_password" name="current_password" type="password" class="form-in @error('current_password', 'updatePassword') is-invalid @enderror" autocomplete="current-password" />
+        <x-form-group label="Password attuale" name="current_password" required>
+            <x-password-input id="update_password_current_password" name="current_password" :class="$errors->getBag('updatePassword')->has('current_password') ? 'is-invalid' : ''" required autocomplete="current-password" />
             @error('current_password', 'updatePassword')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -12,8 +12,8 @@
     </div>
 
     <div class="form-row full">
-        <x-form-group label="Nuova Password" name="password" required>
-            <input id="update_password_password" name="password" type="password" class="form-in @error('password', 'updatePassword') is-invalid @enderror" autocomplete="new-password" />
+        <x-form-group label="Nuova password" name="password" required>
+            <x-password-input id="update_password_password" name="password" :class="$errors->getBag('updatePassword')->has('password') ? 'is-invalid' : ''" required autocomplete="new-password" />
             @error('password', 'updatePassword')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -21,8 +21,8 @@
     </div>
 
     <div class="form-row full">
-        <x-form-group label="Conferma Password" name="password_confirmation" required>
-            <input id="update_password_password_confirmation" name="password_confirmation" type="password" class="form-in @error('password_confirmation', 'updatePassword') is-invalid @enderror" autocomplete="new-password" />
+        <x-form-group label="Conferma password" name="password_confirmation" required>
+            <x-password-input id="update_password_password_confirmation" name="password_confirmation" :class="$errors->getBag('updatePassword')->has('password_confirmation') ? 'is-invalid' : ''" required autocomplete="new-password" />
             @error('password_confirmation', 'updatePassword')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror

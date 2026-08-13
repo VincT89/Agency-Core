@@ -17,19 +17,22 @@
             <div class="form-row">
                 <x-form-group label="Nome Completo" name="name" required>
                     <input name="name" class="form-in @error('name') is-invalid @enderror"
-                           value="{{ old('name', $user->name) }}">
+                           value="{{ old('name', $user->name) }}" required autocomplete="name">
                 </x-form-group>
                 <x-form-group label="Email" name="email" required>
                     <input type="email" name="email" class="form-in @error('email') is-invalid @enderror"
-                           value="{{ old('email', $user->email) }}">
+                           value="{{ old('email', $user->email) }}" required autocomplete="email">
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Ruolo" name="role" required>
-                    <select name="role" class="form-sel @error('role') is-invalid @enderror">
+                    @if($lastActiveAdministrator)
+                        <input type="hidden" name="role" value="{{ $user->role->value }}">
+                    @endif
+                    <select name="role" class="form-sel @error('role') is-invalid @enderror" required @disabled($lastActiveAdministrator)>
                         @foreach($roles as $role)
-                            <option value="{{ $role->value }}" {{ old('role', $user->role->value) == $role->value ? 'selected' : '' }}>{{ ucfirst($role->value) }}</option>
+                            <option value="{{ $role->value }}" {{ old('role', $user->role->value) == $role->value ? 'selected' : '' }}>{{ $role->label() }}</option>
                         @endforeach
                     </select>
                 </x-form-group>
@@ -45,12 +48,21 @@
                            value="{{ old('primary_specialization', $user->primary_specialization) }}">
                 </x-form-group>
                 <x-form-group label="Stato Account" name="status" required>
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    @if($lastActiveAdministrator)
+                        <input type="hidden" name="status" value="active">
+                    @endif
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required @disabled($lastActiveAdministrator)>
                         <option value="active" {{ old('status', $user->status) === 'active' ? 'selected' : '' }}>Attivo</option>
                         <option value="inactive" {{ old('status', $user->status) === 'inactive' ? 'selected' : '' }}>Inattivo (sospeso)</option>
                     </select>
                 </x-form-group>
             </div>
+
+            @if($lastActiveAdministrator)
+                <div class="u-alert-info u-mt-md" role="status">
+                    Questo account è l’unico amministratore attivo. Ruolo e stato restano bloccati finché non viene creato o attivato un altro amministratore.
+                </div>
+            @endif
 
             <div class="modal-ft u-section-sep">
                 <a href="{{ route('users.index') }}" class="btn btn-g">Annulla</a>

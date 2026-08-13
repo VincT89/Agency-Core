@@ -1,7 +1,7 @@
 <div>
     <div class="mb-6 flex justify-between items-center">
         <h2 class="text-2xl font-bold text-gray-800">Controllo pubblicazioni social</h2>
-        <button wire:click="$refresh" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Aggiorna</button>
+        <button type="button" wire:click="$refresh" class="btn btn-g">Aggiorna</button>
     </div>
 
     <!-- Stats -->

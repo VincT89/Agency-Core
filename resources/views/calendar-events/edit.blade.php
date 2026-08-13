@@ -16,16 +16,16 @@
             @method('PUT')
             
             <div class="form-row full">
-                <x-form-group label="Titolo Evento" name="title" required>
+                <x-form-group label="Titolo evento" name="title" required>
                     <input name="title" class="form-in @error('title') is-invalid @enderror"
-                           value="{{ old('title', $calendarEvent->title) }}" placeholder="Es. Riunione Kick-off">
+                           value="{{ old('title', $calendarEvent->title) }}" placeholder="Es. Riunione kick-off" required>
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Inizio" name="start_at" required>
                     <input type="datetime-local" name="start_at" class="form-in @error('start_at') is-invalid @enderror"
-                           value="{{ old('start_at', $calendarEvent->start_at?->format('Y-m-d\TH:i')) }}">
+                           value="{{ old('start_at', $calendarEvent->start_at?->format('Y-m-d\TH:i')) }}" required>
                 </x-form-group>
                 <x-form-group label="Fine" name="end_at">
                     <input type="datetime-local" name="end_at" class="form-in @error('end_at') is-invalid @enderror"
@@ -35,15 +35,15 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Tipo Evento" name="type" required>
-                    <select name="type" x-model="eventType" class="form-sel @error('type') is-invalid @enderror">
+                <x-form-group label="Tipo evento" name="type" required>
+                    <select name="type" x-model="eventType" class="form-sel @error('type') is-invalid @enderror" required>
                         @foreach($types as $t)
                             <option value="{{ $t }}" {{ old('type', $calendarEvent->type) == $t ? 'selected' : '' }}>{{ (new \App\Models\CalendarEvent(['type' => $t]))->type_label }}</option>
                         @endforeach
                     </select>
                 </x-form-group>
                 <x-form-group label="Stato" name="status" required>
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         @foreach($statuses as $s)
                             <option value="{{ $s }}" {{ old('status', $calendarEvent->status) == $s ? 'selected' : '' }}>{{ (new \App\Models\CalendarEvent(['status' => $s]))->status_label }}</option>
                         @endforeach
@@ -53,7 +53,9 @@
 
             <div class="form-row" x-show="eventType !== 'personal'">
                 <x-form-group label="Cliente (opzionale)" name="client_id">
-                    <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror">
+                    <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror"
+                            data-client-select data-project-select="project_sel"
+                            data-current-project="{{ old('project_id', $calendarEvent->project_id) }}">
                         <option value="">-- Evento Interno / Nessun Cliente --</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}" {{ old('client_id', $calendarEvent->client_id) == $client->id ? 'selected' : '' }}>
@@ -129,13 +131,4 @@
             </div>
         </form>
     </x-panel>
-    @push('scripts')
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof initProjectSelect !== 'undefined') {
-            initProjectSelect('client_sel', 'project_sel', {{ $calendarEvent->project_id ?? 'null' }});
-        }
-    });
-    </script>
-    @endpush
 </x-app-layout>

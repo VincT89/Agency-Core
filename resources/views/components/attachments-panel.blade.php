@@ -33,7 +33,8 @@
                         <td>
                             <div class="att-actions">
                                 @can('download', $att)
-                                <a href="{{ route('attachments.download', $att) }}" target="_blank" class="btn-icon" title="Scarica">↓</a>
+                                <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
+                                   class="btn-icon" title="Scarica" aria-label="Scarica allegato">↓</a>
                                 @endcan
 
                                 @can('delete', $att)

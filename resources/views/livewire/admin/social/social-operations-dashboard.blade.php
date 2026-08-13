@@ -98,9 +98,9 @@
                                             Dettagli post
                                         </a>
                                     @endif
-                                    @if($pub->external_permalink)
+                                    @if($pub->resolved_external_permalink)
                                         <a
-                                            href="{{ $pub->external_permalink }}"
+                                            href="{{ $pub->resolved_external_permalink }}"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="btn btn-p btn-xs">
@@ -108,7 +108,7 @@
                                         </a>
                                     @endif
                                     @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Publishing]))
-                                        <button wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Aggiorna lo stato della pubblicazione">
+                                        <button type="button" wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Aggiorna lo stato della pubblicazione">
                                             <i class="fas fa-sync-alt"></i> Aggiorna stato
                                         </button>
                                     @endif

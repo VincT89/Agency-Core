@@ -24,12 +24,12 @@
           <x-badge :status="$campaign->status->value" :label="$campaign->status->label()" />
           <div class="u-flex u-gap-sm">
             @if(auth()->user()->isAdmin())
-              <button wire:click="openCampaignModal" class="btn btn-g btn-sm">Modifica</button>
-              <button wire:click="openExtendModal" class="btn btn-g btn-sm">Prolunga</button>
+              <button type="button" wire:click="openCampaignModal" class="btn btn-g btn-sm">Modifica</button>
+              <button type="button" wire:click="openExtendModal" class="btn btn-g btn-sm">Prolunga</button>
               @if(in_array($campaign->status->value, ['closed', 'paused']))
-                <button wire:click="openRenewModal" class="btn btn-g btn-sm">Rinnova</button>
+                <button type="button" wire:click="openRenewModal" class="btn btn-g btn-sm">Rinnova</button>
               @endif
-              <button wire:click="openInvoiceModal" class="btn btn-g btn-sm">Fattura</button>
+              <button type="button" wire:click="openInvoiceModal" class="btn btn-g btn-sm">Fattura</button>
             @endif
           </div>
       </div>
@@ -145,10 +145,10 @@
                 <div class="cal-mini-header">
                     <div class="cal-mini-title">{{ Str::ucfirst($monthName) }}</div>
                     <div class="cal-mini-nav">
-                        <a wire:click="goToPreviousCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
-                                data-lucide="chevron-left" class="u-icon-sm"></i></a>
-                        <a wire:click="goToNextCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
-                                data-lucide="chevron-right" class="u-icon-sm"></i></a>
+                        <button type="button" wire:click="goToPreviousCalendarMonth" class="btn-cal-nav u-cursor-pointer" aria-label="Mese precedente"><i
+                                data-lucide="chevron-left" class="u-icon-sm" aria-hidden="true"></i></button>
+                        <button type="button" wire:click="goToNextCalendarMonth" class="btn-cal-nav u-cursor-pointer" aria-label="Mese successivo"><i
+                                data-lucide="chevron-right" class="u-icon-sm" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 
@@ -168,11 +168,14 @@
                             $isSelected = $day->toDateString() === $currentDate->toDateString();
                             $hasPublication = in_array($day->toDateString(), $publishedDates, true);
                         @endphp
-                        <a wire:click="setCalendarDate('{{ $day->toDateString() }}')"
+                        <button type="button" wire:click="setCalendarDate('{{ $day->toDateString() }}')"
                             data-date="{{ $day->toDateString() }}"
+                            aria-label="{{ ucfirst($day->translatedFormat('l j F Y')) }}"
+                            @if($isToday) aria-current="date" @endif
+                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
                             class="cal-mini-day u-cursor-pointer {{ $isCurrentMonth ? '' : 'is-other-month' }} {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasPublication ? 'has-publication' : '' }}">
                             {{ $day->day }}
-                        </a>
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -245,7 +248,7 @@
             <div class="panel u-overflow-hidden">
               <div class="lw-modal-hd">
                 <div class="cmp-panel-title">Extra Campagna</div>
-                <button wire:click="openExtraModal" class="btn btn-p btn-sm">+ Aggiungi</button>
+                <button type="button" wire:click="openExtraModal" class="btn btn-p btn-sm">+ Aggiungi</button>
               </div>
               <div class="u-p-lg">
                 @if($campaign->extras->count())
@@ -285,7 +288,7 @@
       <div class="panel u-overflow-hidden">
         <div class="lw-modal-hd">
           <div class="cmp-panel-title">Storico Fatture</div>
-          <button wire:click="openInvoiceModal" class="btn btn-p btn-sm">Genera Fattura</button>
+          <button type="button" wire:click="openInvoiceModal" class="btn btn-p btn-sm">Genera fattura</button>
         </div>
         <div class="u-p-lg">
           @if($campaign->invoices && $campaign->invoices->count())
@@ -322,12 +325,13 @@
 
   {{-- Modale: Modifica Campagna --}}
   @if($showCampaignModal)
-    <div class="lw-overlay">
-      <div class="lw-modal">
+    @teleport('body')
+    <div class="lw-overlay" data-dialog-overlay aria-hidden="false" wire:key="campaign-edit-dialog">
+      <div class="lw-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-edit-dialog-title" tabindex="-1">
         <div class="lw-modal-hd">
-          <h3 class="lw-modal-hd-title">Modifica Campagna</h3>
-          <button type="button" wire:click="closeCampaignModal" class="btn-ghost-white">
-            <i data-lucide="x" class="u-icon-lg"></i>
+          <h2 class="lw-modal-hd-title" id="campaign-edit-dialog-title">Modifica Campagna</h2>
+          <button type="button" wire:click="closeCampaignModal" class="btn-ghost-white" aria-label="Chiudi modifica campagna">
+            <i data-lucide="x" class="u-icon-lg" aria-hidden="true"></i>
           </button>
         </div>
         <div class="lw-modal-body custom-scrollbar">
@@ -382,21 +386,23 @@
           </div>
         </div>
         <div class="lw-modal-ft">
-          <button type="button" wire:click="closeCampaignModal" class="btn btn-s">Annulla</button>
+          <button type="button" wire:click="closeCampaignModal" class="btn btn-s" data-dialog-initial-focus>Annulla</button>
           <button type="button" wire:click="saveCampaign" class="btn btn-p">Salva Modifiche</button>
         </div>
       </div>
     </div>
+    @endteleport
   @endif
 
   {{-- Modale: Prolunga Campagna --}}
   @if($showExtendModal)
-    <div class="lw-overlay">
-      <div class="lw-modal">
+    @teleport('body')
+    <div class="lw-overlay" data-dialog-overlay aria-hidden="false" wire:key="campaign-extend-dialog">
+      <div class="lw-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-extend-dialog-title" tabindex="-1">
         <div class="lw-modal-hd">
-          <h3 class="lw-modal-hd-title">Prolunga Campagna</h3>
-          <button type="button" wire:click="closeExtendModal" class="btn-ghost-white">
-            <i data-lucide="x" class="u-icon-lg"></i>
+          <h2 class="lw-modal-hd-title" id="campaign-extend-dialog-title">Prolunga Campagna</h2>
+          <button type="button" wire:click="closeExtendModal" class="btn-ghost-white" aria-label="Chiudi proroga campagna">
+            <i data-lucide="x" class="u-icon-lg" aria-hidden="true"></i>
           </button>
         </div>
         <div class="lw-modal-body custom-scrollbar">
@@ -427,21 +433,23 @@
           </div>
         </div>
         <div class="lw-modal-ft">
-          <button type="button" wire:click="closeExtendModal" class="btn btn-s">Annulla</button>
+          <button type="button" wire:click="closeExtendModal" class="btn btn-s" data-dialog-initial-focus>Annulla</button>
           <button type="button" wire:click="extendCampaign" class="btn btn-p">Prolunga</button>
         </div>
       </div>
     </div>
+    @endteleport
   @endif
 
   {{-- Modale: Rinnova Campagna --}}
   @if($showRenewModal)
-    <div class="lw-overlay">
-      <div class="lw-modal">
+    @teleport('body')
+    <div class="lw-overlay" data-dialog-overlay aria-hidden="false" wire:key="campaign-renew-dialog">
+      <div class="lw-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-renew-dialog-title" tabindex="-1">
         <div class="lw-modal-hd">
-          <h3 class="lw-modal-hd-title">Rinnova Campagna</h3>
-          <button type="button" wire:click="closeRenewModal" class="btn-ghost-white">
-            <i data-lucide="x" class="u-icon-lg"></i>
+          <h2 class="lw-modal-hd-title" id="campaign-renew-dialog-title">Rinnova Campagna</h2>
+          <button type="button" wire:click="closeRenewModal" class="btn-ghost-white" aria-label="Chiudi rinnovo campagna">
+            <i data-lucide="x" class="u-icon-lg" aria-hidden="true"></i>
           </button>
         </div>
         <div class="lw-modal-body custom-scrollbar">
@@ -472,21 +480,23 @@
           </div>
         </div>
         <div class="lw-modal-ft">
-          <button type="button" wire:click="closeRenewModal" class="btn btn-s">Annulla</button>
+          <button type="button" wire:click="closeRenewModal" class="btn btn-s" data-dialog-initial-focus>Annulla</button>
           <button type="button" wire:click="renewCampaign" class="btn btn-p">Rinnova</button>
         </div>
       </div>
     </div>
+    @endteleport
   @endif
 
   {{-- Modale: Aggiungi Extra --}}
   @if($showExtraModal)
-    <div class="lw-overlay">
-      <div class="lw-modal lw-modal-sm">
+    @teleport('body')
+    <div class="lw-overlay" data-dialog-overlay aria-hidden="false" wire:key="campaign-extra-dialog">
+      <div class="lw-modal lw-modal-sm" role="dialog" aria-modal="true" aria-labelledby="campaign-extra-dialog-title" tabindex="-1">
         <div class="lw-modal-hd">
-          <h3 class="lw-modal-hd-title">Aggiungi Extra</h3>
-          <button type="button" wire:click="closeExtraModal" class="btn-ghost-white">
-            <i data-lucide="x" class="u-icon-lg"></i>
+          <h2 class="lw-modal-hd-title" id="campaign-extra-dialog-title">Aggiungi Extra</h2>
+          <button type="button" wire:click="closeExtraModal" class="btn-ghost-white" aria-label="Chiudi aggiunta extra">
+            <i data-lucide="x" class="u-icon-lg" aria-hidden="true"></i>
           </button>
         </div>
         <div class="lw-modal-body">
@@ -507,21 +517,23 @@
           </div>
         </div>
         <div class="lw-modal-ft">
-          <button type="button" wire:click="closeExtraModal" class="btn btn-s">Annulla</button>
+          <button type="button" wire:click="closeExtraModal" class="btn btn-s" data-dialog-initial-focus>Annulla</button>
           <button type="button" wire:click="addExtra" class="btn btn-p">Salva Extra</button>
         </div>
       </div>
     </div>
+    @endteleport
   @endif
 
   {{-- Modale: Genera Fattura --}}
   @if($showInvoiceModal)
-    <div class="lw-overlay">
-      <div class="lw-modal">
+    @teleport('body')
+    <div class="lw-overlay" data-dialog-overlay aria-hidden="false" wire:key="campaign-invoice-dialog">
+      <div class="lw-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-invoice-dialog-title" tabindex="-1">
         <div class="lw-modal-hd">
-          <h3 class="lw-modal-hd-title">Genera Fattura</h3>
-          <button type="button" wire:click="closeInvoiceModal" class="btn-ghost-white">
-            <i data-lucide="x" class="u-icon-lg"></i>
+          <h2 class="lw-modal-hd-title" id="campaign-invoice-dialog-title">Genera Fattura</h2>
+          <button type="button" wire:click="closeInvoiceModal" class="btn-ghost-white" aria-label="Chiudi generazione fattura">
+            <i data-lucide="x" class="u-icon-lg" aria-hidden="true"></i>
           </button>
         </div>
         <div class="lw-modal-body custom-scrollbar">
@@ -614,11 +626,12 @@
           
         </div>
         <div class="lw-modal-ft">
-          <button type="button" wire:click="closeInvoiceModal" class="btn btn-s">Annulla</button>
+          <button type="button" wire:click="closeInvoiceModal" class="btn btn-s" data-dialog-initial-focus>Annulla</button>
           <button type="button" wire:click="generateInvoice" class="btn btn-p btn-green">Genera bozza fattura</button>
         </div>
       </div>
     </div>
+    @endteleport
   @endif
 
 </div>
@@ -664,7 +677,7 @@
                 day: 'Giorno'
             },
             themeSystem: 'standard',
-            height: '100%',
+            height: window.innerWidth < 901 ? 650 : '100%',
             expandRows: true,
             dayMaxEvents: 3,
             moreLinkClick: 'popover',
@@ -673,7 +686,10 @@
             slotMaxTime: '20:00:00',
             allDaySlot: false,
             defaultTimedEventDuration: '01:00:00',
-            dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+            dayHeaderContent: arg => new Intl.DateTimeFormat('it-IT', {
+                weekday: 'short',
+                day: '2-digit'
+            }).format(arg.date).replace('.', '').toUpperCase(),
             slotLabelFormat: { hour: '2-digit', minute: '2-digit', omitZeroMinute: false, meridiem: false },
             
             selectable: true,

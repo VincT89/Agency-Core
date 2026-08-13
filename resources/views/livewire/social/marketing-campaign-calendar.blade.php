@@ -35,12 +35,12 @@
         <aside class="cal-gsidebar">
             <div class="cal-mini-month u-mb-lg">
                 <div class="cal-mini-header">
-                    <span class="cal-mini-title">{{ ucfirst($currentDate->translatedFormat('F Y')) }}</span>
+                    <span class="cal-mini-title">{{ ucfirst($currentDate->copy()->locale('it')->translatedFormat('F Y')) }}</span>
                     <div class="cal-mini-nav">
-                        <a wire:click="goToPreviousCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
-                                data-lucide="chevron-left" class="u-icon-sm"></i></a>
-                        <a wire:click="goToNextCalendarMonth" class="btn-cal-nav u-cursor-pointer"><i
-                                data-lucide="chevron-right" class="u-icon-sm"></i></a>
+                        <button type="button" wire:click="goToPreviousCalendarMonth" class="btn-cal-nav u-cursor-pointer" aria-label="Mese precedente"><i
+                                data-lucide="chevron-left" class="u-icon-sm" aria-hidden="true"></i></button>
+                        <button type="button" wire:click="goToNextCalendarMonth" class="btn-cal-nav u-cursor-pointer" aria-label="Mese successivo"><i
+                                data-lucide="chevron-right" class="u-icon-sm" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="cal-mini-grid">
@@ -58,11 +58,14 @@
                             $isSelected = $day->toDateString() === $currentDate->toDateString();
                             $hasPublication = in_array($day->toDateString(), $publishedDates, true);
                         @endphp
-                        <a wire:click="setCalendarDate('{{ $day->toDateString() }}')"
+                        <button type="button" wire:click="setCalendarDate('{{ $day->toDateString() }}')"
                             data-date="{{ $day->toDateString() }}"
+                            aria-label="{{ ucfirst($day->copy()->locale('it')->translatedFormat('l j F Y')) }}"
+                            @if($isToday) aria-current="date" @endif
+                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
                             class="cal-mini-day u-cursor-pointer {{ $isCurrentMonth ? '' : 'is-other-month' }} {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasPublication ? 'has-publication' : '' }}">
                             {{ $day->day }}
-                        </a>
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -70,7 +73,8 @@
             <div class="cal-sidebar-filters">
                 <span class="cal-sidebar-label">Filtra Calendario</span>
                 <div class="u-mb-xs">
-                    <select wire:model.live="clientFilter" class="form-sel">
+                    <label for="marketing-calendar-client-filter" class="sr-only">Filtra per cliente</label>
+                    <select id="marketing-calendar-client-filter" wire:model.live="clientFilter" class="form-sel">
                         <option value="">Tutti i Clienti</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}">{{ $client->name }}</option>
@@ -78,7 +82,8 @@
                     </select>
                 </div>
                 <div class="u-mb-xs">
-                    <select wire:model.live="campaignFilter" class="form-sel">
+                    <label for="marketing-calendar-campaign-filter" class="sr-only">Filtra per campagna</label>
+                    <select id="marketing-calendar-campaign-filter" wire:model.live="campaignFilter" class="form-sel">
                         <option value="">Tutte le Campagne</option>
                         @foreach($campaigns as $campaign)
                             <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
@@ -86,7 +91,8 @@
                     </select>
                 </div>
                 <div class="u-mb-xs">
-                    <select wire:model.live="platformFilter" class="form-sel">
+                    <label for="marketing-calendar-platform-filter" class="sr-only">Filtra per piattaforma</label>
+                    <select id="marketing-calendar-platform-filter" wire:model.live="platformFilter" class="form-sel">
                         <option value="">Tutte le Piattaforme</option>
                         @foreach($platforms as $platform)
                             <option value="{{ $platform->value }}">{{ $platform->label() }}</option>
@@ -95,7 +101,7 @@
                 </div>
                 @if($clientFilter || $campaignFilter || $platformFilter)
                     <div class="u-mt-sm">
-                        <button wire:click="$set('clientFilter', ''); $set('campaignFilter', ''); $set('platformFilter', '')" class="btn btn-g u-w-full">Reset Filtri</button>
+                        <button type="button" wire:click="$set('clientFilter', ''); $set('campaignFilter', ''); $set('platformFilter', '')" class="btn btn-g u-w-full">Azzera filtri</button>
                     </div>
                 @endif
             </div>
@@ -166,15 +172,27 @@
                 week: 'Settimana',
                 day: 'Giorno'
             },
+            buttonHints: {
+                prev: 'Periodo precedente',
+                next: 'Periodo successivo',
+                today: 'Vai a oggi',
+                dayGridMonth: 'Visualizza il mese',
+                timeGridWeek: 'Visualizza la settimana',
+                timeGridDay: 'Visualizza il giorno'
+            },
+            viewHint: 'Visualizza $0',
             themeSystem: 'standard',
-            height: '100%',
+            height: window.innerWidth < 901 ? 650 : '100%',
             expandRows: true,
             slotDuration: '01:00:00',
             slotMinTime: '08:00:00',
             slotMaxTime: '20:00:00',
             allDaySlot: false,
             defaultTimedEventDuration: '01:00:00',
-            dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+            dayHeaderContent: arg => new Intl.DateTimeFormat('it-IT', {
+                weekday: 'short',
+                day: '2-digit'
+            }).format(arg.date).replace('.', '').toUpperCase(),
             slotLabelFormat: {
                 hour: '2-digit',
                 minute: '2-digit',

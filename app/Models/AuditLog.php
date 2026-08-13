@@ -89,7 +89,8 @@ class AuditLog extends Model
             'payment_registered', 'registered_payment', 'deleted_payment' => 'Pagamento',
             'uploaded_attachment', 'deleted_attachment' => 'Allegato',
             'password_reset' => 'Sicurezza',
-            'login', 'logout' => 'Accesso',
+            'login' => 'Accesso',
+            'logout' => 'Uscita',
             default => 'Aggiornamento',
         };
     }

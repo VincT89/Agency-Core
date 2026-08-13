@@ -24,7 +24,8 @@
                         <td class="u-text-right">
                             <div class="u-flex-end u-gap-sm">
                                 @can('download', $att)
-                                <a href="{{ route('attachments.download', $att) }}" target="_blank" class="btn-ghost-primary btn-xs" title="Scarica">
+                                <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
+                                   class="btn-ghost-primary btn-xs" title="Scarica" aria-label="Scarica allegato">
                                     <i data-lucide="download" class="u-icon-sm"></i>
                                 </a>
                                 @endcan

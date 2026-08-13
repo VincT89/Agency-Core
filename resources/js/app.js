@@ -1,5 +1,8 @@
 import './project-select.js';
 import clientAutocomplete from './client-autocomplete.js';
+import './password-fields.js';
+import './form-fields.js';
+import './dialog-accessibility.js';
 import './hosting-services.js';
 import './confirm-forms.js';
 import './ui-helpers.js';

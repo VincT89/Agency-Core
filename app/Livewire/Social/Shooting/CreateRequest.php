@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Shooting\Shoot;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class CreateRequest extends Component
@@ -57,7 +58,12 @@ class CreateRequest extends Component
             'title' => 'nullable|string|max:255',
             'project_id' => 'required_without:marketing_campaign_id|nullable|exists:projects,id',
             'marketing_campaign_id' => 'required_without:project_id|nullable|exists:marketing_campaigns,id',
-            'photographer_id' => 'required|exists:users,id',
+            'photographer_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'photographer')
+                    ->where('status', 'active')),
+            ],
             'location' => 'nullable|string',
             'internal_notes' => 'nullable|string',
             'client_notes' => 'nullable|string',
@@ -152,6 +158,7 @@ class CreateRequest extends Component
             ->get();
 
         $photographers = User::where('role', 'photographer')
+            ->where('status', 'active')
             ->orderBy('name')
             ->get();
 

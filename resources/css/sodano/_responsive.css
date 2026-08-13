@@ -232,6 +232,10 @@ pre {
 }
 
 @media (max-width: 767px) {
+    .payment-info-column {
+        padding-top: 0 !important;
+    }
+
   .aruba-status-grid,
   .fiscal-history-item {
     grid-template-columns: minmax(0, 1fr);
@@ -386,6 +390,7 @@ pre {
 
   .ph-right {
     width: 100%;
+    padding-left: 0;
     padding-bottom: 0;
     flex-wrap: wrap;
     align-items: stretch;
@@ -550,6 +555,23 @@ pre {
   .tab-btn,
   .pill {
     flex: 0 0 auto;
+    min-height: 44px;
+  }
+
+  .btn-cal-nav,
+  .cal-mini-day,
+  .social-header-link,
+  .form-in,
+  .form-sel,
+  .form-ta,
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  .cal-mini-day {
+    height: 44px;
   }
 
   .t-table {
@@ -621,6 +643,10 @@ pre {
   .kanban {
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
+  }
+
+  .calendar-kanban-columns > .k-col {
+    width: min(78vw, 280px) !important;
   }
 
   .cal-week {
@@ -891,8 +917,20 @@ pre {
   .tb-btn,
   .avatar-btn,
   .sidebar-toggle,
-  .nav-item {
-    min-height: 42px;
+  .nav-item,
+  .social-header-link,
+  .btn-cal-nav,
+  .cal-mini-day,
+  .fc .fc-button,
+  .form-in,
+  .form-sel,
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  select {
+    min-height: 44px;
+  }
+
+  .cal-mini-day {
+    height: 44px;
   }
 }
 

@@ -27,7 +27,7 @@ class UpdateHostingServiceRequest extends FormRequest
             'client_id' => ['required', 'exists:clients,id'],
             'type' => ['required', Rule::in(['domain', 'hosting', 'website', 'maintenance', 'email', 'dns', 'other'])],
             'name' => ['required', 'string', 'max:255'],
-            'domain' => ['nullable', 'string', 'max:255'],
+            'domain' => [Rule::requiredIf($this->input('type') === 'domain'), 'nullable', 'string', 'max:255'],
             'provider' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::in(['active', 'suspended', 'cancelled'])],

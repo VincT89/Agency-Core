@@ -475,7 +475,7 @@ class MarketingCampaignShow extends Component
             'nextMonth' => $nextMonth,
             'monthName' => $firstDayOfMonth->translatedFormat('F Y'),
             'publishedDates' => $this->publishedDates(),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app', ['title' => $this->campaign->name]);
     }
 
 }

@@ -121,6 +121,19 @@ class User extends Authenticatable
         return $this->role === UserRole::Admin;
     }
 
+    public function isLastActiveAdministrator(): bool
+    {
+        if (! $this->isAdmin() || $this->status !== 'active') {
+            return false;
+        }
+
+        return ! static::query()
+            ->where('role', UserRole::Admin->value)
+            ->where('status', 'active')
+            ->whereKeyNot($this->getKey())
+            ->exists();
+    }
+
     public function canManageSystem(): bool
     {
         return $this->isAdmin();

@@ -1,9 +1,9 @@
 @props(['id' => '', 'title' => ''])
-<div class="overlay" id="{{ $id }}">
-    <div class="modal">
+<div class="overlay" id="{{ $id }}" data-dialog-overlay aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="{{ $id }}-title" tabindex="-1">
         <div class="modal-hd">
-            <div class="modal-title">{{ $title }}</div>
-            <button type="button" class="modal-close" @click="document.getElementById('{{ $id }}').classList.remove('open')">✕</button>
+            <h2 class="modal-title" id="{{ $id }}-title">{{ $title }}</h2>
+            <button type="button" class="modal-close" data-dialog-initial-focus aria-label="Chiudi finestra" @click="document.getElementById('{{ $id }}').classList.remove('open')">✕</button>
         </div>
         {{ $slot }}
         @if(isset($footer))

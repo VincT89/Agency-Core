@@ -16,6 +16,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'lastActiveAdministrator' => $request->user()->isLastActiveAdministrator(),
         ]);
     }
 
@@ -41,6 +42,10 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        if ($user->isLastActiveAdministrator()) {
+            return back()->with('error', 'Non puoi eliminare l’unico amministratore attivo. Crea o attiva prima un altro amministratore.');
+        }
 
         Auth::logout();
 

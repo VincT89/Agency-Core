@@ -57,11 +57,11 @@
         <x-panel title="Panoramica Operativa" dot="var(--accent)">
             <x-slot:headerActions>
                 <div class="tab-switcher no-margin">
-                    <button @click="tab = 'tasks'" :class="tab === 'tasks' ? 'active' : ''" class="tab-btn">Task In
+                    <button type="button" @click="tab = 'tasks'" :class="tab === 'tasks' ? 'active' : ''" class="tab-btn">Task In
                         Scadenza</button>
-                    <button @click="tab = 'tickets'" :class="tab === 'tickets' ? 'active' : ''" class="tab-btn">Ticket
+                    <button type="button" @click="tab = 'tickets'" :class="tab === 'tickets' ? 'active' : ''" class="tab-btn">Ticket
                         Recenti</button>
-                    <button @click="tab = 'domains'" :class="tab === 'domains' ? 'active' : ''" class="tab-btn">Domini in
+                    <button type="button" @click="tab = 'domains'" :class="tab === 'domains' ? 'active' : ''" class="tab-btn">Domini in
                         Scadenza</button>
                 </div>
             </x-slot:headerActions>
@@ -281,9 +281,6 @@
             };
             window.financialChartInstance = new ApexCharts(financialEl, options);
             window.financialChartInstance.render();
-            requestAnimationFrame(() => {
-                window.financialChartInstance?.resize();
-            });
         }
 
         // --- Operativo ---
@@ -347,9 +344,6 @@
             };
             window.operationalChartInstance = new ApexCharts(operationalEl, options);
             window.operationalChartInstance.render();
-            requestAnimationFrame(() => {
-                window.operationalChartInstance?.resize();
-            });
         }
     }
 

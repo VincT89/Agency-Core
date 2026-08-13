@@ -74,7 +74,7 @@
                     </dl>
 
                     <div class="u-flex u-justify-between u-items-center social-card-actions">
-                        <button wire:click="syncConnection({{ $connection->id }})" 
+                        <button type="button" wire:click="syncConnection({{ $connection->id }})"
                                 wire:loading.attr="disabled"
                                 class="btn btn-outline btn-sm u-flex u-items-center u-gap-xs">
                             <span class="u-flex u-items-center u-gap-xs" wire:loading.remove wire:target="syncConnection({{ $connection->id }})">

@@ -20,7 +20,7 @@
             <div class="form-row full">
                 <x-form-group label="Nome / Ragione Sociale" name="name" required>
                     <input name="name" class="form-in @error('name') is-invalid @enderror"
-                           value="{{ old('name') }}" placeholder="Es. Acme S.r.l.">
+                           value="{{ old('name') }}" placeholder="Es. Acme S.r.l." required>
                 </x-form-group>
             </div>
             <div class="form-row">
@@ -72,7 +72,7 @@
                            value="{{ old('sdi_code') }}" placeholder="6 o 7 caratteri">
                 </x-form-group>
                 <x-form-group label="Stato cliente" name="status">
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         <option value="active"   {{ old('status', 'active') == 'active'   ? 'selected' : '' }}>Attivo</option>
                         <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Inattivo</option>
                     </select>
@@ -141,9 +141,9 @@
             
             <div class="sec-lbl u-mt-md">Integrazione Nextcloud</div>
             <div class="form-row full">
-                <x-form-group label="Nome Cartella Nextcloud *" name="nextcloud_folder_name" required>
+                <x-form-group label="Nome cartella Nextcloud" name="nextcloud_folder_name" required>
                     <input name="nextcloud_folder_name" class="form-in @error('nextcloud_folder_name') is-invalid @enderror"
-                           value="{{ old('nextcloud_folder_name') }}" placeholder="Es. acme-srl">
+                           value="{{ old('nextcloud_folder_name') }}" placeholder="Es. acme-srl" required>
                     <div class="u-text-xs u-text-muted u-mt-xs">La cartella verrà creata in <code>/Photos/{nome_cartella}</code>. Usare solo lettere, numeri, trattini e underscore. Non inserire spazi o slash.</div>
                 </x-form-group>
             </div>

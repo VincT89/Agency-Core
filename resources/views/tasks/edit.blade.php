@@ -17,13 +17,13 @@
             <div class="form-row full">
                 <x-form-group label="Titolo task" name="title" required>
                     <input name="title" class="form-in @error('title') is-invalid @enderror"
-                           value="{{ old('title', $task->title) }}" placeholder="Descrizione sintetica del task...">
+                           value="{{ old('title', $task->title) }}" placeholder="Descrizione sintetica del task..." required>
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Progetto" name="project_id" required>
-                    <select name="project_id" class="form-sel @error('project_id') is-invalid @enderror">
+                    <select name="project_id" class="form-sel @error('project_id') is-invalid @enderror" required>
                         <option value="">Seleziona progetto...</option>
                         @foreach($projects as $project)
                             <option value="{{ $project->id }}"
@@ -48,7 +48,7 @@
 
             <div class="form-row">
                 <x-form-group label="Stato" name="status" required>
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         @foreach($statuses as $s)
                             <option value="{{ $s }}" {{ old('status', $task->status) === $s ? 'selected' : '' }}>
                                 {{ (new \App\Models\Task(['status' => $s]))->status_label }}
@@ -57,7 +57,7 @@
                     </select>
                 </x-form-group>
                 <x-form-group label="Priorità" name="priority" required>
-                    <select name="priority" class="form-sel @error('priority') is-invalid @enderror">
+                    <select name="priority" class="form-sel @error('priority') is-invalid @enderror" required>
                         @foreach($priorities as $p)
                             <option value="{{ $p }}" {{ old('priority', $task->priority) === $p ? 'selected' : '' }}>
                                 {{ ucfirst($p) }}

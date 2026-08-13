@@ -8,6 +8,11 @@
         </x-slot:actions>
     </x-page-header>
 
+    @php
+        $domainContext = request('type') === 'domain';
+        $excludeDomains = request('exclude_type') === 'domain';
+    @endphp
+
     <div class="filter-bar">
         <div class="pills u-m-0">
             <a href="{{ request()->fullUrlWithQuery(['status_filter' => null]) }}" class="pill {{ !request('status_filter') ? 'on' : '' }}">Tutti</a>
@@ -20,22 +25,30 @@
             @if(request('status_filter'))
                 <input type="hidden" name="status_filter" value="{{ request('status_filter') }}">
             @endif
-            <select name="type" class="form-sel hosting-input-sm hosting-w-150" @change="$el.form.submit()">
-                <option value="all">Tutti i tipi</option>
-                <option value="domain" {{ request('type') === 'domain' ? 'selected' : '' }}>Domini</option>
-                <option value="hosting" {{ request('type') === 'hosting' ? 'selected' : '' }}>Hosting</option>
-                <option value="website" {{ request('type') === 'website' ? 'selected' : '' }}>Website</option>
-                <option value="maintenance" {{ request('type') === 'maintenance' ? 'selected' : '' }}>Manutenzioni</option>
-                <option value="email" {{ request('type') === 'email' ? 'selected' : '' }}>Email</option>
-                <option value="dns" {{ request('type') === 'dns' ? 'selected' : '' }}>DNS</option>
-                <option value="other" {{ request('type') === 'other' ? 'selected' : '' }}>Altro</option>
-            </select>
-            @if(request()->has('exclude_type'))
-                <input type="hidden" name="exclude_type" value="{{ request('exclude_type') }}">
+            @if($domainContext)
+                <input type="hidden" name="type" value="domain">
+            @else
+                <label for="hosting-type-filter" class="sr-only">Tipo di servizio</label>
+                <select id="hosting-type-filter" name="type" class="form-sel hosting-input-sm hosting-w-150" @change="$el.form.submit()">
+                    <option value="">Tutti i tipi</option>
+                    @unless($excludeDomains)
+                        <option value="domain" {{ request('type') === 'domain' ? 'selected' : '' }}>Domini</option>
+                    @endunless
+                    <option value="hosting" {{ request('type') === 'hosting' ? 'selected' : '' }}>Hosting</option>
+                    <option value="website" {{ request('type') === 'website' ? 'selected' : '' }}>Website</option>
+                    <option value="maintenance" {{ request('type') === 'maintenance' ? 'selected' : '' }}>Manutenzioni</option>
+                    <option value="email" {{ request('type') === 'email' ? 'selected' : '' }}>Email</option>
+                    <option value="dns" {{ request('type') === 'dns' ? 'selected' : '' }}>DNS</option>
+                    <option value="other" {{ request('type') === 'other' ? 'selected' : '' }}>Altro</option>
+                </select>
             @endif
-            <input type="text" name="search" value="{{ request('search') }}" 
+            @if($excludeDomains)
+                <input type="hidden" name="exclude_type" value="domain">
+            @endif
+            <label for="hosting-search" class="sr-only">Cerca servizi</label>
+            <input id="hosting-search" type="search" name="search" value="{{ request('search') }}"
                    class="form-in hosting-input-sm hosting-w-250" 
-                   placeholder="Cerca nome, provider, client, dominio..."
+                   placeholder="Nome, provider, cliente o dominio"
                    @input.debounce.500ms="$el.form.submit()">
             @if(request('search'))
                 <a href="{{ route('hosting-services.index', ['type' => request('type'), 'exclude_type' => request('exclude_type')]) }}" class="btn btn-g hosting-input-sm">Reset</a>

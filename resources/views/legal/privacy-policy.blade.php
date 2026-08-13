@@ -1,7 +1,7 @@
 <x-legal-document
     title="Privacy Policy"
     description="Informativa sul trattamento dei dati personali nell'uso di Agency Core e delle integrazioni con le piattaforme social."
-    updated="10 agosto 2026"
+    updated="13 agosto 2026"
 >
     <section>
         <h2>1. Titolare del trattamento</h2>
@@ -80,14 +80,16 @@
     <section>
         <h2>5. Integrazione con TikTok</h2>
         <p>
-            Nell'attuale configurazione di collaudo, Agency Core richiede a TikTok gli ambiti
-            <strong>user.info.basic</strong> e <strong>video.upload</strong>. Il primo consente di leggere le
-            informazioni di base del profilo autorizzato; il secondo consente di inviare un video come bozza.
+            Agency Core può richiedere a TikTok gli ambiti <strong>user.info.basic</strong>,
+            <strong>video.upload</strong> e <strong>video.publish</strong>. Il primo consente di leggere le
+            informazioni di base del profilo autorizzato; gli altri consentono di trasferire un video e, quando
+            l'account e l'applicazione sono abilitati, di pubblicarlo direttamente.
         </p>
         <p>
-            L'invio come bozza non completa automaticamente la pubblicazione. Il titolare dell'account deve
-            terminare l'operazione nell'app TikTok. Agency Core non pubblica contenuti senza un'azione o una
-            programmazione effettuata da un utente autorizzato.
+            Prima di una pubblicazione diretta, l'utente autorizzato sceglie le opzioni rese disponibili da TikTok,
+            incluse visibilità, interazioni, dichiarazioni commerciali o di contenuto generato con intelligenza
+            artificiale e conferma relativa all'uso della musica. Agency Core non avvia pubblicazioni senza
+            un'azione o una programmazione esplicita dell'utente autorizzato.
         </p>
         <p>
             L'autorizzazione può essere negata durante il collegamento oppure revocata dalle impostazioni TikTok.

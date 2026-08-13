@@ -84,6 +84,6 @@ class ExpensesIndex extends Component
 
         return view('livewire.expenses.expenses-index', [
             'expenses' => $expenses,
-        ])->layout('layouts.app');
+        ])->layout('layouts.app', ['title' => 'Spese']);
     }
 }

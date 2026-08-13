@@ -8,7 +8,7 @@
         @if($eyebrow)
             <div class="page-eyebrow">{{ $eyebrow }}</div>
         @endif
-        <div class="page-title">{{ $title ?? '' }}</div>
+        <div class="page-title" role="heading" aria-level="1">{{ $title ?? '' }}</div>
         @if($meta)
             <div class="page-meta">{{ $meta }}</div>
         @endif

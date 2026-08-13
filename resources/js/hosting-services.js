@@ -21,6 +21,7 @@ function initHostingServices() {
         btn.addEventListener('click', async (e) => {
             const container = e.target.closest('.hosting-password-container');
             const valSpan = container.querySelector('.hosting-password-value');
+            const status = container.querySelector('.hosting-password-status');
             const isHidden = valSpan.dataset.hidden === 'true';
             
             if (isHidden) {
@@ -43,6 +44,11 @@ function initHostingServices() {
                     
                     valSpan.textContent = data.password;
                     valSpan.dataset.hidden = 'false';
+                    valSpan.setAttribute('aria-hidden', 'false');
+                    btn.setAttribute('aria-pressed', 'true');
+                    btn.setAttribute('aria-label', 'Nascondi password');
+                    btn.setAttribute('title', 'Nascondi password');
+                    status.textContent = 'Password visibile.';
                     setIcon(btn, 'eye-off');
                 } catch (error) {
                     console.error('Errore nel fetch password:', error);
@@ -55,6 +61,11 @@ function initHostingServices() {
                 // Nascondi
                 valSpan.textContent = '••••••••';
                 valSpan.dataset.hidden = 'true';
+                valSpan.setAttribute('aria-hidden', 'true');
+                btn.setAttribute('aria-pressed', 'false');
+                btn.setAttribute('aria-label', 'Mostra password');
+                btn.setAttribute('title', 'Mostra password');
+                status.textContent = 'Password nascosta.';
                 setIcon(btn, 'eye');
             }
         });
@@ -66,6 +77,7 @@ function initHostingServices() {
         btn.addEventListener('click', async (e) => {
             const container = e.target.closest('.hosting-password-container');
             const valSpan = container.querySelector('.hosting-password-value');
+            const status = container.querySelector('.hosting-password-status');
             const isHidden = valSpan.dataset.hidden === 'true';
             
             let passwordToCopy = valSpan.textContent;
@@ -94,9 +106,12 @@ function initHostingServices() {
 
             navigator.clipboard.writeText(passwordToCopy).then(() => {
                 setIcon(btn, 'check', 'u-text-teal');
+                status.textContent = 'Password copiata.';
                 setTimeout(() => {
                     setIcon(btn, 'copy');
                 }, 2000);
+            }).catch(() => {
+                status.textContent = 'Impossibile copiare automaticamente la password.';
             });
         });
     });
@@ -104,19 +119,30 @@ function initHostingServices() {
     // Row Click per la tabella
     document.querySelectorAll('.js-row-link:not(.js-bound)').forEach(row => {
         row.classList.add('js-bound');
+        if (!row.hasAttribute('tabindex')) row.tabIndex = 0;
+        if (!row.hasAttribute('role')) row.setAttribute('role', 'link');
+
+        const navigateToRow = () => {
+            const href = row.dataset.href;
+            if (!href) return;
+            if (window.Livewire && window.Livewire.navigate) {
+                window.Livewire.navigate(href);
+            } else {
+                window.location.href = href;
+            }
+        };
+
         row.addEventListener('click', (e) => {
             // Ignora se si clicca su link, bottoni, input, select o elementi con js-stop-propagation
             if (e.target.closest('a, button, input, select, .js-stop-propagation')) {
                 return;
             }
-            const href = row.dataset.href;
-            if (href) {
-                if (window.Livewire && window.Livewire.navigate) {
-                    window.Livewire.navigate(href);
-                } else {
-                    window.location.href = href;
-                }
-            }
+            navigateToRow();
+        });
+        row.addEventListener('keydown', (e) => {
+            if (e.target !== row || (e.key !== 'Enter' && e.key !== ' ')) return;
+            e.preventDefault();
+            navigateToRow();
         });
     });
 

@@ -10,10 +10,10 @@
 
     <div class="filter-bar">
         <div class="pills u-m-0">
-            <button wire:click="$set('status', '')" class="pill {{ !$status ? 'on' : '' }}">Tutte</button>
-            <button wire:click="$set('status', 'pending')" class="pill {{ $status === 'pending' ? 'on' : '' }}">Da Pagare</button>
-            <button wire:click="$set('status', 'paid')" class="pill {{ $status === 'paid' ? 'on' : '' }}">Pagate</button>
-            <button wire:click="$set('status', 'cancelled')" class="pill {{ $status === 'cancelled' ? 'on' : '' }}">Annullate</button>
+            <button type="button" wire:click="$set('status', '')" class="pill {{ !$status ? 'on' : '' }}">Tutte</button>
+            <button type="button" wire:click="$set('status', 'pending')" class="pill {{ $status === 'pending' ? 'on' : '' }}">Da pagare</button>
+            <button type="button" wire:click="$set('status', 'paid')" class="pill {{ $status === 'paid' ? 'on' : '' }}">Pagate</button>
+            <button type="button" wire:click="$set('status', 'cancelled')" class="pill {{ $status === 'cancelled' ? 'on' : '' }}">Annullate</button>
         </div>
 
         <div class="u-flex u-gap-sm filter-form u-ml-auto">
@@ -27,7 +27,7 @@
 
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cerca spesa..." class="form-in form-in-sm filter-search">
             @if($search || $status || $expenseable_type)
-                <button wire:click="$set('search', ''); $set('status', ''); $set('expenseable_type', '');" class="btn btn-g btn-sm">Reset</button>
+                <button type="button" wire:click="$set('search', ''); $set('status', ''); $set('expenseable_type', '');" class="btn btn-g btn-sm">Azzera filtri</button>
             @endif
         </div>
     </div>

@@ -21,7 +21,7 @@
             <div class="form-row full">
                 <x-form-group label="Nome / Ragione Sociale" name="name" required>
                     <input name="name" class="form-in @error('name') is-invalid @enderror"
-                           value="{{ old('name', $client->name) }}" placeholder="Es. Acme S.r.l.">
+                           value="{{ old('name', $client->name) }}" placeholder="Es. Acme S.r.l." required>
                 </x-form-group>
             </div>
             <div class="form-row">
@@ -73,7 +73,7 @@
                            value="{{ old('sdi_code', $client->sdi_code) }}" placeholder="6 o 7 caratteri">
                 </x-form-group>
                 <x-form-group label="Stato cliente" name="status">
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         <option value="active"   {{ old('status', $client->status) == 'active'   ? 'selected' : '' }}>Attivo</option>
                         <option value="inactive" {{ old('status', $client->status) == 'inactive' ? 'selected' : '' }}>Inattivo</option>
                     </select>

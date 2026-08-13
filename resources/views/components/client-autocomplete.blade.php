@@ -6,6 +6,8 @@
     'canCreate' => auth()->user()->can('create', \App\Models\Client::class),
 ])
 
+@php($resultsId = $name . '_autocomplete_results')
+
 <div x-data="clientAutocomplete({
         initialValue: @js($value),
         initialText: @js($text),
@@ -22,14 +24,20 @@
                x-model="search"
                @input.debounce.300ms="fetchResults()"
                @focus="open()"
+               @keydown.escape="close()"
                class="form-in ca-create-input @error($name) is-invalid @enderror"
                placeholder="Cerca cliente (min. 1 carattere)..."
                autocomplete="off"
+               role="combobox"
+               aria-autocomplete="list"
+               aria-controls="{{ $resultsId }}"
+               :aria-expanded="isOpen.toString()"
+               @if($required) required aria-required="true" @endif
         >
         
         <input type="hidden" name="{{ $name }}" x-model="value">
         
-        <div x-show="loading" class="ca-spinner-container">
+        <div x-show="loading" class="ca-spinner-container" role="status" aria-label="Ricerca clienti in corso">
             <svg class="ca-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="ca-spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="ca-spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -43,9 +51,11 @@
          class="ca-dropdown"
          x-cloak>
          
-         <ul class="ca-results-list">
+         <ul id="{{ $resultsId }}" class="ca-results-list" role="listbox" aria-label="Risultati clienti">
              <template x-for="result in results" :key="result.id">
-                 <li @click="selectClient(result)" class="ca-result-item">
+                 <li @click="selectClient(result)" @keydown.enter.prevent="selectClient(result)"
+                     @keydown.space.prevent="selectClient(result)" class="ca-result-item"
+                     role="option" tabindex="0" :aria-selected="(String(value) === String(result.id)).toString()">
                      <div class="ca-result-name" x-text="result.name"></div>
                      <div class="ca-result-meta">
                         <span x-show="result.company_name" x-text="result.company_name + (result.vat_number ? ' · ' : '')"></span>

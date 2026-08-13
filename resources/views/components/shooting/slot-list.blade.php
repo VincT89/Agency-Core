@@ -49,7 +49,7 @@
                 </div>
                 
                 @if($interactive && $slot->status->value === 'proposed')
-                    <button wire:click="acceptSlot({{ $slot->id }})" wire:loading.attr="disabled" class="btn btn-p shooting-btn-accept">Accetta questo Slot</button>
+                    <button type="button" wire:click="acceptSlot({{ $slot->id }})" wire:loading.attr="disabled" class="btn btn-p shooting-btn-accept">Accetta questo slot</button>
                 @endif
             </div>
         @endforeach
@@ -59,7 +59,7 @@
         <div class="shooting-reject-wrap">
             <label class="form-lbl">Note per il rifiuto (opzionale)</label>
             <textarea wire:model="photographerNote" class="form-in shooting-textarea-mb8" rows="2"></textarea>
-            <button wire:click="rejectAllSlots" wire:loading.attr="disabled" class="btn btn-outline shooting-btn-reject">Rifiuta Tutti gli Slot</button>
+            <button type="button" wire:click="rejectAllSlots" wire:loading.attr="disabled" class="btn btn-outline shooting-btn-reject">Rifiuta tutti gli slot</button>
         </div>
     @endif
 </div>

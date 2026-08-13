@@ -206,6 +206,7 @@ class ExpenseForm extends Component
 
     public function render()
     {
-        return view('livewire.expenses.expense-form')->layout('layouts.app');
+        return view('livewire.expenses.expense-form')
+            ->layout('layouts.app', ['title' => $this->expense ? 'Modifica spesa' : 'Nuova spesa']);
     }
 }

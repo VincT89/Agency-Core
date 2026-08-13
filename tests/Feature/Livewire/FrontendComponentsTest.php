@@ -9,7 +9,9 @@ use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Models\Shooting\Shoot;
 use App\Models\User;
+use App\Livewire\Social\MarketingCampaigns\MarketingCampaignShow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class FrontendComponentsTest extends TestCase
@@ -30,7 +32,16 @@ class FrontendComponentsTest extends TestCase
 
     public function test_marketing_campaign_calendar_renders_successfully(): void
     {
-        $this->assertRouteRenders('social.calendar');
+        $this->get(route('social.calendar'))
+            ->assertOk()
+            ->assertSeeHtml('id="marketing-calendar-client-filter"')
+            ->assertSeeHtml('for="marketing-calendar-client-filter"')
+            ->assertSeeHtml('id="marketing-calendar-campaign-filter"')
+            ->assertSeeHtml('for="marketing-calendar-campaign-filter"')
+            ->assertSeeHtml('id="marketing-calendar-platform-filter"')
+            ->assertSeeHtml('for="marketing-calendar-platform-filter"')
+            ->assertSee("prev: 'Periodo precedente'", false)
+            ->assertSee("next: 'Periodo successivo'", false);
     }
 
     public function test_marketing_campaigns_index_renders_successfully(): void
@@ -48,6 +59,29 @@ class FrontendComponentsTest extends TestCase
         $campaign = MarketingCampaign::factory()->create();
 
         $this->assertRouteRenders('marketing-campaigns.show', $campaign);
+    }
+
+    public function test_marketing_campaign_dialogs_render_as_accessible_teleported_dialogs(): void
+    {
+        $campaign = MarketingCampaign::factory()->create();
+        $component = Livewire::test(MarketingCampaignShow::class, ['campaign' => $campaign]);
+
+        foreach ([
+            ['openCampaignModal', 'closeCampaignModal', 'showCampaignModal', 'Modifica Campagna'],
+            ['openExtendModal', 'closeExtendModal', 'showExtendModal', 'Prolunga Campagna'],
+            ['openRenewModal', 'closeRenewModal', 'showRenewModal', 'Rinnova Campagna'],
+            ['openExtraModal', 'closeExtraModal', 'showExtraModal', 'Aggiungi Extra'],
+            ['openInvoiceModal', 'closeInvoiceModal', 'showInvoiceModal', 'Genera Fattura'],
+        ] as [$openMethod, $closeMethod, $property, $title]) {
+            $component
+                ->call($openMethod)
+                ->assertSet($property, true)
+                ->assertSee($title)
+                ->assertSeeHtml('role="dialog"')
+                ->assertSeeHtml('aria-modal="true"')
+                ->call($closeMethod)
+                ->assertSet($property, false);
+        }
     }
 
     public function test_marketing_campaign_post_create_renders_successfully(): void

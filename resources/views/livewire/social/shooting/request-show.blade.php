@@ -107,7 +107,8 @@
                                 <label class="form-lbl" for="revision-photographer">Fotografo *</label>
                                 <select id="revision-photographer"
                                         wire:model="revisionPhotographerId"
-                                        class="form-sel @error('revisionPhotographerId') is-invalid @enderror">
+                                        class="form-sel @error('revisionPhotographerId') is-invalid @enderror"
+                                        required @disabled($photographers->isEmpty())>
                                     <option value="">Seleziona fotografo...</option>
                                     @foreach($photographers as $photographer)
                                         <option value="{{ $photographer->id }}">{{ $photographer->name }}</option>
@@ -116,23 +117,27 @@
                                 @error('revisionPhotographerId')
                                     <div class="shooting-err-msg">{{ $message }}</div>
                                 @enderror
+                                @if($photographers->isEmpty())
+                                    <div class="u-alert-error u-mt-sm" role="alert">Non ci sono fotografi attivi disponibili.</div>
+                                @endif
                             </div>
 
                             <div class="shooting-revision-slots">
                                 @foreach($revisionSlots as $index => $slot)
                                     <div class="shooting-revision-slot" wire:key="revision-slot-{{ $index }}">
                                         <div class="form-g">
-                                            <label class="form-lbl">Nuova data *</label>
-                                            <input type="date"
+                                            <label for="revision-date-{{ $index }}" class="form-lbl">Nuova data *</label>
+                                            <input id="revision-date-{{ $index }}" type="date"
                                                    wire:model="revisionSlots.{{ $index }}.date"
-                                                   class="form-in @error('revisionSlots.'.$index.'.date') is-invalid @enderror">
+                                                   class="form-in @error('revisionSlots.'.$index.'.date') is-invalid @enderror"
+                                                   min="{{ now()->toDateString() }}" required>
                                             @error('revisionSlots.'.$index.'.date')
                                                 <div class="shooting-err-msg">{{ $message }}</div>
                                             @enderror
                                         </div>
                                         <div class="form-g">
-                                            <label class="form-lbl">Fascia oraria *</label>
-                                            <select wire:model="revisionSlots.{{ $index }}.period" class="form-sel">
+                                            <label for="revision-period-{{ $index }}" class="form-lbl">Fascia oraria *</label>
+                                            <select id="revision-period-{{ $index }}" wire:model="revisionSlots.{{ $index }}.period" class="form-sel" required>
                                                 <option value="morning">Mattina</option>
                                                 <option value="intermediate">Intermedio</option>
                                                 <option value="afternoon">Pomeriggio</option>
@@ -142,6 +147,7 @@
                                         <button type="button"
                                                 wire:click="removeRevisionSlot({{ $index }})"
                                                 class="btn btn-g btn-sm"
+                                                aria-label="Rimuovi data {{ $index + 1 }}"
                                                 @disabled(count($revisionSlots) === 1)>
                                             Rimuovi
                                         </button>
@@ -161,6 +167,7 @@
                                     wire:click="reopenProposal"
                                     wire:loading.attr="disabled"
                                     wire:target="reopenProposal"
+                                    @disabled($photographers->isEmpty())
                                     class="btn btn-p">
                                 Invia nuova proposta
                             </button>

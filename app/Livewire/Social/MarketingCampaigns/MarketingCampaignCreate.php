@@ -79,6 +79,6 @@ class MarketingCampaignCreate extends Component
 
         return view('livewire.social.marketing-campaigns.marketing-campaign-create', [
             'clients' => $clients,
-        ])->layout('layouts.app');
+        ])->layout('layouts.app', ['title' => 'Nuovo progetto marketing']);
     }
 }

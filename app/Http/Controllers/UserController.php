@@ -70,6 +70,7 @@ class UserController extends Controller implements HasMiddleware
         return view('users.edit', [
             'user'  => $user,
             'roles' => UserRole::cases(),
+            'lastActiveAdministrator' => $user->isLastActiveAdministrator(),
         ]);
     }
 
@@ -83,6 +84,15 @@ class UserController extends Controller implements HasMiddleware
             'phone'                  => ['nullable', 'string', 'max:50'],
             'status'                 => ['required', 'in:active,inactive'],
         ]);
+
+        if (
+            $user->isLastActiveAdministrator()
+            && ($data['role'] !== UserRole::Admin->value || $data['status'] !== 'active')
+        ) {
+            return back()->withInput()->withErrors([
+                'role' => 'Deve rimanere almeno un amministratore attivo.',
+            ]);
+        }
 
         $user->update($data);
 
@@ -114,6 +124,10 @@ class UserController extends Controller implements HasMiddleware
         // Impedisce l'autodisattivazione del proprio account
         abort_if($user->id === auth()->id(), 403, 'Non puoi disattivare il tuo account.');
 
+        if ($user->isLastActiveAdministrator()) {
+            return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
+        }
+
         $user->update([
             'status' => $user->status === 'active' ? 'inactive' : 'active',
         ]);
@@ -126,6 +140,10 @@ class UserController extends Controller implements HasMiddleware
     public function destroy(User $user): RedirectResponse
     {
         abort_if($user->id === auth()->id(), 403, 'Non puoi eliminare il tuo account.');
+
+        if ($user->isLastActiveAdministrator()) {
+            return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
+        }
 
         $user->delete();
 

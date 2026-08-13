@@ -1834,7 +1834,7 @@ class MarketingCampaignPostShow extends Component
     public function render()
     {
         return view('livewire.social.marketing-campaigns.marketing-campaign-post-show')
-            ->layout('layouts.app');
+            ->layout('layouts.app', ['title' => $this->post->title ?: 'Dettaglio post']);
     }
 
     public function refreshPreflight(): void

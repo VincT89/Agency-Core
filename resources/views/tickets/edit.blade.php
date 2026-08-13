@@ -21,14 +21,14 @@
             <div class="form-row full">
                 <x-form-group label="Oggetto" name="title" required>
                     <input name="title" class="form-in @error('title') is-invalid @enderror"
-                           value="{{ old('title', $ticket->title) }}">
+                           value="{{ old('title', $ticket->title) }}" required>
                 </x-form-group>
             </div>
 
             <div class="form-row">
-                <x-form-group label="Cliente" name="client_id">
+                <x-form-group label="Cliente" name="client_id" required>
                     <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror" data-client-select data-project-select="project_sel" data-current-project="{{ $ticket->project_id ?? '' }}" required>
-                        <option value="">Seleziona cliente (Obbligatorio)...</option>
+                        <option value="">Seleziona cliente...</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}" {{ old('client_id', $ticket->client_id) == $client->id ? 'selected' : '' }}>
                                 {{ $client->name }}
@@ -38,7 +38,7 @@
                 </x-form-group>
                 <x-form-group label="Progetto" name="project_id" required>
                     <select name="project_id" id="project_sel" class="form-sel @error('project_id') is-invalid @enderror" required>
-                        <option value="">Seleziona progetto (Obbligatorio)...</option>
+                        <option value="">Seleziona progetto...</option>
                         @if($ticket->project)
                             <option value="{{ $ticket->project_id }}" selected>{{ $ticket->project->name }}</option>
                         @endif
@@ -48,14 +48,14 @@
 
             <div class="form-row">
                 <x-form-group label="Tipo" name="type" required>
-                    <select name="type" class="form-sel @error('type') is-invalid @enderror">
+                    <select name="type" class="form-sel @error('type') is-invalid @enderror" required>
                         @foreach($types as $t)
                             <option value="{{ $t }}" {{ old('type', $ticket->type) == $t ? 'selected' : '' }}>{{ ucfirst($t) }}</option>
                         @endforeach
                     </select>
                 </x-form-group>
                 <x-form-group label="Priorità" name="priority" required>
-                    <select name="priority" class="form-sel @error('priority') is-invalid @enderror">
+                    <select name="priority" class="form-sel @error('priority') is-invalid @enderror" required>
                         @foreach($priorities as $p)
                             <option value="{{ $p }}" {{ old('priority', $ticket->priority) == $p ? 'selected' : '' }}>{{ ucfirst($p) }}</option>
                         @endforeach
@@ -65,7 +65,7 @@
 
             <div class="form-row">
                 <x-form-group label="Stato" name="status" required>
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         @foreach($statuses as $s)
                             <option value="{{ $s }}" {{ old('status', $ticket->status) == $s ? 'selected' : '' }}>{{ (new \App\Models\Ticket(['status' => $s]))->status_label }}</option>
                         @endforeach

@@ -63,8 +63,9 @@
 
         {{-- Email --}}
         <div class="form-g login-form-g">
-          <div class="form-lbl">Email aziendale</div>
+          <label class="form-lbl" for="login-email">Email aziendale</label>
           <input
+            id="login-email"
             type="email"
             name="email"
             class="form-in @error('email') is-invalid @enderror"
@@ -81,15 +82,15 @@
 
         {{-- Password --}}
         <div class="form-g login-form-g last">
-          <div class="form-lbl">Password</div>
-          <input
-            type="password"
+          <label class="form-lbl" for="login-password">Password</label>
+          <x-password-input
+            id="login-password"
             name="password"
-            class="form-in @error('password') is-invalid @enderror"
+            :class="$errors->has('password') ? 'is-invalid' : ''"
             placeholder="••••••••"
             required
             autocomplete="current-password"
-          >
+          />
           @error('password')
             <div class="invalid-feedback">{{ $message }}</div>
           @enderror

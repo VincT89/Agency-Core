@@ -190,6 +190,6 @@ class UserDailyNotes extends Component
 
         return view('livewire.dashboard.user-daily-notes', [
             'note' => $note
-        ]);
+        ])->layout('layouts.app', ['title' => 'Blocco Note']);
     }
 }

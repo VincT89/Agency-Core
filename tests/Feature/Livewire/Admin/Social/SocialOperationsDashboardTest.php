@@ -60,17 +60,29 @@ class SocialOperationsDashboardTest extends TestCase
             'correlation_id' => 'published-publication',
             'external_permalink' => 'https://www.facebook.com/example/posts/1',
         ]);
+        MarketingCampaignPostPublication::create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => 'facebook',
+            'status' => PublicationStatus::Published->value,
+            'correlation_id' => 'historical-published-publication',
+            'external_post_id' => 'page-123_post-456',
+        ]);
 
         $component = Livewire::actingAs($this->user)
             ->test(SocialOperationsDashboard::class)
             ->assertSee("#{$pending->id}", false)
             ->assertSee("#{$published->id}", false)
+            ->assertSee('https://www.facebook.com/page-123/posts/post-456', false)
             ->assertSee('Dettagli post')
             ->assertSee('Apri sul social')
             ->assertSeeHtml('class="social-operation-filters"')
             ->assertSeeHtml('aria-pressed="true"')
             ->assertSeeHtml('class="t-table u-w-full social-operations-table"')
             ->assertSeeHtml('data-label="Azioni"');
+
+        $responsiveCss = file_get_contents(resource_path('css/sodano/_social.css'));
+        $this->assertStringContainsString('.table-responsive.social-operations-table-container > .t-table.social-operations-table thead tr', $responsiveCss);
+        $this->assertStringContainsString('max-width: 1px;', $responsiveCss);
 
         $component
             ->set('filter', 'active')

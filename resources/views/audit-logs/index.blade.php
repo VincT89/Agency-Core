@@ -3,6 +3,12 @@
         <x-slot:title>Registro attività</x-slot:title>
     </x-page-header>
 
+    @if($errors->any())
+        <div class="u-alert-error u-mb-md" role="alert">
+            Controlla il periodo: la data finale non può precedere quella iniziale.
+        </div>
+    @endif
+
     <x-panel title="Filtri del registro" padded class="u-mb-md">
         <form action="{{ route('audit-logs.index') }}" method="GET" class="audit-log-filters">
             <div class="form-g">
@@ -43,12 +49,14 @@
 
             <div class="form-g">
                 <label for="audit-date-from" class="form-lbl">Dal giorno</label>
-                <input id="audit-date-from" type="date" name="date_from" value="{{ request('date_from') }}" class="form-in">
+                <input id="audit-date-from" type="date" name="date_from" value="{{ old('date_from', request('date_from')) }}"
+                       class="form-in @error('date_from') is-invalid @enderror">
             </div>
 
             <div class="form-g">
                 <label for="audit-date-to" class="form-lbl">Al giorno</label>
-                <input id="audit-date-to" type="date" name="date_to" value="{{ request('date_to') }}" class="form-in">
+                <input id="audit-date-to" type="date" name="date_to" value="{{ old('date_to', request('date_to')) }}"
+                       class="form-in @error('date_to') is-invalid @enderror">
             </div>
 
             <div class="audit-log-filter-actions">

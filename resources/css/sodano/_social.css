@@ -1278,16 +1278,27 @@
         width: 100%;
     }
 
-    .social-operations-table thead {
+    .table-responsive.social-operations-table-container > .t-table.social-operations-table thead {
+        display: block;
         position: absolute;
         width: 1px;
+        min-width: 0;
+        max-width: 1px;
         height: 1px;
         padding: 0;
         margin: -1px;
         overflow: hidden;
         clip: rect(0 0 0 0);
+        clip-path: inset(50%);
         white-space: nowrap;
         border: 0;
+    }
+
+    .table-responsive.social-operations-table-container > .t-table.social-operations-table thead tr {
+        display: block;
+        width: 1px;
+        min-width: 0;
+        max-width: 1px;
     }
 
     .social-operations-table tbody {

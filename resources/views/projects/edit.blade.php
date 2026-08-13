@@ -20,9 +20,9 @@
 
             <div class="sec-lbl">Dati Progetto</div>
             <div class="form-row">
-                <x-form-group label="Nome Progetto" name="name" required>
+                <x-form-group label="Nome progetto" name="name" required>
                     <input name="name" class="form-in @error('name') is-invalid @enderror"
-                           value="{{ old('name', $project->name) }}">
+                           value="{{ old('name', $project->name) }}" required>
                 </x-form-group>
                 <x-form-group label="Codice Progetto" name="code">
                     <input name="code" class="form-in @error('code') is-invalid @enderror"
@@ -31,8 +31,9 @@
             </div>
 
             <div class="form-row full u-mb-md">
-                <x-form-group label="Team di Commessa" name="members" required>
-                    <div class="u-flex u-flex-wrap u-gap-md" style="row-gap: 8px;">
+                <x-form-group label="Team di commessa" name="members" required>
+                    <div class="u-flex u-flex-wrap u-gap-md" style="row-gap: 8px;"
+                         data-required-checkbox-group data-required-message="Seleziona almeno un membro del team.">
                         @php
                             $projectMembers = $project->users->pluck('pivot.role', 'id')->toArray();
                         @endphp
@@ -63,16 +64,16 @@
                         $currentClientText = $currentClient ? $currentClient->name . ($currentClient->company_name ? ' - ' . $currentClient->company_name : '') : '';
                     }
                 @endphp
-                <x-form-group label="Cliente" name="client_id" required>
+                <x-form-group label="Cliente (opzionale)" name="client_id">
                     <x-client-autocomplete 
                         name="client_id" 
                         :value="$currentClientId" 
                         :text="$currentClientText" 
-                        :required="true" 
+                        :required="false"
                     />
                 </x-form-group>
                 <x-form-group label="Stato" name="status">
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         <option value="active" {{ old('status', $project->status) == 'active' ? 'selected' : '' }}>Attivo</option>
                         <option value="completed" {{ old('status', $project->status) == 'completed' ? 'selected' : '' }}>Completato</option>
                         <option value="on_hold" {{ old('status', $project->status) == 'on_hold' ? 'selected' : '' }}>Sospeso</option>

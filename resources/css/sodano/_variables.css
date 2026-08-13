@@ -16,8 +16,16 @@
   --text: #1a1a2e;
   --text1: #1a1a2e;
   --text2: #6b7280;
-  --text3: #9ca3af;
+  --text3: #4b5563;
   --text-inv: #ffffff;
+
+  /* Colori destinati al testo, separati dagli accenti decorativi */
+  --red-text: #b42323;
+  --green-text: #147a52;
+  --blue-text: #2459b8;
+  --orange-text: #a33b00;
+  --purple-text: #6d4db7;
+  --teal-text: #0f766e;
 
   /* Brand / Accents */
   --accent: #c8102e;
@@ -72,5 +80,11 @@
   --text: #f0ede8;
   --text1: #f0ede8;
   --text2: #b0afb4;
-  --text3: #6e6d74;
+  --text3: #a1a1aa;
+  --red-text: #fca5a5;
+  --green-text: #6ee7b7;
+  --blue-text: #93c5fd;
+  --orange-text: #fdba74;
+  --purple-text: #c4b5fd;
+  --teal-text: #5eead4;
 }

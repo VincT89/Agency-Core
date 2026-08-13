@@ -187,6 +187,7 @@ class TutorRoleMatrixTest extends TestCase
             'client_id' => $client->id,
             'name' => 'Test Domain',
             'type' => 'domain',
+            'domain' => 'test-domain.example',
             // status volutamente omesso
         ]);
         

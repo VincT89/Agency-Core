@@ -6,7 +6,7 @@
 
 .dropdown-menu {
   position: absolute;
-  top: 38px;
+  top: 46px;
   right: 0;
   background: var(--bg2);
   border: 1px solid var(--line2);
@@ -53,6 +53,7 @@
   width: 100%;
   text-align: left;
   cursor: pointer;
+  min-height: 40px;
 }
 
 .dropdown-item:hover {
@@ -61,7 +62,7 @@
 }
 
 .dropdown-item.danger {
-  color: var(--red);
+  color: var(--red-text);
 }
 
 .dropdown-item.danger:hover {
@@ -131,6 +132,8 @@
   border: none;
   cursor: pointer;
   color: var(--text3);
+  width: 36px;
+  height: 36px;
   padding: 4px;
   display: flex;
   align-items: center;
@@ -139,7 +142,7 @@
 }
 
 .notif-item-delete:hover {
-  color: var(--red);
+  color: var(--red-text);
 }
 
 .notif-empty {
@@ -171,6 +174,7 @@
   text-decoration: underline;
   white-space: nowrap;
   transition: color var(--transition);
+  min-height: 32px;
 }
 
 .notif-mark-all:hover {

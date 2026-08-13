@@ -15,19 +15,19 @@
             @method('PATCH')
             
             <div class="form-row">
-                <x-form-group label="Data Pagamento" name="payment_date" required>
+                <x-form-group label="Data pagamento" name="payment_date" required>
                     <input type="date" name="payment_date" class="form-in @error('payment_date') is-invalid @enderror"
-                           value="{{ old('payment_date', $payment->payment_date?->toDateString()) }}">
+                           value="{{ old('payment_date', $payment->payment_date?->toDateString()) }}" required>
                 </x-form-group>
-                <x-form-group label="Importo" name="amount" required>
-                    <input type="number" step="0.01" name="amount" class="form-in @error('amount') is-invalid @enderror"
-                           value="{{ old('amount', $payment->amount) }}">
+                <x-form-group label="Importo (€)" name="amount" required>
+                    <input type="number" min="0.01" step="0.01" name="amount" class="form-in @error('amount') is-invalid @enderror"
+                           value="{{ old('amount', $payment->amount) }}" required>
                 </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Metodo" name="method" required>
-                    <select name="method" class="form-sel @error('method') is-invalid @enderror">
+                    <select name="method" class="form-sel @error('method') is-invalid @enderror" required>
                         @foreach($methods as $m)
                             <option value="{{ $m }}" {{ old('method', $payment->method) == $m ? 'selected' : '' }}>{{ (new \App\Models\Payment(['method' => $m]))->method_label }}</option>
                         @endforeach
@@ -40,13 +40,13 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Fattura di Riferimento" name="invoice_id" required>
+                <x-form-group label="Fattura di riferimento" name="invoice_id" required>
                     <div class="u-fake-input-disabled">
                         {{ $payment->invoice->number }} — {{ $payment->invoice->client?->name }}
                         <span class="u-ml-auto u-text-sm">(Fissa)</span>
                     </div>
                 </x-form-group>
-                <div class="u-pt-28">
+                <div class="u-pt-28 payment-info-column">
                     <div class="u-info-box">
                         <span class="u-text-strong">Info:</span> Il Cliente e il Progetto sono già saldamente legati e la fattura non può essere alterata.
                     </div>

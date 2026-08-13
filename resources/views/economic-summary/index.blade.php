@@ -7,9 +7,13 @@
     <x-slot:title>Riepiloghi Economici</x-slot:title>
         <x-slot:actions>
             <form method="GET" action="{{ route('economic-summary.index') }}" class="finance-filter-form">
-                <input type="date" name="from" value="{{ $from ?? '' }}" class="form-in finance-date-input" title="Dal">
+                <label for="economic-from" class="sr-only">Data iniziale</label>
+                <input id="economic-from" type="date" name="from" value="{{ old('from', $from ?? '') }}"
+                       class="form-in finance-date-input @error('from') is-invalid @enderror">
                 <span class="finance-filter-sep">-</span>
-                <input type="date" name="to" value="{{ $to ?? '' }}" class="form-in finance-date-input" title="Al">
+                <label for="economic-to" class="sr-only">Data finale</label>
+                <input id="economic-to" type="date" name="to" value="{{ old('to', $to ?? '') }}"
+                       class="form-in finance-date-input @error('to') is-invalid @enderror">
                 <button type="submit" class="btn btn-p finance-btn-sm">Applica</button>
                 @if($from || $to)
                     <a href="{{ route('economic-summary.index') }}" class="btn btn-g finance-btn-sm">Reset</a>
@@ -17,6 +21,12 @@
             </form>
         </x-slot:actions>
     </x-page-header>
+
+    @if($errors->any())
+        <div class="u-alert-error u-mb-md" role="alert">
+            Controlla il periodo: la data finale non può precedere quella iniziale.
+        </div>
+    @endif
 
     @if($from || $to)
     <div class="finance-note-wrap">

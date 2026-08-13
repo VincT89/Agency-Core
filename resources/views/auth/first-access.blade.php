@@ -66,16 +66,16 @@
 
         {{-- Password --}}
         <div class="form-g login-form-g">
-          <div class="form-lbl">Nuova Password</div>
-          <input
-            type="password"
+          <label class="form-lbl" for="first-access-password">Nuova Password</label>
+          <x-password-input
+            id="first-access-password"
             name="password"
-            class="form-in @error('password') is-invalid @enderror"
+            :class="$errors->has('password') ? 'is-invalid' : ''"
             placeholder="Minimo 8 caratteri"
             required
             autofocus
             autocomplete="new-password"
-          >
+          />
           @error('password')
             <div class="invalid-feedback">{{ $message }}</div>
           @enderror
@@ -83,15 +83,14 @@
 
         {{-- Conferma Password --}}
         <div class="form-g login-form-g lg">
-          <div class="form-lbl">Conferma Password</div>
-          <input
-            type="password"
+          <label class="form-lbl" for="first-access-password-confirmation">Conferma Password</label>
+          <x-password-input
+            id="first-access-password-confirmation"
             name="password_confirmation"
-            class="form-in"
             placeholder="Ripeti password"
             required
             autocomplete="new-password"
-          >
+          />
         </div>
 
         <div class="login-form-footer end">

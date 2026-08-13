@@ -136,7 +136,8 @@
                             <td class="mono-col">{{ $att->created_at->format('d/m/Y H:i') }}</td>
                             <td>
                                 <div class="u-flex u-gap-sm">
-                                    <a href="{{ route('attachments.download', $att) }}" target="_blank" class="btn-icon">↓</a>
+                                    <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
+                                       class="btn-icon" aria-label="Scarica allegato {{ $att->original_name ?? $att->filename ?? '' }}">↓</a>
                                     @can('delete', $att)
                                         <form action="{{ route('attachments.destroy', $att) }}" method="POST" onsubmit="return confirm('Eliminare il file?')">
                                             @csrf @method('DELETE')

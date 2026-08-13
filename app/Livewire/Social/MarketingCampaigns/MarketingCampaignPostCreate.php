@@ -938,7 +938,7 @@ class MarketingCampaignPostCreate extends Component
     public function render()
     {
         return view('livewire.social.marketing-campaigns.marketing-campaign-post-create')
-            ->layout('layouts.app');
+            ->layout('layouts.app', ['title' => 'Nuovo post · '.$this->campaign->name]);
     }
 
     public function temporaryVideoPreviewUrl(TemporaryUploadedFile $file): string

@@ -32,10 +32,10 @@
             <div class="form-row">
                 <x-form-group label="Riferimento interno" name="number" required>
                     <input name="number" class="form-in @error('number') is-invalid @enderror"
-                           value="{{ old('number', $invoice->number) }}">
+                           value="{{ old('number', $invoice->number) }}" required>
                 </x-form-group>
                 <x-form-group label="Stato dell’incasso" name="status" required>
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         @foreach($statuses as $status)
                             <option value="{{ $status }}" @selected(old('status', $invoice->status) === $status)>
                                 {{ (new \App\Models\Invoice(['status' => $status]))->status_label }}
@@ -51,7 +51,9 @@
             <div class="form-row">
                 <x-form-group label="Cliente" name="client_id" required>
                     <select name="client_id" id="client_sel"
-                            class="form-sel @error('client_id') is-invalid @enderror">
+                            class="form-sel @error('client_id') is-invalid @enderror" required
+                            data-client-select data-project-select="project_sel"
+                            data-current-project="{{ old('project_id', $invoice->project_id) }}">
                         <option value="">Seleziona cliente...</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}"
@@ -72,7 +74,8 @@
                 @else
                     <x-form-group label="Progetto" name="project_id" required>
                         <select name="project_id" id="project_sel"
-                                class="form-sel @error('project_id') is-invalid @enderror" required>
+                                class="form-sel @error('project_id') is-invalid @enderror" required
+                                aria-describedby="project_sel_help">
                             <option value="">Seleziona progetto...</option>
                             @if($invoice->project)
                                 <option value="{{ $invoice->project_id }}" selected>
@@ -80,6 +83,7 @@
                                 </option>
                             @endif
                         </select>
+                        <div id="project_sel_help" class="u-text-meta" aria-live="polite">Il progetto deve appartenere al cliente selezionato.</div>
                     </x-form-group>
                 @endif
             </div>
@@ -88,7 +92,7 @@
                 <x-form-group label="Data fattura" name="issue_date" required>
                     <input type="date" name="issue_date"
                            class="form-in @error('issue_date') is-invalid @enderror"
-                           value="{{ old('issue_date', $invoice->issue_date?->toDateString()) }}">
+                           value="{{ old('issue_date', $invoice->issue_date?->toDateString()) }}" required>
                 </x-form-group>
                 <x-form-group label="Data di scadenza" name="due_date">
                     <input type="date" name="due_date"
@@ -97,7 +101,7 @@
                 </x-form-group>
                 <x-form-group label="Valuta" name="currency" required>
                     <input name="currency" class="form-in @error('currency') is-invalid @enderror"
-                           value="{{ old('currency', $invoice->currency) }}" maxlength="3">
+                           value="{{ old('currency', $invoice->currency) }}" maxlength="3" required>
                 </x-form-group>
             </div>
 
@@ -310,16 +314,6 @@
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                if (
-                    typeof initProjectSelect !== 'undefined'
-                    && document.getElementById('project_sel')
-                ) {
-                    initProjectSelect(
-                        'client_sel',
-                        'project_sel',
-                        @js(old('project_id', $invoice->project_id))
-                    );
-                }
             });
         </script>
     @endpush

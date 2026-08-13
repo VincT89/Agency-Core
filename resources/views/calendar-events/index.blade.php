@@ -53,9 +53,9 @@
                 <div class="cal-mini-header">
                     <span class="cal-mini-title">{{ ucfirst($currentDate->translatedFormat('F Y')) }}</span>
                     <div class="cal-mini-nav">
-                        <a href="{{ request()->fullUrlWithQuery(['date' => $prevMonth]) }}" wire:navigate class="btn-cal-nav"><i
+                        <a href="{{ request()->fullUrlWithQuery(['date' => $prevMonth]) }}" wire:navigate class="btn-cal-nav" aria-label="Mese precedente"><i
                                 data-lucide="chevron-left" class="u-icon-sm"></i></a>
-                        <a href="{{ request()->fullUrlWithQuery(['date' => $nextMonth]) }}" wire:navigate class="btn-cal-nav"><i
+                        <a href="{{ request()->fullUrlWithQuery(['date' => $nextMonth]) }}" wire:navigate class="btn-cal-nav" aria-label="Mese successivo"><i
                                 data-lucide="chevron-right" class="u-icon-sm"></i></a>
                     </div>
                 </div>
@@ -75,6 +75,8 @@
                         @endphp
                         <a href="{{ request()->fullUrlWithQuery(['date' => $day->toDateString()]) }}" wire:navigate
                             data-date="{{ $day->toDateString() }}"
+                            aria-label="{{ ucfirst($day->translatedFormat('l d F Y')) }}"
+                            @if($isSelected) aria-current="date" @endif
                             class="cal-mini-day {{ $isCurrentMonth ? '' : 'is-other-month' }} {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }}">
                             {{ $day->day }}
                         </a>
@@ -111,15 +113,15 @@
                 <div x-show="viewMode === 'kanban'" class="u-flex u-items-center u-gap-md" style="display: none;">
                     <h3 class="u-text-lg u-font-medium">Vista Kanban ({{ $startOfWeek->format('d/m') }} - {{ $endOfWeek->format('d/m') }})</h3>
                     <div class="cal-mini-nav" style="display: inline-flex;">
-                        <a href="{{ request()->fullUrlWithQuery(['date' => $prevWeek]) }}" wire:navigate class="btn-cal-nav"><i data-lucide="chevron-left" class="u-icon-sm"></i></a>
-                        <a href="{{ request()->fullUrlWithQuery(['date' => $nextWeek]) }}" wire:navigate class="btn-cal-nav"><i data-lucide="chevron-right" class="u-icon-sm"></i></a>
+                        <a href="{{ request()->fullUrlWithQuery(['date' => $prevWeek]) }}" wire:navigate class="btn-cal-nav" aria-label="Settimana precedente"><i data-lucide="chevron-left" class="u-icon-sm" aria-hidden="true"></i></a>
+                        <a href="{{ request()->fullUrlWithQuery(['date' => $nextWeek]) }}" wire:navigate class="btn-cal-nav" aria-label="Settimana successiva"><i data-lucide="chevron-right" class="u-icon-sm" aria-hidden="true"></i></a>
                     </div>
                 </div>
                 <h3 class="u-text-lg u-font-medium" x-show="viewMode === 'calendar'">Vista Calendario</h3>
                 
-                <div class="tab-switcher u-flex-center u-inline-flex">
-                    <button type="button" @click="$dispatch('view-mode-changed', 'calendar')" class="tab-btn" :class="{'active': viewMode === 'calendar'}">Calendario</button>
-                    <button type="button" @click="$dispatch('view-mode-changed', 'kanban')" class="tab-btn" :class="{'active': viewMode === 'kanban'}">Kanban</button>
+                <div class="tab-switcher u-flex-center u-inline-flex" role="tablist" aria-label="Vista calendario">
+                    <button type="button" role="tab" :aria-selected="(viewMode === 'calendar').toString()" @click="$dispatch('view-mode-changed', 'calendar')" class="tab-btn" :class="{'active': viewMode === 'calendar'}">Calendario</button>
+                    <button type="button" role="tab" :aria-selected="(viewMode === 'kanban').toString()" @click="$dispatch('view-mode-changed', 'kanban')" class="tab-btn" :class="{'active': viewMode === 'kanban'}">Kanban</button>
                 </div>
             </div>
 
@@ -129,9 +131,8 @@
             </div>
 
             <div class="kanban" x-show="viewMode === 'kanban'" style="display: none; height: calc(100vh - 180px); overflow-x: auto; padding: 0 16px;">
-                <div class="u-flex u-gap-md u-h-full">
+                <div class="u-flex u-gap-md u-h-full calendar-kanban-columns">
                     @foreach($weekDays as $index => $day)
-                        @if($day->dayOfWeek !== 0) {{-- Exclude Sunday --}}
                             <div class="k-col u-flex-shrink-0" style="width: 300px; display: flex; flex-direction: column; max-height: 100%;">
                                 <div class="k-col-title u-mb-sm">
                                     <span>{{ ucfirst($day->translatedFormat('l d/m')) }}</span>
@@ -150,7 +151,6 @@
                                     </template>
                                 </div>
                             </div>
-                        @endif
                     @endforeach
                 </div>
             </div>
@@ -212,7 +212,7 @@
                             week: 'Settimana',
                             day: 'Giorno'
                         },
-                        height: '100%', // Adatta il calendario al flex container per avere solo scroll interno
+                        height: window.innerWidth < 901 ? 650 : '100%',
                         slotMinTime: '08:00:00', // Nasconde la notte fonda
                         slotMaxTime: '24:00:00',
                         slotLabelFormat: {
@@ -223,7 +223,10 @@
                         },
                         slotLabelInterval: '00:30:00',
                         allDaySlot: true,
-                        dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true },
+                        dayHeaderContent: arg => new Intl.DateTimeFormat('it-IT', {
+                            weekday: 'short',
+                            day: '2-digit'
+                        }).format(arg.date).replace('.', '').toUpperCase(),
                         nowIndicator: true,
                         selectable: true,
                         selectMirror: true,

@@ -7,13 +7,17 @@
     </x-page-header>
 
     <x-panel padded>
-        <form action="{{ route('hosting-services.store') }}" method="POST">
+        <form action="{{ route('hosting-services.store') }}" method="POST"
+              x-data="{ serviceType: @js(old('type', request('type', 'hosting'))) }">
             @csrf
-            
-            @if(request()->has('type') && request('type') === 'domain')
+
+            @php
+                $fixedDomain = request('type') === 'domain';
+                $excludeDomains = request('exclude_type') === 'domain';
+            @endphp
+
+            @if($fixedDomain)
                 <input type="hidden" name="type" value="domain">
-            @elseif(request()->has('exclude_type') && request('exclude_type') === 'domain')
-                <input type="hidden" name="type" value="hosting">
             @endif
 
             <div class="hosting-services-help">
@@ -23,10 +27,13 @@
 
             <div class="sec-lbl">Dettagli Servizio</div>
             
-            <div class="form-row {{ request()->has('type') ? 'u-hidden' : '' }}">
+            @unless($fixedDomain)
+            <div class="form-row">
                 <x-form-group label="Tipo Servizio" name="type" required>
-                    <select name="type" class="form-sel @error('type') is-invalid @enderror" required {{ request()->has('type') ? 'disabled' : '' }}>
-                        <option value="domain" {{ old('type', request('type')) === 'domain' ? 'selected' : '' }}>Dominio</option>
+                    <select name="type" x-model="serviceType" class="form-sel @error('type') is-invalid @enderror" required>
+                        @unless($excludeDomains)
+                            <option value="domain" {{ old('type', request('type')) === 'domain' ? 'selected' : '' }}>Dominio</option>
+                        @endunless
                         <option value="hosting" {{ old('type', request('type', 'hosting')) === 'hosting' ? 'selected' : '' }}>Hosting</option>
                         <option value="website" {{ old('type') === 'website' ? 'selected' : '' }}>Website</option>
                         <option value="maintenance" {{ old('type') === 'maintenance' ? 'selected' : '' }}>Manutenzione</option>
@@ -36,6 +43,7 @@
                     </select>
                 </x-form-group>
             </div>
+            @endunless
 
             <div class="form-row full">
                 <x-form-group label="Nome Identificativo" name="name" required>
@@ -44,27 +52,16 @@
             </div>
 
             <div class="form-row full">
-                <div class="form-g" x-data="clientAutocomplete('{{ route('api.clients.search') }}')" @click.outside="isOpen = false">
-                    <div class="form-lbl">Cliente <span class="u-text-red">*</span></div>
-                    <div class="hosting-services-relative">
-                        <input type="hidden" name="client_id" x-model="selectedId">
-                        <input type="text" class="form-in @error('client_id') is-invalid @enderror" x-model="search" @focus="isOpen = true; if(search.length === 0) fetchResults()" @input.debounce.300ms="fetchResults" placeholder="Cerca cliente..." autocomplete="off">
-                        
-                        <div class="autocomplete-dropdown u-hidden" :class="{'u-hidden': !(isOpen && results.length > 0)}">
-                            <template x-for="result in results" :key="result.id">
-                                <div class="autocomplete-item" @click="selectResult(result)">
-                                    <span x-text="result.name"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                    @error('client_id') <div class="hosting-services-error">{{ $message }}</div> @enderror
-                </div>
+                <x-form-group label="Cliente" name="client_id" required>
+                    <x-client-autocomplete name="client_id" :required="true" :value="old('client_id')" :can-create="false" />
+                </x-form-group>
             </div>
 
             <div class="form-row">
-                <x-form-group label="Dominio / URL" name="domain">
-                    <input name="domain" class="form-in @error('domain') is-invalid @enderror" value="{{ old('domain') }}">
+                <x-form-group label="Dominio / URL" name="domain" :required="$fixedDomain">
+                    <input name="domain" class="form-in @error('domain') is-invalid @enderror" value="{{ old('domain') }}"
+                           :required="serviceType === 'domain'" :aria-required="(serviceType === 'domain').toString()">
+                    <div class="u-text-meta u-mt-xs" x-show="serviceType === 'domain'">Obbligatorio per i servizi di tipo dominio.</div>
                 </x-form-group>
                 <x-form-group label="Provider" name="provider">
                     <input name="provider" class="form-in @error('provider') is-invalid @enderror" value="{{ old('provider') }}" placeholder="Es. Aruba, SiteGround">
@@ -87,7 +84,7 @@
                     <input name="username" class="form-in @error('username') is-invalid @enderror" value="{{ old('username') }}">
                 </x-form-group>
                 <x-form-group label="Password" name="password">
-                    <input name="password" class="form-in @error('password') is-invalid @enderror" placeholder="Inserisci password in chiaro">
+                    <x-password-input id="hosting-password" name="password" :class="$errors->has('password') ? 'is-invalid' : ''" placeholder="Inserisci password" />
                 </x-form-group>
             </div>
             @endcan
@@ -96,7 +93,7 @@
             <div class="form-row">
                 @if(auth()->user()->canAccessFinance())
                 <x-form-group label="Costo di Rinnovo (€)" name="renewal_cost">
-                    <input type="number" step="0.01" name="renewal_cost" class="form-in @error('renewal_cost') is-invalid @enderror" value="{{ old('renewal_cost') }}">
+                    <input type="number" min="0" step="0.01" name="renewal_cost" class="form-in @error('renewal_cost') is-invalid @enderror" value="{{ old('renewal_cost') }}">
                 </x-form-group>
                 @endif
                 <x-form-group label="Data Scadenza / Rinnovo" name="renewal_date">
@@ -107,7 +104,7 @@
             <div class="form-row">
                 @if(auth()->user()->canAccessFinance())
                 <x-form-group label="Costo Risorse (€)" name="resource_cost">
-                    <input type="number" step="0.01" name="resource_cost" class="form-in @error('resource_cost') is-invalid @enderror" value="{{ old('resource_cost') }}">
+                    <input type="number" min="0" step="0.01" name="resource_cost" class="form-in @error('resource_cost') is-invalid @enderror" value="{{ old('resource_cost') }}">
                 </x-form-group>
                 @endif
                 <x-form-group label="Ciclo di Fatturazione" name="billing_cycle">
@@ -128,7 +125,7 @@
             </div>
 
             <div class="modal-ft hosting-services-footer">
-                <a href="{{ route('hosting-services.index') }}" class="btn btn-g">Annulla</a>
+                <a href="{{ route('hosting-services.index', ['type' => request('type'), 'exclude_type' => request('exclude_type')]) }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Servizio</button>
             </div>
         </form>

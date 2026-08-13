@@ -77,6 +77,6 @@ class MarketingCampaignsIndex extends Component
             'campaigns' => $campaigns,
             'clients' => $clients,
             'statuses' => MarketingCampaignStatus::cases(),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app', ['title' => 'Progetti Marketing']);
     }
 }

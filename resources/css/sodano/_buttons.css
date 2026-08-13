@@ -1,6 +1,7 @@
 .btn {
   font-family: var(--sans); font-size: 11px; font-weight: 600;
   letter-spacing: .04em; padding: 8px 16px; border-radius: var(--r);
+  min-height: 40px;
   cursor: pointer; transition: all .15s; border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -22,7 +23,7 @@
 .btn-g:hover { border-color: var(--line3); color: var(--text); background: #f0f4fc; }
 
 .btn-icon {
-  width: 32px; height: 32px; background: transparent;
+  width: 40px; height: 40px; background: transparent;
   border: 1px solid var(--line2); border-radius: var(--r);
   color: var(--text2); cursor: pointer; display: flex;
   align-items: center; justify-content: center; transition: all .15s;
@@ -33,6 +34,7 @@
 .btn-sm {
   padding: 4px 10px;
   font-size: 10px;
+  min-height: 36px;
   border-radius: var(--r);
 }
 
@@ -59,6 +61,7 @@
 .btn-xs {
   font-size: 10px;
   padding: 2px 4px;
+  min-height: 32px;
 }
 
 .btn-red { background: var(--red); color: #fff; border-color: var(--red); }

@@ -1,7 +1,7 @@
 <x-legal-document
     title="Termini di servizio"
     description="Condizioni applicabili all'accesso e all'uso di Agency Core e delle sue integrazioni con servizi esterni."
-    updated="10 agosto 2026"
+    updated="13 agosto 2026"
 >
     <section>
         <h2>1. Fornitore del servizio</h2>
@@ -65,9 +65,15 @@
     <section>
         <h2>6. Funzionamento dell'integrazione TikTok</h2>
         <p>
-            Nell'attuale configurazione di collaudo, Agency Core utilizza il caricamento di bozze TikTok mediante il
-            permesso <strong>video.upload</strong>. Il trasferimento del file a TikTok non equivale alla pubblicazione
-            definitiva: il titolare dell'account deve completare l'operazione nell'app TikTok.
+            Agency Core può trasferire video a TikTok mediante il permesso <strong>video.upload</strong> e, quando
+            account e applicazione sono abilitati, pubblicarli direttamente mediante <strong>video.publish</strong>.
+            La disponibilità effettiva dipende dalle capacità comunicate da TikTok per l'account collegato.
+        </p>
+        <p>
+            Prima della pubblicazione diretta, l'utente deve verificare visibilità, commenti, Duet, Stitch,
+            dichiarazioni commerciali o di contenuto generato con intelligenza artificiale e confermare il rispetto
+            delle regole sull'uso della musica. La conferma impartita nel gestionale costituisce una richiesta di
+            pubblicazione verso TikTok.
         </p>
         <p>
             TikTok può rifiutare, limitare, elaborare in ritardo o rimuovere un contenuto secondo le proprie regole.

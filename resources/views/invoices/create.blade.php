@@ -22,10 +22,10 @@
             <div class="form-row">
                 <x-form-group label="Riferimento interno" name="number" required>
                     <input name="number" class="form-in @error('number') is-invalid @enderror"
-                           value="{{ old('number') }}" placeholder="Es. BOZZA-2026-001">
+                           value="{{ old('number') }}" placeholder="Es. BOZZA-2026-001" required>
                 </x-form-group>
                 <x-form-group label="Stato dell’incasso" name="status" required>
-                    <select name="status" class="form-sel @error('status') is-invalid @enderror">
+                    <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         @foreach($statuses as $status)
                             <option value="{{ $status }}" @selected(old('status', 'draft') === $status)>
                                 {{ (new \App\Models\Invoice(['status' => $status]))->status_label }}
@@ -41,7 +41,9 @@
             <div class="form-row">
                 <x-form-group label="Cliente" name="client_id" required>
                     <select name="client_id" id="client_sel"
-                            class="form-sel @error('client_id') is-invalid @enderror">
+                            class="form-sel @error('client_id') is-invalid @enderror" required
+                            data-client-select data-project-select="project_sel"
+                            data-current-project="{{ old('project_id') }}">
                         <option value="">Seleziona cliente...</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}" @selected((int) old('client_id') === $client->id)>
@@ -52,9 +54,11 @@
                 </x-form-group>
                 <x-form-group label="Progetto" name="project_id" required>
                     <select name="project_id" id="project_sel"
-                            class="form-sel @error('project_id') is-invalid @enderror" required>
-                        <option value="">Seleziona progetto...</option>
+                            class="form-sel @error('project_id') is-invalid @enderror" required
+                            aria-describedby="project_sel_help">
+                        <option value="">Seleziona prima un cliente</option>
                     </select>
+                    <div id="project_sel_help" class="u-text-meta" aria-live="polite">Seleziona un cliente per caricare i progetti disponibili.</div>
                 </x-form-group>
             </div>
 
@@ -62,7 +66,7 @@
                 <x-form-group label="Data fattura" name="issue_date" required>
                     <input type="date" id="issue_date" name="issue_date"
                            class="form-in @error('issue_date') is-invalid @enderror"
-                           value="{{ old('issue_date', now()->toDateString()) }}">
+                           value="{{ old('issue_date', now()->toDateString()) }}" required>
                 </x-form-group>
                 <x-form-group label="Data di scadenza" name="due_date">
                     <input type="date" id="due_date" name="due_date"
@@ -71,7 +75,7 @@
                 </x-form-group>
                 <x-form-group label="Valuta" name="currency" required>
                     <input name="currency" class="form-in @error('currency') is-invalid @enderror"
-                           value="{{ old('currency', 'EUR') }}" maxlength="3">
+                           value="{{ old('currency', 'EUR') }}" maxlength="3" required>
                 </x-form-group>
             </div>
 
@@ -260,10 +264,6 @@
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                if (typeof initProjectSelect !== 'undefined') {
-                    initProjectSelect('client_sel', 'project_sel', @js(old('project_id')));
-                }
-
                 const issueDateInput = document.getElementById('issue_date');
                 const dueDateInput = document.getElementById('due_date');
 

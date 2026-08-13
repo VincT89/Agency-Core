@@ -36,7 +36,24 @@ body {
   --text: #f0ede8;
   --text1: #f0ede8;
   --text2: #b0afb4;
-  --text3: #6e6d74;
+  --text3: #a1a1aa;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100000;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  background: var(--text);
+  color: var(--text-inv);
+  transform: translateY(-150%);
+  transition: transform .15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .topbar {
@@ -163,8 +180,8 @@ body {
 }
 
 .tb-btn {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--line2);
   background: transparent;
   color: var(--text2);
@@ -213,8 +230,8 @@ body {
 }
 
 .avatar-btn {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--accent);
   display: flex;
@@ -239,8 +256,8 @@ body {
 }
 
 .sidebar-toggle {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   background: transparent;
   border: 1px solid var(--line2);
   border-radius: var(--r);
@@ -445,12 +462,13 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  gap: 24px;
   margin-bottom: 18px;
   padding-bottom: 16px;
   border-bottom: 1px solid #d0d8ee;
 }
 
-.ph-left {}
+.ph-left { min-width: 0; }
 
 .page-eyebrow {
   font-family: var(--mono);
@@ -469,6 +487,8 @@ body {
   letter-spacing: -.02em;
   line-height: 1;
   color: #000000;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .page-title strong {
@@ -488,7 +508,10 @@ body {
 .ph-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-left: 8px;
   padding-bottom: 4px;
 }
 

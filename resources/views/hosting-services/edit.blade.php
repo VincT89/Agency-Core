@@ -7,7 +7,8 @@
     </x-page-header>
 
     <x-panel padded>
-        <form action="{{ route('hosting-services.update', $hostingService) }}" method="POST">
+        <form action="{{ route('hosting-services.update', $hostingService) }}" method="POST"
+              x-data="{ serviceType: @js(old('type', $hostingService->type)) }">
             @csrf
             @method('PUT')
 
@@ -15,7 +16,7 @@
             
             <div class="form-row">
                 <x-form-group label="Tipo Servizio" name="type" required>
-                    <select name="type" class="form-sel @error('type') is-invalid @enderror" required>
+                    <select name="type" x-model="serviceType" class="form-sel @error('type') is-invalid @enderror" required>
                         <option value="domain" {{ old('type', $hostingService->type) === 'domain' ? 'selected' : '' }}>Dominio</option>
                         <option value="hosting" {{ old('type', $hostingService->type) === 'hosting' ? 'selected' : '' }}>Hosting</option>
                         <option value="website" {{ old('type', $hostingService->type) === 'website' ? 'selected' : '' }}>Website</option>
@@ -34,42 +35,18 @@
             </div>
 
             <div class="form-row full">
-                <div class="form-g" x-data="{
-                    search: '{{ addslashes($hostingService->client->name ?? '') }}',
-                    selectedId: '{{ $hostingService->client_id }}',
-                    results: [],
-                    isOpen: false,
-                    async fetchResults() {
-                        if (this.search.length < 2) { this.results = []; return; }
-                        const res = await fetch(`{{ route('api.clients.search') }}?q=${this.search}`);
-                        this.results = await res.json();
-                    },
-                    selectResult(r) {
-                        this.selectedId = r.id;
-                        this.search = r.name;
-                        this.isOpen = false;
-                    }
-                }" @click.outside="isOpen = false">
-                    <div class="form-lbl">Cliente <span class="u-text-red">*</span></div>
-                    <div class="hosting-services-relative">
-                        <input type="hidden" name="client_id" x-model="selectedId">
-                        <input type="text" class="form-in @error('client_id') is-invalid @enderror" x-model="search" @focus="isOpen = true; if(search.length === 0) fetchResults()" @input.debounce.300ms="fetchResults" placeholder="Cerca cliente..." autocomplete="off">
-                        
-                        <div class="autocomplete-dropdown u-hidden" :class="{'u-hidden': !(isOpen && results.length > 0)}">
-                            <template x-for="result in results" :key="result.id">
-                                <div class="autocomplete-item" @click="selectResult(result)">
-                                    <span x-text="result.name"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                    @error('client_id') <div class="hosting-services-error">{{ $message }}</div> @enderror
-                </div>
+                <x-form-group label="Cliente" name="client_id" required>
+                    <x-client-autocomplete name="client_id" :required="true"
+                        :value="old('client_id', $hostingService->client_id)"
+                        :text="$hostingService->client?->name" :can-create="false" />
+                </x-form-group>
             </div>
 
             <div class="form-row">
                 <x-form-group label="Dominio / URL" name="domain">
-                    <input name="domain" class="form-in @error('domain') is-invalid @enderror" value="{{ old('domain', $hostingService->domain) }}">
+                    <input name="domain" class="form-in @error('domain') is-invalid @enderror"
+                           value="{{ old('domain', $hostingService->domain) }}"
+                           :required="serviceType === 'domain'" :aria-required="(serviceType === 'domain').toString()">
                 </x-form-group>
                 <x-form-group label="Provider" name="provider">
                     <input name="provider" class="form-in @error('provider') is-invalid @enderror" value="{{ old('provider', $hostingService->provider) }}">
@@ -92,7 +69,7 @@
                     <input name="username" class="form-in @error('username') is-invalid @enderror" value="{{ old('username', $hostingService->username) }}">
                 </x-form-group>
                 <x-form-group label="Password" name="password">
-                    <input name="password" class="form-in @error('password') is-invalid @enderror" placeholder="Lascia vuoto per mantenere inalterata">
+                    <x-password-input id="hosting-password" name="password" :class="$errors->has('password') ? 'is-invalid' : ''" placeholder="Lascia vuoto per mantenere inalterata" />
                     <div class="hosting-services-help-text">Lascia il campo vuoto se non vuoi sovrascrivere la password attuale.</div>
                 </x-form-group>
             </div>
@@ -111,7 +88,7 @@
             <div class="form-row">
                 @if(auth()->user()->canAccessFinance())
                 <x-form-group label="Costo di Rinnovo (€)" name="renewal_cost">
-                    <input type="number" step="0.01" name="renewal_cost" class="form-in @error('renewal_cost') is-invalid @enderror" value="{{ old('renewal_cost', $hostingService->renewal_cost) }}">
+                    <input type="number" min="0" step="0.01" name="renewal_cost" class="form-in @error('renewal_cost') is-invalid @enderror" value="{{ old('renewal_cost', $hostingService->renewal_cost) }}">
                 </x-form-group>
                 @endif
                 <x-form-group label="Data Scadenza / Rinnovo" name="renewal_date">
@@ -122,7 +99,7 @@
             <div class="form-row">
                 @if(auth()->user()->canAccessFinance())
                 <x-form-group label="Costo Risorse (€)" name="resource_cost">
-                    <input type="number" step="0.01" name="resource_cost" class="form-in @error('resource_cost') is-invalid @enderror" value="{{ old('resource_cost', $hostingService->resource_cost) }}">
+                    <input type="number" min="0" step="0.01" name="resource_cost" class="form-in @error('resource_cost') is-invalid @enderror" value="{{ old('resource_cost', $hostingService->resource_cost) }}">
                 </x-form-group>
                 @endif
                 <x-form-group label="Ciclo di Fatturazione" name="billing_cycle">

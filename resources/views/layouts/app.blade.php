@@ -17,6 +17,8 @@
 
 <body>
 
+  <a class="skip-link" href="#content-area">Vai al contenuto principale</a>
+
   {{-- Background Canvas --}}
   <canvas id="bg-canvas" class="app-bg-canvas" aria-hidden="true"></canvas>
 
@@ -30,7 +32,7 @@
        :class="sidebarOpen ? 'expanded' : ''">
 
     {{-- TOPBAR --}}
-    <div class="topbar">
+    <header class="topbar">
       <div class="topbar-left">
         <button
           type="button"
@@ -53,7 +55,7 @@
         <div class="logo-text">Sodano Consulting</div>
       </div>
       <div class="topbar-center">
-        <span class="breadcrumb">
+        <nav class="breadcrumb" aria-label="Percorso della pagina">
           @isset($breadcrumb)
             @foreach($breadcrumb as $label => $url)
               @if(!$loop->last)
@@ -66,31 +68,40 @@
           @else
             <span class="cur">{{ $title ?? 'Dashboard' }}</span>
           @endisset
-        </span>
+        </nav>
       </div>
       <div class="topbar-right">
         <span class="tb-date">{{ strtoupper(now()->locale('it')->isoFormat('ddd D MMM YYYY')) }}</span>
         @livewire('notifications.notification-dropdown')
 
-        <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
-          <div class="avatar-btn" title="{{ auth()->user()->name }}" @click="open = !open">
+        <div class="dropdown" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="if(open){ open = false; $nextTick(() => $refs.profileTrigger.focus()) }">
+          <button
+            type="button"
+            class="avatar-btn"
+            x-ref="profileTrigger"
+            title="{{ auth()->user()->name }}"
+            aria-label="Apri menu profilo di {{ auth()->user()->name }}"
+            aria-controls="profile-menu"
+            :aria-expanded="open.toString()"
+            @click="open = !open"
+          >
             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(strstr(auth()->user()->name, ' '), 1, 1)) }}
-          </div>
-          <div class="dropdown-menu" x-show="open" x-transition x-cloak>
+          </button>
+          <div id="profile-menu" class="dropdown-menu" role="menu" x-show="open" x-transition x-cloak :aria-hidden="(!open).toString()">
             <div class="dropdown-header stacked">
               <div class="dropdown-header-title">{{ auth()->user()->name }}</div>
-              <div class="u-text-meta">{{ auth()->user()->role->value }}</div>
+              <div class="u-text-meta">{{ auth()->user()->role->label() }}</div>
             </div>
-            <a href="{{ route('profile.edit') }}" class="dropdown-item">Profilo</a>
+            <a href="{{ route('profile.edit') }}" class="dropdown-item" role="menuitem">Profilo</a>
             <div class="dropdown-divider"></div>
             <form method="POST" action="{{ route('logout') }}">
               @csrf
-              <button type="submit" class="dropdown-item danger">Esci</button>
+              <button type="submit" class="dropdown-item danger" role="menuitem">Esci</button>
             </form>
           </div>
         </div>
       </div>
-    </div>
+    </header>
 
     <button
       type="button"
@@ -103,9 +114,10 @@
     ></button>
 
     {{-- SIDEBAR --}}
-    <div
+    <nav
       class="sidebar"
       id="app-sidebar"
+      aria-label="Navigazione principale"
       :aria-hidden="(!sidebarOpen && window.innerWidth < 1024).toString()"
       :inert="!sidebarOpen && window.innerWidth < 1024"
       @click="if ($event.target.closest('a') && window.innerWidth < 1024) sidebarOpen = false"
@@ -294,7 +306,7 @@
       <div class="nav-divider"></div>
       
       <div class="nav-group">
-        <x-nav-item href="http://drive.sodanoconsulting.it/" target="_blank" icon="hard-drive" label="Sodano Drive" />
+        <x-nav-item href="https://drive.sodanoconsulting.it/" target="_blank" rel="noopener noreferrer" icon="hard-drive" label="Sodano Drive" />
         <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
           :active="request()->routeIs('profile.*')" />
       </div>
@@ -307,11 +319,11 @@
           <div class="nav-tooltip">Logout</div>
         </button>
       </form>
-    </div>
+    </nav>
 
     {{-- MAIN --}}
-    <div class="main">
-      <div class="content page-transition-root" id="content-area">
+    <main class="main">
+      <div class="content page-transition-root" id="content-area" tabindex="-1">
         {{-- Flash messages --}}
         @if(session('success'))
           <div class="flash flash-success">{{ session('success') }}</div>
@@ -322,7 +334,7 @@
 
         {{ $slot }}
       </div>
-    </div>
+    </main>
 
   </div>
 
@@ -331,8 +343,6 @@
       window.calendarEventsInstance?.updateSize();
       window.marketingGlobalCalendar?.updateSize();
       window.marketingCampaignDetailCalendar?.updateSize();
-      window.financialChartInstance?.resize();
-      window.operationalChartInstance?.resize();
       window.dispatchEvent(new CustomEvent('app:layout-resized'));
     };
 

@@ -74,9 +74,10 @@
                         Pass: 
                         @if($hostingService->password)
                             <div class="hosting-password-container" data-id="{{ $hostingService->id }}">
-                                <span class="hosting-password-value" data-hidden="true">••••••••</span>
-                                <button type="button" class="hosting-password-toggle" title="Mostra/Nascondi"><i data-lucide="eye" class="u-icon-sm"></i></button>
-                                <button type="button" class="hosting-password-copy" title="Copia"><i data-lucide="copy" class="u-icon-sm"></i></button>
+                                <span id="hosting-password-{{ $hostingService->id }}" class="hosting-password-value" data-hidden="true" aria-hidden="true">••••••••</span>
+                                <button type="button" class="hosting-password-toggle" title="Mostra password" aria-label="Mostra password" aria-controls="hosting-password-{{ $hostingService->id }}" aria-pressed="false"><i data-lucide="eye" class="u-icon-sm"></i></button>
+                                <button type="button" class="hosting-password-copy" title="Copia password" aria-label="Copia password"><i data-lucide="copy" class="u-icon-sm"></i></button>
+                                <span class="sr-only hosting-password-status" role="status" aria-live="polite">Password nascosta.</span>
                             </div>
                         @else
                             —

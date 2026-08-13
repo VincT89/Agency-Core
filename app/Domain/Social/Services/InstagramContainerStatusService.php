@@ -137,4 +137,57 @@ class InstagramContainerStatusService
 
         return $publishResponse->json();
     }
+
+    public function getMediaPermalink(
+        string $mediaId,
+        string $accessToken,
+        ?string $correlationId = null
+    ): ?string {
+        try {
+            $client = SocialProviderHttp::meta(retrySafe: true)->withHeaders([
+                'X-Correlation-Id' => $correlationId ?? 'none',
+            ]);
+            $graphVersion = config('services.meta.graph_version', 'v19.0');
+            $response = $client->get(
+                "https://graph.facebook.com/{$graphVersion}/{$mediaId}",
+                [
+                    'fields' => 'permalink',
+                    'access_token' => $accessToken,
+                ]
+            );
+
+            if (! $response->successful()) {
+                Log::warning('Instagram permalink fetch failed', [
+                    'media_id' => $mediaId,
+                    ...ProviderErrorSanitizer::context($response),
+                ]);
+
+                return null;
+            }
+
+            $permalink = $response->json('permalink');
+            if (! is_string($permalink) || ! filter_var($permalink, FILTER_VALIDATE_URL)) {
+                return null;
+            }
+
+            $scheme = strtolower((string) parse_url($permalink, PHP_URL_SCHEME));
+            $host = strtolower((string) parse_url($permalink, PHP_URL_HOST));
+
+            if (
+                $scheme !== 'https'
+                || ($host !== 'instagram.com' && ! str_ends_with($host, '.instagram.com'))
+            ) {
+                return null;
+            }
+
+            return $permalink;
+        } catch (\Throwable $exception) {
+            Log::warning('Instagram permalink fetch exception', [
+                'media_id' => $mediaId,
+                'exception' => $exception::class,
+            ]);
+
+            return null;
+        }
+    }
 }

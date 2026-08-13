@@ -336,11 +336,18 @@ class ProcessInstagramContainerAction
             );
         }
 
+        $externalPermalink = $this->service->getMediaPermalink(
+            $externalPostId,
+            $accessToken,
+            $publication->correlation_id
+        );
+
         $published = DB::transaction(function () use (
             $publicationId,
             $claimUuid,
             $publishResponse,
-            $externalPostId
+            $externalPostId,
+            $externalPermalink
         ) {
             $publication = MarketingCampaignPostPublication::whereKey($publicationId)
                 ->lockForUpdate()
@@ -364,6 +371,7 @@ class ProcessInstagramContainerAction
                 'status' => PublicationStatus::Published->value,
                 'meta_processing_state' => 'FINISHED',
                 'external_post_id' => $externalPostId,
+                'external_permalink' => $externalPermalink,
                 'provider_last_response' => $publishResponse,
                 'provider_state_payload' => $payload,
                 'published_at' => now(),

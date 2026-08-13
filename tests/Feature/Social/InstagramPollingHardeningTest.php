@@ -76,6 +76,50 @@ class InstagramPollingHardeningTest extends TestCase
         );
     }
 
+    public function test_successful_publish_persists_the_instagram_permalink(): void
+    {
+        $publication = $this->publication();
+        $service = Mockery::mock(InstagramContainerStatusService::class);
+        $service->shouldReceive('getContainerStatus')
+            ->once()
+            ->andReturn(new InstagramContainerStatusResult(
+                status: 'FINISHED',
+                isPermanentError: false,
+                errorMessage: null,
+                responseData: ['status_code' => 'FINISHED']
+            ));
+        $service->shouldReceive('publishContainer')
+            ->once()
+            ->andReturn(['id' => 'ig-media-123']);
+        $service->shouldReceive('getMediaPermalink')
+            ->once()
+            ->with(
+                'ig-media-123',
+                'valid-token',
+                $publication->correlation_id
+            )
+            ->andReturn('https://www.instagram.com/p/example123/');
+
+        $sync = Mockery::mock(SyncMarketingCampaignPostPublicationStatusAction::class);
+        $sync->shouldReceive('execute')->once();
+        $resolveToken = Mockery::mock(ResolveAssetAccessTokenAction::class);
+
+        (new ProcessInstagramContainerAction($service, $sync, $resolveToken))
+            ->execute($publication->id);
+
+        $publication->refresh();
+        $this->assertSame(PublicationStatus::Published, $publication->status);
+        $this->assertSame('ig-media-123', $publication->external_post_id);
+        $this->assertSame(
+            'https://www.instagram.com/p/example123/',
+            $publication->external_permalink
+        );
+        $this->assertSame(
+            $publication->external_permalink,
+            $publication->resolved_external_permalink
+        );
+    }
+
     public function test_failed_callback_does_not_overwrite_published_state(): void
     {
         $publication = $this->publication([

@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\Social\PublicationFailureClassification;
+use App\Enums\Social\PublicationStatus;
+use App\Enums\Social\SocialPlatform;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MarketingCampaignPostPublication extends Model
@@ -44,8 +47,8 @@ class MarketingCampaignPostPublication extends Model
     protected function casts(): array
     {
         return [
-            'status' => \App\Enums\Social\PublicationStatus::class,
-            'platform' => \App\Enums\Social\SocialPlatform::class,
+            'status' => PublicationStatus::class,
+            'platform' => SocialPlatform::class,
             'snapshot_schema_version' => 'integer',
             'payload_snapshot' => 'array',
             'response_snapshot' => 'array',
@@ -56,7 +59,7 @@ class MarketingCampaignPostPublication extends Model
             'stale_deadline_at' => 'datetime',
             'attempt_count' => 'integer',
             'poll_count' => 'integer',
-            'failure_classification' => \App\Enums\Social\PublicationFailureClassification::class,
+            'failure_classification' => PublicationFailureClassification::class,
         ];
     }
 
@@ -97,9 +100,11 @@ class MarketingCampaignPostPublication extends Model
 
             $postId = trim((string) $this->external_post_id);
             if ($postId === '') {
-                $postId = (string) ($this->findProviderValue(
-                    [$this->provider_last_response, $this->response_snapshot],
-                    ['publicaly_available_post_id', 'publicly_available_post_id']
+                $postId = (string) ($this->singleProviderIdentifier(
+                    $this->findProviderValue(
+                        [$this->provider_last_response, $this->response_snapshot],
+                        ['publicaly_available_post_id', 'publicly_available_post_id']
+                    )
                 ) ?? '');
             }
 
@@ -107,7 +112,7 @@ class MarketingCampaignPostPublication extends Model
                 return null;
             }
 
-            if ($this->platform === \App\Enums\Social\SocialPlatform::Facebook) {
+            if ($this->platform === SocialPlatform::Facebook) {
                 if (str_contains($postId, '_')) {
                     [$pageId, $storyId] = explode('_', $postId, 2);
 
@@ -117,10 +122,10 @@ class MarketingCampaignPostPublication extends Model
                 return 'https://www.facebook.com/'.rawurlencode($postId);
             }
 
-            if ($this->platform === \App\Enums\Social\SocialPlatform::Tiktok) {
-                $username = ltrim(trim((string) ($this->socialAccount?->username ?? '')), '@');
+            if ($this->platform === SocialPlatform::Tiktok) {
+                $username = $this->tiktokUsername();
 
-                return $username !== ''
+                return $username !== null
                     ? 'https://www.tiktok.com/@'.rawurlencode($username).'/video/'.rawurlencode($postId)
                     : null;
             }
@@ -151,6 +156,49 @@ class MarketingCampaignPostPublication extends Model
         return null;
     }
 
+    private function singleProviderIdentifier(mixed $value): ?string
+    {
+        $values = is_array($value) ? $value : [$value];
+        $identifiers = [];
+
+        foreach ($values as $identifier) {
+            if (! is_string($identifier) && ! is_int($identifier)) {
+                continue;
+            }
+
+            $identifier = trim((string) $identifier);
+            if ($identifier !== '') {
+                $identifiers[] = $identifier;
+            }
+        }
+
+        $identifiers = array_values(array_unique($identifiers));
+
+        return count($identifiers) === 1 ? $identifiers[0] : null;
+    }
+
+    private function tiktokUsername(): ?string
+    {
+        foreach ([
+            $this->socialAccount?->username,
+            data_get(
+                $this->socialAccount?->api_metadata,
+                'content_posting_info.creator_username'
+            ),
+        ] as $value) {
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $username = ltrim(trim($value), '@');
+            if ($username !== '') {
+                return $username;
+            }
+        }
+
+        return null;
+    }
+
     private function findProviderValue(mixed $payload, array $keys): mixed
     {
         if (! is_array($payload)) {
@@ -159,7 +207,7 @@ class MarketingCampaignPostPublication extends Model
 
         foreach ($payload as $key => $value) {
             if (in_array($key, $keys, true)) {
-                return is_array($value) ? ($value[0] ?? null) : $value;
+                return $value;
             }
 
             if (is_array($value)) {

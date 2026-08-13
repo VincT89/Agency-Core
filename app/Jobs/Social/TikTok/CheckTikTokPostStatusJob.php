@@ -163,7 +163,8 @@ class CheckTikTokPostStatusJob implements ShouldQueue
                 null,
                 null,
                 $formattedResponse,
-                'delivered_to_tiktok'
+                'delivered_to_tiktok',
+                $result->publicPostId()
             );
 
             return;
@@ -253,14 +254,16 @@ class CheckTikTokPostStatusJob implements ShouldQueue
         ?string $message,
         ?PublicationFailureClassification $classification,
         ?array $response = null,
-        ?string $deliveryState = null
+        ?string $deliveryState = null,
+        ?string $externalPostId = null
     ): bool {
         $updated = DB::transaction(function () use (
             $status,
             $message,
             $classification,
             $response,
-            $deliveryState
+            $deliveryState,
+            $externalPostId
         ) {
             $publication = MarketingCampaignPostPublication::whereKey($this->publicationId)
                 ->lockForUpdate()
@@ -277,6 +280,10 @@ class CheckTikTokPostStatusJob implements ShouldQueue
                 'delivery_state' => $deliveryState,
                 'published_at' => $status === PublicationStatus::Published ? now() : null,
             ];
+
+            if ($status === PublicationStatus::Published && $externalPostId !== null) {
+                $update['external_post_id'] = $externalPostId;
+            }
 
             if ($response !== null) {
                 $update['provider_last_response'] = $response;

@@ -140,6 +140,37 @@ class TikTokPollingHardeningTest extends TestCase
         );
     }
 
+    public function test_published_public_post_id_is_persisted_and_resolved(): void
+    {
+        [$publication, $account] = $this->publishingPublication();
+        $account->update([
+            'api_metadata' => [
+                'content_posting_info' => [
+                    'creator_username' => 'test.r4',
+                ],
+            ],
+        ]);
+        Http::fake([
+            '*' => Http::response([
+                'data' => [
+                    'status' => 'PUBLISH_COMPLETE',
+                    'publicaly_available_post_id' => ['7391234567890123456'],
+                ],
+                'error' => ['code' => 'ok'],
+            ]),
+        ]);
+
+        $this->handle(new CheckTikTokPostStatusJob($publication->id));
+
+        $publication = $publication->fresh(['socialAccount']);
+        $this->assertSame(PublicationStatus::Published, $publication->status);
+        $this->assertSame('7391234567890123456', $publication->external_post_id);
+        $this->assertSame(
+            'https://www.tiktok.com/@test.r4/video/7391234567890123456',
+            $publication->resolved_external_permalink
+        );
+    }
+
     private function publishingPublication(): array
     {
         $post = MarketingCampaignPost::factory()->create();

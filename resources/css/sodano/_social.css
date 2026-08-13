@@ -1179,6 +1179,14 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
+.social-operation-external-link,
+.social-operation-permalink-recovery {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
 .social-operation-row {
     cursor: default;
 }

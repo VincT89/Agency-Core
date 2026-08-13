@@ -90,6 +90,7 @@
                             </td>
                             <td class="u-text-right social-operation-actions" data-label="Azioni">
                                 <div class="u-flex u-flex-wrap u-justify-end u-gap-xs social-operation-actions-list">
+                                    @php($externalPermalink = $pub->resolved_external_permalink)
                                     @if($pub->post && $pub->post->campaign)
                                         <a
                                             href="{{ route('marketing-campaigns.posts.show', ['campaign' => $pub->post->campaign->id, 'post' => $pub->post_id ?? $pub->marketing_campaign_post_id]) }}"
@@ -98,14 +99,29 @@
                                             Dettagli post
                                         </a>
                                     @endif
-                                    @if($pub->resolved_external_permalink)
+                                    @if($externalPermalink)
                                         <a
-                                            href="{{ $pub->resolved_external_permalink }}"
+                                            href="{{ $externalPermalink }}"
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            class="btn btn-p btn-xs">
+                                            class="btn btn-p btn-xs social-operation-external-link">
                                             Apri sul social
                                         </a>
+                                    @elseif(
+                                        $pub->status === \App\Enums\Social\PublicationStatus::Published
+                                        && in_array($pub->platform, [
+                                            \App\Enums\Social\SocialPlatform::Instagram,
+                                            \App\Enums\Social\SocialPlatform::Tiktok,
+                                        ], true)
+                                    )
+                                        <button
+                                            type="button"
+                                            wire:click="recoverPermalink({{ $pub->id }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="recoverPermalink({{ $pub->id }})"
+                                            class="btn btn-sec btn-xs social-operation-permalink-recovery">
+                                            Recupera collegamento
+                                        </button>
                                     @endif
                                     @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Publishing]))
                                         <button type="button" wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Aggiorna lo stato della pubblicazione">

@@ -6,6 +6,7 @@ use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
 use App\Enums\Social\MarketingCampaignPostStatus;
 use App\Enums\Social\PublicationStatus;
+use App\Enums\Social\SocialPlatform;
 use App\Enums\UserRole;
 use App\Jobs\Social\ExecuteMarketingCampaignPostPublicationJob;
 use App\Livewire\Admin\Social\SocialOperationsDashboard;
@@ -16,6 +17,7 @@ use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostPublication;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Mockery\MockInterface;
@@ -137,6 +139,97 @@ class SocialOperationsDashboardTest extends TestCase
             ->call('retryPublication', $publication->id);
 
         Queue::assertPushed(ExecuteMarketingCampaignPostPublicationJob::class);
+    }
+
+    public function test_tiktok_public_permalink_and_instagram_recovery_are_rendered(): void
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create([
+            'client_id' => $client->id,
+        ]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+        ]);
+        $tiktokAccount = ClientSocialAccount::factory()->create([
+            'client_id' => $client->id,
+            'platform' => SocialPlatform::Tiktok,
+            'api_metadata' => [
+                'content_posting_info' => [
+                    'creator_username' => 'test.r4',
+                ],
+            ],
+        ]);
+        MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'client_social_account_id' => $tiktokAccount->id,
+            'platform' => SocialPlatform::Tiktok,
+            'status' => PublicationStatus::Published,
+            'external_post_id' => null,
+            'provider_last_response' => [
+                'response_data' => [
+                    'data' => [
+                        'publicaly_available_post_id' => ['7391234567890123456'],
+                    ],
+                ],
+            ],
+        ]);
+        $instagramPublication = MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'platform' => SocialPlatform::Instagram,
+            'status' => PublicationStatus::Published,
+            'external_post_id' => 'ig-media-123',
+            'external_permalink' => null,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(SocialOperationsDashboard::class)
+            ->assertSee(
+                'https://www.tiktok.com/@test.r4/video/7391234567890123456',
+                false
+            )
+            ->assertSeeHtml('class="btn btn-p btn-xs social-operation-external-link"')
+            ->assertSeeHtml("wire:click=\"recoverPermalink({$instagramPublication->id})\"")
+            ->assertSee('Recupera collegamento');
+    }
+
+    public function test_instagram_permalink_can_be_recovered_for_a_published_row(): void
+    {
+        $client = Client::factory()->create();
+        $campaign = MarketingCampaign::factory()->create([
+            'client_id' => $client->id,
+        ]);
+        $post = MarketingCampaignPost::factory()->create([
+            'marketing_campaign_id' => $campaign->id,
+        ]);
+        $account = ClientSocialAccount::factory()->create([
+            'client_id' => $client->id,
+            'platform' => SocialPlatform::Instagram,
+            'access_token' => 'instagram-token',
+        ]);
+        $publication = MarketingCampaignPostPublication::factory()->create([
+            'marketing_campaign_post_id' => $post->id,
+            'client_social_account_id' => $account->id,
+            'platform' => SocialPlatform::Instagram,
+            'status' => PublicationStatus::Published,
+            'external_post_id' => 'ig-media-123',
+            'external_permalink' => null,
+        ]);
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'id' => 'ig-media-123',
+                'permalink' => 'https://www.instagram.com/p/example123/',
+            ]),
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(SocialOperationsDashboard::class)
+            ->call('recoverPermalink', $publication->id)
+            ->assertSee('https://www.instagram.com/p/example123/', false);
+
+        $this->assertSame(
+            'https://www.instagram.com/p/example123/',
+            $publication->fresh()->external_permalink
+        );
     }
 
     public function test_refresh_container_blocks_terminal_state()

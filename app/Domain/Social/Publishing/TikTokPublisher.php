@@ -344,7 +344,12 @@ class TikTokPublisher implements SocialPublisherInterface
                 $apiMetadata = $account->api_metadata ?? [];
                 $apiMetadata['content_posting_info'] = $creatorInfo;
 
+                $creatorUsername = trim((string) ($creatorInfo['creator_username'] ?? ''));
+
                 $account->update([
+                    'username' => $creatorUsername !== ''
+                        ? ltrim($creatorUsername, '@')
+                        : $account->username,
                     'publishing_capabilities' => $publishingCapabilities,
                     'api_metadata' => $apiMetadata,
                     'last_api_check_at' => now(),

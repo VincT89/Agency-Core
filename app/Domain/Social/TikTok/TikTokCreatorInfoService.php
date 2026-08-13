@@ -104,6 +104,9 @@ class TikTokCreatorInfoService
 
         $account->update([
             'account_name' => $userData['display_name'] ?? $account->account_name,
+            'username' => filled($contentInfo['creator_username'] ?? null)
+                ? ltrim(trim((string) $contentInfo['creator_username']), '@')
+                : $account->username,
             'api_metadata' => $apiMetadata,
             'publishing_capabilities' => $publishingCapabilities,
             'last_api_check_at' => now(),

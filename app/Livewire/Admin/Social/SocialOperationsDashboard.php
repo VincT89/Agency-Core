@@ -4,10 +4,11 @@ namespace App\Livewire\Admin\Social;
 
 use App\Domain\Social\Actions\ArchiveMarketingCampaignPostAction;
 use App\Domain\Social\Actions\RefreshPublicationStatusAction;
-use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
+use App\Domain\Social\Actions\ResolvePublishedPublicationPermalinkAction;
 use App\Domain\Social\Actions\RestoreMarketingCampaignPostAction;
-use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
+use App\Domain\Social\Actions\RetryMarketingCampaignPostPublicationAction;
 use App\Domain\Social\Actions\SyncMarketingCampaignPostPublicationStatusAction;
+use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use App\Enums\Social\PublicationStatus;
 use App\Enums\Social\SocialPlatform;
 use App\Exceptions\Social\ContainerProcessingException;
@@ -106,6 +107,57 @@ class SocialOperationsDashboard extends Component
                 'error' => $e->getMessage(),
             ]);
             session()->flash('error', 'Non è stato possibile aggiornare lo stato della pubblicazione.');
+        }
+    }
+
+    public function recoverPermalink(
+        int $publicationId,
+        ResolvePublishedPublicationPermalinkAction $action
+    ): void {
+        $this->authorize('manage_social_operations');
+
+        $publication = MarketingCampaignPostPublication::findOrFail($publicationId);
+
+        if (
+            $publication->status !== PublicationStatus::Published
+            || ! in_array($publication->platform, [
+                SocialPlatform::Instagram,
+                SocialPlatform::Tiktok,
+            ], true)
+        ) {
+            session()->flash(
+                'error',
+                'Il collegamento può essere recuperato soltanto per una pubblicazione Instagram o TikTok completata.'
+            );
+
+            return;
+        }
+
+        try {
+            $permalink = $action->execute($publication);
+
+            if ($permalink) {
+                session()->flash('success', 'Collegamento al contenuto recuperato.');
+
+                return;
+            }
+
+            session()->flash(
+                'info',
+                $publication->platform === SocialPlatform::Tiktok
+                    ? 'TikTok non ha ancora restituito un identificativo pubblico. Il contenuto potrebbe essere privato o ancora in moderazione.'
+                    : 'Instagram non ha restituito il collegamento del contenuto. Riprova più tardi.'
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to recover social publication permalink', [
+                'publication_id' => $publicationId,
+                'platform' => $publication->platform->value,
+                'exception' => $exception::class,
+            ]);
+            session()->flash(
+                'error',
+                'Non è stato possibile recuperare il collegamento in questo momento.'
+            );
         }
     }
 

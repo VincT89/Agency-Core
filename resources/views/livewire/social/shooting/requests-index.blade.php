@@ -26,7 +26,7 @@
                     <th>Fotografo</th>
                     <th>Stato</th>
                     <th>Data Creazione</th>
-                    <th>Azioni</th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -59,7 +59,7 @@
                             <x-shooting.status-badge :status="$shoot->status" context="social" />
                         </td>
                         <td class="shooting-date">{{ $shoot->created_at->format('d/m/Y') }}</td>
-                        <td>
+                        <td class="t-actions">
                             <a href="{{ route('social.shooting.show', $shoot) }}" class="btn btn-outline shooting-btn-xs">Dettaglio</a>
                         </td>
                     </tr>

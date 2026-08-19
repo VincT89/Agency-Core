@@ -254,11 +254,17 @@
 }
 
 .pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  box-sizing: border-box;
   font-family: var(--sans);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: .04em;
-  padding: 5px 12px;
+  padding: 0 10px;
+  line-height: 1;
   border-radius: 20px;
   border: 1px solid var(--line2);
   color: var(--text3);
@@ -281,6 +287,7 @@
 /* TAB SWITCHER */
 .tab-switcher {
   display: flex;
+  align-items: center;
   gap: 4px;
   background: var(--bg2);
   padding: 4px;
@@ -290,13 +297,18 @@
 }
 
 .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
   font-family: var(--sans);
   font-size: 11px;
   font-weight: 600;
   color: var(--text3);
   background: transparent;
   border: none;
-  padding: 6px 12px;
+  padding: 0 12px;
+  line-height: 1;
   border-radius: 4px;
   cursor: pointer;
   text-decoration: none;
@@ -385,7 +397,10 @@
   border: none;
   cursor: pointer;
   padding: 0;
-  display: flex;
+  width: var(--control-h-xs);
+  height: var(--control-h-xs);
+  border-radius: var(--r);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: opacity var(--transition);
@@ -477,7 +492,7 @@
 .confirm-modal-title { font-family: var(--sans); font-size: 16px; font-weight: 600; color: var(--text); margin: 0; }
 .confirm-modal-message { color: var(--text2); font-size: 13.5px; margin-bottom: 24px; line-height: 1.5; }
 .confirm-modal-footer { display: flex; justify-content: flex-end; gap: 12px; }
-.confirm-modal-btn { padding: 8px 16px; }
+.confirm-modal-btn { padding: 0 var(--control-px); }
 .confirm-modal-icon-svg { width: 20px; height: 20px; }
 .delete-modal-confirm-label { display: block; margin-bottom: 8px; }
 .delete-modal-confirm-token { user-select: all; }
@@ -495,6 +510,9 @@
 .dot.color-teal { background: var(--teal); }
 .dot.color-orange { background: var(--orange); }
 .dot.color-blue { background: var(--blue); }
+.dot.color-red { background: var(--red); }
+.dot.color-green { background: var(--green); }
+.dot.color-yellow { background: var(--yellow); }
 
 /* Feed Item */
 .feed-av-gradient { background: linear-gradient(135deg, #5b8ef5, #a78bfa); }
@@ -514,7 +532,7 @@
 .empty-state-title { font-size: 16px; font-weight: 600; color: var(--text1); margin-bottom: 4px; }
 .empty-state-msg { font-size: 14px; font-weight: 400; max-width: 400px; margin: 0 auto; }
 .empty-state-action-wrap { margin-top: 16px; }
-.empty-state-action-btn { padding: 8px 16px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.empty-state-action-btn { padding: 0 var(--control-px); font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
 
 /* Registro attività */
 .audit-log-filters {
@@ -602,7 +620,7 @@
 .att-form { display: flex; gap: 16px; align-items: flex-end; }
 .att-form-col { flex: 1; }
 .att-input-sm { padding: 4px 8px; font-size: 12px; height: 28px; }
-.att-btn-submit { padding: 6px 12px; height: 28px; }
+.att-btn-submit { min-height: var(--control-h-xs); height: var(--control-h-xs); padding: 0 var(--control-px-xs); }
 .att-error { color: var(--red); font-size: 12px; margin-top: 4px; }
 
 /* Client Autocomplete Component */

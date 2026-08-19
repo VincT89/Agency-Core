@@ -24,14 +24,25 @@
 
 .hosting-password-toggle,
 .hosting-password-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--control-h-xs);
+    height: var(--control-h-xs);
     background: none;
     border: none;
     color: var(--accent);
     font-size: 0.8em;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 0;
     border-radius: 4px;
     transition: background-color 0.2s, color 0.2s;
+}
+
+.hosting-password-toggle .u-icon-sm,
+.hosting-password-copy .u-icon-sm {
+    margin-right: 0;
 }
 
 .hosting-password-toggle:hover,
@@ -172,8 +183,9 @@
 }
 
 .hosting-btn-sm {
-    padding: 4px 12px;
-    font-size: 12px;
+    min-height: var(--control-h-sm);
+    padding: 0 var(--control-px-sm);
+    font-size: 10px;
 }
 
 .hosting-empty-p {

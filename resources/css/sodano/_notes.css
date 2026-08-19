@@ -18,8 +18,8 @@
     background: var(--bg2);
     border: 1px solid var(--line);
     border-radius: 50%;
-    width: 44px;
-    height: 44px;
+    width: var(--control-h);
+    height: var(--control-h);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -213,13 +213,14 @@
 }
 
 .note-check-add-btn {
+    min-height: var(--control-h-sm);
     background: transparent;
     border: none;
     color: var(--accent);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    padding: 6px 12px;
+    padding: 0 var(--control-px-sm);
     border-radius: 6px;
     transition: background 0.2s;
 }

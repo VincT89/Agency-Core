@@ -6,8 +6,8 @@
 >
   <x-social.sody-processing-loader />
 
-  <div class="u-mb-lg">
-      <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-g u-inline-flex-center u-gap-xs">
+  <div class="page-back-row">
+      <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-g btn-sm u-inline-flex-center u-gap-xs">
           <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna al progetto
       </a>
   </div>
@@ -302,7 +302,7 @@
                     <input
                         type="file"
                         multiple
-                        class="form-in p-2 text-sm"
+                        class="form-in cmp-media-file-input"
                         accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
                         x-on:change="handleLocalFiles($event)"
                     >

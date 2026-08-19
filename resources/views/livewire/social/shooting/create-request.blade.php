@@ -1,6 +1,9 @@
 <div>
-    <div class="shooting-back-link">
-        <a href="{{ route('social.shooting.index') }}" wire:navigate>← Torna alle richieste</a>
+    <div class="page-back-row">
+        <a href="{{ route('social.shooting.index') }}" wire:navigate class="btn btn-g btn-sm">
+            <i data-lucide="arrow-left" class="u-icon-sm" aria-hidden="true"></i>
+            Torna alle richieste
+        </a>
     </div>
 
     <div class="mb-4">

@@ -1,14 +1,10 @@
 <x-app-layout title="{{ $task->title }}">
-    <div style="margin: -var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);">
-        <div class="u-mb-lg u-flex-end">
-            <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
-                <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
-            </a>
-        </div>
-        <x-page-header
-            eyebrow="Task · {{ $task->project?->name ?? '—' }}"
-            
-        >
+    <div class="page-back-row">
+        <a href="{{ route('tasks.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
+            <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
+        </a>
+    </div>
+    <x-page-header eyebrow="Task · {{ $task->project?->name ?? '—' }}">
         <x-slot:title><strong class="task-title">{{ $task->title }}</strong></x-slot:title>
         <x-slot:actions>
             <x-badge :status="$task->status" :label="$task->status_label" />
@@ -39,11 +35,11 @@
             $progress = $progressMap[$task->status] ?? 0;
         @endphp
         <div class="u-flex-between u-mb-xs u-align-center">
-            <div class="u-text-strong u-text-sm" style="text-transform: uppercase; letter-spacing: 0.5px;">Avanzamento: {{ $task->status_label }}</div>
+            <div class="u-text-strong u-text-sm task-progress-label">Avanzamento: {{ $task->status_label }}</div>
             <div class="u-text-strong u-text-muted u-font-mono">{{ $progress }}%</div>
         </div>
-        <div class="project-progress-bar-wrap" style="height: 8px; border-radius: 4px; background: var(--line); overflow: hidden;">
-            <div class="project-progress-bar-inner task-progress-{{ $task->status }}" style="width: {{ $progress }}%; height: 100%; transition: width 0.4s ease, background-color 0.4s ease;"></div>
+        <div class="project-progress-bar-wrap task-progress-track">
+            <div class="project-progress-bar-inner task-progress-fill task-progress-{{ $task->status }}" style="width: {{ $progress }}%;"></div>
         </div>
     </div>
 
@@ -231,5 +227,4 @@
         <x-audit-timeline :logs="$task->auditLogs" />
     </div>
     @endif
-    </div>
 </x-app-layout>

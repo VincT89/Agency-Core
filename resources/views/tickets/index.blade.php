@@ -44,7 +44,7 @@
                     <th>Assegnato</th>
                     <th>Cliente</th>
                     <th>Stato</th>
-                    <th></th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -69,7 +69,7 @@
                         @endif
                     </td>
                     <td><x-badge :status="$ticket->status" :label="$ticket->status_label" /></td>
-                    <td>
+                    <td class="t-actions">
                         @can('update', $ticket)
                             <a href="{{ route('tickets.edit', $ticket) }}" class="btn-icon js-stop-propagation">✎</a>
                         @endcan

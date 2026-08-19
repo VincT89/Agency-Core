@@ -1,8 +1,9 @@
 <div>
-    <x-page-header eyebrow="Amministrazione Social">
+    <x-page-header
+        eyebrow="Amministrazione Social"
+        meta="Monitora le pubblicazioni operative. I post archiviati localmente restano consultabili nel filtro dedicato."
+    >
         <x-slot:title><strong>Coda Social</strong> Pubblicazioni</x-slot:title>
-        <div class="u-text-sm u-text-muted u-mt-xs">Monitora le pubblicazioni operative. I post archiviati localmente restano consultabili nel filtro dedicato.
-        </div>
     </x-page-header>
 
     @if (session()->has('success'))
@@ -22,14 +23,14 @@
     @endif
 
     <div class="social-operation-filters" role="group" aria-label="Filtra le pubblicazioni social">
-        <button type="button" wire:click="$set('filter', 'all')" aria-pressed="{{ $filter === 'all' ? 'true' : 'false' }}" class="btn {{ $filter === 'all' ? 'btn-p' : 'btn-sec' }}">Operative</button>
-        <button type="button" wire:click="$set('filter', 'active')" aria-pressed="{{ $filter === 'active' ? 'true' : 'false' }}" class="btn {{ $filter === 'active' ? 'btn-blue' : 'btn-sec' }}">In corso</button>
-        <button type="button" wire:click="$set('filter', 'published')" aria-pressed="{{ $filter === 'published' ? 'true' : 'false' }}" class="btn {{ $filter === 'published' ? 'btn-p' : 'btn-sec' }}">Pubblicate</button>
-        <button type="button" wire:click="$set('filter', 'needs_manual_review')" aria-pressed="{{ $filter === 'needs_manual_review' ? 'true' : 'false' }}" class="btn {{ $filter === 'needs_manual_review' ? 'btn-orange' : 'btn-sec' }}">Da revisionare</button>
-        <button type="button" wire:click="$set('filter', 'failed')" aria-pressed="{{ $filter === 'failed' ? 'true' : 'false' }}" class="btn {{ $filter === 'failed' ? 'btn-red' : 'btn-sec' }}">Fallite</button>
-        <button type="button" wire:click="$set('filter', 'stale_publishing')" aria-pressed="{{ $filter === 'stale_publishing' ? 'true' : 'false' }}" class="btn {{ $filter === 'stale_publishing' ? 'btn-blue' : 'btn-sec' }}">Bloccate</button>
-        <button type="button" wire:click="$set('filter', 'attempt_history')" aria-pressed="{{ $filter === 'attempt_history' ? 'true' : 'false' }}" class="btn {{ $filter === 'attempt_history' ? 'btn-p' : 'btn-sec' }}">Storico tentativi</button>
-        <button type="button" wire:click="$set('filter', 'archived')" aria-pressed="{{ $filter === 'archived' ? 'true' : 'false' }}" class="btn {{ $filter === 'archived' ? 'btn-p' : 'btn-sec' }}">Archiviate</button>
+        <button type="button" wire:click="$set('filter', 'all')" aria-pressed="{{ $filter === 'all' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'all' ? 'btn-p' : 'btn-sec' }}">Operative</button>
+        <button type="button" wire:click="$set('filter', 'active')" aria-pressed="{{ $filter === 'active' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'active' ? 'btn-blue' : 'btn-sec' }}">In corso</button>
+        <button type="button" wire:click="$set('filter', 'published')" aria-pressed="{{ $filter === 'published' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'published' ? 'btn-p' : 'btn-sec' }}">Pubblicate</button>
+        <button type="button" wire:click="$set('filter', 'needs_manual_review')" aria-pressed="{{ $filter === 'needs_manual_review' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'needs_manual_review' ? 'btn-orange' : 'btn-sec' }}">Da revisionare</button>
+        <button type="button" wire:click="$set('filter', 'failed')" aria-pressed="{{ $filter === 'failed' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'failed' ? 'btn-red' : 'btn-sec' }}">Fallite</button>
+        <button type="button" wire:click="$set('filter', 'stale_publishing')" aria-pressed="{{ $filter === 'stale_publishing' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'stale_publishing' ? 'btn-blue' : 'btn-sec' }}">Bloccate</button>
+        <button type="button" wire:click="$set('filter', 'attempt_history')" aria-pressed="{{ $filter === 'attempt_history' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'attempt_history' ? 'btn-p' : 'btn-sec' }}">Storico tentativi</button>
+        <button type="button" wire:click="$set('filter', 'archived')" aria-pressed="{{ $filter === 'archived' ? 'true' : 'false' }}" class="btn btn-sm {{ $filter === 'archived' ? 'btn-p' : 'btn-sec' }}">Archiviate</button>
     </div>
 
     <div class="panel social-operations-panel">
@@ -42,7 +43,7 @@
                         <th>Piattaforma</th>
                         <th>Stato</th>
                         <th>Esito</th>
-                        <th class="u-text-right">Azioni</th>
+                        <th class="t-actions">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,8 +89,8 @@
                                     <div class="u-text-sm u-text-muted">Nessun problema rilevato.</div>
                                 @endif
                             </td>
-                            <td class="u-text-right social-operation-actions" data-label="Azioni">
-                                <div class="u-flex u-flex-wrap u-justify-end u-gap-xs social-operation-actions-list">
+                            <td class="t-actions social-operation-actions" data-label="Azioni">
+                                <div class="t-actions-list social-operation-actions-list">
                                     @php($externalPermalink = $pub->resolved_external_permalink)
                                     @if($pub->post && $pub->post->campaign)
                                         <a

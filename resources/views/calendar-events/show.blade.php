@@ -1,6 +1,6 @@
 <x-app-layout title="{{ $calendarEvent->title }}">
-    <div class="u-mb-lg u-flex-end">
-        <a href="{{ route('calendar-events.index') }}" class="btn btn-g u-flex-center u-gap-xs">
+    <div class="page-back-row">
+        <a href="{{ route('calendar-events.index') }}" class="btn btn-g btn-sm u-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna al calendario
         </a>
     </div>
@@ -123,7 +123,7 @@
                             <th>Dimens.</th>
                             <th>Utente</th>
                             <th>Data</th>
-                            <th>Azioni</th>
+                            <th class="t-actions">Azioni</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -134,8 +134,8 @@
                             <td class="mono-col">{{ number_format($att->size / 1024, 0) }} KB</td>
                             <td>{{ $att->uploader?->name }}</td>
                             <td class="mono-col">{{ $att->created_at->format('d/m/Y H:i') }}</td>
-                            <td>
-                                <div class="u-flex u-gap-sm">
+                            <td class="t-actions">
+                                <div class="t-actions-list">
                                     <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
                                        class="btn-icon" aria-label="Scarica allegato {{ $att->original_name ?? $att->filename ?? '' }}">↓</a>
                                     @can('delete', $att)

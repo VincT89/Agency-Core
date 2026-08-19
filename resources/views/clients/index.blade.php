@@ -33,7 +33,7 @@
                     <th>Ticket</th>
                     <th>Fatture</th>
                     <th>Stato</th>
-                    <th></th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,7 +48,7 @@
                     <td class="mono-col">{{ $client->tickets_count }}</td>
                     <td class="mono-col">{{ $client->invoices_count }}</td>
                     <td><x-badge :status="$client->status" :label="$client->status_label" /></td>
-                    <td>
+                    <td class="t-actions">
                         @can('update', $client)
                             <a href="{{ route('clients.edit', $client) }}" class="btn-icon" @click.stop>✎</a>
                         @endcan

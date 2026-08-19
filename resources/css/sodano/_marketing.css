@@ -511,8 +511,15 @@
 }
 
 .btn-cal-nav {
-    padding: 4px 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-h-xs);
+    height: var(--control-h-xs);
+    padding: 0;
+    border-radius: var(--r);
     color: var(--accent);
+    text-decoration: none;
     transition: color 0.2s ease;
 }
 
@@ -831,11 +838,23 @@
 }
 
 .btn-ghost-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--control-h-xs);
+    min-height: var(--control-h-xs);
+    padding: 0 var(--control-px-xs);
+    border-radius: var(--r);
     background: transparent;
     border: none;
     color: var(--red);
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.btn-ghost-danger :is(.u-icon-xs, .u-icon-sm, .u-icon-md, .u-icon-lg),
+.btn-cal-nav :is(.u-icon-xs, .u-icon-sm, .u-icon-md, .u-icon-lg) {
+    margin-right: 0;
 }
 
 .btn-ghost-danger:hover {
@@ -847,6 +866,11 @@
     display: flex;
     align-items: center;
     color: var(--blue);
+}
+
+.cmp-media-file-input {
+    padding: 6px 8px;
+    font-size: 12px;
 }
 
 .cmp-media-icon {
@@ -1016,8 +1040,9 @@
 }
 
 .mkt-review-btn {
-    padding: 6px 12px;
-    font-size: 12px;
+    min-height: var(--control-h-sm);
+    padding: 0 var(--control-px-sm);
+    font-size: 10px;
 }
 
 .mkt-modal-ft-between {
@@ -1125,6 +1150,41 @@
     gap: 24px;
 }
 
+.cmp-admin-table {
+    table-layout: fixed;
+}
+
+.cmp-campaign-admin-grid > .panel > .panel-header {
+    min-height: calc(var(--control-h-sm) + 28px);
+    box-sizing: border-box;
+}
+
+.cmp-admin-table th,
+.cmp-admin-table td {
+    vertical-align: middle;
+}
+
+.cmp-admin-table .name-col {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.cmp-periods-table col:nth-child(1) { width: 44%; }
+.cmp-periods-table col:nth-child(2) { width: 28%; }
+.cmp-periods-table col:nth-child(3) { width: 28%; }
+
+.cmp-extras-table col:nth-child(1) { width: 34%; }
+.cmp-extras-table col:nth-child(2) { width: 16%; }
+.cmp-extras-table col:nth-child(3) { width: 18%; }
+.cmp-extras-table col:nth-child(4) { width: 18%; }
+.cmp-extras-table col:nth-child(5) { width: 14%; }
+
+.cmp-invoices-table col:nth-child(1) { width: 32%; }
+.cmp-invoices-table col:nth-child(2) { width: 17%; }
+.cmp-invoices-table col:nth-child(3) { width: 17%; }
+.cmp-invoices-table col:nth-child(4) { width: 20%; }
+.cmp-invoices-table col:nth-child(5) { width: 14%; }
+
 .cmp-posts-table {
     width: 100%;
     font-size: 13px;
@@ -1158,8 +1218,8 @@
 }
 
 .cmp-post-thumb {
-    width: 40px;
-    height: 40px;
+    width: var(--table-thumb);
+    height: var(--table-thumb);
     object-fit: contain;
     background-color: #000;
     border-radius: 6px;
@@ -1167,8 +1227,8 @@
 }
 
 .cmp-post-thumb-empty {
-    width: 40px;
-    height: 40px;
+    width: var(--table-thumb);
+    height: var(--table-thumb);
     background: var(--bg2);
     border-radius: 6px;
     border: 1px solid var(--line);
@@ -1411,10 +1471,6 @@
 
 .cmp-post-thumb-popup {
     min-width: 200px;
-}
-
-.cmp-campaign-page .t-table tbody td {
-    padding: 6px 16px;
 }
 
 .cmp-media-preview-label-bottom {
@@ -2019,7 +2075,7 @@ body.sody-loader-active {
 .shooting-photographer-name { font-size: 13px; color: var(--text2); }
 .shooting-unassigned { font-size: 12px; color: var(--text3); }
 .shooting-date { font-size: 13px; color: var(--text2); }
-.shooting-btn-xs { padding: 4px 8px; font-size: 12px; }
+.shooting-btn-xs { min-height: var(--control-h-xs); padding: 0 var(--control-px-xs); font-size: 10px; }
 .shooting-empty-table { text-align: center; padding: 32px; color: var(--text3); }
 .shooting-pagination { margin-top: 24px; }
 .shooting-back-link { margin-bottom: 15px; }
@@ -2040,7 +2096,7 @@ body.sody-loader-active {
 .shooting-text-red { color: var(--red); }
 .shooting-desc-text { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
 .shooting-slot-card { background: var(--bg3); border-radius: 8px; padding: 16px; position: relative; display: flex; flex-direction: column; gap: 12px; }
-.shooting-slot-del { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; }
+.shooting-slot-del { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; justify-content: center; width: var(--control-h-xs); height: var(--control-h-xs); padding: 0; border: none; border-radius: var(--r); background: none; color: var(--red); cursor: pointer; }
 .shooting-slot-lbl { font-size: 11px; margin-bottom: 4px; }
 .shooting-err-summary { color: var(--red); font-size: 13px; margin-top: 16px; }
 .shooting-err-icon { width: 14px; height: 14px; margin-right: 4px; vertical-align: middle; }
@@ -2084,7 +2140,7 @@ body.sody-loader-active {
 .shooting-slot-period { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
 .shooting-slot-time { font-family: var(--mono); font-size: 11px; }
 .shooting-slot-badges { margin-bottom: 12px; }
-.shooting-btn-accept { width: 100%; font-size: 12px; padding: 6px; }
+.shooting-btn-accept { width: 100%; padding: 0 var(--control-px); font-size: 11px; }
 
 .shooting-reject-wrap { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
 .shooting-textarea-mb8 { margin-bottom: 8px; }

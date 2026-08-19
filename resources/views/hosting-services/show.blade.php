@@ -1,6 +1,6 @@
 <x-app-layout title="{{ $hostingService->name }}">
-    <div class="u-mb-lg u-flex-end">
-        <a href="{{ route('hosting-services.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+    <div class="page-back-row">
+        <a href="{{ route('hosting-services.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
         </a>
     </div>
@@ -191,7 +191,7 @@
                                 <th>Data</th>
                                 <th>Intervento</th>
                                 <th>Operatore</th>
-                                <th></th>
+                                <th class="t-actions">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -207,7 +207,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $intervention->user->name ?? '—' }}</td>
-                                <td>
+                                <td class="t-actions">
                                     <form action="{{ route('hosting-services.interventions.destroy', [$hostingService, $intervention]) }}" method="POST" class="js-confirm-delete">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="btn-icon hosting-past-due">✕</button>

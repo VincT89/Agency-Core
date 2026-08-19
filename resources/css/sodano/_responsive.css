@@ -911,6 +911,14 @@ pre {
 
 @media (pointer: coarse) {
   .btn,
+  .btn-s,
+  .btn-sec,
+  .btn-d,
+  .btn-danger,
+  .btn-blue,
+  .btn-orange,
+  .btn-outline-primary,
+  .btn-ghost-primary,
   .btn-icon,
   .pill,
   .tab-btn,
@@ -926,11 +934,27 @@ pre {
   .form-sel,
   input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
   select {
-    min-height: 44px;
+    min-height: var(--control-h-touch);
+  }
+
+  .btn-icon {
+    width: var(--control-h-touch);
+    height: var(--control-h-touch);
+    min-width: var(--control-h-touch);
   }
 
   .cal-mini-day {
     height: 44px;
+  }
+
+  .btn-cal-nav,
+  .notes-nav-btn,
+  .hosting-password-toggle,
+  .hosting-password-copy,
+  .shooting-slot-del {
+    width: var(--control-h-touch);
+    height: var(--control-h-touch);
+    min-width: var(--control-h-touch);
   }
 }
 

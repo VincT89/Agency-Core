@@ -83,11 +83,12 @@
 
 .fc-button {
     font-family: var(--sans) !important;
-    font-size: 12px !important;
+    min-height: var(--control-h) !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
     letter-spacing: 0 !important;
-    border-radius: 20px !important;
-    padding: 6px 16px !important;
+    border-radius: var(--r) !important;
+    padding: 0 var(--control-px) !important;
     background: var(--bg2) !important;
     border: 1px solid var(--line2) !important;
     color: var(--text) !important;

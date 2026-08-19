@@ -136,6 +136,24 @@
 .task-progress-done {
     background: #22c55e; /* Verde */
 }
+
+.task-progress-label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.task-progress-track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--line);
+}
+
+.task-progress-fill {
+    height: 100%;
+    transition: width 0.4s ease, background-color 0.4s ease;
+}
+
 /* Filtri Progetto (Alpine) */
 .task-project-filters {
     display: flex;

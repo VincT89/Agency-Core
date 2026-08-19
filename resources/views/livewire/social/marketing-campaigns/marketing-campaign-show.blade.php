@@ -1,6 +1,6 @@
 <div>
-  <div class="u-mb-lg u-flex-end">
-      <a href="{{ route('marketing-campaigns.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+  <div class="page-back-row">
+      <a href="{{ route('marketing-campaigns.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
           <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna ai progetti
       </a>
   </div>
@@ -65,7 +65,7 @@
             </div>
         </x-slot:headerActions>
         <div class="table-responsive">
-        <table class="t-table u-w-full">
+        <table class="t-table t-table-media u-w-full">
           <thead>
             <tr>
               <th>Data Pub.</th>
@@ -73,7 +73,7 @@
               <th>Preview</th>
               <th>Titolo</th>
               <th>Stato</th>
-              <th class="u-text-right">Azioni</th>
+              <th class="t-actions">Azioni</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +95,7 @@
                         <img src="{{ $previewUrl }}" class="cmp-post-thumb" loading="eager" decoding="async" alt="Anteprima media post">
                     @endif
                   @else
-                    <div class="cmp-post-thumb-empty"><i data-lucide="image" class="w-5 h-5"></i></div>
+                    <div class="cmp-post-thumb-empty"><i data-lucide="image" class="u-icon-md"></i></div>
                   @endif
                 </td>
                 <td class="font-semibold" data-label="Titolo">
@@ -110,8 +110,8 @@
                     <x-badge :status="$post->status->value" :label="$post->status->label()" />
                   @endif
                 </td>
-                <td class="u-text-right" data-label="Azioni">
-                  <div class="u-flex u-flex-wrap u-justify-end u-gap-xs">
+                <td class="t-actions" data-label="Azioni">
+                  <div class="t-actions-list">
                     <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $post->id]) }}" wire:navigate class="btn btn-sec btn-xs">Dettagli</a>
                     @if($post->isArchived())
                       <button type="button" wire:click="restorePost({{ $post->id }})" wire:confirm="Ripristinare questo post nelle viste operative?" class="btn btn-p btn-xs">Ripristina</button>
@@ -123,7 +123,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="6" class="text-center text-gray-500 py-8">
+                <td colspan="6" class="u-empty-state">
                   {{ $postFilter === 'archived' ? 'Nessun post archiviato.' : 'Nessun post in programma.' }}
                 </td>
               </tr>
@@ -207,112 +207,149 @@
 
     @if(auth()->user()->isAdmin())
       {{-- Blocchi di Gestione --}}
-      <div class="g-2col">
+      <div class="g-2col cmp-campaign-admin-grid">
         
         {{-- Storico Periodi --}}
         <x-panel title="Contratto / Periodi">
-            @if($campaign->periods->count())
-              <table class="t-table">
+          <div class="table-responsive">
+              <table class="t-table cmp-admin-table cmp-periods-table">
+                <colgroup>
+                  <col>
+                  <col>
+                  <col>
+                </colgroup>
                 <thead>
-                  <tr class="cmp-tr">
-                    <th class="w-40">Dal - Al</th>
-                    <th class="right">Importo</th>
-                    <th class="right mkt-pr-0">Stato</th>
+                  <tr>
+                    <th>Periodo</th>
+                    <th class="u-text-right">Importo</th>
+                    <th class="u-text-right">Stato</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @foreach($campaign->periods->sortByDesc('from_date') as $period)
-                    <tr class="cmp-tr">
-                      <td >
+                  @forelse($campaign->periods->sortByDesc('from_date') as $period)
+                    <tr>
+                      <td>
                         {{ $period->from_date->format('d/m/Y') }}<br>
                         <span class="cmp-period-date">{{ $period->to_date ? $period->to_date->format('d/m/Y') : 'In corso' }}</span>
                       </td>
-                      <td class="amount">€ {{ number_format($period->amount, 2, ',', '.') }}</td>
-                      <td class="right">
+                      <td class="mono-col u-text-right">€ {{ number_format($period->amount, 2, ',', '.') }}</td>
+                      <td class="u-text-right">
                         <x-badge :status="$period->status->value" :label="$period->status->label()" />
                         @if($period->invoice_id)
-                      <div class="cmp-inv-factured">Fatturato</div>
+                          <div class="cmp-inv-factured">Fatturato</div>
                         @endif
                       </td>
                     </tr>
-                  @endforeach
+                  @empty
+                    <tr>
+                      <td colspan="3" class="u-empty-state">Nessun periodo registrato.</td>
+                    </tr>
+                  @endforelse
                 </tbody>
               </table>
-            @else
-              <div class="u-text-muted u-text-italic u-p-lg">Nessun periodo registrato.</div>
-            @endif
+          </div>
         </x-panel>
 
-        <div class="u-flex-col u-gap-xl">
-            {{-- Extra --}}
-            <div class="panel u-overflow-hidden">
-              <div class="lw-modal-hd">
-                <div class="cmp-panel-title">Extra Campagna</div>
-                <button type="button" wire:click="openExtraModal" class="btn btn-p btn-sm">+ Aggiungi</button>
-              </div>
-              <div class="u-p-lg">
-                @if($campaign->extras->count())
-                  <table class="t-table">
-                    <tbody>
-                      @foreach($campaign->extras->sortByDesc('created_at') as $extra)
-                        <tr class="cmp-tr">
-                          <td class="w-50">
-                            <div>{{ $extra->description }}</div>
-                            <div class="u-text-meta">{{ $extra->occurred_on ? $extra->occurred_on->format('d/m/Y') : '-' }}</div>
-                          </td>
-                          <td class="amount">€ {{ number_format($extra->amount, 2, ',', '.') }}</td>
-                          <td class="u-flex-end u-gap-sm">
-                            <x-badge :status="$extra->status->value" :label="$extra->status->label()" />
-                            @if(!$extra->invoice_id)
-                              <x-delete-modal wireClick="deleteExtra({{ $extra->id }})" title="Annulla Extra" message="Sei sicuro di voler annullare questo extra?">
-                                <button type="button" class="btn-ghost-danger btn-xs u-text-muted">
-                                  <i data-lucide="trash-2" class="u-icon-sm"></i>
-                                </button>
-                              </x-delete-modal>
-                            @endif
-                          </td>
-                        </tr>
-                      @endforeach
-                    </tbody>
-                  </table>
-                @else
-                  <div class="u-text-muted u-text-italic">Nessun extra registrato.</div>
-                @endif
-              </div>
-            </div>
-
-        </div>
+        {{-- Extra --}}
+        <x-panel title="Extra Campagna">
+          <x-slot:headerActions>
+            <button type="button" wire:click="openExtraModal" class="btn btn-p btn-sm">Aggiungi</button>
+          </x-slot:headerActions>
+          <div class="table-responsive">
+            <table class="t-table cmp-admin-table cmp-extras-table">
+              <colgroup>
+                <col>
+                <col>
+                <col>
+                <col>
+                <col>
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Descrizione</th>
+                  <th>Data</th>
+                  <th class="u-text-right">Importo</th>
+                  <th>Stato</th>
+                  <th class="t-actions">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                @forelse($campaign->extras->sortByDesc('created_at') as $extra)
+                  <tr>
+                    <td class="name-col">{{ $extra->description }}</td>
+                    <td class="mono-col">{{ $extra->occurred_on ? $extra->occurred_on->format('d/m/Y') : 'Non indicata' }}</td>
+                    <td class="mono-col u-text-right">€ {{ number_format($extra->amount, 2, ',', '.') }}</td>
+                    <td><x-badge :status="$extra->status->value" :label="$extra->status->label()" /></td>
+                    <td class="t-actions">
+                      <div class="t-actions-list">
+                        @if(!$extra->invoice_id)
+                          <x-delete-modal wireClick="deleteExtra({{ $extra->id }})" title="Annulla Extra" message="Sei sicuro di voler annullare questo extra?">
+                            <button type="button" class="btn-icon u-text-red" title="Annulla extra" aria-label="Annulla extra">
+                              <i data-lucide="trash-2" class="u-icon-sm"></i>
+                            </button>
+                          </x-delete-modal>
+                        @else
+                          <span class="u-text-meta">Fatturato</span>
+                        @endif
+                      </div>
+                    </td>
+                  </tr>
+                @empty
+                  <tr>
+                    <td colspan="5" class="u-empty-state">Nessun extra registrato.</td>
+                  </tr>
+                @endforelse
+              </tbody>
+            </table>
+          </div>
+        </x-panel>
       </div>
       
       {{-- Storico Fatture --}}
-      <div class="panel u-overflow-hidden">
-        <div class="lw-modal-hd">
-          <div class="cmp-panel-title">Storico Fatture</div>
+      <x-panel title="Storico Fatture">
+        <x-slot:headerActions>
           <button type="button" wire:click="openInvoiceModal" class="btn btn-p btn-sm">Genera fattura</button>
-        </div>
-        <div class="u-p-lg">
-          @if($campaign->invoices && $campaign->invoices->count())
-            <table class="t-table">
+        </x-slot:headerActions>
+        <div class="table-responsive">
+            <table class="t-table cmp-admin-table cmp-invoices-table">
+              <colgroup>
+                <col>
+                <col>
+                <col>
+                <col>
+                <col>
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Fattura</th>
+                  <th>Emissione</th>
+                  <th>Scadenza</th>
+                  <th class="u-text-right">Importo</th>
+                  <th class="t-actions">Azioni</th>
+                </tr>
+              </thead>
               <tbody>
-                @foreach($campaign->invoices->sortByDesc('issue_date') as $invoice)
-                  <tr class="cmp-tr">
-                    <td >
-                      <div class="mkt-fw-bold">Fattura #{{ $invoice->number }}</div>
-                      <div class="u-text-meta">Emissione: {{ $invoice->issue_date->format('d/m/Y') }}</div>
-                    </td>
-                    <td class="amount">
-                      € {{ number_format($invoice->tax_amount, 2, ',', '.') }}<br>
-                      <span class="mkt-text-xs-meta">Scadenza: {{ $invoice->due_date ? $invoice->due_date->format('d/m/Y') : '-' }}</span>
+                @forelse(($campaign->invoices ?? collect())->sortByDesc('issue_date') as $invoice)
+                  <tr>
+                    <td class="name-col">Fattura #{{ $invoice->number }}</td>
+                    <td class="mono-col">{{ $invoice->issue_date->format('d/m/Y') }}</td>
+                    <td class="mono-col">{{ $invoice->due_date ? $invoice->due_date->format('d/m/Y') : 'Non indicata' }}</td>
+                    <td class="mono-col u-text-right">€ {{ number_format($invoice->tax_amount, 2, ',', '.') }}</td>
+                    <td class="t-actions">
+                      <div class="t-actions-list">
+                        <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-g btn-xs">Dettagli</a>
+                      </div>
                     </td>
                   </tr>
-                @endforeach
+                @empty
+                  <tr>
+                    <td colspan="5" class="u-empty-state">Nessuna fattura registrata.</td>
+                  </tr>
+                @endforelse
               </tbody>
             </table>
-          @else
-            <div class="u-text-muted u-text-italic">Nessuna fattura registrata.</div>
-          @endif
         </div>
-      </div>
+      </x-panel>
     @endif
 
     @if($campaign->notes)

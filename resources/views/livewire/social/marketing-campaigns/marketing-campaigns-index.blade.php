@@ -34,7 +34,7 @@
             <th>Cliente</th>
             <th>Stato</th>
             <th>Timeline</th>
-            <th class="text-right">Azioni</th>
+            <th class="t-actions">Azioni</th>
           </tr>
         </thead>
         <tbody>
@@ -67,8 +67,8 @@
                   -
                 @endif
               </td>
-              <td>
-                <a href="{{ route('marketing-campaigns.show', $camp->id) }}" wire:navigate class="btn-icon" @click.stop>→</a>
+              <td class="t-actions">
+                <a href="{{ route('marketing-campaigns.show', $camp->id) }}" wire:navigate class="btn-icon" @click.stop title="Apri progetto" aria-label="Apri progetto {{ $camp->name }}">→</a>
               </td>
             </tr>
           @empty
@@ -82,7 +82,7 @@
       </table>
     </div>
 
-    <div class="mt-4">
+    <div class="u-mt-md">
       {{ $campaigns->links() }}
     </div>
     </x-panel>

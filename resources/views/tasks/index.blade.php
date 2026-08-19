@@ -116,7 +116,7 @@
                         <th>Priorità</th>
                         <th>Scadenza</th>
                         <th>Stato</th>
-                        <th></th>
+                        <th class="t-actions">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,7 +145,7 @@
                             {{ $task->due_date?->format('d/m/Y') ?? '—' }}
                         </td>
                         <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
-                        <td>
+                        <td class="t-actions">
                             @can('update', $task)
                                 <a href="{{ route('tasks.edit', $task) }}" class="btn-icon js-stop-propagation">✎</a>
                             @endcan

@@ -18,7 +18,7 @@
                     <th>Codice</th>
                     <th>Titolo / Progetto</th>
                     <th>Stato</th>
-                    <th>Azioni</th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,7 +36,7 @@
                         <td>
                             <x-shooting.status-badge :status="$shoot->status" context="photography" />
                         </td>
-                        <td>
+                        <td class="t-actions">
                             <a href="{{ route('photography.shooting.show', $shoot) }}" class="btn btn-outline btn-sm">Dettaglio</a>
                         </td>
                     </tr>

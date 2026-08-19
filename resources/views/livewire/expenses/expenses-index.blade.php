@@ -43,7 +43,7 @@
                         <th>Scadenza</th>
                         <th>Collegamento</th>
                         <th>Stato</th>
-                        <th></th>
+                        <th class="t-actions">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,7 +91,7 @@
                                 <span class="badge badge-warning">Da Pagare</span>
                             @endif
                         </td>
-                        <td>
+                        <td class="t-actions">
                             <a href="{{ route('expenses.edit', $expense) }}" wire:navigate class="btn-icon" @click.stop>✎</a>
                         </td>
                     </tr>

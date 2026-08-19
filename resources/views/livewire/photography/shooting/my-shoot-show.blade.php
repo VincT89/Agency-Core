@@ -1,8 +1,9 @@
 <div>
-    <div class="u-mb-sm">
+    <div class="page-back-row">
         <a href="{{ route('photography.shooting.index') }}"
            wire:navigate
-           class="u-text-muted u-text-sm u-no-underline">
+           class="btn btn-g btn-sm">
+            <i data-lucide="arrow-left" class="u-icon-sm" aria-hidden="true"></i>
             Torna ai miei shooting
         </a>
     </div>

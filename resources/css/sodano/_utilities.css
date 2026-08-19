@@ -68,8 +68,7 @@
 .u-text-orange { color: var(--orange-text); }
 .u-accent-blue { accent-color: var(--blue); }
 
-/* Form & Button Sizes */
-.btn-sm,
+/* Form sizes. Le dimensioni dei pulsanti vivono in _buttons.css. */
 .form-in-sm,
 .form-sel-sm {
     padding: 5px 10px !important;
@@ -109,7 +108,6 @@
 .u-w-250 { width: 250px; }
 .u-border-b { border-bottom: 1px solid var(--line); }
 .u-py-sm { padding-top: 8px; padding-bottom: 8px; }
-.btn-xs { padding: 4px 10px !important; font-size: 10px !important; }
 .u-text-h4 { font-size: 16px; }
 .u-text-tiny { font-size: 9px; }
 .u-bg-teal { background-color: var(--teal) !important; }
@@ -121,7 +119,6 @@
 .u-uppercase { text-transform: uppercase; }
 .u-text-accent { color: var(--accent); }
 .g-3col { grid-template-columns: repeat(3, 1fr); }
-.u-icon-lg { width: 32px; height: 32px; }
 .u-opacity-50 { opacity: 0.5; }
 .u-text-secondary { color: var(--text2) !important; }
 .u-text-md { font-size: 14px; }
@@ -133,7 +130,6 @@
 .u-align-middle { vertical-align: middle; }
 .u-text-inherit { color: inherit; }
 .u-items-center { align-items: center; }
-.u-icon-xs { width: 14px; height: 14px; }
 .u-tracking-wide { letter-spacing: 0.5px; }
 .u-pb-0 { padding-bottom: 0 !important; }
 .u-bg-bg3 { background: var(--bg3); }

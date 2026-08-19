@@ -33,7 +33,7 @@
                     <th>Task</th>
                     <th>Ticket</th>
                     <th>Stato</th>
-                    <th></th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,7 +48,7 @@
                     <td class="mono-col">{{ $project->tasks_count }}</td>
                     <td class="mono-col">{{ $project->tickets_count }}</td>
                     <td><x-badge :status="$project->status" :label="$project->status_label" /></td>
-                    <td>
+                    <td class="t-actions">
                         @can('update', $project)
                             <a href="{{ route('projects.edit', $project) }}" class="btn-icon" @click.stop>✎</a>
                         @endcan

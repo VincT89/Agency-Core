@@ -2,6 +2,7 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: auto;
 }
 
 .t-table thead th {
@@ -11,8 +12,10 @@
   text-transform: uppercase;
   color: var(--text);
   font-weight: 600;
-  padding: 12px 18px;
+  padding: var(--table-head-y) var(--table-cell-x);
   text-align: left;
+  line-height: 1.2;
+  vertical-align: middle;
   background: var(--bg1);
   border-bottom: 2px solid var(--line);
 }
@@ -29,7 +32,7 @@
 
 
 .t-table tbody tr {
-  cursor: pointer;
+  cursor: default;
   transition: background .15s;
 }
 
@@ -47,7 +50,7 @@
 }
 
 .t-table tbody tr:hover {
-  background: #f5f5f5;
+  background: var(--bg2);
 }
 
 /* Hover sull'ultima riga: clip agli angoli arrotondati */
@@ -60,8 +63,9 @@
 }
 
 .t-table tbody td {
-  padding: 14px 18px;
+  padding: var(--table-cell-y) var(--table-cell-x);
   font-size: 12px;
+  line-height: 1.35;
   color: var(--text2);
   vertical-align: middle;
   border-bottom: 1px solid var(--line);
@@ -71,7 +75,7 @@
   font-family: var(--sans);
   font-weight: 700;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .t-table tbody td.mono-col {
@@ -80,16 +84,41 @@
   color: var(--text3);
 }
 
-/* Azioni a scomparsa (fade su hover della riga) */
+/* Le azioni restano sempre riconoscibili e accessibili. */
 .t-table tbody tr .table-actions,
 .t-table tbody tr .act-btn {
-  opacity: 0.3;
+  opacity: 1;
   transition: opacity .15s;
 }
 
 .t-table tbody tr:hover .table-actions,
 .t-table tbody tr:hover .act-btn {
   opacity: 1;
+}
+
+.t-table-media tbody td {
+  padding-top: var(--table-media-y);
+  padding-bottom: var(--table-media-y);
+}
+
+.t-table .t-actions {
+  min-width: 76px;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.t-actions-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.t-table tbody tr[tabindex]:focus-visible,
+.t-table tbody tr[role="link"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* Task List */

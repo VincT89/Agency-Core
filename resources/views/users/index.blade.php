@@ -41,7 +41,7 @@
                     <th>Email</th>
                     <th>Ruolo</th>
                     <th>Stato</th>
-                    <th>Azioni</th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,8 +55,9 @@
                         </div>
                     </td>
                     <td><x-badge :status="$user->status" :label="$user->status_label" /></td>
-                    <td class="u-flex u-gap-xs">
-                        <a href="{{ route('users.edit', $user) }}" class="btn-icon">✎</a>
+                    <td class="t-actions">
+                        <div class="t-actions-list">
+                        <a href="{{ route('users.edit', $user) }}" class="btn-icon" title="Modifica utente" aria-label="Modifica utente {{ $user->name }}">✎</a>
                         
                         @if($user->id !== auth()->id())
                             <form action="{{ route('users.reset-password', $user) }}" method="POST" onsubmit="return confirm('Forzare il reset di password e generarne una nuova temporanea per questo utente?')">
@@ -71,6 +72,7 @@
                                 </button>
                             </form>
                         @endif
+                        </div>
                     </td>
                 </tr>
                 @empty

@@ -26,7 +26,7 @@
                     <th>Fotografo</th>
                     <th>Stato</th>
                     <th>Data Creazione</th>
-                    <th>Azioni</th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,7 +55,7 @@
                             <x-shooting.status-badge :status="$shoot->status" context="admin" />
                         </td>
                         <td class="u-text-sm u-text-secondary">{{ $shoot->created_at->format('d/m/Y') }}</td>
-                        <td>
+                        <td class="t-actions">
                             <a href="{{ route('admin.shooting.show', $shoot) }}" class="btn btn-outline btn-sm">Gestisci</a>
                         </td>
                     </tr>

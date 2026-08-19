@@ -515,6 +515,17 @@ body {
   padding-bottom: 4px;
 }
 
+.ph-right .tab-switcher {
+  margin-bottom: 0;
+}
+
+.page-back-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
 .content {
   flex: 1;
   min-height: 0;

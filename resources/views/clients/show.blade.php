@@ -1,6 +1,6 @@
 <x-app-layout title="{{ $client->name }}">
-    <div class="u-mb-lg u-flex-end">
-        <a href="{{ route('clients.index') }}" wire:navigate class="btn btn-g u-flex-center u-gap-xs">
+    <div class="page-back-row">
+        <a href="{{ route('clients.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
         </a>
     </div>

@@ -10,7 +10,7 @@
                         <th>Dimens.</th>
                         <th>Utente</th>
                         <th>Data</th>
-                        <th class="u-text-right">Azioni</th>
+                        <th class="t-actions">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -21,8 +21,8 @@
                         <td class="mono-col">{{ number_format($att->size / 1024, 0) }} KB</td>
                         <td>{{ $att->uploader?->name ?? 'Sistema' }}</td>
                         <td class="mono-col">{{ $att->created_at->format('d/m/Y H:i') }}</td>
-                        <td class="u-text-right">
-                            <div class="u-flex-end u-gap-sm">
+                        <td class="t-actions">
+                            <div class="t-actions-list">
                                 @can('download', $att)
                                 <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
                                    class="btn-ghost-primary btn-xs" title="Scarica" aria-label="Scarica allegato">

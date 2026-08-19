@@ -66,7 +66,7 @@
                     <th>Dominio</th>
                     <th>Credenziali</th>
                     <th>Scadenza</th>
-                    <th></th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -132,7 +132,7 @@
                             <span class="hosting-text-na">-</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="t-actions">
                         <a href="{{ route('hosting-services.edit', $service) }}" class="btn-icon js-stop-propagation" title="Modifica">✎</a>
                     </td>
                 </tr>

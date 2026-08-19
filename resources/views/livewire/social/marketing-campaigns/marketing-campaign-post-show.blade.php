@@ -45,9 +45,9 @@
         :active="in_array($post->status->value, ['pending_n8n', 'submitted_to_n8n', 'regenerating'], true)"
     />
 
-    <div class="u-mb-lg">
+    <div class="page-back-row">
         <a href="{{ route('marketing-campaigns.show', $campaign->id) }}"
-            class="btn btn-g u-inline-flex-center u-gap-xs">
+            class="btn btn-g btn-sm u-inline-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna al progetto
         </a>
     </div>
@@ -518,7 +518,7 @@
                                         <input
                                             type="file"
                                             multiple
-                                            class="form-in p-2 text-sm"
+                                            class="form-in cmp-media-file-input"
                                             accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
                                             x-on:change="handleLocalFiles($event)"
                                         >

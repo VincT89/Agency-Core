@@ -22,7 +22,7 @@
                     <th>Importo</th>
                     <th>Metodo</th>
                     <th>Registrato da</th>
-                    <th></th>
+                    <th class="t-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,7 +40,7 @@
                     <td class="mono-col">€ {{ number_format($payment->amount, 2, ',', '.') }}</td>
                     <td><x-badge :status="$payment->method" :label="$payment->method_label" /></td>
                     <td>{{ $payment->creator?->name ?? 'Sistema' }}</td>
-                    <td>
+                    <td class="t-actions">
                         @can('update', $payment)
                             <a href="{{ route('payments.edit', $payment) }}" class="btn-icon" @click.stop>✎</a>
                         @endcan

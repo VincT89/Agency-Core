@@ -14,11 +14,12 @@
                 <thead>
                     <tr>
                         <th>Nome File</th>
-                        <th>Tipo</th>
-                        <th>Dimens.</th>
+                        <th>Categoria</th>
+                        <th>Formato</th>
+                        <th>Dimensione</th>
                         <th>Utente</th>
                         <th>Data</th>
-                        <th>Azioni</th>
+                        <th class="t-actions">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -30,8 +31,8 @@
                         <td class="mono-col">{{ number_format($att->size / 1024, 0) }} KB</td>
                         <td>{{ $att->uploader?->name ?? 'Sistema' }}</td>
                         <td class="mono-col">{{ $att->created_at->format('d/m/Y H:i') }}</td>
-                        <td>
-                            <div class="att-actions">
+                        <td class="t-actions">
+                            <div class="att-actions t-actions-list">
                                 @can('download', $att)
                                 <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
                                    class="btn-icon" title="Scarica" aria-label="Scarica allegato">↓</a>

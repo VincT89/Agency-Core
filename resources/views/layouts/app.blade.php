@@ -301,7 +301,7 @@
           <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
             :active="request()->routeIs('users.*')" />
           <x-nav-item href="{{ route('admin.availability.index') }}" wire:navigate icon="calendar-clock" label="Disponibilità team"
-            :active="request()->routeIs('admin.availability.*')" />
+            :active="request()->routeIs('admin.availability.*')" :badge="$activeAvailabilityUsersCount ?? null" />
           <x-nav-item href="{{ route('audit-logs.index') }}" icon="history" label="Registro attività"
             :active="request()->routeIs('audit-logs.*')" />
         </div>

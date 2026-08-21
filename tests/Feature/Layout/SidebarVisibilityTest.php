@@ -5,6 +5,8 @@ namespace Tests\Feature\Layout;
 use App\Enums\UserRole;
 use App\Models\MarketingCampaign;
 use App\Models\User;
+use App\Models\UserAvailability;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -61,6 +63,67 @@ class SidebarVisibilityTest extends TestCase
         $response->assertSeeText('Utenti');
         $response->assertSeeText('Le mie disponibilità');
         $response->assertSeeText('Disponibilità team');
+    }
+
+    public function test_admin_sidebar_counts_each_currently_available_active_user_once(): void
+    {
+        Carbon::setTestNow('2026-08-21 10:00:00');
+
+        try {
+            $admin = User::factory()->create([
+                'role' => UserRole::Admin,
+                'status' => 'active',
+            ]);
+            $firstAvailableUser = User::factory()->create(['status' => 'active']);
+            $secondAvailableUser = User::factory()->create(['status' => 'active']);
+            $justEndedUser = User::factory()->create(['status' => 'active']);
+            $notStartedUser = User::factory()->create(['status' => 'active']);
+            $anotherDayUser = User::factory()->create(['status' => 'active']);
+            $inactiveUser = User::factory()->create(['status' => 'inactive']);
+
+            UserAvailability::factory()->for($firstAvailableUser)->create([
+                'date' => today()->toDateString(),
+                'starts_at' => '08:00:00',
+                'ends_at' => '14:00:00',
+            ]);
+            UserAvailability::factory()->for($firstAvailableUser)->create([
+                'date' => today()->toDateString(),
+                'starts_at' => '09:00:00',
+                'ends_at' => '11:00:00',
+            ]);
+            UserAvailability::factory()->for($secondAvailableUser)->create([
+                'date' => today()->toDateString(),
+                'starts_at' => '10:00:00',
+                'ends_at' => '12:00:00',
+            ]);
+            UserAvailability::factory()->for($justEndedUser)->create([
+                'date' => today()->toDateString(),
+                'starts_at' => '08:00:00',
+                'ends_at' => '10:00:00',
+            ]);
+            UserAvailability::factory()->for($notStartedUser)->create([
+                'date' => today()->toDateString(),
+                'starts_at' => '10:01:00',
+                'ends_at' => '12:00:00',
+            ]);
+            UserAvailability::factory()->for($anotherDayUser)->create([
+                'date' => today()->addDay()->toDateString(),
+                'starts_at' => '08:00:00',
+                'ends_at' => '14:00:00',
+            ]);
+            UserAvailability::factory()->for($inactiveUser)->create([
+                'date' => today()->toDateString(),
+                'starts_at' => '08:00:00',
+                'ends_at' => '14:00:00',
+            ]);
+
+            $this->actingAs($admin)
+                ->get('/dashboard')
+                ->assertOk()
+                ->assertSee('Disponibilità team (2)');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_dummy()

@@ -101,6 +101,15 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 });
 
+                $activeAvailabilityUsersCount = 0;
+                if ($user->canManageSystem()) {
+                    $activeAvailabilityUsersCount = UserAvailability::query()
+                        ->activeAt(now())
+                        ->whereHas('user', fn ($query) => $query->where('status', 'active'))
+                        ->distinct()
+                        ->count('user_id');
+                }
+
                 $newTickets = 0;
                 if ($user->can('viewAny', \App\Models\Ticket::class)) {
                     $ticketQuery = \App\Models\Ticket::whereNotIn('status', ['resolved', 'closed'])
@@ -127,6 +136,7 @@ class AppServiceProvider extends ServiceProvider
                     'overdueInvoices' => $counts['overdueInvoices'],
                     'openTasks'       => $counts['openTasks'],
                     'marketingProjectsCount' => $counts['marketingProjectsCount'],
+                    'activeAvailabilityUsersCount' => $activeAvailabilityUsersCount,
                     'newTickets'      => $newTickets,
                     'unreadNotificationsCount' => $user->unreadNotifications()->count(),
                     'latestNotifications'      => $user->notifications()->latest()->limit(5)->get(),

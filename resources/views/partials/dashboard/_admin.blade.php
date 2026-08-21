@@ -67,7 +67,8 @@
             </x-slot:headerActions>
 
             <div x-show="tab === 'tasks'" x-cloak>
-                <table class="t-table u-table-seamless">
+                <div class="table-responsive dashboard-operations-table-wrap">
+                    <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
                             <th>Task</th>
@@ -92,11 +93,13 @@
                             </tr>
                         @endforelse
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
 
             <div x-show="tab === 'tickets'" x-cloak>
-                <table class="t-table u-table-seamless">
+                <div class="table-responsive dashboard-operations-table-wrap">
+                    <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
                             <th>Ticket</th>
@@ -118,11 +121,13 @@
                             </tr>
                         @endforelse
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
 
             <div x-show="tab === 'domains'" x-cloak>
-                <table class="t-table u-table-seamless">
+                <div class="table-responsive dashboard-operations-table-wrap">
+                    <table class="t-table u-table-seamless">
                     <thead>
                         <tr>
                             <th>Dominio</th>
@@ -154,7 +159,8 @@
                             </tr>
                         @endif
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
 
         </x-panel>

@@ -2,77 +2,85 @@
     <div>
         @if($overdueTasks->isNotEmpty())
         <x-panel title="Task Scaduti" dot="var(--red)">
-            <table class="t-table">
-                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
-                <tbody>
-                    @foreach($overdueTasks as $task)
-                    <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
-                        <td class="name-col u-text-danger u-text-strong">{{ $task->title }}</td>
-                        <td>{{ $task->project?->name ?? '—' }}</td>
-                        <td class="mono-col u-text-danger">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
-                        <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="t-table">
+                    <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                    <tbody>
+                        @foreach($overdueTasks as $task)
+                        <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
+                            <td class="name-col u-text-danger u-text-strong">{{ $task->title }}</td>
+                            <td>{{ $task->project?->name ?? '—' }}</td>
+                            <td class="mono-col u-text-danger">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
+                            <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </x-panel>
         <div class="mt-panel"></div>
         @endif
 
         @if($dueSoonTasks->isNotEmpty())
         <x-panel title="Task in Scadenza a Breve" dot="var(--orange)">
-            <table class="t-table">
-                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
-                <tbody>
-                    @foreach($dueSoonTasks as $task)
-                    <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
-                        <td class="name-col">{{ $task->title }}</td>
-                        <td>{{ $task->project?->name ?? '—' }}</td>
-                        <td class="mono-col u-text-warning">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
-                        <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="t-table">
+                    <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                    <tbody>
+                        @foreach($dueSoonTasks as $task)
+                        <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
+                            <td class="name-col">{{ $task->title }}</td>
+                            <td>{{ $task->project?->name ?? '—' }}</td>
+                            <td class="mono-col u-text-warning">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
+                            <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </x-panel>
         <div class="mt-panel"></div>
         @endif
 
         <x-panel title="Altri Task in Lavorazione" dot="var(--line2)">
-            <table class="t-table">
-                <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
-                <tbody>
-                    @forelse($otherTasks as $task)
-                    <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
-                        <td class="name-col">{{ $task->title }}</td>
-                        <td>{{ $task->project?->name ?? '—' }}</td>
-                        <td class="mono-col">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
-                        <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="4" class="u-text-center u-text-muted u-p-md">Nessun task attivo. Ottimo lavoro.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="t-table">
+                    <thead><tr><th>Task</th><th>Commessa</th><th>Scadenza</th><th>Stato</th></tr></thead>
+                    <tbody>
+                        @forelse($otherTasks as $task)
+                        <tr x-data @click="window.Livewire.navigate('{{ route('tasks.show', $task) }}')" class="u-cursor-pointer hover-bg">
+                            <td class="name-col">{{ $task->title }}</td>
+                            <td>{{ $task->project?->name ?? '—' }}</td>
+                            <td class="mono-col">{{ $task->due_date ? $task->due_date->format('d/m/Y') : '—' }}</td>
+                            <td><x-badge :status="$task->status" :label="$task->status_label" /></td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="u-text-center u-text-muted u-p-md">Nessun task attivo. Ottimo lavoro.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </x-panel>
 
         @if(!auth()->user()->isMarketing())
         <div class="mt-panel">
             <x-panel title="Ticket nel Mio Perimetro" dot="var(--blue)">
-                <table class="t-table">
-                    <thead><tr><th>Ticket</th><th>Commessa</th><th>Stato</th></tr></thead>
-                    <tbody>
-                        @forelse($openTickets as $ticket)
-                        <tr x-data @click="window.Livewire.navigate('{{ route('tickets.show', $ticket) }}')" class="u-cursor-pointer hover-bg">
-                            <td class="name-col">{{ $ticket->title }}</td>
-                            <td>{{ $ticket->project?->name ?? '—' }}</td>
-                            <td><x-badge :status="$ticket->status" :label="$ticket->status_label" /></td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessun ticket in corso nel tuo perimetro</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="t-table">
+                        <thead><tr><th>Ticket</th><th>Commessa</th><th>Stato</th></tr></thead>
+                        <tbody>
+                            @forelse($openTickets as $ticket)
+                            <tr x-data @click="window.Livewire.navigate('{{ route('tickets.show', $ticket) }}')" class="u-cursor-pointer hover-bg">
+                                <td class="name-col">{{ $ticket->title }}</td>
+                                <td>{{ $ticket->project?->name ?? '—' }}</td>
+                                <td><x-badge :status="$ticket->status" :label="$ticket->status_label" /></td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessun ticket in corso nel tuo perimetro</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </x-panel>
         </div>
         @endif
@@ -106,20 +114,22 @@
         @if(auth()->user()->isMarketing())
         <div class="mt-panel">
             <x-panel title="Le Mie Richieste Shooting" dot="var(--purple)">
-                <table class="t-table">
-                    <thead><tr><th>Titolo</th><th>Commessa</th><th>Stato</th></tr></thead>
-                    <tbody>
-                        @forelse($recentShoots as $shoot)
-                        <tr x-data @click="window.Livewire.navigate('{{ route('social.shooting.index') }}')" class="u-cursor-pointer hover-bg">
-                            <td class="name-col">{{ $shoot->title }}</td>
-                            <td>{{ $shoot->project?->name ?? '—' }}</td>
-                            <td><x-badge :status="$shoot->status->value" :label="$shoot->status->labelForContext('social')" /></td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessuna richiesta shooting effettuata</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="t-table">
+                        <thead><tr><th>Titolo</th><th>Commessa</th><th>Stato</th></tr></thead>
+                        <tbody>
+                            @forelse($recentShoots as $shoot)
+                            <tr x-data @click="window.Livewire.navigate('{{ route('social.shooting.index') }}')" class="u-cursor-pointer hover-bg">
+                                <td class="name-col">{{ $shoot->title }}</td>
+                                <td>{{ $shoot->project?->name ?? '—' }}</td>
+                                <td><x-badge :status="$shoot->status->value" :label="$shoot->status->labelForContext('social')" /></td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessuna richiesta shooting effettuata</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </x-panel>
         </div>
         @endif

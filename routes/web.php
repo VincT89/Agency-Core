@@ -32,10 +32,12 @@ use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TicketChecklistItemController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UserController;
+use App\Livewire\Admin\Availability\TeamAvailability;
 use App\Livewire\Admin\Shooting\ShootShow;
 use App\Livewire\Admin\Shooting\ShootsIndex;
 use App\Livewire\Admin\Social\AgencySocialConnections;
 use App\Livewire\Admin\Social\SocialOperationsDashboard;
+use App\Livewire\Availability\MyAvailability;
 use App\Livewire\Dashboard\UserDailyNotes;
 use App\Livewire\Expenses\ExpenseForm;
 use App\Livewire\Expenses\ExpenseShow;
@@ -166,6 +168,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     // Team
     Route::resource('teams', TeamController::class);
+
+    Route::get('/availability', MyAvailability::class)->name('availability.index');
+
+    Route::get('/admin/availability', TeamAvailability::class)
+        ->middleware('can:system.admin')
+        ->name('admin.availability.index');
 
     // Shooting (Redirect Legacy)
     Route::get('/shoots', [ShootRedirectController::class, 'index'])->name('shoots.index');

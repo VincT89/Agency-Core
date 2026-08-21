@@ -197,6 +197,9 @@
             :active="request()->routeIs('calendar-events.*')" />
         @endcan
 
+        <x-nav-item href="{{ route('availability.index') }}" wire:navigate icon="clock-3" label="Le mie disponibilità"
+          :active="request()->routeIs('availability.*')" />
+
         @can('viewAny', \App\Models\Team::class)
           @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing() && !auth()->user()->isDeveloper())
             <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
@@ -297,6 +300,8 @@
           <div class="nav-group-label">Admin</div>
           <x-nav-item href="{{ route('users.index') }}" icon="user-cog" label="Utenti"
             :active="request()->routeIs('users.*')" />
+          <x-nav-item href="{{ route('admin.availability.index') }}" wire:navigate icon="calendar-clock" label="Disponibilità team"
+            :active="request()->routeIs('admin.availability.*')" />
           <x-nav-item href="{{ route('audit-logs.index') }}" icon="history" label="Registro attività"
             :active="request()->routeIs('audit-logs.*')" />
         </div>

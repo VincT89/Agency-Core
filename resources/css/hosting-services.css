@@ -266,3 +266,18 @@
 .hosting-detail-val {
     text-align: left;
 }
+
+@media (max-width: 767px) {
+    .hosting-filters-panel {
+        width: 100%;
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+
+    .hosting-filters-panel > .hosting-w-150,
+    .hosting-filters-panel > .hosting-w-250,
+    .hosting-filters-panel > .btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}

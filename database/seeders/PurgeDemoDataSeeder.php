@@ -88,6 +88,7 @@ class PurgeDemoDataSeeder extends Seeder
         'projects',
         'team_user',
         'teams',
+        'user_availabilities',
         'user_daily_note_checklist_items',
         'user_daily_note_entries',
         'user_daily_notes',

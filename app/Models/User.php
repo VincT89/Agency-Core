@@ -116,6 +116,11 @@ class User extends Authenticatable
         return $this->hasMany(UserDailyNote::class);
     }
 
+    public function availabilities(): HasMany
+    {
+        return $this->hasMany(UserAvailability::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === UserRole::Admin;

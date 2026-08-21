@@ -18,6 +18,7 @@ use App\Models\MarketingCampaignPostMedia;
 use App\Models\MarketingCampaignPostPublication;
 use App\Models\MarketingCampaignPostVersion;
 use App\Models\User;
+use App\Models\UserAvailability;
 use Database\Seeders\PurgeDemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -41,6 +42,11 @@ class PurgeDemoDataSeederTest extends TestCase
     {
         $admin = $this->admin(['remember_token' => 'previous-remember-token']);
         $otherUser = User::factory()->create(['role' => UserRole::Marketing]);
+        UserAvailability::factory()->for($otherUser)->create([
+            'date' => today()->toDateString(),
+            'starts_at' => '08:00:00',
+            'ends_at' => '14:00:00',
+        ]);
         $billingProfile = $this->billingProfile();
         InvoiceNumberSequence::create([
             'billing_profile_id' => $billingProfile->getKey(),

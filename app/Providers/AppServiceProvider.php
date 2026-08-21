@@ -5,9 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 
 use Illuminate\Support\Facades\Gate;
-use App\Models\{Ticket, Invoice, Payment, CalendarEvent, Client, Project, Task, Attachment};
+use App\Models\{Ticket, Invoice, Payment, CalendarEvent, Client, Project, Task, Attachment, UserAvailability};
 use App\Policies\{TicketPolicy, InvoicePolicy, PaymentPolicy, CalendarEventPolicy,
-                  ClientPolicy, ProjectPolicy, TaskPolicy, AttachmentPolicy};
+                  ClientPolicy, ProjectPolicy, TaskPolicy, AttachmentPolicy, UserAvailabilityPolicy};
 use App\Observers\{TicketObserver, InvoiceObserver, PaymentObserver, CalendarEventObserver, ClientObserver, ProjectObserver, TaskObserver, AttachmentObserver, UserObserver};
 
 class AppServiceProvider extends ServiceProvider
@@ -61,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Project::class,       ProjectPolicy::class);
         Gate::policy(Task::class,          TaskPolicy::class);
         Gate::policy(Attachment::class,    AttachmentPolicy::class);
+        Gate::policy(UserAvailability::class, UserAvailabilityPolicy::class);
         Gate::policy(\App\Models\HostingService::class, \App\Policies\HostingServicePolicy::class);
         Gate::policy(\App\Models\Expense::class, \App\Policies\ExpensePolicy::class);
         Gate::policy(\App\Models\Team::class, \App\Policies\TeamPolicy::class);

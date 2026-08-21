@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Layout;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Enums\UserRole;
+use App\Models\MarketingCampaign;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class SidebarVisibilityTest extends TestCase
 {
@@ -24,7 +25,8 @@ class SidebarVisibilityTest extends TestCase
         $response->assertSeeText('Progetti');
         $response->assertSeeText('Shooting');
         $response->assertSeeText('Calendario');
-        
+        $response->assertSeeText('Le mie disponibilità');
+
         // Deve vedere i Task (nella sezione Operatività)
         $response->assertSeeText('Operatività');
         $response->assertSeeText('Task');
@@ -36,6 +38,7 @@ class SidebarVisibilityTest extends TestCase
         $response->assertDontSee('Ticket');
         $response->assertDontSeeText('Fatture');
         $response->assertDontSeeText('Utenti');
+        $response->assertDontSeeText('Disponibilità team');
     }
 
     public function test_admin_sees_correct_sidebar_items()
@@ -56,6 +59,8 @@ class SidebarVisibilityTest extends TestCase
         $response->assertSeeText('Fatture');
         $response->assertSeeText('Pagamenti');
         $response->assertSeeText('Utenti');
+        $response->assertSeeText('Le mie disponibilità');
+        $response->assertSeeText('Disponibilità team');
     }
 
     public function test_dummy()
@@ -63,9 +68,9 @@ class SidebarVisibilityTest extends TestCase
         $this->withoutExceptionHandling();
         $user = User::factory()->create(['role' => UserRole::Developer]);
         $this->actingAs($user); // IMPORTANT!
-        
+
         $counts = [
-            'marketingProjectsCount' => \App\Models\MarketingCampaign::visibleTo($user)->whereIn('status', ['draft', 'active'])->count(),
+            'marketingProjectsCount' => MarketingCampaign::visibleTo($user)->whereIn('status', ['draft', 'active'])->count(),
         ];
         $this->assertTrue(true);
     }
@@ -82,11 +87,13 @@ class SidebarVisibilityTest extends TestCase
         $response->assertSeeText('Progetti');
         $response->assertSeeText('Ticket');
         $response->assertSeeText('Task');
+        $response->assertSeeText('Le mie disponibilità');
 
         // Ma non vede fatture o utenti admin
         $response->assertDontSeeText('Fatture');
         $response->assertDontSeeText('Pagamenti');
         $response->assertDontSeeText('Utenti');
         $response->assertDontSeeText('Team');
+        $response->assertDontSeeText('Disponibilità team');
     }
 }

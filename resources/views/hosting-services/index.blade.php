@@ -11,6 +11,8 @@
     @php
         $domainContext = request('type') === 'domain';
         $excludeDomains = request('exclude_type') === 'domain';
+        $listContext = $domainContext ? 'domain' : ($excludeDomains ? 'hosting' : null);
+        $contextParameters = $listContext ? ['context' => $listContext] : [];
     @endphp
 
     <div class="filter-bar">
@@ -57,7 +59,7 @@
     </div>
 
     <x-panel>
-        <table class="t-table">
+        <table class="t-table hosting-services-table">
             <thead>
                 <tr>
                     <th>Nome</th>
@@ -71,33 +73,35 @@
             </thead>
             <tbody>
                 @forelse($services as $service)
-                <tr class="hosting-row-link js-row-link" data-href="{{ route('hosting-services.show', $service) }}">
-                    <td class="name-col">
+                <tr class="hosting-row-link hosting-service-row js-row-link" data-href="{{ route('hosting-services.show', ['hosting_service' => $service] + $contextParameters) }}">
+                    <td class="name-col hosting-service-name" data-label="Servizio">
                         {{ $service->name }}
                         @if($service->provider)
                             <div class="hosting-provider-sub">{{ $service->provider }}</div>
                         @endif
                     </td>
-                    <td>
+                    <td class="hosting-service-client" data-label="Cliente">
                         @if($service->client)
                             <a href="{{ route('clients.show', $service->client) }}" class="hosting-client-link">{{ $service->client->name }}</a>
                         @else
                             <span class="hosting-text-na">-</span>
                         @endif
                     </td>
-                    <td>
-                        <span class="hosting-type-badge">
-                            {{ ucfirst($service->type) }}
-                        </span>
+                    <td class="hosting-service-types" data-label="Tipi">
+                        <div class="hosting-type-badges">
+                            @foreach($service->service_type_labels as $typeLabel)
+                                <span class="hosting-type-badge">{{ $typeLabel }}</span>
+                            @endforeach
+                        </div>
                     </td>
-                    <td class="mono-col">
+                    <td class="mono-col hosting-service-domain" data-label="Dominio">
                         @if($service->domain)
                             {{ $service->domain }}
                         @else
                             <span class="hosting-text-na">-</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="hosting-service-credentials" data-label="Credenziali">
                         @if($service->username || $service->password)
                             @can('manageCredentials', $service)
                                 @if($service->username)
@@ -113,7 +117,7 @@
                             <span class="hosting-text-na">N/A</span>
                         @endif
                     </td>
-                    <td class="mono-col">
+                    <td class="mono-col hosting-service-renewal" data-label="Scadenza">
                         @if($service->renewal_date)
                             @if($service->is_expired)
                                 <span class="badge badge-danger" title="{{ $service->renewal_date->format('d/m/Y') }}">
@@ -132,8 +136,11 @@
                             <span class="hosting-text-na">-</span>
                         @endif
                     </td>
-                    <td class="t-actions">
-                        <a href="{{ route('hosting-services.edit', $service) }}" class="btn-icon js-stop-propagation" title="Modifica">✎</a>
+                    <td class="t-actions hosting-service-actions" data-label="Azioni">
+                        <a href="{{ route('hosting-services.edit', ['hosting_service' => $service] + $contextParameters) }}" class="btn-icon hosting-service-edit js-stop-propagation" title="Modifica">
+                            <span aria-hidden="true">✎</span>
+                            <span class="hosting-service-edit-label">Modifica</span>
+                        </a>
                     </td>
                 </tr>
                 @empty

@@ -1,32 +1,33 @@
 <x-app-layout title="Modifica Servizio">
+    @php
+        $context = in_array(request('context'), ['domain', 'hosting'], true) ? request('context') : null;
+        $showParameters = ['hosting_service' => $hostingService]
+            + ($context ? ['context' => $context] : []);
+        $selectedServiceTypes = \App\Models\HostingService::normalizeServiceTypes(
+            (array) old('service_types', $hostingService->resolved_service_types)
+        );
+    @endphp
+
     <x-page-header eyebrow="Servizi IT" >
         <x-slot:title><strong>Modifica</strong> {{ $hostingService->name }}</x-slot:title>
         <x-slot:actions>
-            <a href="{{ route('hosting-services.show', $hostingService) }}" class="btn btn-g">← Indietro</a>
+            <a href="{{ route('hosting-services.show', $showParameters) }}" class="btn btn-g">← Indietro</a>
         </x-slot:actions>
     </x-page-header>
 
     <x-panel padded>
         <form action="{{ route('hosting-services.update', $hostingService) }}" method="POST"
-              x-data="{ serviceType: @js(old('type', $hostingService->type)) }">
+              x-data="{ serviceTypes: @js($selectedServiceTypes) }">
             @csrf
             @method('PUT')
 
+            @if($context)
+                <input type="hidden" name="context" value="{{ $context }}">
+            @endif
+
             <div class="sec-lbl">Dettagli Servizio</div>
-            
-            <div class="form-row">
-                <x-form-group label="Tipo Servizio" name="type" required>
-                    <select name="type" x-model="serviceType" class="form-sel @error('type') is-invalid @enderror" required>
-                        <option value="domain" {{ old('type', $hostingService->type) === 'domain' ? 'selected' : '' }}>Dominio</option>
-                        <option value="hosting" {{ old('type', $hostingService->type) === 'hosting' ? 'selected' : '' }}>Hosting</option>
-                        <option value="website" {{ old('type', $hostingService->type) === 'website' ? 'selected' : '' }}>Website</option>
-                        <option value="maintenance" {{ old('type', $hostingService->type) === 'maintenance' ? 'selected' : '' }}>Manutenzione</option>
-                        <option value="email" {{ old('type', $hostingService->type) === 'email' ? 'selected' : '' }}>Email</option>
-                        <option value="dns" {{ old('type', $hostingService->type) === 'dns' ? 'selected' : '' }}>DNS</option>
-                        <option value="other" {{ old('type', $hostingService->type) === 'other' ? 'selected' : '' }}>Altro</option>
-                    </select>
-                </x-form-group>
-            </div>
+
+            @include('hosting-services._service-type-selector')
 
             <div class="form-row full">
                 <x-form-group label="Nome Identificativo" name="name" required>
@@ -46,7 +47,8 @@
                 <x-form-group label="Dominio / URL" name="domain">
                     <input name="domain" class="form-in @error('domain') is-invalid @enderror"
                            value="{{ old('domain', $hostingService->domain) }}"
-                           :required="serviceType === 'domain'" :aria-required="(serviceType === 'domain').toString()">
+                           :required="serviceTypes.includes('domain')" :aria-required="serviceTypes.includes('domain').toString()">
+                    <div class="u-text-meta u-mt-xs" x-show="serviceTypes.includes('domain')">Obbligatorio quando il rinnovo comprende un dominio.</div>
                 </x-form-group>
                 <x-form-group label="Provider" name="provider">
                     <input name="provider" class="form-in @error('provider') is-invalid @enderror" value="{{ old('provider', $hostingService->provider) }}">
@@ -120,7 +122,7 @@
             </div>
 
             <div class="modal-ft hosting-services-footer">
-                <a href="{{ route('hosting-services.show', $hostingService) }}" class="btn btn-g">Annulla</a>
+                <a href="{{ route('hosting-services.show', $showParameters) }}" class="btn btn-g">Annulla</a>
                 <button type="submit" class="btn btn-p">Salva Modifiche</button>
             </div>
         </form>

@@ -1,18 +1,34 @@
 <x-app-layout title="{{ $hostingService->name }}">
+    @php
+        $context = in_array(request('context'), ['domain', 'hosting'], true) ? request('context') : null;
+
+        if ($context === null) {
+            $context = $hostingService->resolved_service_types === ['domain'] ? 'domain' : 'hosting';
+        }
+
+        $indexParameters = $context === 'domain'
+            ? ['type' => 'domain']
+            : ['exclude_type' => 'domain'];
+        $serviceParameters = [
+            'hosting_service' => $hostingService,
+            'context' => $context,
+        ];
+    @endphp
+
     <div class="page-back-row">
-        <a href="{{ route('hosting-services.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
+        <a href="{{ route('hosting-services.index', $indexParameters) }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
         </a>
     </div>
-    <x-page-header eyebrow="Servizio · {{ ucfirst($hostingService->type) }}">
+    <x-page-header eyebrow="Servizio · {{ implode(' + ', $hostingService->service_type_labels) }}">
         <x-slot:title><strong>{{ $hostingService->name }}</strong></x-slot:title>
         <x-slot:actions>
-            <a href="{{ $hostingService->type === 'domain' ? route('hosting-services.index', ['type' => 'domain']) : route('hosting-services.index', ['exclude_type' => 'domain']) }}" class="btn btn-g">← Indietro</a>
+            <a href="{{ route('hosting-services.index', $indexParameters) }}" class="btn btn-g">← Indietro</a>
             <x-badge :status="$hostingService->status === 'active' ? 'success' : 'danger'" :label="$hostingService->status === 'active' ? 'Attivo' : ucfirst($hostingService->status)" />
-            <a href="{{ route('hosting-services.edit', $hostingService) }}" class="btn btn-g">Modifica</a>
+            <a href="{{ route('hosting-services.edit', $serviceParameters) }}" class="btn btn-g">Modifica</a>
             
             <x-delete-modal 
-                action="{{ route('hosting-services.destroy', $hostingService) }}" 
+                action="{{ route('hosting-services.destroy', $serviceParameters) }}"
                 title="Elimina Servizio" 
                 message="Eliminare definitivamente il servizio '{{ $hostingService->name }}'?"
                 confirmText="{{ $hostingService->name }}">
@@ -34,6 +50,14 @@
                     @else
                         —
                     @endif
+                </div>
+            </div>
+            <div class="hosting-detail-row">
+                <div class="form-lbl">Tipi servizio</div>
+                <div class="hosting-type-badges hosting-detail-val">
+                    @foreach($hostingService->service_type_labels as $typeLabel)
+                        <span class="hosting-type-badge">{{ $typeLabel }}</span>
+                    @endforeach
                 </div>
             </div>
             <div class="hosting-detail-row">

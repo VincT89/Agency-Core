@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HostingService;
 use App\Http\Requests\StoreHostingServiceRequest;
 use App\Http\Requests\UpdateHostingServiceRequest;
+use App\Models\HostingService;
 use Illuminate\Http\Request;
 
 class HostingServiceController extends Controller
@@ -18,9 +18,9 @@ class HostingServiceController extends Controller
             ->orderByRaw('renewal_date IS NULL, renewal_date ASC');
 
         if ($request->filled('type') && $request->type !== 'all') {
-            $query->where('type', $request->type);
+            $query->withServiceType($request->type);
         } elseif ($request->get('exclude_type') === 'domain') {
-            $query->where('type', '!=', 'domain');
+            $query->withAnyServiceTypeExcept('domain');
         }
 
         if ($request->filled('search')) {
@@ -30,11 +30,11 @@ class HostingServiceController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('domain', 'like', "%{$search}%")
                     ->orWhere('provider', 'like', "%{$search}%");
-                
+
                 if ($canManageCredentials) {
                     $q->orWhere('username', 'like', "%{$search}%");
                 }
-                
+
                 $q->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
             });
         }
@@ -45,11 +45,11 @@ class HostingServiceController extends Controller
                 $query->where('renewal_date', '<', $now);
             } elseif ($request->status_filter === 'expiring') {
                 $query->where('renewal_date', '>=', $now)
-                      ->where('renewal_date', '<=', $now->copy()->addDays(30));
+                    ->where('renewal_date', '<=', $now->copy()->addDays(30));
             } elseif ($request->status_filter === 'active') {
-                $query->where(function($q) use ($now) {
+                $query->where(function ($q) use ($now) {
                     $q->whereNull('renewal_date')
-                      ->orWhere('renewal_date', '>=', $now);
+                        ->orWhere('renewal_date', '>=', $now);
                 });
             }
         }
@@ -62,32 +62,48 @@ class HostingServiceController extends Controller
     public function create()
     {
         $this->authorize('create', HostingService::class);
+
         return view('hosting-services.create');
     }
 
     public function store(StoreHostingServiceRequest $request)
     {
-        $hostingService = HostingService::create($request->validated());
-        return redirect()->route('hosting-services.index', ['type' => $request->type === 'domain' ? 'domain' : null, 'exclude_type' => $request->type !== 'domain' ? 'domain' : null])
-                         ->with('success', 'Servizio creato con successo.');
+        $data = $request->validated();
+        $context = $data['context'] ?? null;
+        unset($data['context']);
+
+        $data['service_types'] = HostingService::normalizeServiceTypes($data['service_types']);
+        $data['type'] = $data['service_types'][0];
+
+        $hostingService = HostingService::create($data);
+
+        return redirect()->route('hosting-services.index', $this->indexParameters($hostingService, $context))
+            ->with('success', 'Servizio creato con successo.');
     }
 
     public function show(HostingService $hostingService)
     {
         $this->authorize('view', $hostingService);
         $hostingService->load(['client', 'interventions.user']);
+
         return view('hosting-services.show', compact('hostingService'));
     }
 
     public function edit(HostingService $hostingService)
     {
         $this->authorize('update', $hostingService);
+
         return view('hosting-services.edit', compact('hostingService'));
     }
 
     public function update(UpdateHostingServiceRequest $request, HostingService $hostingService)
     {
         $data = $request->validated();
+        $context = $data['context'] ?? null;
+        unset($data['context']);
+
+        $data['service_types'] = HostingService::normalizeServiceTypes($data['service_types']);
+        $data['type'] = $data['service_types'][0];
 
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
@@ -95,18 +111,37 @@ class HostingServiceController extends Controller
 
         $hostingService->update($data);
 
-        return redirect()->route('hosting-services.index', ['type' => $hostingService->type === 'domain' ? 'domain' : null, 'exclude_type' => $hostingService->type !== 'domain' ? 'domain' : null])
-                         ->with('success', 'Servizio aggiornato con successo.');
+        return redirect()->route('hosting-services.index', $this->indexParameters($hostingService, $context))
+            ->with('success', 'Servizio aggiornato con successo.');
     }
 
     public function destroy(HostingService $hostingService)
     {
         $this->authorize('delete', $hostingService);
-        
-        $type = $hostingService->type;
+
+        $parameters = $this->indexParameters($hostingService, request('context'));
         $hostingService->delete();
 
-        return redirect()->route('hosting-services.index', ['type' => $type === 'domain' ? 'domain' : null, 'exclude_type' => $type !== 'domain' ? 'domain' : null])
-                         ->with('success', 'Servizio eliminato con successo.');
+        return redirect()->route('hosting-services.index', $parameters)
+            ->with('success', 'Servizio eliminato con successo.');
+    }
+
+    private function indexParameters(HostingService $hostingService, ?string $context): array
+    {
+        $serviceTypes = $hostingService->resolved_service_types;
+        $hasDomain = in_array('domain', $serviceTypes, true);
+        $hasNonDomainType = count(array_diff($serviceTypes, ['domain'])) > 0;
+
+        if ($context === 'domain' && $hasDomain) {
+            return ['type' => 'domain'];
+        }
+
+        if ($context === 'hosting' && $hasNonDomainType) {
+            return ['exclude_type' => 'domain'];
+        }
+
+        return $hasDomain && ! $hasNonDomainType
+            ? ['type' => 'domain']
+            : ['exclude_type' => 'domain'];
     }
 }

@@ -117,6 +117,10 @@
     cursor: pointer;
 }
 
+.hosting-service-edit-label {
+    display: none;
+}
+
 .hosting-input-sm {
     padding: 5px 10px;
     font-size: 11px;
@@ -132,11 +136,90 @@
 }
 
 .hosting-type-badge {
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     background: var(--bg-card);
     padding: 2px 6px;
     border-radius: 4px;
     border: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+.hosting-type-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.hosting-type-options {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.hosting-type-option {
+    position: relative;
+    display: block;
+    cursor: pointer;
+}
+
+.hosting-type-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hosting-type-option span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--control-h-sm);
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--bg);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    transition: border-color .15s, background-color .15s, color .15s;
+}
+
+.hosting-type-option span::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+    border: 1px solid var(--line3);
+    border-radius: 3px;
+    background: var(--bg2);
+}
+
+.hosting-type-option:hover span {
+    border-color: var(--line3);
+    color: var(--text);
+}
+
+.hosting-type-option input[type="checkbox"]:checked + span {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+    color: var(--text);
+}
+
+.hosting-type-option input[type="checkbox"]:checked + span::before {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: inset 0 0 0 3px var(--bg2);
+}
+
+.hosting-type-option input[type="checkbox"]:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.hosting-type-options.is-invalid .hosting-type-option span,
+.hosting-type-options[aria-invalid="true"] .hosting-type-option span {
+    border-color: var(--red);
 }
 
 .hosting-text-na {
@@ -268,6 +351,154 @@
 }
 
 @media (max-width: 767px) {
+    .t-table.hosting-services-table,
+    .t-table.hosting-services-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .t-table.hosting-services-table {
+        overflow: visible;
+        white-space: normal;
+    }
+
+    .t-table.hosting-services-table thead {
+        display: block;
+        position: absolute;
+        width: 1px;
+        min-width: 0;
+        max-width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .t-table.hosting-services-table thead tr {
+        display: block;
+        width: 1px;
+        min-width: 0;
+        max-width: 1px;
+    }
+
+    .t-table.hosting-services-table tbody {
+        display: grid;
+        gap: 12px;
+        padding: 12px;
+        box-sizing: border-box;
+    }
+
+    .hosting-services-table .hosting-service-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "name name"
+            "client renewal"
+            "types types"
+            "domain domain"
+            "credentials credentials"
+            "actions actions";
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--r2);
+        background: var(--bg1);
+    }
+
+    .t-table.hosting-services-table .hosting-service-row > td {
+        display: flex;
+        min-width: 0;
+        max-width: none;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+        padding: 10px 12px;
+        border: 0;
+        text-align: left;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+
+    .hosting-service-row > td::before {
+        content: attr(data-label);
+        color: var(--text3);
+        font-family: var(--mono);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+
+    .t-table.hosting-services-table .hosting-service-name {
+        grid-area: name;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .hosting-service-client {
+        grid-area: client;
+    }
+
+    .hosting-service-types {
+        grid-area: types;
+    }
+
+    .hosting-service-domain {
+        grid-area: domain;
+    }
+
+    .hosting-service-credentials {
+        grid-area: credentials;
+    }
+
+    .hosting-service-renewal {
+        grid-area: renewal;
+    }
+
+    .t-table.hosting-services-table .hosting-service-actions {
+        grid-area: actions;
+        min-width: 0;
+        border-top: 1px solid var(--line);
+        text-align: left !important;
+    }
+
+    .hosting-service-edit {
+        width: 100%;
+        height: auto;
+        min-height: 44px;
+        gap: 6px;
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .hosting-service-edit-label {
+        display: inline;
+    }
+
+    .hosting-services-table .hosting-empty-row {
+        display: block;
+        border: 1px dashed var(--line2);
+        border-radius: var(--r);
+        background: var(--bg1);
+    }
+
+    .t-table.hosting-services-table .hosting-empty-row > td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        border: 0;
+        white-space: normal;
+    }
+
+    .hosting-type-options {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .hosting-filters-panel {
         width: 100%;
         margin-left: 0;
@@ -279,5 +510,11 @@
     .hosting-filters-panel > .btn {
         flex: 1 1 100%;
         width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .hosting-type-options {
+        grid-template-columns: 1fr;
     }
 }

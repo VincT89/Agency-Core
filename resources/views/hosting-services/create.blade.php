@@ -7,17 +7,25 @@
     </x-page-header>
 
     <x-panel padded>
+        @php
+            $requestedType = request('type');
+            $defaultType = array_key_exists($requestedType, \App\Models\HostingService::TYPE_LABELS)
+                ? $requestedType
+                : 'hosting';
+            $selectedServiceTypes = \App\Models\HostingService::normalizeServiceTypes(
+                (array) old('service_types', [$defaultType])
+            );
+            $context = request('type') === 'domain'
+                ? 'domain'
+                : (request('exclude_type') === 'domain' ? 'hosting' : null);
+        @endphp
+
         <form action="{{ route('hosting-services.store') }}" method="POST"
-              x-data="{ serviceType: @js(old('type', request('type', 'hosting'))) }">
+              x-data="{ serviceTypes: @js($selectedServiceTypes) }">
             @csrf
 
-            @php
-                $fixedDomain = request('type') === 'domain';
-                $excludeDomains = request('exclude_type') === 'domain';
-            @endphp
-
-            @if($fixedDomain)
-                <input type="hidden" name="type" value="domain">
+            @if($context)
+                <input type="hidden" name="context" value="{{ $context }}">
             @endif
 
             <div class="hosting-services-help">
@@ -26,24 +34,8 @@
             </div>
 
             <div class="sec-lbl">Dettagli Servizio</div>
-            
-            @unless($fixedDomain)
-            <div class="form-row">
-                <x-form-group label="Tipo Servizio" name="type" required>
-                    <select name="type" x-model="serviceType" class="form-sel @error('type') is-invalid @enderror" required>
-                        @unless($excludeDomains)
-                            <option value="domain" {{ old('type', request('type')) === 'domain' ? 'selected' : '' }}>Dominio</option>
-                        @endunless
-                        <option value="hosting" {{ old('type', request('type', 'hosting')) === 'hosting' ? 'selected' : '' }}>Hosting</option>
-                        <option value="website" {{ old('type') === 'website' ? 'selected' : '' }}>Website</option>
-                        <option value="maintenance" {{ old('type') === 'maintenance' ? 'selected' : '' }}>Manutenzione</option>
-                        <option value="email" {{ old('type') === 'email' ? 'selected' : '' }}>Email</option>
-                        <option value="dns" {{ old('type') === 'dns' ? 'selected' : '' }}>DNS</option>
-                        <option value="other" {{ old('type') === 'other' ? 'selected' : '' }}>Altro</option>
-                    </select>
-                </x-form-group>
-            </div>
-            @endunless
+
+            @include('hosting-services._service-type-selector')
 
             <div class="form-row full">
                 <x-form-group label="Nome Identificativo" name="name" required>
@@ -58,10 +50,10 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Dominio / URL" name="domain" :required="$fixedDomain">
+                <x-form-group label="Dominio / URL" name="domain">
                     <input name="domain" class="form-in @error('domain') is-invalid @enderror" value="{{ old('domain') }}"
-                           :required="serviceType === 'domain'" :aria-required="(serviceType === 'domain').toString()">
-                    <div class="u-text-meta u-mt-xs" x-show="serviceType === 'domain'">Obbligatorio per i servizi di tipo dominio.</div>
+                           :required="serviceTypes.includes('domain')" :aria-required="serviceTypes.includes('domain').toString()">
+                    <div class="u-text-meta u-mt-xs" x-show="serviceTypes.includes('domain')">Obbligatorio quando il rinnovo comprende un dominio.</div>
                 </x-form-group>
                 <x-form-group label="Provider" name="provider">
                     <input name="provider" class="form-in @error('provider') is-invalid @enderror" value="{{ old('provider') }}" placeholder="Es. Aruba, SiteGround">

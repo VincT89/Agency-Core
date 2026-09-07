@@ -20,6 +20,12 @@ class DashboardController extends Controller
             $data = $this->getAdminData($user);
         } elseif ($user->isAdministration()) {
             $data = $this->getAdministrationData($user);
+        } elseif ($user->isCommercial()) {
+            $data = [
+                'commercialTickets' => Ticket::query()->open()
+                    ->with(['client:id,name', 'project', 'assignee:id,name,role'])
+                    ->latest('updated_at')->limit(10)->get(),
+            ];
         } else {
             // Carica la dashboard operativa per sviluppatori, marketing, creativi, ecc.
             $data = $this->getWorkspaceData($user);

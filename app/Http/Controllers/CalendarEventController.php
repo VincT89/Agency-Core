@@ -110,7 +110,7 @@ class CalendarEventController extends Controller
         $this->authorize('create', CalendarEvent::class);
         $user = auth()->user();
 
-        $clients = Client::query()
+        $clients = $user->isCommercial() ? collect() : Client::query()
             ->where(function ($q) use ($user) {
                 if (!$user->canBypassProjectScope()) {
                     $q->whereHas('projects');
@@ -120,14 +120,14 @@ class CalendarEventController extends Controller
             ->orderBy('name')
             ->get();
 
-        $users = User::query()
+        $users = $user->isCommercial() ? collect() : User::query()
             ->orderBy('name')
             ->get();
 
         return view('calendar-events.create', [
             'clients' => $clients,
             'users' => $users,
-            'types' => CalendarEvent::TYPES,
+            'types' => $user->isCommercial() ? ['personal'] : CalendarEvent::TYPES,
             'statuses' => CalendarEvent::STATUSES,
         ]);
     }
@@ -165,7 +165,7 @@ class CalendarEventController extends Controller
         $this->authorize('update', $calendarEvent);
         $user = auth()->user();
 
-        $clients = Client::query()
+        $clients = $user->isCommercial() ? collect() : Client::query()
             ->where(function ($q) use ($user) {
                 if (!$user->canBypassProjectScope()) {
                     $q->whereHas('projects');
@@ -175,7 +175,7 @@ class CalendarEventController extends Controller
             ->orderBy('name')
             ->get();
 
-        $users = User::query()
+        $users = $user->isCommercial() ? collect() : User::query()
             ->orderBy('name')
             ->get();
 
@@ -183,7 +183,7 @@ class CalendarEventController extends Controller
             'calendarEvent' => $calendarEvent,
             'clients' => $clients,
             'users' => $users,
-            'types' => CalendarEvent::TYPES,
+            'types' => $user->isCommercial() ? ['personal'] : CalendarEvent::TYPES,
             'statuses' => CalendarEvent::STATUSES,
         ]);
     }

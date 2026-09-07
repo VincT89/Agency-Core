@@ -1,7 +1,7 @@
 <div>
 
 <div class="u-mt-lg">
-    <x-panel title="Commenti / Note operative" dot="var(--blue)" padded>
+    <x-panel :title="auth()->user()->isCommercial() ? 'Commenti' : 'Commenti / Note operative'" dot="var(--blue)" padded>
         
         {{-- Lista Commenti --}}
         <div class="comments-scroll-container" 
@@ -46,7 +46,7 @@
         </div>
 
         {{-- Form --}}
-        @can('update', $ticket)
+        @can('comment', $ticket)
             <div class="comments-composer">
                 <form wire:submit="addComment">
                     <textarea wire:model="body"
@@ -60,6 +60,7 @@
                     
                     <div class="u-mt-sm u-flex u-items-center u-gap-md u-flex-between">
                         <div class="u-flex u-items-center u-gap-md">
+                            @can('update', $ticket)
                             <label class="u-flex u-items-center u-gap-xs">
                                 <input type="radio" wire:model="delivery_mode" value="internal">
                                 <span class="u-text-meta">Nota interna</span>
@@ -68,6 +69,7 @@
                                 <input type="radio" wire:model="delivery_mode" value="send_to_client_via_sody">
                                 <span class="u-text-meta">Invia al cliente con Sody</span>
                             </label>
+                            @endcan
                         </div>
                         <button type="submit" class="btn btn-p" wire:loading.attr="disabled" wire:target="addComment">
                             <span wire:loading.remove wire:target="addComment">Aggiungi commento</span>

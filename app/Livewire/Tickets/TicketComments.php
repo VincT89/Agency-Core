@@ -13,6 +13,7 @@ class TicketComments extends Component
 {
     use AuthorizesRequests;
 
+    #[\Livewire\Attributes\Locked]
     public Ticket $ticket;
     public string $body = '';
     public string $delivery_mode = 'internal';
@@ -27,17 +28,21 @@ class TicketComments extends Component
 
     public function mount(Ticket $ticket)
     {
+        $this->authorize('view', $ticket);
         $this->ticket = $ticket;
     }
 
     public function addComment()
     {
-        $this->authorize('update', $this->ticket);
+        $this->authorize('comment', $this->ticket);
 
         $validated = $this->validate();
 
         $deliveryMode = $validated['delivery_mode'] ?? 'internal';
         $sendToSody = $deliveryMode === 'send_to_client_via_sody';
+        if ($sendToSody) {
+            $this->authorize('update', $this->ticket);
+        }
 
         $commentData = [
             'user_id' => auth()->id(),
@@ -133,6 +138,7 @@ class TicketComments extends Component
 
     public function render()
     {
+        $this->authorize('view', $this->ticket);
         return view('livewire.tickets.ticket-comments');
     }
 }

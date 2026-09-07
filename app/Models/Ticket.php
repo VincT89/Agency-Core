@@ -28,6 +28,16 @@ class Ticket extends Model
         'request',
         'change',
         'admin',
+        'quote',
+    ];
+
+    public const DEPARTMENTS = [
+        'developer' => 'Sviluppo',
+        'marketing' => 'Marketing',
+        'graphic_designer' => 'Grafica',
+        'photographer' => 'Fotografia',
+        'administration' => 'Amministrazione',
+        'other' => 'Altro',
     ];
 
     public const STATUSES = [
@@ -65,6 +75,7 @@ class Ticket extends Model
         'source',
         'context',
         'received_at',
+        'requested_department',
     ];
 
     protected $casts = [
@@ -94,6 +105,7 @@ class Ticket extends Model
             'request' => 'Richiesta',
             'change' => 'Modifica',
             'admin' => 'Amministrazione commerciale',
+            'quote' => 'Richiesta di preventivo',
             default => ucfirst((string) $this->type),
         };
     }
@@ -117,7 +129,15 @@ class Ticket extends Model
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        $relation = $this->belongsTo(Project::class);
+
+        // Il commerciale legge solo il nome del progetto del proprio ticket.
+        if (auth()->user()?->isCommercial()) {
+            $relation->withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)
+                ->select(['projects.id', 'projects.name', 'projects.client_id']);
+        }
+
+        return $relation;
     }
 
     public function tasks()
@@ -189,12 +209,17 @@ class Ticket extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        if ($user->isCommercial()) {
+            return $query->where('tickets.created_by', $user->id);
+        }
+
         if ($user->canAccessAllProjects() || $user->isMarketing()) {
             return $query;
         }
 
-        return $query->whereHas('project.users', function ($q) use ($user) {
-            $q->where('users.id', $user->id);
+        return $query->where(function ($visible) use ($user) {
+            $visible->whereHas('project.users', fn ($members) => $members->where('users.id', $user->id))
+                ->orWhere(fn ($unlinked) => $unlinked->whereNull('project_id')->where('assigned_to', $user->id));
         });
     }
 }

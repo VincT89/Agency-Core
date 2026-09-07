@@ -8,12 +8,12 @@ class NotificationDropdown extends Component
 {
     public function markAllAsRead()
     {
-        auth()->user()->unreadNotifications->markAsRead();
+        auth()->user()->visibleNotifications()->whereNull('read_at')->get()->markAsRead();
     }
 
     public function markAsRead($id)
     {
-        $notification = auth()->user()->notifications()->where('id', $id)->first();
+        $notification = auth()->user()->visibleNotifications()->where('id', $id)->first();
         if ($notification) {
             $notification->markAsRead();
         }
@@ -21,7 +21,7 @@ class NotificationDropdown extends Component
 
     public function markAsReadAndRedirect($id)
     {
-        $notification = auth()->user()->notifications()->where('id', $id)->first();
+        $notification = auth()->user()->visibleNotifications()->where('id', $id)->first();
         if ($notification) {
             $notification->markAsRead();
             $url = $notification->data['intended_url']
@@ -35,7 +35,7 @@ class NotificationDropdown extends Component
 
     public function deleteNotification($id)
     {
-        $notification = auth()->user()->notifications()->where('id', $id)->first();
+        $notification = auth()->user()->visibleNotifications()->where('id', $id)->first();
         if ($notification) {
             $notification->delete();
         }
@@ -45,8 +45,8 @@ class NotificationDropdown extends Component
     {
         $user = auth()->user();
         return view('livewire.notifications.notification-dropdown', [
-            'unreadNotificationsCount' => $user->unreadNotifications()->count(),
-            'latestNotifications' => $user->notifications()->latest()->take(10)->get(),
+            'unreadNotificationsCount' => $user->visibleNotifications()->whereNull('read_at')->count(),
+            'latestNotifications' => $user->visibleNotifications()->latest()->take(10)->get(),
         ]);
     }
 }

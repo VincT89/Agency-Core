@@ -19,15 +19,16 @@ class UpdateCalendarEventRequest extends FormRequest
 
     public function rules(): array
     {
+        $commercial = $this->user()->isCommercial();
         return [
-            'client_id' => ['nullable', 'exists:clients,id'],
-            'project_id' => ['nullable', 'exists:projects,id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'client_id' => $commercial ? ['prohibited'] : ['nullable', 'exists:clients,id'],
+            'project_id' => $commercial ? ['prohibited'] : ['nullable', 'exists:projects,id'],
+            'assigned_to' => $commercial ? ['prohibited'] : ['nullable', 'exists:users,id'],
 
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
 
-            'type' => ['required', Rule::in(CalendarEvent::TYPES)],
+            'type' => ['required', Rule::in($commercial ? ['personal'] : CalendarEvent::TYPES)],
             'status' => ['required', Rule::in(CalendarEvent::STATUSES)],
 
             'start_at' => ['required', 'date'],

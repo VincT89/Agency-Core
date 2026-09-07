@@ -50,7 +50,7 @@ class StoreAttachmentRequest extends FormRequest
         }
 
         // Intentionally resolving attachment capabilities by checking parent update rights
-        return $this->user()->can('update', $attachable);
+        return $this->user()->can($attachable instanceof Ticket ? 'addAttachment' : 'update', $attachable);
     }
 
     public function rules(): array

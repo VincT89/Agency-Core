@@ -15,12 +15,16 @@ class AttachmentManager extends Component
 {
     use WithFileUploads, AuthorizesRequests;
 
+    #[\Livewire\Attributes\Locked]
     public Model $model;
     public $file;
     public $type;
 
     public function mount(Model $model)
     {
+        if ($model instanceof \App\Models\Ticket) {
+            $this->authorize('view', $model);
+        }
         $this->model = $model;
         
         $isValid = false;
@@ -44,7 +48,7 @@ class AttachmentManager extends Component
 
     public function upload()
     {
-        $this->authorize('update', $this->model);
+        $this->authorize($this->model instanceof \App\Models\Ticket ? 'addAttachment' : 'update', $this->model);
         
         $mimes = implode(',', StoreAttachmentRequest::ALLOWED_MIMES);
         $this->validate([
@@ -99,6 +103,9 @@ class AttachmentManager extends Component
 
     public function render()
     {
+        if ($this->model instanceof \App\Models\Ticket) {
+            $this->authorize('view', $this->model);
+        }
         return view('livewire.shared.attachment-manager');
     }
 }

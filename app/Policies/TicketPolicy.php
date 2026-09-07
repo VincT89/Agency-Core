@@ -16,6 +16,7 @@ class TicketPolicy
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::GraphicDesigner,
             \App\Enums\UserRole::OperationsManager,
+            UserRole::Commercial,
         ], true);
     }
 
@@ -34,7 +35,22 @@ class TicketPolicy
 
     public function update(User $user, Ticket $ticket): bool
     {
+        if ($user->isCommercial()) {
+            return false;
+        }
         return $this->canAccessTicket($user, $ticket);
+    }
+
+    public function comment(User $user, Ticket $ticket): bool
+    {
+        return $user->isCommercial()
+            ? $this->view($user, $ticket)
+            : $this->update($user, $ticket);
+    }
+
+    public function addAttachment(User $user, Ticket $ticket): bool
+    {
+        return $this->comment($user, $ticket);
     }
 
     public function delete(User $user, Ticket $ticket): bool
@@ -44,7 +60,15 @@ class TicketPolicy
 
     private function canAccessTicket(User $user, Ticket $ticket): bool
     {
+        if ($user->isCommercial()) {
+            return (int) $ticket->created_by === (int) $user->id;
+        }
+
         if ($user->canBypassProjectScope()) {
+            return true;
+        }
+
+        if (!$ticket->project_id && (int) $ticket->assigned_to === (int) $user->id) {
             return true;
         }
 

@@ -42,7 +42,7 @@ class UserDailyNotes extends Component
         $note = UserDailyNote::with(['entries' => function($q) {
             $q->orderBy('sort_order');
         }])->where('user_id', Auth::id())
-          ->where('date', $this->currentDate)
+          ->whereDate('date', $this->currentDate)
           ->first();
 
         $this->entryContents = [];
@@ -61,7 +61,7 @@ class UserDailyNotes extends Component
     protected function cleanupEmptyEntries()
     {
         $note = UserDailyNote::where('user_id', Auth::id())
-            ->where('date', $this->currentDate)
+            ->whereDate('date', $this->currentDate)
             ->first();
 
         if ($note) {
@@ -75,8 +75,9 @@ class UserDailyNotes extends Component
 
     protected function getOrCreateDailyNote()
     {
-        return UserDailyNote::firstOrCreate([
+        return UserDailyNote::whereDate('date', $this->currentDate)->firstOrCreate([
             'user_id' => Auth::id(),
+        ], [
             'date' => $this->currentDate,
         ]);
     }
@@ -185,7 +186,7 @@ class UserDailyNotes extends Component
         }, 'entries.checklistItems' => function($q) {
             $q->orderBy('sort_order');
         }])->where('user_id', Auth::id())
-          ->where('date', $this->currentDate)
+          ->whereDate('date', $this->currentDate)
           ->first();
 
         return view('livewire.dashboard.user-daily-notes', [

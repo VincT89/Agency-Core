@@ -21,6 +21,22 @@ class ProjectSupremacyScope implements Scope
 
         $user = Auth::user();
 
+        if ($user->isCommercial()) {
+            if ($model instanceof \App\Models\Ticket) {
+                $builder->where($model->qualifyColumn('created_by'), $user->id);
+            } elseif ($model instanceof \App\Models\CalendarEvent) {
+                $builder->where($model->qualifyColumn('type'), 'personal')
+                    ->whereNull($model->qualifyColumn('project_id'))
+                    ->where(function ($query) use ($model, $user) {
+                        $query->where($model->qualifyColumn('created_by'), $user->id)
+                            ->orWhere($model->qualifyColumn('assigned_to'), $user->id);
+                    });
+            } else {
+                $builder->whereRaw('1 = 0');
+            }
+            return;
+        }
+
         // Ignora il filtro per amministratori con visibilità globale
         if ($user->canBypassProjectScope()) {
             return;
@@ -38,6 +54,12 @@ class ProjectSupremacyScope implements Scope
             });
 
             // Gestisce le eccezioni per entità non strettamente legate al progetto
+            if ($model instanceof \App\Models\Ticket) {
+                $query->orWhere(function ($q) use ($user) {
+                    $q->whereNull('project_id')->where('assigned_to', $user->id);
+                });
+            }
+
             if ($model instanceof \App\Models\CalendarEvent) {
                 $query->orWhere(function ($q) use ($user) {
                     $q->whereNull('project_id')

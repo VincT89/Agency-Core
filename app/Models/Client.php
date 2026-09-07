@@ -203,6 +203,10 @@ class Client extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        if ($user->isCommercial()) {
+            return $query->whereRaw('1 = 0');
+        }
+
         if ($user->canAccessAllProjects() || $user->isMarketing()) {
             return $query;
         }

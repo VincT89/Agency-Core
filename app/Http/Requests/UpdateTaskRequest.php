@@ -38,7 +38,7 @@ class UpdateTaskRequest extends FormRequest
             ],
             'assigned_to' => [
                 'nullable',
-                Rule::exists('users', 'id')->where('status', 'active'),
+                Rule::exists('users', 'id')->where('status', 'active')->whereNot('role', \App\Enums\UserRole::Commercial->value),
             ],
             'title'       => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

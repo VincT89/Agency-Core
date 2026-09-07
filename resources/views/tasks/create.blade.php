@@ -37,6 +37,7 @@
                         @endforeach
                     </select>
                 </x-form-group>
+                @if(!isset($sourceTicket))
                 <x-form-group label="Assegnato a" name="assigned_to">
                     <select name="assigned_to" class="form-sel @error('assigned_to') is-invalid @enderror">
                         <option value="">Non assegnato</option>
@@ -47,7 +48,16 @@
                         @endforeach
                     </select>
                 </x-form-group>
+                @endif
             </div>
+
+            @if(isset($sourceTicket))
+                @include('shared.department-assignee', [
+                    'selectedAssignee' => old('assigned_to'),
+                    'suggestedDepartment' => $sourceTicket->requested_department,
+                    'assignmentContext' => 'task',
+                ])
+            @endif
 
             <div class="form-row">
                 <x-form-group label="Stato" name="status" required>

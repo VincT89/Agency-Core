@@ -11,6 +11,7 @@ enum UserRole: string
     case Photographer   = 'photographer';
     case GraphicDesigner= 'graphic_designer';
     case OperationsManager = 'operations_manager';
+    case Commercial     = 'commercial';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum UserRole: string
             self::Photographer      => 'Fotografo',
             self::GraphicDesigner   => 'Grafica',
             self::OperationsManager => 'Operations Manager',
+            self::Commercial        => 'Commerciale',
         };
     }
 
@@ -35,6 +37,7 @@ enum UserRole: string
             self::Photographer      => 'var(--cyan)',   // Cyan muted
             self::GraphicDesigner   => 'var(--magenta)',// Magenta
             self::OperationsManager => 'var(--orange)', // Orange
+            self::Commercial        => 'var(--blue)',
         };
     }
 }

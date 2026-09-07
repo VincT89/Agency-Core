@@ -20,7 +20,9 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
         projectEl.appendChild(defaultOpt);
     };
 
+    let requestNumber = 0;
     async function loadProjects(clientId) {
+        const activeRequest = ++requestNumber;
         if (!clientId) {
             setDefaultOption('Seleziona prima un cliente');
             projectEl.disabled = true;
@@ -34,9 +36,13 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
         setHelp('Caricamento progetti in corso.');
 
         try {
-            const res  = await fetch(`/api/clients/${clientId}/projects`);
+            const url = clientEl.dataset.projectUrl
+                ? clientEl.dataset.projectUrl.replace('{client}', encodeURIComponent(clientId))
+                : `/api/clients/${clientId}/projects`;
+            const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
+            if (activeRequest !== requestNumber) return;
             setDefaultOption(data.length ? 'Seleziona progetto...' : 'Nessun progetto disponibile');
             projectEl.disabled = false;
             data.forEach(p => {
@@ -48,16 +54,18 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
                 }
                 projectEl.appendChild(opt);
             });
+            projectEl.dispatchEvent(new Event('change', { bubbles: true }));
             setHelp(data.length
                 ? `${data.length} ${data.length === 1 ? 'progetto disponibile' : 'progetti disponibili'}.`
-                : 'Il cliente non ha progetti: creane uno prima di registrare la fattura.', !data.length);
+                : (clientEl.dataset.emptyProjectHelp || 'Il cliente non ha progetti: creane uno prima di registrare la fattura.'), !data.length && projectEl.required);
         } catch(e) {
+            if (activeRequest !== requestNumber) return;
             console.error('Errore caricamento progetti:', e);
             setDefaultOption('Progetti non disponibili');
             projectEl.disabled = true;
             setHelp('Non è stato possibile caricare i progetti. Riprova.', true);
         } finally {
-            projectEl.removeAttribute('aria-busy');
+            if (activeRequest === requestNumber) projectEl.removeAttribute('aria-busy');
         }
     }
 

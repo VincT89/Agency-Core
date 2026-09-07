@@ -138,6 +138,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('clients', ClientController::class);
     Route::resource('projects', ProjectController::class);
     Route::resource('tickets', TicketController::class);
+    Route::get('/api/ticket-clients/{client}/projects', [TicketController::class, 'clientProjects'])
+        ->name('tickets.client-projects');
     Route::patch('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])
         ->name('tickets.update-status');
     Route::post('tickets/{ticket}/checklist-items', [TicketChecklistItemController::class, 'store'])

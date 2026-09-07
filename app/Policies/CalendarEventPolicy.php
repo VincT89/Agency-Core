@@ -32,6 +32,7 @@ class CalendarEventPolicy
             \App\Enums\UserRole::Photographer, 
             \App\Enums\UserRole::GraphicDesigner,
             \App\Enums\UserRole::OperationsManager,
+            \App\Enums\UserRole::Commercial,
         ], true); 
     }
 
@@ -48,6 +49,7 @@ class CalendarEventPolicy
             \App\Enums\UserRole::Photographer, 
             \App\Enums\UserRole::GraphicDesigner,
             \App\Enums\UserRole::OperationsManager,
+            \App\Enums\UserRole::Commercial,
         ], true); 
     }
 
@@ -76,6 +78,10 @@ class CalendarEventPolicy
 
     private function canAccessEvent(User $user, CalendarEvent $event): bool
     {
+        if ($user->isCommercial()) {
+            return !$event->project_id && $this->ownsPersonalEvent($user, $event);
+        }
+
         if ($event->type === 'personal') {
             return $this->ownsPersonalEvent($user, $event);
         }

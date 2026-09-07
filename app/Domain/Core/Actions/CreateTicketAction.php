@@ -17,6 +17,14 @@ class CreateTicketAction
     public function execute(array $data): Ticket
     {
         return DB::transaction(function () use ($data) {
+            unset($data['assignment_department']);
+            if (auth()->user()?->isCommercial()) {
+                $data = \Illuminate\Support\Arr::only($data, [
+                    'client_id', 'project_id', 'title', 'description', 'type', 'priority', 'requested_department',
+                ]);
+                $data['status'] = 'open';
+                $data['assigned_to'] = null;
+            }
             $data['created_by'] = auth()->id();
             $data['opened_at'] = $data['opened_at'] ?? now();
 

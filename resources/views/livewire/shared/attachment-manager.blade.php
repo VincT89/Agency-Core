@@ -56,7 +56,7 @@
             <div class="u-text-center u-text-muted u-p-md u-mb-md">Nessun allegato presente.</div>
         @endif
 
-        @can('update', $model)
+        @can($model instanceof \App\Models\Ticket ? 'addAttachment' : 'update', $model)
         <div class="attachments-upload-footer">
             <div class="u-flex-between">
                 <div>

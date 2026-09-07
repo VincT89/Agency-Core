@@ -27,7 +27,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="g-2col">
+    <div @class(['g-2col' => !auth()->user()->isCommercial()])>
         <x-panel title="Dettagli Principali" dot="var(--blue)" padded>
             <div class="form-g mb-2">
                 <div class="form-lbl">Inizio</div>
@@ -78,6 +78,7 @@
             @endif
         </x-panel>
 
+        @if(!auth()->user()->isCommercial())
         <x-panel title="Collegamento & Team" dot="var(--teal)" padded>
             <div class="form-g mb-2">
                 <div class="form-lbl">Cliente</div>
@@ -108,6 +109,7 @@
                 <div class="cal-detail-value">{{ $calendarEvent->creator?->name ?? 'Sistema' }}</div>
             </div>
         </x-panel>
+        @endif
     </div>
 
 

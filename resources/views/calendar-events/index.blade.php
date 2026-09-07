@@ -1,9 +1,13 @@
 <x-app-layout title="Calendario">
     <x-page-header eyebrow="Modulo · Operativo">
         <x-slot:title><strong>Calendario</strong> Eventi</x-slot:title>
+        @if(auth()->user()->isCommercial())
+            <p class="u-text-sm u-text-muted u-mt-xs">Organizza i tuoi appuntamenti personali.</p>
+        @else
         <div class="u-text-sm u-text-muted u-mt-xs">Pianificazione di incontri, appuntamenti cliente e milestone. Per il
             progresso operativo usa i <a href="{{ route('tasks.index') }}"
                 class="u-text-accent u-no-underline">Task</a>.</div>
+        @endif
     </x-page-header>
 
     @php
@@ -84,6 +88,7 @@
                 </div>
             </div>
 
+            @if(!auth()->user()->isCommercial())
             <div class="cal-sidebar-filters">
                 <span class="cal-sidebar-label">Filtra Vista</span>
                 @php $currentDept = request('department'); @endphp
@@ -106,6 +111,7 @@
                         class="cal-sidebar-filter {{ $currentDept === 'administration' ? 'is-active' : '' }}">Amministrazione</a>
                 @endif
             </div>
+            @endif
         </aside>
 
         <main class="cal-gmain" x-data="calendarKanbanApp('{{ $startOfWeek->toDateString() }}', '{{ $endOfWeek->toDateString() }}')" @view-mode-changed.window="viewMode = $event.detail">

@@ -10,7 +10,7 @@
     </x-page-header>
 
     <x-panel padded>
-        <form action="{{ route('calendar-events.store') }}" method="POST" x-data="{ eventType: '{{ old('type', 'other') }}' }">
+        <form action="{{ route('calendar-events.store') }}" method="POST" x-data="{ eventType: '{{ auth()->user()->isCommercial() ? 'personal' : old('type', 'other') }}' }">
             @csrf
             
             <div class="form-row full">
@@ -49,6 +49,7 @@
                 </x-form-group>
             </div>
 
+            @if(!auth()->user()->isCommercial())
             <div class="form-row" x-show="eventType !== 'personal'">
                 <x-form-group label="Cliente (opzionale)" name="client_id">
                     <select name="client_id" id="client_sel" class="form-sel @error('client_id') is-invalid @enderror"
@@ -68,7 +69,10 @@
                 </x-form-group>
             </div>
 
+            @endif
+
             <div class="form-row">
+                @if(!auth()->user()->isCommercial())
                 <x-form-group label="Assegnato a" name="assigned_to" x-show="eventType !== 'personal'">
                     <select name="assigned_to" class="form-sel @error('assigned_to') is-invalid @enderror">
                         <option value="">Nessuno</option>
@@ -79,6 +83,7 @@
                         @endforeach
                     </select>
                 </x-form-group>
+                @endif
                 <div x-show="eventType === 'personal'" class="u-flex-1">
                     <div class="form-lbl">Assegnato a</div>
                     <div class="form-in u-bg-muted u-text-muted">A me stesso (Personale)</div>

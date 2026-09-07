@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Models\Client;
+use App\Models\Scopes\ProjectSupremacyScope;
+use App\Enums\UserRole;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -21,17 +23,17 @@ class TicketController extends Controller
         
         $tickets = $ticketQuery->forIndex($request->all())->paginate(15)->withQueryString();
 
-        return view('tickets.index', compact('tickets'));
+        return view($user->isCommercial() ? 'tickets.commercial.index' : 'tickets.index', compact('tickets'));
     }
 
     public function create(\App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('create', Ticket::class);
-        $clients = $clientQuery->forDropdown()->get();
+        $clients = auth()->user()->isCommercial()
+            ? Client::orderBy('name')->get(['id', 'name'])
+            : $clientQuery->forDropdown()->get();
 
-        $users = User::query()
-            ->orderBy('name')
-            ->get();
+        $users = auth()->user()->isCommercial() ? collect() : $this->ticketAssignees();
 
         return view('tickets.create', [
             'clients' => $clients,
@@ -46,6 +48,10 @@ class TicketController extends Controller
     {
         $ticket = $action->execute($request->validated());
 
+        if ($request->user()->isCommercial()) {
+            return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket inviato all’amministratore.');
+        }
+
         return redirect()
             ->route('tickets.index')
             ->with('success', 'Ticket creato correttamente.');
@@ -54,19 +60,22 @@ class TicketController extends Controller
     public function show(Ticket $ticket): View
     {
         $this->authorize('view', $ticket);
-        $ticket->load([
-            'client', 
+        $relations = [
+            auth()->user()->isCommercial() ? 'client:id,name' : 'client',
             'project', 
-            'creator', 
-            'assignee', 
+            'creator:id,name,role',
+            'assignee:id,name,role',
             'attachments.uploader', 
-            'auditLogs.user',
-            'tasks.project',
-            'tasks.assignee',
             'comments.user',
-            'checklistItems.completedBy',
-        ]);
-        return view('tickets.show', compact('ticket'));
+        ];
+        if (!auth()->user()->isCommercial()) {
+            $relations = array_merge($relations, ['tasks.project', 'tasks.assignee', 'checklistItems.completedBy']);
+        }
+        if (auth()->user()->canViewAuditLogs()) {
+            $relations[] = 'auditLogs.user';
+        }
+        $ticket->load($relations);
+        return view(auth()->user()->isCommercial() ? 'tickets.commercial.show' : 'tickets.show', compact('ticket'));
     }
 
     public function edit(Ticket $ticket, \App\Domain\Core\Queries\ClientQuery $clientQuery): View
@@ -74,9 +83,7 @@ class TicketController extends Controller
         $this->authorize('update', $ticket);
         $clients = $clientQuery->forDropdown()->get();
 
-        $users = User::query()
-            ->orderBy('name')
-            ->get();
+        $users = $this->ticketAssignees($ticket);
 
         return view('tickets.edit', [
             'ticket' => $ticket->load(['client', 'project']),
@@ -91,7 +98,7 @@ class TicketController extends Controller
     public function update(UpdateTicketRequest $request, Ticket $ticket): RedirectResponse
     {
         $this->authorize('update', $ticket);
-        $data = $request->validated();
+        $data = $request->safe()->except('assignment_department');
 
         if (($data['status'] ?? null) === 'closed') {
             $data['closed_at'] = $ticket->closed_at ?? now();
@@ -145,5 +152,31 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.index')
             ->with('success', 'Ticket eliminato correttamente.');
+    }
+
+    public function clientProjects(Client $client): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('create', Ticket::class);
+        $projects = $client->projects();
+        if (auth()->user()->isCommercial()) {
+            $projects->withoutGlobalScope(ProjectSupremacyScope::class);
+        } else {
+            $this->authorize('view', $client);
+        }
+        return response()->json($projects->where('status', 'active')->orderBy('name')->get(['id', 'name']));
+    }
+
+    private function ticketAssignees(?Ticket $ticket = null)
+    {
+        return User::query()->where(function ($query) use ($ticket) {
+            $query->where(function ($eligible) {
+                $eligible->where('status', 'active')->whereIn('role', [
+                    UserRole::Admin, UserRole::Developer, UserRole::GraphicDesigner, UserRole::OperationsManager,
+                ]);
+            });
+            if ($ticket?->assigned_to) {
+                $query->orWhere('id', $ticket->assigned_to);
+            }
+        })->with('projects:id')->orderBy('name')->get(['id', 'name', 'role', 'status']);
     }
 }

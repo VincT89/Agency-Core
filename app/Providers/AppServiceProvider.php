@@ -19,6 +19,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::before(function (\App\Models\User $user, string $ability, array $arguments) {
+            if (!$user->isCommercial()) {
+                return null;
+            }
+            $subject = $arguments[0] ?? null;
+            foreach ([Ticket::class, Attachment::class, UserAvailability::class, CalendarEvent::class] as $allowed) {
+                if ((is_object($subject) || is_string($subject)) && is_a($subject, $allowed, true)) {
+                    return null;
+                }
+            }
+            return false;
+        });
+
         \Carbon\Carbon::setLocale('it');
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
         \Illuminate\Support\Facades\Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');
@@ -90,6 +103,18 @@ class AppServiceProvider extends ServiceProvider
             if (auth()->check()) {
                 $user = auth()->user();
 
+                if ($user->isCommercial()) {
+                    $view->with([
+                        'clientsCount' => 0, 'projectsCount' => 0, 'overdueInvoices' => 0,
+                        'openTasks' => 0, 'marketingProjectsCount' => 0,
+                        'activeAvailabilityUsersCount' => 0, 'newTickets' => 0,
+                        'openTickets' => Ticket::query()->open()->count(),
+                        'unreadNotificationsCount' => $user->visibleNotifications()->whereNull('read_at')->count(),
+                        'latestNotifications' => $user->visibleNotifications()->latest()->limit(5)->get(),
+                    ]);
+                    return;
+                }
+
                 $counts = \Illuminate\Support\Facades\Cache::remember('sidebar_counts_' . $user->id, 60, function () use ($user) {
                     return [
                         'clientsCount'    => \App\Models\Client::visibleTo($user)->where('status', 'active')->count(),
@@ -119,12 +144,7 @@ class AppServiceProvider extends ServiceProvider
                         })
                         ->where('created_at', '>', $user->last_tickets_viewed_at ?? now()->subYears(10));
 
-                    // Enforcement esplicito del perimetro (ridondante ma richiesto per policy user-specific)
-                    if (!$user->canBypassProjectScope()) {
-                        $ticketQuery->whereIn('project_id', function ($sub) use ($user) {
-                            $sub->select('project_id')->from('project_user')->where('user_id', $user->id);
-                        });
-                    }
+                    $ticketQuery->visibleTo($user);
 
                     $newTickets = $ticketQuery->count();
                 }

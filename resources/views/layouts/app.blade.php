@@ -142,6 +142,20 @@
         </svg>
       </button>
 
+      @if(auth()->user()->isCommercial())
+        <div class="nav-group">
+          <div class="sidebar-action-group">
+            <a href="{{ route('tickets.create') }}" class="btn btn-p sidebar-action-btn" aria-label="Apri ticket"
+              x-bind:title="!sidebarOpen ? 'Apri ticket' : ''">
+              <i data-lucide="plus" class="u-icon-sm" aria-hidden="true"></i>
+              <span class="sidebar-btn-text">Apri ticket</span>
+            </a>
+          </div>
+          <x-nav-item href="{{ route('daily-notes.index') }}" wire:navigate icon="book-open" label="Blocco Note"
+            :active="request()->routeIs('daily-notes.*')" />
+        </div>
+      @endif
+
       {{-- ACCESSO RAPIDO --}}
       @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
         <div class="nav-group">
@@ -188,8 +202,8 @@
         @endcan
 
         @can('viewAny', \App\Models\Ticket::class)
-          <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" label="Ticket"
-            :active="request()->routeIs('tickets.*')" :badge="$openTickets ?? null" />
+          <x-nav-item href="{{ route('tickets.index') }}" icon="ticket" :label="auth()->user()->isCommercial() ? 'I miei ticket' : 'Ticket'"
+            :active="request()->routeIs('tickets.*')" :badge="auth()->user()->isCommercial() ? null : ($openTickets ?? null)" />
         @endcan
 
         @can('viewAny', \App\Models\CalendarEvent::class)
@@ -254,6 +268,7 @@
 
       {{-- 3. AMMINISTRAZIONE --}}
       <div class="nav-divider"></div>
+      @if(!auth()->user()->isCommercial())
       <div class="nav-group">
         <div class="nav-group-label">Amministrazione</div>
 
@@ -280,6 +295,8 @@
             :active="request()->routeIs('economic-summary.*')" />
         @endif
       </div>
+
+      @endif
 
       {{-- HOSTING E DOMINI --}}
       @can('viewAny', \App\Models\HostingService::class)
@@ -311,7 +328,9 @@
       <div class="nav-divider"></div>
       
       <div class="nav-group">
+        @if(!auth()->user()->isCommercial())
         <x-nav-item href="https://drive.sodanoconsulting.it/" target="_blank" rel="noopener noreferrer" icon="hard-drive" label="Sodano Drive" />
+        @endif
         <x-nav-item href="{{ route('profile.edit') }}" icon="settings" label="Impostazioni"
           :active="request()->routeIs('profile.*')" />
       </div>

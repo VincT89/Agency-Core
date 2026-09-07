@@ -32,14 +32,17 @@ class StoreTaskRequest extends FormRequest
                     $ticket = Ticket::whereKey($value)->first();
                     if (!$ticket) {
                         $fail('Il ticket selezionato non esiste.');
+                    } elseif (!$this->user()->can('view', $ticket)) {
+                        $fail('Non puoi collegare questo ticket.');
                     } elseif ($ticket->project_id != $this->project_id) {
                         $fail('Il ticket deve appartenere allo stesso progetto del task.');
                     }
                 },
             ],
+            'assignment_department' => ['nullable', Rule::enum(\App\Enums\UserRole::class)],
             'assigned_to' => [
                 'nullable',
-                Rule::exists('users', 'id')->where('status', 'active'),
+                Rule::exists('users', 'id')->where('status', 'active')->whereNot('role', \App\Enums\UserRole::Commercial->value),
             ],
             'title'       => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -49,5 +52,23 @@ class StoreTaskRequest extends FormRequest
             'due_date'    => ['nullable', 'date'],
             'notes'       => ['nullable', 'string'],
         ];
+    }
+
+    public function after(): array
+    {
+        return [function (\Illuminate\Validation\Validator $validator) {
+            if ($validator->errors()->isNotEmpty() || !$this->filled('ticket_id') || !$this->filled('assigned_to')) {
+                return;
+            }
+            $assignee = \App\Models\User::find($this->input('assigned_to'));
+            $task = new Task(['project_id' => $this->input('project_id'), 'assigned_to' => $assignee?->id]);
+            if (!$assignee || !\Illuminate\Support\Facades\Gate::forUser($assignee)->allows('viewAny', Task::class)
+                || !\Illuminate\Support\Facades\Gate::forUser($assignee)->allows('view', $task)) {
+                $validator->errors()->add('assigned_to', 'Il referente deve essere abilitato ai Task e al progetto selezionato.');
+            }
+            if ($this->filled('assignment_department') && $assignee?->role->value !== $this->input('assignment_department')) {
+                $validator->errors()->add('assigned_to', 'Il referente non appartiene al reparto selezionato.');
+            }
+        }];
     }
 }

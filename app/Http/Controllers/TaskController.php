@@ -35,7 +35,7 @@ class TaskController extends Controller
         }
 
         $projects = Project::where('status', 'active')->orderBy('name')->get(['id', 'name']);
-        $users    = User::where('status', 'active')->orderBy('name')->get(['id', 'name']);
+        $users    = User::where('status', 'active')->where('role', '!=', \App\Enums\UserRole::Commercial)->orderBy('name')->get(['id', 'name']);
 
         return view('tasks.index', compact('viewMode', 'taskList', 'kanbanTasks', 'projects', 'users'));
     }
@@ -45,7 +45,7 @@ class TaskController extends Controller
         $this->authorize('create', Task::class);
 
         $projects = Project::with('client')->where('status', 'active')->orderBy('name')->get();
-        $users    = User::where('status', 'active')->orderBy('name')->get();
+        $users    = User::where('status', 'active')->where('role', '!=', \App\Enums\UserRole::Commercial)->orderBy('name')->get();
 
         // Precompila l'ID progetto se fornito via querystring
         $preselectedProjectId = $request->project_id;
@@ -59,6 +59,12 @@ class TaskController extends Controller
         $sourceTicket = null;
         if ($request->filled('ticket_id')) {
             $sourceTicket = Ticket::with(['project', 'client'])->findOrFail($request->ticket_id);
+            $this->authorize('view', $sourceTicket);
+            $users = User::where('status', 'active')->whereIn('role', [
+                \App\Enums\UserRole::Admin, \App\Enums\UserRole::OperationsManager,
+                \App\Enums\UserRole::Developer, \App\Enums\UserRole::Marketing,
+                \App\Enums\UserRole::Photographer, \App\Enums\UserRole::GraphicDesigner,
+            ])->with('projects:id')->orderBy('name')->get(['id', 'name', 'role']);
         }
 
         return view('tasks.create', [
@@ -118,7 +124,7 @@ class TaskController extends Controller
         $this->authorize('update', $task);
 
         $projects = Project::with('client')->where('status', 'active')->orderBy('name')->get();
-        $users    = User::where('status', 'active')->orderBy('name')->get();
+        $users    = User::where('status', 'active')->where('role', '!=', \App\Enums\UserRole::Commercial)->orderBy('name')->get();
 
         return view('tasks.edit', [
             'task'       => $task,

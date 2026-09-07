@@ -15,7 +15,11 @@
                 <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-g">Modifica</a>
             @endcan
             @can('create', \App\Models\Task::class)
-                <a href="{{ route('tasks.create', ['ticket_id' => $ticket->id]) }}" class="btn btn-p">Crea Task Collegato</a>
+                @if($ticket->project_id)
+                <a href="{{ route('tasks.create', ['ticket_id' => $ticket->id]) }}" class="btn btn-p">Assegna lavoro a un reparto</a>
+                @else
+                    <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-g">Collega un progetto per assegnare un Task</a>
+                @endif
             @endcan
         
             @can('delete', $ticket)
@@ -156,9 +160,15 @@
                     </div>
                 </div>
                 <div class="form-g mb-3">
-                    <div class="u-text-label">Assegnato a</div>
+                    <div class="u-text-label">Referente ticket</div>
                     <div class="u-text-strong">{{ $ticket->assignee?->name ?? 'Non assegnato' }}</div>
                 </div>
+                @if($ticket->requested_department)
+                    <div class="form-g mb-3">
+                        <div class="u-text-label">Area della richiesta</div>
+                        <div>{{ \App\Models\Ticket::DEPARTMENTS[$ticket->requested_department] ?? $ticket->requested_department }}</div>
+                    </div>
+                @endif
                 <div class="form-g mb-3">
                     <div class="u-text-label">Creato da</div>
                     <div class="u-text-strong">{{ $ticket->creator?->name ?? 'Sistema' }}</div>

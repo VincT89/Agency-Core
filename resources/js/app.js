@@ -1,5 +1,6 @@
 import './project-select.js';
 import './ticket-forms.js';
+import './task-assignee.js';
 import clientAutocomplete from './client-autocomplete.js';
 import './password-fields.js';
 import './form-fields.js';

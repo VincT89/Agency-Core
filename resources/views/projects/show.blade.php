@@ -101,7 +101,7 @@
             @forelse($project->users as $u)
                 <div class="u-flex-between u-border-b u-py-sm">
                     <span class="u-text-strong">{{ $u->name }}</span>
-                    <x-badge :status="$u->role->value" :label="ucfirst($u->role->value)" />
+                    <x-badge :status="$u->role->value" :label="$u->role->label()" />
                 </div>
             @empty
                 <div class="u-p-md">

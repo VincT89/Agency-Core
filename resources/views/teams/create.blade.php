@@ -41,7 +41,7 @@
                     <div class="u-flex-1">
                         <div class="u-text-sm u-text-strong">{{ $user->name }}</div>
                         <div class="u-font-mono u-text-tiny u-text-muted">
-                            {{ $user->role->value }}
+                            {{ $user->role->label() }}
                             @if($user->primary_specialization) · {{ $user->primary_specialization }}@endif
                         </div>
                     </div>

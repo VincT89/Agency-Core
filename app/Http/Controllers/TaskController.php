@@ -45,7 +45,7 @@ class TaskController extends Controller
         $this->authorize('create', Task::class);
 
         $projects = Project::with('client')->where('status', 'active')->orderBy('name')->get();
-        $users    = User::where('status', 'active')->where('role', '!=', \App\Enums\UserRole::Commercial)->orderBy('name')->get();
+        $users = $this->taskAssignees();
 
         // Precompila l'ID progetto se fornito via querystring
         $preselectedProjectId = $request->project_id;
@@ -60,11 +60,6 @@ class TaskController extends Controller
         if ($request->filled('ticket_id')) {
             $sourceTicket = Ticket::with(['project', 'client'])->findOrFail($request->ticket_id);
             $this->authorize('view', $sourceTicket);
-            $users = User::where('status', 'active')->whereIn('role', [
-                \App\Enums\UserRole::Admin, \App\Enums\UserRole::OperationsManager,
-                \App\Enums\UserRole::Developer, \App\Enums\UserRole::Marketing,
-                \App\Enums\UserRole::Photographer, \App\Enums\UserRole::GraphicDesigner,
-            ])->with('projects:id')->orderBy('name')->get(['id', 'name', 'role']);
         }
 
         return view('tasks.create', [
@@ -124,7 +119,7 @@ class TaskController extends Controller
         $this->authorize('update', $task);
 
         $projects = Project::with('client')->where('status', 'active')->orderBy('name')->get();
-        $users    = User::where('status', 'active')->where('role', '!=', \App\Enums\UserRole::Commercial)->orderBy('name')->get();
+        $users = $this->taskAssignees($task);
 
         return view('tasks.edit', [
             'task'       => $task,
@@ -135,7 +130,7 @@ class TaskController extends Controller
         ]);
     }
 
-    public function update(UpdateTaskRequest $request, Task $task): RedirectResponse
+    public function update(UpdateTaskRequest $request, Task $task, \App\Domain\Core\Actions\UpdateTaskAction $action): RedirectResponse
     {
         $data = $request->validated();
 
@@ -146,7 +141,7 @@ class TaskController extends Controller
             $data['completed_at'] = null;
         }
 
-        $task->update($data);
+        $action->execute($task, $data);
 
         return redirect()->route('tasks.show', $task)
             ->with('success', 'Task aggiornato correttamente.');
@@ -184,5 +179,21 @@ class TaskController extends Controller
         }
 
         return redirect()->back()->with('success', 'Stato task aggiornato!');
+    }
+
+    private function taskAssignees(?Task $task = null): \Illuminate\Database\Eloquent\Collection
+    {
+        $users = User::where('status', 'active')->with('projects:id')->orderBy('name')->get()
+            ->filter(fn (User $user) => $user->can('viewAny', Task::class));
+
+        // Mostra un'eventuale assegnazione precedente non più valida, senza rimuoverla in silenzio.
+        if ($task?->assigned_to && !$users->contains('id', $task->assigned_to)) {
+            $currentAssignee = $task->assignee()->with('projects:id')->first();
+            if ($currentAssignee) {
+                $users->push($currentAssignee);
+            }
+        }
+
+        return $users->sortBy('name')->values();
     }
 }

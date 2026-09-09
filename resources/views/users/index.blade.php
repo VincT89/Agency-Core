@@ -51,7 +51,7 @@
                     <td class="mono-col">{{ $user->email }}</td>
                     <td>
                         <div class="u-text-sm u-uppercase u-font-mono">
-                            {{ $user->role->value }}
+                            {{ $user->role->label() }}
                         </div>
                     </td>
                     <td><x-badge :status="$user->status" :label="$user->status_label" /></td>

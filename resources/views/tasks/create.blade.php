@@ -38,16 +38,10 @@
                     </select>
                 </x-form-group>
                 @if(!isset($sourceTicket))
-                <x-form-group label="Assegnato a" name="assigned_to">
-                    <select name="assigned_to" class="form-sel @error('assigned_to') is-invalid @enderror">
-                        <option value="">Non assegnato</option>
-                        @foreach($users as $user)
-                            <option value="{{ $user->id }}" {{ old('assigned_to') == $user->id ? 'selected' : '' }}>
-                                {{ $user->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </x-form-group>
+                    @include('tasks.partials.assignee-field', [
+                        'selectedAssignee' => old('assigned_to'),
+                        'selectedProjectId' => old('project_id', $preselectedProjectId),
+                    ])
                 @endif
             </div>
 

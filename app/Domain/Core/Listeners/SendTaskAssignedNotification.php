@@ -10,9 +10,11 @@ class SendTaskAssignedNotification
     {
         $task = $event->task;
 
-        // Invia la notifica se l'assegnatario è diverso dal creatore
-        if ($task->assigned_to && $task->assigned_to !== $task->created_by && $task->assignee) {
-             $task->assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+        // Rilegge il destinatario dopo una riassegnazione, anche se la relazione era già caricata.
+        $task->load('assignee');
+
+        if ($task->assigned_to && (int) $task->assigned_to !== (int) $event->actorId && $task->assignee) {
+            $task->assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
         }
     }
 }

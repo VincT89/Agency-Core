@@ -9,6 +9,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateTaskRequest extends FormRequest
 {
+    use \App\Http\Requests\Concerns\ValidatesTaskAssignee;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('task'));
@@ -38,6 +40,7 @@ class UpdateTaskRequest extends FormRequest
             ],
             'assigned_to' => [
                 'nullable',
+                'integer',
                 Rule::exists('users', 'id')->where('status', 'active')->whereNot('role', \App\Enums\UserRole::Commercial->value),
             ],
             'title'       => ['required', 'string', 'max:255'],

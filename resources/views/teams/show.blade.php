@@ -44,7 +44,7 @@
                         <td class="name-col">
                             {{ $member->name }}
                             <div class="u-font-mono u-text-tiny u-text-muted">
-                                {{ $member->role->value }}
+                                {{ $member->role->label() }}
                             </div>
                         </td>
                         <td class="u-text-sm u-text-muted">

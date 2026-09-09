@@ -13,8 +13,11 @@ class TaskAssigned
 
     public $task;
 
+    public readonly ?int $actorId;
+
     public function __construct(Task $task)
     {
         $this->task = $task;
+        $this->actorId = auth()->id();
     }
 }

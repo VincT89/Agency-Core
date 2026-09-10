@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\{StoreClientRequest, UpdateClientRequest};
+use App\Http\Requests\{QuickStoreClientRequest, StoreClientRequest, UpdateClientRequest};
+use App\Enums\UserRole;
 use App\Models\Client;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -26,7 +28,7 @@ class ClientController extends Controller
     public function create(): View
     {
         $this->authorize('create', Client::class);
-        return view('clients.create');
+        return view('clients.create', ['commercialUsers' => $this->commercialUsers()]);
     }
 
     public function store(StoreClientRequest $request, \App\Actions\Clients\CreateClientAction $action): RedirectResponse
@@ -50,7 +52,7 @@ class ClientController extends Controller
     public function edit(Client $client): View
     {
         $this->authorize('update', $client);
-        return view('clients.edit', compact('client'));
+        return view('clients.edit', ['client' => $client, 'commercialUsers' => $this->commercialUsers($client)]);
     }
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
@@ -171,7 +173,7 @@ class ClientController extends Controller
 
     public function search(Request $request, \App\Domain\Core\Queries\ClientQuery $clientQuery): JsonResponse
     {
-        $this->authorize('viewAny', Client::class);
+        $this->authorize('lookup', Client::class);
 
         $search = $request->get('q', '');
 
@@ -186,9 +188,9 @@ class ClientController extends Controller
         return response()->json($clients);
     }
 
-    public function quickStore(StoreClientRequest $request, \App\Actions\Clients\CreateClientAction $action): JsonResponse
+    public function quickStore(QuickStoreClientRequest $request, \App\Actions\Clients\CreateClientAction $action): JsonResponse
     {
-        $this->authorize('create', Client::class);
+        $this->authorize('quickCreate', Client::class);
         $client = $action->execute($request->validated());
 
         return response()->json([
@@ -199,5 +201,19 @@ class ClientController extends Controller
             'vat_number' => $client->vat_number,
             'phone' => $client->phone,
         ], 201);
+    }
+
+    private function commercialUsers(?Client $client = null): \Illuminate\Support\Collection
+    {
+        if (! auth()->user()->canManageSystem()) {
+            return collect();
+        }
+
+        return User::query()->where(function ($query) use ($client) {
+            $query->where(fn ($active) => $active->where('role', UserRole::Commercial)->where('status', 'active'));
+            if ($client?->commercial_user_id) {
+                $query->orWhere('id', $client->commercial_user_id);
+            }
+        })->orderBy('name')->get(['id', 'name', 'role', 'status']);
     }
 }

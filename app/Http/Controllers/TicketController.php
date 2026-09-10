@@ -29,9 +29,7 @@ class TicketController extends Controller
     public function create(\App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('create', Ticket::class);
-        $clients = auth()->user()->isCommercial()
-            ? Client::orderBy('name')->get(['id', 'name'])
-            : $clientQuery->forDropdown()->get();
+        $clients = $clientQuery->forDropdown()->get(['id', 'name', 'company_name']);
 
         $users = auth()->user()->isCommercial() ? collect() : $this->ticketAssignees();
 
@@ -157,11 +155,10 @@ class TicketController extends Controller
     public function clientProjects(Client $client): \Illuminate\Http\JsonResponse
     {
         $this->authorize('create', Ticket::class);
+        $this->authorize('selectForTicket', $client);
         $projects = $client->projects();
         if (auth()->user()->isCommercial()) {
             $projects->withoutGlobalScope(ProjectSupremacyScope::class);
-        } else {
-            $this->authorize('view', $client);
         }
         return response()->json($projects->where('status', 'active')->orderBy('name')->get(['id', 'name']));
     }

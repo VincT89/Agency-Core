@@ -1,4 +1,4 @@
-<div class="dropdown" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="if(open){ open = false; $nextTick(() => $refs.notificationsTrigger.focus()) }">
+<div class="dropdown" wire:poll.30s.visible x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="if(open){ open = false; $nextTick(() => $refs.notificationsTrigger.focus()) }">
   <button
     id="notifications-trigger"
     type="button"
@@ -7,7 +7,7 @@
     aria-controls="notifications-panel"
     :aria-expanded="open.toString()"
     aria-label="Notifiche{{ isset($unreadNotificationsCount) && $unreadNotificationsCount > 0 ? ', '.$unreadNotificationsCount.' non lette' : '' }}"
-    @click="open = !open"
+    @click="open = !open; if (open) $wire.$refresh()"
   >
     @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
       <span class="badge-notif" aria-hidden="true">{{ $unreadNotificationsCount }}</span>

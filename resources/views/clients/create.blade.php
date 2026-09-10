@@ -44,6 +44,8 @@
                 </x-form-group>
             </div>
 
+            @include('clients.partials.commercial-field')
+
             {{-- Sezione: Dati fiscali --}}
             <div class="sec-lbl u-mt-md">Dati fiscali</div>
             <div class="form-row">

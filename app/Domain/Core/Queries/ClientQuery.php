@@ -28,6 +28,10 @@ class ClientQuery
     public function forSearch(string $search): Builder
     {
         $query = Client::query();
+
+        if (auth()->user()?->isCommercial()) {
+            $query->visibleTo(auth()->user());
+        }
         
         if (strlen($search) >= 1) {
             $searchStr = '%' . strtolower($search) . '%';
@@ -45,6 +49,10 @@ class ClientQuery
 
     public function forDropdown(): Builder
     {
+        if (auth()->user()?->isCommercial()) {
+            return Client::visibleTo(auth()->user())->orderBy('name');
+        }
+
         return Client::query()
             ->where(function ($q) {
                 if (!auth()->check() || !auth()->user()->canBypassProjectScope()) {

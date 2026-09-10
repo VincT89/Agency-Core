@@ -3,7 +3,7 @@
     'required' => false,
     'value' => null,
     'text' => null,
-    'canCreate' => auth()->user()->can('create', \App\Models\Client::class),
+    'canCreate' => auth()->user()->can('quickCreate', \App\Models\Client::class),
 ])
 
 @php($resultsId = $name . '_autocomplete_results')
@@ -15,12 +15,13 @@
         searchEndpoint: @js(route('api.clients.search')),
         storeEndpoint: @js(route('api.clients.quick-store'))
     })"
-    class="ca-wrapper"
+    {{ $attributes->class(['ca-wrapper']) }}
     @click.outside="close()"
 >
     <div class="ca-input-container">
         <input type="text"
                id="{{ $name }}_search"
+               x-ref="searchInput"
                x-model="search"
                @input.debounce.300ms="fetchResults()"
                @focus="open()"
@@ -35,7 +36,7 @@
                @if($required) required aria-required="true" @endif
         >
         
-        <input type="hidden" name="{{ $name }}" x-model="value">
+        <input type="hidden" name="{{ $name }}" value="{{ $value }}" x-model="value">
         
         <div x-show="loading" class="ca-spinner-container" role="status" aria-label="Ricerca clienti in corso">
             <svg class="ca-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -91,11 +92,11 @@
              {{-- Row 1: Nome & Azienda --}}
              <div class="form-row">
                  <div>
-                     <input type="text" x-model="newClient.name" class="form-in ca-create-input" :class="errors.name ? 'is-invalid' : ''" placeholder="Nome *">
+                     <input type="text" x-model="newClient.name" class="form-in ca-create-input" :class="errors.name ? 'is-invalid' : ''" placeholder="Nome *" aria-label="Nome del nuovo cliente" maxlength="255">
                      <div x-show="errors.name" class="ca-error-text" x-text="errors.name"></div>
                  </div>
                  <div>
-                     <input type="text" x-model="newClient.company_name" class="form-in ca-create-input" :class="errors.company_name ? 'is-invalid' : ''" placeholder="Ragione Sociale">
+                     <input type="text" x-model="newClient.company_name" class="form-in ca-create-input" :class="errors.company_name ? 'is-invalid' : ''" placeholder="Ragione Sociale" aria-label="Ragione sociale del nuovo cliente" maxlength="255">
                      <div x-show="errors.company_name" class="ca-error-text" x-text="errors.company_name"></div>
                  </div>
              </div>
@@ -103,11 +104,11 @@
              {{-- Row 2: Email & Telefono --}}
              <div class="form-row">
                  <div>
-                     <input type="email" x-model="newClient.email" class="form-in ca-create-input" :class="errors.email ? 'is-invalid' : ''" placeholder="Email">
+                     <input type="email" x-model="newClient.email" class="form-in ca-create-input" :class="errors.email ? 'is-invalid' : ''" placeholder="Email" aria-label="Email del nuovo cliente" maxlength="255" :disabled="!showQuickCreate">
                      <div x-show="errors.email" class="ca-error-text" x-text="errors.email"></div>
                  </div>
                  <div>
-                     <input type="text" x-model="newClient.phone" class="form-in ca-create-input" :class="errors.phone ? 'is-invalid' : ''" placeholder="Telefono">
+                     <input type="text" x-model="newClient.phone" class="form-in ca-create-input" :class="errors.phone ? 'is-invalid' : ''" placeholder="Telefono" aria-label="Telefono del nuovo cliente" maxlength="50">
                      <div x-show="errors.phone" class="ca-error-text" x-text="errors.phone"></div>
                  </div>
              </div>
@@ -115,11 +116,11 @@
              {{-- Row 3: P.IVA & Indirizzo --}}
              <div class="form-row">
                  <div>
-                     <input type="text" x-model="newClient.vat_number" class="form-in ca-create-input" :class="errors.vat_number ? 'is-invalid' : ''" placeholder="Partita IVA">
+                     <input type="text" x-model="newClient.vat_number" class="form-in ca-create-input" :class="errors.vat_number ? 'is-invalid' : ''" placeholder="Partita IVA" aria-label="Partita IVA del nuovo cliente" maxlength="20">
                      <div x-show="errors.vat_number" class="ca-error-text" x-text="errors.vat_number"></div>
                  </div>
                  <div>
-                     <input type="text" x-model="newClient.address" class="form-in ca-create-input" :class="errors.address ? 'is-invalid' : ''" placeholder="Indirizzo">
+                     <input type="text" x-model="newClient.address" class="form-in ca-create-input" :class="errors.address ? 'is-invalid' : ''" placeholder="Indirizzo" aria-label="Indirizzo del nuovo cliente" maxlength="255">
                      <div x-show="errors.address" class="ca-error-text" x-text="errors.address"></div>
                  </div>
              </div>
@@ -135,10 +136,10 @@
                      <span x-show="!loading">Salva Cliente</span>
                      <span x-show="loading">Salvataggio...</span>
                  </button>
-                 <button type="button" @click="showQuickCreate = false" class="btn btn-g ca-action-btn">Annulla</button>
+                 <button type="button" @click="showQuickCreate = false" class="btn btn-g ca-action-btn" :disabled="loading">Annulla</button>
              </div>
              
-             <div x-show="genericError" class="ca-error-text" x-text="genericError"></div>
          </div>
     </div>
+    <div x-show="genericError" class="ca-error-text" x-text="genericError" role="alert" x-cloak></div>
 </div>

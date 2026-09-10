@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
             $subject = $arguments[0] ?? null;
+            if ((is_object($subject) || is_string($subject)) && is_a($subject, Client::class, true)
+                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket'], true)) {
+                return null;
+            }
             foreach ([Ticket::class, Attachment::class, UserAvailability::class, CalendarEvent::class] as $allowed) {
                 if ((is_object($subject) || is_string($subject)) && is_a($subject, $allowed, true)) {
                     return null;

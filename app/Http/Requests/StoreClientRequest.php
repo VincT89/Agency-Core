@@ -7,6 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreClientRequest extends FormRequest
 {
+    use Concerns\ValidatesClientCommercial;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', Client::class);
@@ -17,6 +19,7 @@ class StoreClientRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'company_name' => ['nullable', 'string', 'max:255'],
+            'commercial_user_id' => $this->commercialUserRules(),
             'email' => ['nullable', 'email', 'max:255', 'unique:clients,email'],
             'phone' => ['nullable', 'string', 'max:50'],
             'reference_person' => ['nullable', 'string', 'max:255'],

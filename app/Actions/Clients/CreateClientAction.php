@@ -9,6 +9,10 @@ class CreateClientAction
 {
     public function execute(array $data): Client
     {
+        if (auth()->user()?->isCommercial()) {
+            $data['commercial_user_id'] = auth()->id();
+        }
+
         // Genera uno slug univoco basato sul nome
         $baseSlug = Str::slug($data['name']);
         $slug = $baseSlug;

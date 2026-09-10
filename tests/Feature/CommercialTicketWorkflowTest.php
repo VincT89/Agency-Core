@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Core\Actions\CreateTicketAction;
 use App\Enums\UserRole;
 use App\Livewire\Shared\AttachmentManager;
+use App\Livewire\Notifications\NotificationDropdown;
 use App\Livewire\Tickets\TicketComments;
 use App\Models\Client;
 use App\Models\Project;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Notifications\TicketUnassignedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -37,7 +39,7 @@ class CommercialTicketWorkflowTest extends TestCase
         $this->admin = $this->user(UserRole::Admin);
         $this->commercial = $this->user(UserRole::Commercial);
         $this->actingAs($this->admin);
-        $this->client = Client::factory()->create();
+        $this->client = Client::factory()->create(['commercial_user_id' => $this->commercial->id]);
         $this->project = Project::factory()->create(['client_id' => $this->client->id, 'status' => 'active']);
     }
 
@@ -78,9 +80,11 @@ class CommercialTicketWorkflowTest extends TestCase
 
     public function test_commercial_can_select_existing_clients_and_only_receive_project_names(): void
     {
-        $withoutProject = Client::factory()->create(['name' => 'Cliente dimostrativo senza progetto']);
+        $withoutProject = Client::factory()->create(['name' => 'Cliente dimostrativo senza progetto', 'commercial_user_id' => $this->commercial->id]);
         $this->actingAs($this->commercial)->get(route('tickets.create'))->assertOk()
-            ->assertSee($withoutProject->name)->assertDontSee('name="assigned_to"', false)->assertDontSee('name="status"', false);
+            ->assertSee('Crea nuovo cliente')->assertDontSee('name="assigned_to"', false)->assertDontSee('name="status"', false);
+        $this->getJson(route('api.clients.search', ['q' => $withoutProject->name]))->assertOk()
+            ->assertJsonCount(1)->assertJsonPath('0.id', $withoutProject->id);
         $this->get(route('tickets.client-projects', $this->client))->assertOk()
             ->assertExactJson([['id' => $this->project->id, 'name' => $this->project->name]]);
         $this->get(route('tickets.client-projects', $withoutProject))->assertExactJson([]);
@@ -109,11 +113,96 @@ class CommercialTicketWorkflowTest extends TestCase
         $this->get(route('tickets.show', $ticket))->assertOk()->assertSee('Richiesta di preventivo');
     }
 
+    public function test_request_and_assignment_notifications_are_saved_and_visible_to_their_recipients(): void
+    {
+        Notification::swap(new ChannelManager($this->app));
+        $inactiveAdmin = $this->user(UserRole::Admin);
+        $inactiveAdmin->update(['status' => 'inactive']);
+        $adminDropdown = Livewire::test(NotificationDropdown::class);
+
+        $this->actingAs($this->commercial)->post(route('tickets.store'), $this->payload([
+            'type' => 'quote', 'project_id' => null,
+        ]))->assertSessionHasNoErrors()->assertRedirect();
+        $ticket = Ticket::query()->sole();
+        $notification = $this->admin->visibleNotifications()->sole();
+        $this->assertSame('ticket_unassigned', $notification->data['type']);
+        $this->assertSame($ticket->id, $notification->data['ticket_id']);
+        $this->assertSame(route('tickets.show', $ticket), $notification->data['url']);
+        $this->assertNull($notification->read_at);
+        $this->assertSame(0, $inactiveAdmin->notifications()->count());
+        $this->assertSame(0, $this->commercial->notifications()->count());
+
+        $this->actingAs($this->admin);
+        $adminDropdown->call('$refresh')->assertSee('Nuovo ticket non assegnato')->assertSee($ticket->title);
+        $recipient = $this->user(UserRole::Developer);
+        $assignment = $this->payload([
+            'type' => 'quote', 'project_id' => null, 'status' => 'in_progress',
+            'assigned_to' => $recipient->id, 'assignment_department' => 'developer',
+        ]);
+        $this->patch(route('tickets.update', $ticket), $assignment)->assertSessionHasNoErrors()->assertRedirect();
+        $assignedNotification = $recipient->visibleNotifications()->sole();
+        $this->assertSame('ticket_assigned', $assignedNotification->data['type']);
+        $this->assertSame($ticket->id, $assignedNotification->data['ticket_id']);
+        $this->assertNull($assignedNotification->read_at);
+
+        $this->patch(route('tickets.update', $ticket), $assignment)->assertSessionHasNoErrors();
+        $this->assertSame(1, $recipient->notifications()->count());
+        $this->actingAs($recipient);
+        Livewire::test(NotificationDropdown::class)->assertSee('Nuovo ticket assegnato')->assertSee($ticket->title);
+        $this->post(route('notifications.read', $assignedNotification->id))->assertRedirect(route('tickets.show', $ticket));
+        $this->assertNotNull($assignedNotification->fresh()->read_at);
+        $this->get(route('tickets.show', $ticket))->assertOk()->assertSee($ticket->title);
+    }
+
+    public function test_linked_work_notifies_the_department_member_and_updates_commercial_ticket_progress(): void
+    {
+        Notification::swap(new ChannelManager($this->app));
+        $ticket = $this->ticket($this->commercial);
+        $marketing = $this->user(UserRole::Marketing);
+        $this->project->users()->attach($marketing->id, ['role' => 'marketing', 'assignment_status' => 'active']);
+        $this->post(route('tasks.store'), [
+            'project_id' => $this->project->id, 'ticket_id' => $ticket->id,
+            'assigned_to' => $marketing->id, 'assignment_department' => 'marketing',
+            'title' => 'Lavoro Marketing dimostrativo notificato', 'status' => 'todo', 'priority' => 'medium',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $task = Task::query()->sole();
+        $notification = $marketing->visibleNotifications()->sole();
+        $this->assertSame('task_assigned', $notification->data['type']);
+        $this->assertSame(route('tasks.show', $task), $notification->data['url']);
+        $this->actingAs($marketing)->get(route('dashboard'))->assertOk()->assertSee($task->title);
+        Livewire::test(NotificationDropdown::class)->assertSee($task->title);
+        $this->actingAs($this->commercial)->get(route('tickets.show', $ticket))
+            ->assertOk()->assertSee('In lavorazione')->assertDontSee($task->title);
+    }
+
+    public function test_commercial_follows_status_and_resolution_of_own_ticket(): void
+    {
+        $ticket = $this->ticket($this->commercial);
+        $foreign = $this->ticket($this->admin, ['title' => 'Ticket riservato ad altri']);
+
+        foreach (['in_progress' => 'In lavorazione', 'waiting' => 'In attesa', 'resolved' => 'Risolto', 'closed' => 'Chiuso'] as $status => $label) {
+            $this->actingAs($this->admin)->patch(route('tickets.update-status', $ticket), ['status' => $status])
+                ->assertSessionHasNoErrors()->assertRedirect();
+            $this->actingAs($this->commercial)->get(route('tickets.index'))
+                ->assertOk()->assertSee($ticket->title)->assertSee($label)->assertDontSee($foreign->title);
+            $this->get(route('tickets.show', $ticket))->assertOk()->assertSee($label);
+        }
+
+        $this->actingAs($this->admin)->patch(route('tickets.update', $ticket), $this->payload([
+            'status' => 'closed', 'resolution_notes' => 'Richiesta dimostrativa completata e verificata.',
+        ]))->assertSessionHasNoErrors()->assertRedirect();
+        $this->actingAs($this->commercial)->get(route('tickets.show', $ticket))
+            ->assertOk()->assertSee('Richiesta dimostrativa completata e verificata.');
+        $this->get(route('tickets.show', $foreign))->assertNotFound();
+        $this->patch(route('tickets.update-status', $ticket), ['status' => 'open'])->assertForbidden();
+    }
+
     public function test_intervention_requires_a_project_belonging_to_the_selected_client(): void
     {
         $this->actingAs($this->commercial)->post(route('tickets.store'), $this->payload(['project_id' => null]))
             ->assertSessionHasErrors('project_id');
-        $otherClient = Client::factory()->create();
+        $otherClient = Client::factory()->create(['commercial_user_id' => $this->commercial->id]);
         $this->post(route('tickets.store'), $this->payload(['client_id' => $otherClient->id]))
             ->assertSessionHasErrors('project_id');
         $this->post(route('tickets.store'), $this->payload(['requested_department' => 'unknown']))
@@ -125,7 +214,7 @@ class CommercialTicketWorkflowTest extends TestCase
     public function test_commercial_cannot_force_operational_fields_on_creation(): void
     {
         $this->actingAs($this->commercial);
-        $this->assertSame(0, Client::visibleTo($this->commercial)->count());
+        $this->assertSame(1, Client::visibleTo($this->commercial)->count());
         foreach (['assigned_to' => $this->admin->id, 'status' => 'closed', 'assignment_department' => 'admin',
             'due_date' => '2026-09-20', 'opened_at' => '2020-01-01', 'notes' => 'nota', 'resolution_notes' => 'risolto'] as $field => $value) {
             $this->post(route('tickets.store'), $this->payload([$field => $value]))->assertSessionHasErrors($field);

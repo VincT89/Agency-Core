@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateClientRequest extends FormRequest
 {
+    use Concerns\ValidatesClientCommercial;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('client'));
@@ -16,6 +18,7 @@ class UpdateClientRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'company_name' => ['nullable', 'string', 'max:255'],
+            'commercial_user_id' => $this->commercialUserRules(),
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'reference_person' => ['nullable', 'string', 'max:255'],

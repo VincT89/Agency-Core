@@ -69,13 +69,15 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
         }
     }
 
-    clientEl.addEventListener('change', () => {
+    const isInput = clientEl.matches('select, input');
+    const clientValue = () => isInput ? clientEl.value : clientEl.querySelector('input[type="hidden"]')?.value;
+    clientEl.addEventListener(isInput ? 'change' : 'client-updated', (event) => {
         currentProjectId = null;
-        loadProjects(clientEl.value);
+        loadProjects(isInput ? clientValue() : event.detail);
     });
 
     // Se c'è già un cliente selezionato al caricamento della pagina
-    loadProjects(clientEl.value);
+    loadProjects(clientValue());
 }
 
 function autoInitProjectSelects() {

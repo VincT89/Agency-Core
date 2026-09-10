@@ -1,6 +1,7 @@
 @php
     $commercial = auth()->user()->isCommercial();
     $selectedType = old('type', $ticket?->type ?? 'request');
+    $selectedClient = $clients->firstWhere('id', old('client_id', $ticket?->client_id));
 @endphp
 <form action="{{ $ticket ? route('tickets.update', $ticket) : route('tickets.store') }}" method="POST" data-ticket-form>
     @csrf
@@ -17,6 +18,18 @@
     </div>
     <div class="form-row">
         <x-form-group label="Cliente" name="client_id" required>
+            @if($commercial)
+                <x-client-autocomplete
+                    name="client_id" :required="true"
+                    :value="$selectedClient?->id"
+                    :text="$selectedClient ? $selectedClient->name . ($selectedClient->company_name ? ' - ' . $selectedClient->company_name : '') : null"
+                    id="client_sel" data-client-select data-project-select="project_sel"
+                    data-project-url="{{ url('/api/ticket-clients/{client}/projects') }}"
+                    data-current-project="{{ old('project_id', $ticket?->project_id) }}"
+                    data-empty-project-help="Il cliente non ha progetti attivi. Puoi inviare una richiesta di preventivo senza progetto."
+                />
+                <p class="u-text-meta">Cerca tra i tuoi clienti oppure aggiungine uno nuovo.</p>
+            @else
             <select name="client_id" id="client_sel" class="form-sel" data-client-select data-project-select="project_sel"
                 data-project-url="{{ url('/api/ticket-clients/{client}/projects') }}"
                 data-current-project="{{ old('project_id', $ticket?->project_id) }}"
@@ -26,6 +39,7 @@
                     <option value="{{ $client->id }}" @selected(old('client_id', $ticket?->client_id) == $client->id)>{{ $client->name }}</option>
                 @endforeach
             </select>
+            @endif
         </x-form-group>
         <x-form-group label="Progetto" name="project_id">
             <select name="project_id" id="project_sel" class="form-sel" aria-describedby="project_sel_help ticket-project-rule" @required($selectedType !== 'quote')>

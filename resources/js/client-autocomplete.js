@@ -6,6 +6,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
         results: [],
         isOpen: false,
         loading: false,
+        searchRequest: 0,
         canCreate: canCreate,
         showQuickCreate: false,
         newClient: {
@@ -21,6 +22,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
         genericError: null,
 
         init() {
+            this.$nextTick(() => this.updateValidity());
             this.$watch('search', (value) => {
                 if (value !== this.originalText) {
                     this.value = '';
@@ -30,14 +32,22 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
                 if (value.length >= 1) {
                     this.newClient.name = value;
                 }
+                this.updateValidity();
             });
 
             this.$watch('value', (val) => {
+                this.updateValidity();
                 this.$el.dispatchEvent(new CustomEvent('client-updated', {
                     detail: val,
                     bubbles: true
                 }));
             });
+        },
+
+        updateValidity() {
+            const input = this.$refs.searchInput;
+            input.setCustomValidity(input.required && !this.value
+                ? 'Seleziona un cliente dalla ricerca o creane uno nuovo.' : '');
         },
 
         open() {
@@ -51,14 +61,20 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
         },
 
         openQuickCreate() {
+            ++this.searchRequest;
+            this.loading = false;
             this.showQuickCreate = true;
             this.isOpen = false;
         },
 
         async fetchResults() {
+            if (this.showQuickCreate || (this.value && this.search === this.originalText)) return;
+            const activeRequest = ++this.searchRequest;
+            const query = this.search;
             if (this.search.length < 1) {
                 this.results = [];
                 this.isOpen = false;
+                this.loading = false;
                 return;
             }
 
@@ -66,20 +82,28 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
             this.isOpen = true;
             this.errors = {};
             this.genericError = null;
+            this.results = [];
 
             try {
-                const response = await fetch(`${searchEndpoint}?q=${encodeURIComponent(this.search)}`);
-                if (response.ok) {
-                    this.results = await response.json();
-                }
+                const response = await fetch(`${searchEndpoint}?q=${encodeURIComponent(query)}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error('Ricerca non disponibile');
+                const results = await response.json();
+                if (activeRequest !== this.searchRequest || query !== this.search) return;
+                this.results = results;
             } catch (error) {
-                console.error("Errore ricerca clienti", error);
+                if (activeRequest === this.searchRequest && query === this.search) {
+                    this.genericError = 'Non è stato possibile cercare i clienti. Riprova.';
+                }
             } finally {
-                this.loading = false;
+                if (activeRequest === this.searchRequest) this.loading = false;
             }
         },
 
         selectClient(client) {
+            ++this.searchRequest;
+            this.loading = false;
             this.value = client.id;
             
             let displayText = client.name;
@@ -90,6 +114,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
             this.search = displayText;
             this.originalText = displayText;
             this.close();
+            this.showQuickCreate = false;
         },
 
         async quickStoreClient() {

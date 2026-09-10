@@ -10,6 +10,23 @@ class ClientPolicy
 {
     use HandlesRoleAuthorization;
 
+    public function lookup(User $user): bool
+    {
+        return $user->isCommercial() || $this->viewAny($user);
+    }
+
+    public function quickCreate(User $user): bool
+    {
+        return $user->isCommercial() || $this->create($user);
+    }
+
+    public function selectForTicket(User $user, Client $client): bool
+    {
+        return $user->isCommercial()
+            ? (int) $client->commercial_user_id === (int) $user->id
+            : $this->view($user, $client);
+    }
+
     public function viewAny(User $user): bool  
     { 
         return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager; 
@@ -17,6 +34,10 @@ class ClientPolicy
     
     public function view(User $user, Client $client): bool
     { 
+        if ($user->isCommercial()) {
+            return false;
+        }
+
         if ($user->role === UserRole::Administration || $user->role === UserRole::OperationsManager) {
             return true;
         }

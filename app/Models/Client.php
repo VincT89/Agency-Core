@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\URL;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\URL;
     'name',
     'slug',
     'company_name',
+    'commercial_user_id',
     'email',
     'phone',
     'normalized_phone',
@@ -88,6 +90,11 @@ class Client extends Model
             'inactive' => 'Inattivo',
             default => ucfirst((string) $this->status),
         };
+    }
+
+    public function commercialUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'commercial_user_id');
     }
 
     public function projects(): HasMany
@@ -204,7 +211,7 @@ class Client extends Model
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
         if ($user->isCommercial()) {
-            return $query->whereRaw('1 = 0');
+            return $query->where('commercial_user_id', $user->id);
         }
 
         if ($user->canAccessAllProjects() || $user->isMarketing()) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Concerns;
 
+use App\Models\Client;
 use App\Models\Project;
 use App\Models\Scopes\ProjectSupremacyScope;
 use App\Models\Ticket;
@@ -38,6 +39,12 @@ trait ValidatesTicketInput
     {
         return [function (Validator $validator) {
             if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            if ($this->user()->isCommercial()
+                && ! Client::visibleTo($this->user())->whereKey($this->input('client_id'))->exists()) {
+                $validator->errors()->add('client_id', 'Seleziona un tuo cliente oppure aggiungine uno nuovo.');
                 return;
             }
 

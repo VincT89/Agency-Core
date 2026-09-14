@@ -126,10 +126,18 @@ class User extends Authenticatable
         $notifications = $this->notifications();
 
         if ($this->isCommercial()) {
-            $notifications->whereIn('data->type', [
-                'ticket_assigned', 'ticket_unassigned', 'ticket_due_soon', 'ticket_overdue',
-            ])->whereIn('data->ticket_id', Ticket::withoutGlobalScopes()
-                ->where('created_by', $this->id)->select('id'));
+            $notifications->where(function ($visible) {
+                $visible->where(function ($tickets) {
+                    $tickets->whereIn('data->type', ['ticket_assigned', 'ticket_unassigned', 'ticket_due_soon', 'ticket_overdue'])
+                        ->whereIn('data->ticket_id', Ticket::withoutGlobalScopes()->where('created_by', $this->id)->select('id'));
+                })->orWhere(function ($tasks) {
+                    $tasks->whereIn('data->type', ['task_assigned', 'task_due_soon'])
+                        ->whereIn('data->task_id', Task::withoutGlobalScopes()->forCommercial($this)->select('tasks.id'));
+                })->orWhere(function ($quotes) {
+                    $quotes->where('data->type', 'quote_updated')
+                        ->whereIn('data->quote_id', Quote::visibleTo($this)->select('quotes.id'));
+                });
+            });
         }
 
         return $notifications;
@@ -194,6 +202,11 @@ class User extends Authenticatable
     }
 
     public function canAccessFinance(): bool
+    {
+        return $this->isAdmin() || $this->isAdministration();
+    }
+
+    public function canViewManagementDashboard(): bool
     {
         return $this->isAdmin() || $this->isAdministration();
     }

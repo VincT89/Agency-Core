@@ -199,6 +199,7 @@ class ClientSocialAccountForm extends Component
 
     public function render()
     {
+        $this->authorize('viewAny', ClientSocialAccount::class);
         $availableAssets = [];
         if ($this->activeTab === 'facebook' || $this->activeTab === 'instagram') {
             $platformType = $this->activeTab === 'facebook' ? 'facebook_page' : 'instagram_business_account';

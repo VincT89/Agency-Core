@@ -109,7 +109,7 @@
                                             Apri sul social
                                         </a>
                                     @elseif(
-                                        $pub->status === \App\Enums\Social\PublicationStatus::Published
+                                        auth()->user()->can('manage_social_operations') && $pub->status === \App\Enums\Social\PublicationStatus::Published
                                         && in_array($pub->platform, [
                                             \App\Enums\Social\SocialPlatform::Instagram,
                                             \App\Enums\Social\SocialPlatform::Tiktok,
@@ -124,6 +124,7 @@
                                             Recupera collegamento
                                         </button>
                                     @endif
+                                    @can('manage_social_operations')
                                     @if(in_array($pub->status, [\App\Enums\Social\PublicationStatus::Publishing]))
                                         <button type="button" wire:click="refreshPublication({{ $pub->id }})" class="btn-xs btn-outline-primary" title="Aggiorna lo stato della pubblicazione">
                                             <i class="fas fa-sync-alt"></i> Aggiorna stato
@@ -177,6 +178,7 @@
                                         <i data-lucide="x" class="u-icon-sm"></i> Segna fallita
                                     </button>
                                     @endif
+                                    @endcan
                                 </div>
                             </td>
                         </tr>

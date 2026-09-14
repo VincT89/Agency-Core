@@ -19,6 +19,7 @@
 @endphp
 
 <form wire:submit="save('{{ $platformValue }}')" class="social-account-form">
+    <fieldset class="permission-fieldset social-account-form" @disabled($account ? auth()->user()->cannot('update', $account) : auth()->user()->cannot('create', \App\Models\ClientSocialAccount::class))>
     @if($isTikTok)
         <div class="social-static-field">
             <span class="form-lbl">Modalità di collegamento</span>
@@ -359,4 +360,5 @@
             </span>
         </button>
     </div>
+    </fieldset>
 </form>

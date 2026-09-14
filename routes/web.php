@@ -138,6 +138,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('clients', ClientController::class);
     Route::resource('projects', ProjectController::class);
     Route::resource('tickets', TicketController::class);
+    Route::resource('quotes', \App\Http\Controllers\QuoteController::class)->except(['destroy']);
+    Route::post('quotes/{quote}/present', [\App\Http\Controllers\QuoteController::class, 'present'])->name('quotes.present');
+    Route::post('quotes/{quote}/accept', [\App\Http\Controllers\QuoteController::class, 'accept'])->name('quotes.accept');
+    Route::post('quotes/{quote}/reject', [\App\Http\Controllers\QuoteController::class, 'reject'])->name('quotes.reject');
+    Route::post('quotes/{quote}/revise', [\App\Http\Controllers\QuoteController::class, 'revise'])->name('quotes.revise');
+    Route::get('quotes/{quote}/project', [\App\Http\Controllers\QuoteController::class, 'createProject'])->name('quotes.project.create');
+    Route::post('quotes/{quote}/project', [\App\Http\Controllers\QuoteController::class, 'storeProject'])->name('quotes.project.store');
     Route::get('/api/ticket-clients/{client}/projects', [TicketController::class, 'clientProjects'])
         ->name('tickets.client-projects');
     Route::patch('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])
@@ -211,12 +218,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     // ADMIN - SOCIAL CONNECTIONS
-    Route::prefix('admin/social/connections')->name('admin.social.connections.')->middleware('can:manage_social_connections')->group(function () {
+    Route::prefix('admin/social/connections')->name('admin.social.connections.')->middleware('can:view_social_connections')->group(function () {
         // Il Livewire Index verrà aggiunto qui successivamente
         Route::get('/', AgencySocialConnections::class)->name('index');
 
-        Route::get('/meta/redirect', [AgencyMetaOAuthController::class, 'redirect'])->name('meta.redirect');
-        Route::get('/meta/callback', [AgencyMetaOAuthController::class, 'callback'])->name('meta.callback');
+        Route::get('/meta/redirect', [AgencyMetaOAuthController::class, 'redirect'])->middleware('can:manage_social_connections')->name('meta.redirect');
+        Route::get('/meta/callback', [AgencyMetaOAuthController::class, 'callback'])->middleware('can:manage_social_connections')->name('meta.callback');
     });
 
     // ADMIN - TIKTOK CONNECTIONS (Client Specific)
@@ -226,7 +233,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     // ADMIN - SOCIAL OPERATIONS
-    Route::prefix('admin/social/operations')->name('admin.social.operations.')->middleware('can:manage_social_operations')->group(function () {
+    Route::prefix('admin/social/operations')->name('admin.social.operations.')->middleware('can:view_social_operations')->group(function () {
         Route::get('/', SocialOperationsDashboard::class)->name('index');
     });
     // AMMINISTRAZIONE - SPESE

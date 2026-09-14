@@ -14,7 +14,7 @@
         @endif
     </x-page-header>
 
-    @can('system.admin')
+    @if(auth()->user()->canViewManagementDashboard())
         @include('partials.dashboard._admin')
     @elseif(auth()->user()->isAdministration())
         @include('partials.dashboard._administration')

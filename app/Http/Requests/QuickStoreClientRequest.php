@@ -21,6 +21,12 @@ class QuickStoreClientRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:50'],
             'vat_number' => ['nullable', 'string', 'max:20', 'unique:clients,vat_number'],
             'address' => ['nullable', 'string', 'max:255'],
+            'reference_person' => ['nullable', 'string', 'max:255'],
+            'tax_code' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'string', 'max:10'],
+            'province' => ['nullable', 'string', 'max:5'],
+            'country' => ['nullable', 'string', 'max:100'],
             'commercial_user_id' => ['missing'],
         ];
     }

@@ -45,7 +45,7 @@ class StoreTaskRequest extends FormRequest
             'assigned_to' => [
                 'nullable',
                 'integer',
-                Rule::exists('users', 'id')->where('status', 'active')->whereNot('role', \App\Enums\UserRole::Commercial->value),
+                Rule::exists('users', 'id')->where('status', 'active'),
             ],
             'title'       => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

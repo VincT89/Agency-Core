@@ -65,6 +65,7 @@ class TicketController extends Controller
             'assignee:id,name,role',
             'attachments.uploader', 
             'comments.user',
+            'requestedServices',
         ];
         if (!auth()->user()->isCommercial()) {
             $relations = array_merge($relations, ['tasks.project', 'tasks.assignee', 'checklistItems.completedBy']);
@@ -73,7 +74,8 @@ class TicketController extends Controller
             $relations[] = 'auditLogs.user';
         }
         $ticket->load($relations);
-        return view(auth()->user()->isCommercial() ? 'tickets.commercial.show' : 'tickets.show', compact('ticket'));
+        $quotes = $ticket->quotes()->visibleTo(auth()->user())->latest()->get();
+        return view(auth()->user()->isCommercial() ? 'tickets.commercial.show' : 'tickets.show', compact('ticket', 'quotes'));
     }
 
     public function edit(Ticket $ticket, \App\Domain\Core\Queries\ClientQuery $clientQuery): View
@@ -96,7 +98,7 @@ class TicketController extends Controller
     public function update(UpdateTicketRequest $request, Ticket $ticket): RedirectResponse
     {
         $this->authorize('update', $ticket);
-        $data = $request->safe()->except('assignment_department');
+        $data = $request->safe()->except(['assignment_department', 'requested_services']);
 
         if (($data['status'] ?? null) === 'closed') {
             $data['closed_at'] = $ticket->closed_at ?? now();
@@ -109,7 +111,15 @@ class TicketController extends Controller
         }
 
         $oldAssignedTo = $ticket->assigned_to;
-        $ticket->update($data);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($ticket, $data, $request) {
+            $ticket->update($data);
+            if ($ticket->type === 'quote' && $request->has('requested_services')) {
+                $ticket->requestedServices()->delete();
+                foreach (array_values($request->validated('requested_services', [])) as $index => $service) {
+                    $ticket->requestedServices()->create($service + ['sort_order' => $index]);
+                }
+            }
+        });
 
         if (
             !empty($data['assigned_to']) &&
@@ -168,7 +178,7 @@ class TicketController extends Controller
         return User::query()->where(function ($query) use ($ticket) {
             $query->where(function ($eligible) {
                 $eligible->where('status', 'active')->whereIn('role', [
-                    UserRole::Admin, UserRole::Developer, UserRole::GraphicDesigner, UserRole::OperationsManager,
+                    UserRole::Admin, UserRole::Administration, UserRole::Developer, UserRole::GraphicDesigner, UserRole::OperationsManager,
                 ]);
             });
             if ($ticket?->assigned_to) {

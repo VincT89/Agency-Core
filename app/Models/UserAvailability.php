@@ -36,7 +36,7 @@ class UserAvailability extends Model
         $time = $moment->format('H:i:s');
 
         return $query
-            ->where('date', $moment->toDateString())
+            ->whereDate('date', $moment->toDateString())
             ->where('starts_at', '<=', $time)
             ->where('ends_at', '>', $time);
     }

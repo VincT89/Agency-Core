@@ -1,9 +1,9 @@
 @php
     $commercial = auth()->user()->isCommercial();
-    $selectedType = old('type', $ticket?->type ?? 'request');
-    $selectedClient = $clients->firstWhere('id', old('client_id', $ticket?->client_id));
+    $selectedType = old('type', $ticket?->type ?? (request('type') === 'quote' ? 'quote' : 'request'));
+    $selectedClient = $clients->firstWhere('id', old('client_id', $ticket?->client_id ?? request('client_id')));
 @endphp
-<form action="{{ $ticket ? route('tickets.update', $ticket) : route('tickets.store') }}" method="POST" data-ticket-form>
+<form action="{{ $ticket ? route('tickets.update', $ticket) : route('tickets.store') }}" method="POST" data-ticket-form x-data="{ requestType: @js($selectedType) }">
     @csrf
     @if($ticket) @method('PATCH') @endif
 
@@ -11,16 +11,11 @@
         <p class="ticket-create-note">Descrivi la richiesta del cliente. L’amministratore la valuterà e assegnerà il lavoro al reparto competente.</p>
     @endif
 
-    <div class="form-row full">
-        <x-form-group label="Oggetto" name="title" required>
-            <input name="title" class="form-in" value="{{ old('title', $ticket?->title) }}" maxlength="255" required>
-        </x-form-group>
-    </div>
     <div class="form-row">
         <x-form-group label="Cliente" name="client_id" required>
             @if($commercial)
                 <x-client-autocomplete
-                    name="client_id" :required="true"
+                    name="client_id" :required="true" :extended="true"
                     :value="$selectedClient?->id"
                     :text="$selectedClient ? $selectedClient->name . ($selectedClient->company_name ? ' - ' . $selectedClient->company_name : '') : null"
                     id="client_sel" data-client-select data-project-select="project_sel"
@@ -52,9 +47,14 @@
             <p id="project_sel_help" class="u-text-meta" role="status"></p>
         </x-form-group>
     </div>
+    <div class="form-row full">
+        <x-form-group label="Oggetto" name="title" required>
+            <input name="title" class="form-in" value="{{ old('title', $ticket?->title) }}" maxlength="255" required>
+        </x-form-group>
+    </div>
     <div class="form-row">
         <x-form-group label="Motivo della richiesta" name="type" required>
-            <select name="type" class="form-sel" data-ticket-type required>
+            <select name="type" class="form-sel" data-ticket-type required x-model="requestType">
                 @foreach($types as $type)
                     <option value="{{ $type }}" @selected($selectedType === $type)>{{ (new \App\Models\Ticket(['type' => $type]))->type_label }}</option>
                 @endforeach
@@ -69,6 +69,7 @@
             </select>
         </x-form-group>
     </div>
+    @include('tickets.partials.requested-services-form')
     <div class="form-row">
         <x-form-group label="Priorità" name="priority" required>
             <select name="priority" class="form-sel" required>

@@ -1,3 +1,6 @@
+@if(auth()->user()?->isAdministration())
+    <p class="u-text-sm u-text-muted">La pubblicazione richiede una verifica del reparto competente.</p>
+@else
 @php
     $diagnostic = app(\App\Domain\Social\Services\PublicationDiagnosticPresenter::class)
         ->present($publication);
@@ -71,3 +74,4 @@
         </div>
     @endif
 </div>
+@endif

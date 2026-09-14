@@ -2,7 +2,9 @@
     <x-page-header eyebrow="Social">
         <x-slot:title><strong>Progetti Marketing</strong></x-slot:title>
         <x-slot name="actions">
-            <a href="{{ route('marketing-campaigns.create') }}" class="btn btn-p" wire:navigate>+ Nuovo Progetto</a>
+            @can('create', \App\Models\MarketingCampaign::class)
+                <a href="{{ route('marketing-campaigns.create') }}" class="btn btn-p" wire:navigate>Nuovo progetto</a>
+            @endcan
         </x-slot>
     </x-page-header>
 

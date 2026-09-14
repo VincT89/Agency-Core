@@ -21,7 +21,7 @@ class ShootsIndex extends Component
 
     public function mount()
     {
-        if (!auth()->user()->canManageSystem()) {
+        if (!auth()->user()->canViewManagementDashboard()) {
             abort(403);
         }
     }
@@ -35,6 +35,7 @@ class ShootsIndex extends Component
 
     public function render(ShootQuery $query)
     {
+        abort_unless(auth()->user()->canViewManagementDashboard(), 403);
         $filters = [
             'status' => $this->status,
             'search' => $this->search,

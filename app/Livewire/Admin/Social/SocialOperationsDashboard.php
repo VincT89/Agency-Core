@@ -26,7 +26,7 @@ class SocialOperationsDashboard extends Component
 
     public function mount()
     {
-        $this->authorize('manage_social_operations');
+        $this->authorize('view_social_operations');
     }
 
     public function updatedFilter()
@@ -244,6 +244,7 @@ class SocialOperationsDashboard extends Component
 
     public function render()
     {
+        $this->authorize('view_social_operations');
         $query = MarketingCampaignPostPublication::with([
             'post.campaign.client',
             'post.publications',

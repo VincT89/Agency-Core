@@ -11,6 +11,9 @@ class TaskPolicy
 
     public function viewAny(User $user): bool  
     { 
+        if ($user->isCommercial() || $user->isAdministration()) {
+            return true;
+        }
         return $user->canManageSystem() || in_array($user->role, [
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::Marketing, 
@@ -22,6 +25,10 @@ class TaskPolicy
 
     public function view(User $user, Task $task): bool
     {
+        if ($user->isCommercial()) {
+            return (int) $task->assigned_to === (int) $user->id
+                || ($task->exists && Task::withoutGlobalScopes()->forCommercial($user)->whereKey($task->id)->exists());
+        }
         return $this->canAccessTask($user, $task);
     }
 
@@ -38,6 +45,9 @@ class TaskPolicy
 
     public function update(User $user, Task $task): bool
     {
+        if ($user->isCommercial()) {
+            return false;
+        }
         return $this->canAccessTask($user, $task);
     }
 

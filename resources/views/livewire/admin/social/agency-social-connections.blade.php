@@ -1,6 +1,6 @@
 <div>
     <x-page-header eyebrow="Social Media" title="Connessioni Meta dell'agenzia">
-        @if($connections->isNotEmpty())
+        @if($connections->isNotEmpty() && auth()->user()->can('manage_social_connections'))
         <x-slot name="actions">
             <a href="{{ route('admin.social.connections.meta.redirect') }}" class="btn btn-p u-flex u-items-center u-gap-xs">
                 <i data-lucide="plus" class="u-icon-sm"></i> Aggiungi account Meta
@@ -23,9 +23,11 @@
                 <i data-lucide="share-2" class="social-empty-icon"></i>
                 <h3 class="u-text-strong social-empty-title">Nessuna connessione Meta attiva</h3>
                 <p class="u-text-muted social-empty-text">Collega un account Meta aziendale per sincronizzare pagine Facebook e account Instagram Business.</p>
+                @can('manage_social_connections')
                 <a href="{{ route('admin.social.connections.meta.redirect') }}" class="btn btn-p u-mt-lg u-flex u-items-center u-gap-xs social-empty-btn">
                     <i data-lucide="plus" class="u-icon-sm"></i> Collega account Meta
                 </a>
+                @endcan
             </div>
         </x-panel>
     @else
@@ -73,6 +75,7 @@
                         </div>
                     </dl>
 
+                    @can('manage_social_operations')
                     <div class="u-flex u-justify-between u-items-center social-card-actions">
                         <button type="button" wire:click="syncConnection({{ $connection->id }})"
                                 wire:loading.attr="disabled"
@@ -98,6 +101,7 @@
                             </span>
                         </button>
                     </div>
+                    @endcan
                 </x-panel>
             @endforeach
         </div>

@@ -19,7 +19,7 @@ class ShootPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isOperationalStaff();
+        return $user->isOperationalStaff() || $user->isAdministration();
     }
 
     public function view(User $user, Shoot $shoot): bool

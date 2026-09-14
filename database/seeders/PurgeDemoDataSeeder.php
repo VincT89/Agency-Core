@@ -61,6 +61,9 @@ class PurgeDemoDataSeeder extends Seeder
         'tasks',
         'ticket_checklist_items',
         'ticket_comments',
+        'quote_items',
+        'quotes',
+        'ticket_requested_services',
         'tickets',
         'calendar_events',
         'electronic_invoice_events',
@@ -234,6 +237,10 @@ class PurgeDemoDataSeeder extends Seeder
             DB::table('marketing_campaign_post_publications')
                 ->whereNotNull('retry_of_publication_id')
                 ->update(['retry_of_publication_id' => null]);
+
+            DB::table('quotes')
+                ->whereNotNull('previous_quote_id')
+                ->update(['previous_quote_id' => null]);
 
             foreach (self::PURGE_TABLES as $table) {
                 DB::table($table)->delete();

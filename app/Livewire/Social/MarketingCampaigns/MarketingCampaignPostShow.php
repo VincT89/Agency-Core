@@ -214,8 +214,10 @@ class MarketingCampaignPostShow extends Component
             'publishing_platforms' => $post->publishing_platforms ?? [],
         ];
 
-        $this->loadTikTokDirectOptions();
-        $this->refreshPreflight();
+        if (auth()->user()->can('update', $this->post)) {
+            $this->loadTikTokDirectOptions();
+            $this->refreshPreflight();
+        }
     }
 
     #[On('post-saved')]
@@ -467,6 +469,7 @@ class MarketingCampaignPostShow extends Component
 
     public function browseNextcloud(string $path = '/')
     {
+        $this->authorize('update', $this->post);
         $this->nextcloud_error = null;
         $service = app(NextcloudService::class);
 
@@ -490,6 +493,7 @@ class MarketingCampaignPostShow extends Component
 
     public function openNextcloudPicker(string $mediaKind = 'photo'): void
     {
+        $this->authorize('update', $this->post);
         $this->nextcloud_media_kind = $mediaKind;
         $this->showNextcloudPicker = true;
         $this->pending_nextcloud_files = [];
@@ -1833,12 +1837,14 @@ class MarketingCampaignPostShow extends Component
 
     public function render()
     {
+        $this->authorize('view', $this->post);
         return view('livewire.social.marketing-campaigns.marketing-campaign-post-show')
             ->layout('layouts.app', ['title' => $this->post->title ?: 'Dettaglio post']);
     }
 
     public function refreshPreflight(): void
     {
+        $this->authorize('update', $this->post);
         $this->preflightResults = [];
         $platforms = [
             SocialPlatform::Instagram->value,

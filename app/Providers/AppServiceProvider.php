@@ -25,8 +25,14 @@ class AppServiceProvider extends ServiceProvider
             }
             $subject = $arguments[0] ?? null;
             if ((is_object($subject) || is_string($subject)) && is_a($subject, Client::class, true)
-                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket'], true)) {
+                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket', 'viewAny', 'view'], true)) {
                 return null;
+            }
+            foreach ([Task::class, \App\Models\Quote::class] as $readable) {
+                if ((is_object($subject) || is_string($subject)) && is_a($subject, $readable, true)
+                    && in_array($ability, ['viewAny', 'view'], true)) {
+                    return null;
+                }
             }
             foreach ([Ticket::class, Attachment::class, UserAvailability::class, CalendarEvent::class] as $allowed) {
                 if ((is_object($subject) || is_string($subject)) && is_a($subject, $allowed, true)) {
@@ -77,6 +83,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Client::class,        ClientPolicy::class);
         Gate::policy(Project::class,       ProjectPolicy::class);
         Gate::policy(Task::class,          TaskPolicy::class);
+        Gate::policy(\App\Models\Quote::class, \App\Policies\QuotePolicy::class);
         Gate::policy(Attachment::class,    AttachmentPolicy::class);
         Gate::policy(UserAvailability::class, UserAvailabilityPolicy::class);
         Gate::policy(\App\Models\HostingService::class, \App\Policies\HostingServicePolicy::class);
@@ -102,6 +109,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage_social_operations', function (\App\Models\User $user) {
             return $user->canManageSystem() || in_array($user->role, [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing]);
         });
+        Gate::define('view_social_connections', fn (\App\Models\User $user) => $user->canManageSystem() || $user->isAdministration());
+        Gate::define('view_social_operations', fn (\App\Models\User $user) => $user->canViewManagementDashboard() || $user->isMarketing());
 
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             if (auth()->check()) {
@@ -109,8 +118,8 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($user->isCommercial()) {
                     $view->with([
-                        'clientsCount' => 0, 'projectsCount' => 0, 'overdueInvoices' => 0,
-                        'openTasks' => 0, 'marketingProjectsCount' => 0,
+                        'clientsCount' => Client::visibleTo($user)->count(), 'projectsCount' => 0, 'overdueInvoices' => 0,
+                        'openTasks' => Task::query()->open()->count(), 'marketingProjectsCount' => 0,
                         'activeAvailabilityUsersCount' => 0, 'newTickets' => 0,
                         'openTickets' => Ticket::query()->open()->count(),
                         'unreadNotificationsCount' => $user->visibleNotifications()->whereNull('read_at')->count(),

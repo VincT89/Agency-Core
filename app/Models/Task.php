@@ -71,7 +71,12 @@ class Task extends Model
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        $relation = $this->belongsTo(Project::class);
+        if (auth()->user()?->isCommercial()) {
+            $relation->withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)
+                ->select(['projects.id', 'projects.name', 'projects.client_id']);
+        }
+        return $relation;
     }
 
     public function ticket(): BelongsTo
@@ -141,6 +146,10 @@ class Task extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        if ($user->isCommercial()) {
+            return $query->forCommercial($user);
+        }
+
         if ($user->canAccessAllProjects() || $user->isMarketing()) {
             return $query;
         }
@@ -148,5 +157,44 @@ class Task extends Model
         return $query->whereHas('project.users', function ($q) use ($user) {
             $q->where('users.id', $user->id);
         });
+    }
+
+    public function scopeForCommercial(Builder $query, User $user): Builder
+    {
+        return $query->where(function ($visible) use ($user) {
+            $visible->where('tasks.assigned_to', $user->id)
+                ->orWhere(fn ($clients) => $clients->forClients(Client::where('commercial_user_id', $user->id)->select('id')));
+        });
+    }
+
+    public function scopeForClients(Builder $query, $clientIds): Builder
+    {
+        return $query->where(function ($visible) use ($clientIds) {
+            $projects = fn () => Project::withoutGlobalScopes()->whereIn('client_id', $clientIds)->select('id');
+            $visible->whereIn('tasks.project_id', $projects())
+                ->orWhereIn('tasks.ticket_id', Ticket::withoutGlobalScopes()->whereIn('client_id', $clientIds)->select('id'))
+                ->orWhereIn('tasks.id', \Illuminate\Support\Facades\DB::table('shoots')->select('task_id')->whereNotNull('task_id')
+                    ->where(fn ($shoots) => $shoots->whereIn('project_id', $projects())
+                        ->orWhereIn('marketing_campaign_id', \Illuminate\Support\Facades\DB::table('marketing_campaigns')->whereIn('client_id', $clientIds)->select('id'))));
+        });
+    }
+
+    public function commercialShoot()
+    {
+        return $this->hasOne(\App\Models\Shooting\Shoot::class, 'task_id')->withoutGlobalScopes()
+            ->select(['id', 'task_id', 'project_id', 'marketing_campaign_id', 'title', 'client_notes', 'location']);
+    }
+
+    public function clientForDisplay(): ?Client
+    {
+        if ($this->project?->client) { return $this->project->client; }
+        $clientId = $this->ticket_id ? Ticket::withoutGlobalScopes()->whereKey($this->ticket_id)->value('client_id') : null;
+        if (!$clientId && $this->commercialShoot?->project_id) {
+            $clientId = Project::withoutGlobalScopes()->whereKey($this->commercialShoot->project_id)->value('client_id');
+        }
+        if (!$clientId && $this->commercialShoot?->marketing_campaign_id) {
+            $clientId = MarketingCampaign::whereKey($this->commercialShoot->marketing_campaign_id)->value('client_id');
+        }
+        return $clientId ? Client::select(['id', 'name'])->find($clientId) : null;
     }
 }

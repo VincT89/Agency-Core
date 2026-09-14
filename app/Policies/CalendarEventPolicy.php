@@ -26,6 +26,7 @@ class CalendarEventPolicy
 
     public function viewAny(User $user): bool  
     { 
+        if ($user->isAdministration()) { return true; }
         return $user->canManageSystem() || in_array($user->role, [
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::Marketing, 

@@ -11,6 +11,9 @@ class AttachmentPolicy
 
     public function download(User $user, Attachment $attachment): bool
     {
+        if ($user->isCommercial() && !$attachment->attachable instanceof \App\Models\Ticket) {
+            return false;
+        }
         if (! $attachment->attachable) {
             return false; // Nega accesso se il modello padre non esiste
         }
@@ -20,6 +23,9 @@ class AttachmentPolicy
 
     public function delete(User $user, Attachment $attachment): bool
     {
+        if ($user->isCommercial() && !$attachment->attachable instanceof \App\Models\Ticket) {
+            return false;
+        }
         if (! $attachment->attachable) {
             return false; // Nega eliminazione se il modello padre non esiste
         }

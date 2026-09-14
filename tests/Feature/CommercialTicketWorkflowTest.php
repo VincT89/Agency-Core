@@ -63,6 +63,7 @@ class CommercialTicketWorkflowTest extends TestCase
             'client_id' => $this->client->id, 'project_id' => $this->project->id,
             'title' => 'Richiesta dimostrativa', 'type' => 'request', 'priority' => 'medium',
             'description' => 'Dettagli dimostrativi del cliente.', 'requested_department' => 'marketing',
+            'requested_services' => [['name' => 'Servizio dimostrativo']],
         ], $attributes);
     }
 
@@ -254,12 +255,12 @@ class CommercialTicketWorkflowTest extends TestCase
         $this->project->users()->attach($this->commercial->id, ['role' => 'member']);
         $task = Task::create(['project_id' => $this->project->id, 'created_by' => $this->admin->id, 'title' => 'Task riservato', 'status' => 'todo']);
         $this->actingAs($this->commercial);
-        foreach (['clients.index', 'clients.show', 'projects.index', 'tasks.index', 'tasks.create', 'teams.index',
+        foreach (['projects.index', 'tasks.create', 'teams.index',
             'invoices.index', 'payments.index', 'hosting-services.index', 'users.index', 'admin.availability.index'] as $route) {
             $this->get(route($route, $route === 'clients.show' ? $this->client : []))->assertForbidden();
         }
         $this->get(route('projects.show', $this->project))->assertNotFound();
-        $this->get(route('tasks.show', $task))->assertNotFound();
+        $this->get(route('tasks.show', $task))->assertOk();
         $this->get(route('availability.index'))->assertOk();
     }
 
@@ -342,17 +343,19 @@ class CommercialTicketWorkflowTest extends TestCase
         $this->actingAs($this->commercial)->get(route('tickets.show', $ticket))->assertOk()->assertSee('In lavorazione')->assertDontSee($task->title);
     }
 
-    public function test_commercial_cannot_be_assigned_operational_tasks(): void
+    public function test_commercial_can_receive_an_operational_task_in_consultation(): void
     {
         $payload = [
             'project_id' => $this->project->id, 'assigned_to' => $this->commercial->id,
             'title' => 'Attività dimostrativa', 'status' => 'todo', 'priority' => 'medium',
         ];
-        $this->post(route('tasks.store'), $payload)->assertSessionHasErrors('assigned_to');
+        $this->post(route('tasks.store'), $payload)->assertSessionHasNoErrors()->assertRedirect();
         $task = Task::create(['project_id' => $this->project->id, 'created_by' => $this->admin->id, 'title' => 'Task dimostrativo', 'status' => 'todo']);
-        $this->put(route('tasks.update', $task), $payload)->assertSessionHasErrors('assigned_to');
-        $this->get(route('tasks.create'))->assertViewHas('users', fn ($users) => !$users->contains('id', $this->commercial->id));
-        $this->assertNull($task->fresh()->assigned_to);
+        $this->put(route('tasks.update', $task), $payload)->assertSessionHasNoErrors()->assertRedirect();
+        $this->get(route('tasks.create'))->assertViewHas('users', fn ($users) => $users->contains('id', $this->commercial->id));
+        $this->assertSame($this->commercial->id, $task->fresh()->assigned_to);
+        $this->actingAs($this->commercial)->get(route('tasks.show', $task))->assertOk();
+        $this->get(route('tasks.edit', $task))->assertForbidden();
     }
 
     public function test_notifications_do_not_reveal_tickets_or_tasks_from_a_previous_role(): void

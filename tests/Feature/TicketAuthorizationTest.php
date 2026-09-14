@@ -95,11 +95,11 @@ class TicketAuthorizationTest extends TestCase
             ->assertOk();
     }
 
-    public function test_administration_cannot_see_ticket_index(): void
+    public function test_administration_can_see_ticket_index(): void
     {
         $this->actingAs($this->administration)
             ->get(route('tickets.index'))
-            ->assertForbidden();
+            ->assertOk();
     }
 
     public function test_operativo_can_see_ticket_index(): void

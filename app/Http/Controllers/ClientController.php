@@ -22,7 +22,7 @@ class ClientController extends Controller
 
         $clients = $clientQuery->forIndex($request->all())->paginate(20)->withQueryString();
 
-        return view('clients.index', compact('clients'));
+        return view(auth()->user()->isCommercial() ? 'clients.commercial.index' : 'clients.index', compact('clients'));
     }
 
     public function create(): View
@@ -43,10 +43,19 @@ class ClientController extends Controller
     {
         $this->authorize('view', $client);
 
+        if (auth()->user()->isCommercial()) {
+            return view('clients.commercial.show', [
+                'client' => $client,
+                'quotes' => $client->quotes()->visibleTo(auth()->user())->latest()->paginate(15, ['*'], 'offers_page'),
+                'tickets' => $client->tickets()->with(['assignee:id,name', 'project'])->latest()->paginate(15, ['*'], 'tickets_page'),
+            ]);
+        }
+
         $client->load(['projects', 'tickets' => fn($q) => $q->latest()->limit(5),
                         'invoices' => fn($q) => $q->latest()->limit(5), 'attachments.uploader']);
 
-        return view('clients.show', compact('client'));
+        $quotes = $client->quotes()->visibleTo(auth()->user())->latest()->paginate(15, ['*'], 'offers_page');
+        return view('clients.show', compact('client', 'quotes'));
     }
 
     public function edit(Client $client): View

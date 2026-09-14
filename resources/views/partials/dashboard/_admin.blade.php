@@ -31,7 +31,7 @@
     </a>
 </div>
 
-<div class="g-2col u-mb-lg">
+<div @class(['g-2col', 'u-mb-lg', 'management-dashboard-full-width' => !auth()->user()->canViewAuditLogs()])>
     <div>
         <div class="mt-panel">
             <x-panel title="Andamento Finanziario" dot="var(--green)" padded>
@@ -209,8 +209,8 @@
 
     </div>
 
+    @if(auth()->user()->canViewAuditLogs())
     <div>
-
         <x-panel title="Attività Recenti" dot="var(--purple)" padded>
             @forelse($recentActivity as $log)
                 <x-audit-item :log="$log" />
@@ -219,6 +219,7 @@
             @endforelse
         </x-panel>
     </div>
+    @endif
 </div>
 
 @push('scripts')

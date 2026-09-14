@@ -11,7 +11,7 @@ function initTaskAssignees() {
             [...select.options].forEach(option => {
                 if (!option.value) return;
                 const canReceive = option.dataset.eligible === '1' && Boolean(project.value)
-                    && (option.dataset.global === '1' || (option.dataset.projects || '').split(',').includes(project.value));
+                    && (option.dataset.directAssignment === '1' || option.dataset.global === '1' || (option.dataset.projects || '').split(',').includes(project.value));
                 option.disabled = !canReceive;
                 option.hidden = !canReceive && !option.selected;
                 if (canReceive) available++;

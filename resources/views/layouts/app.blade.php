@@ -153,18 +153,22 @@
           </div>
           <x-nav-item href="{{ route('daily-notes.index') }}" wire:navigate icon="book-open" label="Blocco Note"
             :active="request()->routeIs('daily-notes.*')" />
+          <x-nav-item href="{{ route('tickets.create', ['type' => 'quote']) }}" icon="file-text" label="Richiedi preventivo"
+            :active="request()->routeIs('tickets.create') && request('type') === 'quote'" />
         </div>
       @endif
 
       {{-- ACCESSO RAPIDO --}}
-      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canManageSystem())
+      @if(auth()->user()->hasOperationalDashboard() || auth()->user()->canViewManagementDashboard())
         <div class="nav-group">
           <div class="nav-group-label">Accesso Rapido</div>
           <div class="sidebar-action-group">
+            @can('create', \App\Models\Task::class)
             <a href="{{ route('tasks.create') }}" wire:navigate class="btn btn-p sidebar-action-btn" x-bind:title="!sidebarOpen ? 'Nuovo Task' : ''">
               <i data-lucide="plus" class="u-icon-sm"></i>
               <span class="sidebar-btn-text">Nuovo Task</span>
             </a>
+            @endcan
             @can('viewAny', \App\Models\Ticket::class)
               @if(isset($newTickets) && $newTickets > 0)
                 <a href="{{ route('tickets.index') }}" wire:navigate class="sidebar-ticket-alarm" x-bind:title="!sidebarOpen ? 'Ticket' : ''">
@@ -211,6 +215,13 @@
             :active="request()->routeIs('calendar-events.*')" />
         @endcan
 
+        @if(auth()->user()->isCommercial())
+          <x-nav-item href="{{ route('clients.index') }}" icon="building-2" label="I miei clienti" :active="request()->routeIs('clients.*')" />
+        @endif
+        @can('viewAny', \App\Models\Quote::class)
+          <x-nav-item href="{{ route('quotes.index') }}" icon="file-text" label="Offerte commerciali" :active="request()->routeIs('quotes.*')" />
+        @endcan
+
         <x-nav-item href="{{ route('availability.index') }}" wire:navigate icon="clock-3" label="Le mie disponibilità"
           :active="request()->routeIs('availability.*')" />
 
@@ -223,7 +234,7 @@
       </div>
 
       {{-- 2. SOCIAL MEDIA — marketing e admin --}}
-      @if(auth()->user()->isMarketing() || auth()->user()->canManageSystem() || auth()->user()->can('manage_social_connections'))
+      @if(auth()->user()->isMarketing() || auth()->user()->canViewManagementDashboard() || auth()->user()->can('view_social_connections'))
         <div class="nav-divider"></div>
         <div class="nav-group">
           <div class="nav-group-label">Social Media</div>
@@ -239,17 +250,17 @@
               :active="request()->routeIs('social.shooting.*')" />
           @endif
 
-          @if(auth()->user()->canManageSystem())
+          @if(auth()->user()->canViewManagementDashboard())
             <x-nav-item href="{{ route('admin.shooting.index') }}" icon="camera" label="Gestione Shooting"
               :active="request()->routeIs('admin.shooting.*')" />
           @endif
               
-          @can('manage_social_connections')
+          @can('view_social_connections')
             <x-nav-item href="{{ route('admin.social.connections.index') }}" icon="share-2" label="Connessioni Social"
                 :active="request()->routeIs('admin.social.connections.*')" />
           @endcan
             
-          @can('manage_social_operations')
+          @can('view_social_operations')
             <x-nav-item href="{{ route('admin.social.operations.index') }}" icon="server-crash" label="Coda Social"
                 :active="request()->routeIs('admin.social.operations.*')" />
           @endcan

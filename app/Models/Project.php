@@ -32,6 +32,11 @@ class Project extends Model
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);
 
         static::deleting(function ($project) {
+            if (Quote::where('project_id', $project->id)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'project' => 'Il progetto è collegato allo storico delle offerte e non può essere eliminato. Puoi chiuderlo o annullarlo.',
+                ]);
+            }
             $project->tickets->each(fn($ticket) => $ticket->delete());
             $project->calendarEvents->each(fn($event) => $event->delete());
             $project->attachments->each(fn($attachment) => $attachment->delete());

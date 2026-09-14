@@ -36,6 +36,7 @@ class MarketingCampaignCreate extends Component
 
     public function save()
     {
+        $this->authorize('create', MarketingCampaign::class);
         $this->validate();
 
         $client = Client::findOrFail($this->client_id);
@@ -66,6 +67,7 @@ class MarketingCampaignCreate extends Component
 
     public function render()
     {
+        $this->authorize('create', MarketingCampaign::class);
         $user = auth()->user();
 
         // Admin/System vedono tutti i clienti, gli altri solo i propri

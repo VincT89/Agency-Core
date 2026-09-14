@@ -1,0 +1,18 @@
+.commercial-services { border: 0; min-width: 0; padding: 0; margin: 24px 0; }
+.permission-fieldset { border: 0; min-width: 0; padding: 0; margin: 0; }
+.permission-fieldset:disabled :is(input, select, textarea) { opacity: 1; }
+.management-dashboard-full-width { grid-template-columns: minmax(0, 1fr); }
+.commercial-services legend { font-weight: 600; margin-bottom: 12px; }
+.commercial-service-row { display: grid; gap: 8px; border-bottom: 1px solid var(--line); padding: 16px 0; margin-bottom: 16px; min-width: 0; }
+.commercial-history-row { padding: 18px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.commercial-history-row:first-child { padding-top: 0; }
+.commercial-history-row:last-child { border-bottom: 0; }
+.commercial-history-row h2, .commercial-history-row h3 { font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
+.commercial-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.commercial-actions form { margin: 0; }
+.commercial-members { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
+.commercial-members label { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+@media (max-width: 600px) {
+    .commercial-actions > *, .commercial-actions form .btn { width: 100%; }
+    .commercial-services .form-row { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+class Quote extends Model
+{
+    public const STATUSES = ['draft' => 'Bozza', 'presented' => 'Presentata', 'accepted' => 'Accettata', 'rejected' => 'Rifiutata'];
+
+    protected $fillable = ['client_id', 'ticket_id', 'created_by', 'previous_quote_id', 'project_id', 'revision', 'title', 'status', 'client_snapshot', 'notes', 'total', 'presented_at', 'accepted_at', 'rejected_at'];
+
+    protected $casts = ['client_snapshot' => 'array', 'total' => 'decimal:2', 'presented_at' => 'datetime', 'accepted_at' => 'datetime', 'rejected_at' => 'datetime'];
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function previousQuote(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'previous_quote_id');
+    }
+
+    public function nextQuote(): HasOne
+    {
+        return $this->hasOne(self::class, 'previous_quote_id');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(QuoteItem::class)->orderBy('sort_order');
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->isAdmin() || $user->isAdministration()) {
+            return $query;
+        }
+        if ($user->isCommercial()) {
+            return $query->where('quotes.status', '!=', 'draft')
+                ->whereHas('client', fn ($client) => $client->where('commercial_user_id', $user->id));
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+}

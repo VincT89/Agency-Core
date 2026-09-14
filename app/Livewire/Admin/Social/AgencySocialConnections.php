@@ -105,6 +105,7 @@ class AgencySocialConnections extends Component
 
     public function render()
     {
+        $this->authorize('view_social_connections');
         return view('livewire.admin.social.agency-social-connections', [
             'connections' => AgencySocialConnection::with('assets', 'connectedBy')->get(),
         ])->layout('layouts.app', ['title' => 'Connessioni Social']);

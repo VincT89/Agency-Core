@@ -12,6 +12,9 @@ class TicketPolicy
 
     public function viewAny(User $user): bool
     {
+        if ($user->isAdministration()) {
+            return true;
+        }
         return $user->canManageSystem() || in_array($user->role, [
             \App\Enums\UserRole::Developer, 
             \App\Enums\UserRole::GraphicDesigner,
@@ -30,7 +33,7 @@ class TicketPolicy
 
     public function create(User $user): bool
     {
-        return $this->viewAny($user);
+        return !$user->isAdministration() && $this->viewAny($user);
     }
 
     public function update(User $user, Ticket $ticket): bool

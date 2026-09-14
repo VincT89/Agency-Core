@@ -188,6 +188,7 @@
     </div>
 
     {{-- Commenti --}}
+    @include('tickets.partials.quote-details')
     <livewire:tickets.ticket-comments :ticket="$ticket" />
     <x-audit-timeline :logs="$ticket->auditLogs" />
 

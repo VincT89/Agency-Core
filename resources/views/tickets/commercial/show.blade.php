@@ -20,5 +20,6 @@
         @endif
     </x-panel>
     <livewire:tickets.ticket-comments :ticket="$ticket" />
+    @include('tickets.partials.quote-details')
     <livewire:shared.attachment-manager :model="$ticket" />
 </x-app-layout>

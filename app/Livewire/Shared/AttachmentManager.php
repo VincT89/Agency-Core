@@ -22,6 +22,7 @@ class AttachmentManager extends Component
 
     public function mount(Model $model)
     {
+        abort_if(auth()->user()->isCommercial() && !$model instanceof \App\Models\Ticket, 403);
         if ($model instanceof \App\Models\Ticket) {
             $this->authorize('view', $model);
         }
@@ -103,6 +104,7 @@ class AttachmentManager extends Component
 
     public function render()
     {
+        abort_if(auth()->user()->isCommercial() && !$this->model instanceof \App\Models\Ticket, 403);
         if ($this->model instanceof \App\Models\Ticket) {
             $this->authorize('view', $this->model);
         }

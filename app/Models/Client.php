@@ -107,6 +107,11 @@ class Client extends Model
         return $this->hasMany(Ticket::class);
     }
 
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
+    }
+
     public function calendarEvents(): HasMany
     {
         return $this->hasMany(CalendarEvent::class);

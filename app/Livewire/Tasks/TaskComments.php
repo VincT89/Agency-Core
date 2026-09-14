@@ -27,6 +27,8 @@ class TaskComments extends Component
 
     public function mount(Task $task)
     {
+        abort_if(auth()->user()->isCommercial(), 403);
+        $this->authorize('view', $task);
         $this->task = $task;
     }
 
@@ -53,6 +55,8 @@ class TaskComments extends Component
 
     public function render()
     {
+        abort_if(auth()->user()->isCommercial(), 403);
+        $this->authorize('view', $this->task);
         return view('livewire.tasks.task-comments');
     }
 }

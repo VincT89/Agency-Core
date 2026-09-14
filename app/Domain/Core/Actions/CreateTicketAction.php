@@ -20,7 +20,7 @@ class CreateTicketAction
             unset($data['assignment_department']);
             if (auth()->user()?->isCommercial()) {
                 $data = \Illuminate\Support\Arr::only($data, [
-                    'client_id', 'project_id', 'title', 'description', 'type', 'priority', 'requested_department',
+                    'client_id', 'project_id', 'title', 'description', 'type', 'priority', 'requested_department', 'requested_services',
                 ]);
                 $data['status'] = 'open';
                 $data['assigned_to'] = null;
@@ -34,12 +34,19 @@ class CreateTicketAction
                 $data['closed_at'] = null;
             }
 
+            $services = $data['requested_services'] ?? [];
+            unset($data['requested_services']);
             $ticket = Ticket::create($data);
+            if ($ticket->type === 'quote') {
+                foreach (array_values($services) as $index => $service) {
+                    $ticket->requestedServices()->create($service + ['sort_order' => $index]);
+                }
+            }
 
             if (!empty($data['assigned_to'])) {
                 event(new \App\Domain\Core\Events\TicketAssigned($ticket));
             } else {
-                foreach ($this->resolver->admins() as $admin) {
+                foreach ($this->resolver->intakeRecipients($ticket) as $admin) {
                     if ($admin->id !== auth()->id()) {
                         $admin->notify(new TicketUnassignedNotification($ticket));
                     }

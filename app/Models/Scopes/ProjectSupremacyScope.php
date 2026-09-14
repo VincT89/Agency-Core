@@ -24,6 +24,8 @@ class ProjectSupremacyScope implements Scope
         if ($user->isCommercial()) {
             if ($model instanceof \App\Models\Ticket) {
                 $builder->where($model->qualifyColumn('created_by'), $user->id);
+            } elseif ($model instanceof \App\Models\Task) {
+                $builder->forCommercial($user);
             } elseif ($model instanceof \App\Models\CalendarEvent) {
                 $builder->where($model->qualifyColumn('type'), 'personal')
                     ->whereNull($model->qualifyColumn('project_id'))

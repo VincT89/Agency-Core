@@ -124,7 +124,7 @@ class SecurityAuthorizationTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_administration_cannot_view_orphan_ticket()
+    public function test_administration_can_view_a_ticket_without_a_project()
     {
         $manager = User::factory()->create(['role' => UserRole::Administration]);
         
@@ -144,10 +144,8 @@ class SecurityAuthorizationTest extends TestCase
         $ticket->created_by = User::factory()->create(['role' => UserRole::Admin])->id;
         $ticket->save();
 
-        // The policy checks if they are Operative to even see Any Ticket. In show, it checks `canAccessTicket` fallback.
-        // Wait, UserRole::Administration shouldn't be able to view tickets.
         $response = $this->actingAs($manager)->get("/tickets/{$ticket->id}");
-        $response->assertStatus(403);
+        $response->assertOk()->assertSee($ticket->title);
     }
 
     public function test_administration_has_global_access_to_finance()

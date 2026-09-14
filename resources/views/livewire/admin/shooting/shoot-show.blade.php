@@ -72,7 +72,7 @@
                 </div>
             </x-panel>
 
-            @if($shoot->status === \App\Enums\Shooting\ShootStatus::WaitingClient)
+            @if($shoot->status === \App\Enums\Shooting\ShootStatus::WaitingClient && auth()->user()->can('confirmClient', $shoot))
                 <x-panel title="Comunicazione e risposta cliente" dot="var(--yellow)">
                     <div class="u-p-lg">
                         <p class="shooting-desc-text">
@@ -96,9 +96,11 @@
                         <p class="shooting-desc-text">
                             Il marketing deve aggiornare fotografo e date prima di riaprire la richiesta.
                         </p>
+                        @can('revise', $shoot)
                         <a href="{{ route('social.shooting.show', $shoot) }}" class="btn btn-p">
                             Rivedi la proposta
                         </a>
+                        @endcan
                     </div>
                 </x-panel>
             @endif
@@ -142,6 +144,7 @@
                 </div>
             </x-panel>
 
+            @if(auth()->user()->canViewAuditLogs())
             <div class="mt-panel">
                 <x-panel title="Storico attività" dot="var(--gray)">
                     <div class="u-p-md">
@@ -153,6 +156,7 @@
                     </div>
                 </x-panel>
             </div>
+            @endif
         </div>
     </div>
 </div>

@@ -79,7 +79,7 @@ class MarketingCampaign extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->canManageSystem() || $user->isMarketing()) {
+        if ($user->canViewManagementDashboard() || $user->isMarketing()) {
             return $query;
         }
 

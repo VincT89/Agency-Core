@@ -47,6 +47,7 @@ class CommercialClientWorkflowTest extends TestCase
         return array_merge([
             'client_id' => $clientId, 'title' => 'Preventivo dimostrativo',
             'type' => 'quote', 'priority' => 'medium', 'project_id' => null,
+            'requested_services' => [['name' => 'Servizio dimostrativo']],
         ], $attributes);
     }
 
@@ -110,9 +111,9 @@ class CommercialClientWorkflowTest extends TestCase
         $this->actingAs($this->commercial)->postJson(route('api.clients.quick-store'), [
             'name' => 'Cliente con proprietario falsificato', 'commercial_user_id' => $this->otherCommercial->id,
         ])->assertUnprocessable()->assertJsonValidationErrors('commercial_user_id');
-        $this->get(route('clients.index'))->assertForbidden();
+        $this->get(route('clients.index'))->assertOk()->assertSee($this->ownClient->name)->assertDontSee($this->otherClient->name);
         $this->get(route('clients.create'))->assertForbidden();
-        $this->get(route('clients.show', $this->ownClient))->assertForbidden();
+        $this->get(route('clients.show', $this->ownClient))->assertOk()->assertSee('Storico offerte commerciali');
         $this->postJson(route('clients.store'), ['name' => 'Creazione completa vietata'])->assertForbidden();
         $this->patchJson(route('clients.update', $this->ownClient), ['name' => 'Modifica vietata'])->assertForbidden();
         $this->assertDatabaseCount('clients', 3);

@@ -29,13 +29,13 @@ class ClientPolicy
 
     public function viewAny(User $user): bool  
     { 
-        return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager; 
+        return $user->isCommercial() || $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager;
     }
     
     public function view(User $user, Client $client): bool
     { 
         if ($user->isCommercial()) {
-            return false;
+            return (int) $client->commercial_user_id === (int) $user->id;
         }
 
         if ($user->role === UserRole::Administration || $user->role === UserRole::OperationsManager) {

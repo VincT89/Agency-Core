@@ -17,6 +17,9 @@ use App\Models\MarketingCampaignPost;
 use App\Models\MarketingCampaignPostMedia;
 use App\Models\MarketingCampaignPostPublication;
 use App\Models\MarketingCampaignPostVersion;
+use App\Models\Project;
+use App\Models\Quote;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Models\UserAvailability;
 use Database\Seeders\PurgeDemoDataSeeder;
@@ -71,6 +74,15 @@ class PurgeDemoDataSeederTest extends TestCase
         ]);
 
         $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+        $ticket = Ticket::create(['client_id' => $client->id, 'project_id' => $project->id, 'created_by' => $otherUser->id,
+            'title' => 'Richiesta dimostrativa', 'type' => 'quote', 'status' => 'open', 'priority' => 'medium']);
+        $ticket->requestedServices()->create(['name' => 'Servizio dimostrativo']);
+        $offer = Quote::create(['client_id' => $client->id, 'project_id' => $project->id, 'ticket_id' => $ticket->id,
+            'created_by' => $otherUser->id, 'title' => 'Offerta dimostrativa', 'status' => 'draft']);
+        $revision = Quote::create(['client_id' => $client->id, 'previous_quote_id' => $offer->id, 'revision' => 2,
+            'title' => 'Revisione dimostrativa', 'status' => 'draft']);
+        $revision->items()->create(['name' => 'Servizio dimostrativo', 'quantity' => '1', 'unit_price' => '1', 'total' => '1']);
         $campaign = MarketingCampaign::factory()->create([
             'client_id' => $client->getKey(),
             'created_by' => $otherUser->getKey(),

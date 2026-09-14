@@ -33,4 +33,12 @@ class TicketNotificationRecipientResolver
 
         return $recipients->values();
     }
+
+    public function intakeRecipients(Ticket $ticket): Collection
+    {
+        return User::query()->where('status', 'active')
+            ->whereIn('role', $ticket->type === 'quote'
+                ? [UserRole::Admin->value, UserRole::Administration->value]
+                : [UserRole::Admin->value])->get();
+    }
 }

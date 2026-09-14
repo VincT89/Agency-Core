@@ -16,6 +16,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
             phone: '',
             vat_number: '',
             address: '',
+            reference_person: '', tax_code: '', city: '', postal_code: '', province: '', country: '',
             status: 'active'
         },
         errors: {},
@@ -131,6 +132,9 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
             if (this.newClient.phone) payload.phone = this.newClient.phone;
             if (this.newClient.vat_number) payload.vat_number = this.newClient.vat_number;
             if (this.newClient.address) payload.address = this.newClient.address;
+            for (const field of ['reference_person', 'tax_code', 'city', 'postal_code', 'province', 'country']) {
+                if (this.newClient[field]) payload[field] = this.newClient[field];
+            }
 
             try {
                 const response = await fetch(storeEndpoint, {
@@ -155,7 +159,7 @@ export default function clientAutocomplete({ initialValue, initialText, canCreat
                         email: '',
                         phone: '',
                         vat_number: '',
-                        address: ''
+                        address: '', reference_person: '', tax_code: '', city: '', postal_code: '', province: '', country: ''
                     };
                     this.showQuickCreate = false;
                 } else if (response.status === 422) {

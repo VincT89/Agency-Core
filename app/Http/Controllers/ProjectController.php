@@ -41,35 +41,9 @@ class ProjectController extends Controller
         return view('projects.create', compact('users', 'departments'));
     }
 
-    public function store(StoreProjectRequest $request): RedirectResponse
+    public function store(StoreProjectRequest $request, \App\Domain\Core\Actions\CreateProjectAction $action): RedirectResponse
     {
-        $data = $request->validated();
-        $data['slug'] = $this->uniqueSlug($data['name']);
-
-        $members = $data['members'] ?? [];
-        $roles = $data['roles'] ?? [];
-
-        unset($data['members'], $data['roles']);
-
-        $project = Project::create($data);
-
-        if (! in_array(auth()->id(), $members, true)) {
-            $members[] = auth()->id();
-            $roles[auth()->id()] = 'sponsor';
-        }
-
-        $sync = [];
-
-        foreach ($members as $userId) {
-            $sync[$userId] = [
-                'role' => $roles[$userId] ?? 'member',
-                'assignment_status' => 'active',
-                'assigned_at' => now(),
-                'unassigned_at' => null,
-            ];
-        }
-
-        $project->users()->sync($sync);
+        $project = $action->execute($request->validated());
 
         return redirect()->route('projects.show', $project)
             ->with('success', 'Progetto creato correttamente.');
@@ -154,7 +128,9 @@ class ProjectController extends Controller
     public function destroy(Project $project): RedirectResponse
     {
         $this->authorize('delete', $project);
-        $project->delete();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($project) {
+            Project::lockForUpdate()->findOrFail($project->id)->delete();
+        });
 
         return redirect()->route('projects.index')
             ->with('success', 'Progetto eliminato correttamente.');

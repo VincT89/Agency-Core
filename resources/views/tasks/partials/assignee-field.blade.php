@@ -6,12 +6,12 @@
             @php
                 $eligible = $user->status === 'active' && $user->can('viewAny', \App\Models\Task::class);
                 $available = $eligible && $selectedProjectId
-                    && ($user->canBypassProjectScope() || $user->projects->contains('id', $selectedProjectId));
+                    && ($user->isCommercial() || $user->canBypassProjectScope() || $user->projects->contains('id', $selectedProjectId));
                 $selected = (string) $selectedAssignee === (string) $user->id;
             @endphp
             <option value="{{ $user->id }}" data-eligible="{{ $eligible ? '1' : '0' }}"
                 data-projects="{{ implode(',', $user->projects->modelKeys()) }}"
-                data-global="{{ $user->canBypassProjectScope() ? '1' : '0' }}"
+                data-global="{{ $user->canBypassProjectScope() ? '1' : '0' }}" data-direct-assignment="{{ $user->isCommercial() ? '1' : '0' }}"
                 @selected($selected) @disabled(!$available) @if(!$available && !$selected) hidden @endif>{{ $user->name }}</option>
         @endforeach
     </select>

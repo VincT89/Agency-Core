@@ -59,9 +59,11 @@
               <button type="button" wire:click="$set('postFilter', 'archived')" class="btn btn-sm {{ $postFilter === 'archived' ? 'btn-p' : 'btn-sec' }}">
                 Archiviati ({{ $archivedPostsCount }})
               </button>
+              @can('create', \App\Models\MarketingCampaignPost::class)
               <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate.hover class="btn btn-p btn-sm u-flex-center u-gap-xs">
                   <i data-lucide="plus" class="u-icon-sm"></i> Nuovo Post
               </a>
+              @endcan
             </div>
         </x-slot:headerActions>
         <div class="table-responsive">
@@ -113,11 +115,13 @@
                 <td class="t-actions" data-label="Azioni">
                   <div class="t-actions-list">
                     <a href="{{ route('marketing-campaigns.posts.show', ['campaign' => $campaign->id, 'post' => $post->id]) }}" wire:navigate class="btn btn-sec btn-xs">Dettagli</a>
+                    @can('update', $post)
                     @if($post->isArchived())
                       <button type="button" wire:click="restorePost({{ $post->id }})" wire:confirm="Ripristinare questo post nelle viste operative?" class="btn btn-p btn-xs">Ripristina</button>
                     @elseif($post->canBeArchived())
                       <button type="button" wire:click="archivePost({{ $post->id }})" wire:confirm="Il post verrà nascosto dalle viste operative, ma lo storico resterà conservato. Verifica prima che il contenuto non sia già visibile sul social: nessun contenuto remoto verrà eliminato. Procedere?" class="btn btn-red btn-xs">Archivia</button>
                     @endif
+                    @endcan
                   </div>
                 </td>
               </tr>
@@ -136,9 +140,11 @@
     <div class="cal-gshell" id="mkt-calendar-wrapper">
         <!-- SIDEBAR -->
         <aside class="cal-gsidebar">
+            @can('create', \App\Models\MarketingCampaignPost::class)
             <a href="{{ route('marketing-campaigns.posts.create', $campaign->id) }}" wire:navigate class="btn btn-p u-flex-center u-gap-xs u-w-full u-mb-md">
                 <i data-lucide="plus" class="u-icon-sm"></i> Nuovo Post
             </a>
+            @endcan
 
             <!-- Mini-Mese -->
             <div class="cal-mini-month">
@@ -205,7 +211,7 @@
         </main>
     </div>
 
-    @if(auth()->user()->isAdmin())
+    @if(auth()->user()->canViewManagementDashboard())
       {{-- Blocchi di Gestione --}}
       <div class="g-2col cmp-campaign-admin-grid">
         
@@ -253,7 +259,7 @@
         {{-- Extra --}}
         <x-panel title="Extra Campagna">
           <x-slot:headerActions>
-            <button type="button" wire:click="openExtraModal" class="btn btn-p btn-sm">Aggiungi</button>
+            @can('update', $campaign)<button type="button" wire:click="openExtraModal" class="btn btn-p btn-sm">Aggiungi</button>@endcan
           </x-slot:headerActions>
           <div class="table-responsive">
             <table class="t-table cmp-admin-table cmp-extras-table">
@@ -282,13 +288,13 @@
                     <td><x-badge :status="$extra->status->value" :label="$extra->status->label()" /></td>
                     <td class="t-actions">
                       <div class="t-actions-list">
-                        @if(!$extra->invoice_id)
+                        @if(!$extra->invoice_id && auth()->user()->can('update', $campaign))
                           <x-delete-modal wireClick="deleteExtra({{ $extra->id }})" title="Annulla Extra" message="Sei sicuro di voler annullare questo extra?">
                             <button type="button" class="btn-icon u-text-red" title="Annulla extra" aria-label="Annulla extra">
                               <i data-lucide="trash-2" class="u-icon-sm"></i>
                             </button>
                           </x-delete-modal>
-                        @else
+                        @elseif($extra->invoice_id)
                           <span class="u-text-meta">Fatturato</span>
                         @endif
                       </div>
@@ -308,7 +314,7 @@
       {{-- Storico Fatture --}}
       <x-panel title="Storico Fatture">
         <x-slot:headerActions>
-          <button type="button" wire:click="openInvoiceModal" class="btn btn-p btn-sm">Genera fattura</button>
+          @can('update', $campaign)<button type="button" wire:click="openInvoiceModal" class="btn btn-p btn-sm">Genera fattura</button>@endcan
         </x-slot:headerActions>
         <div class="table-responsive">
             <table class="t-table cmp-admin-table cmp-invoices-table">

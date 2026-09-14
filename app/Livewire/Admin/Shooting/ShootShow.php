@@ -21,7 +21,7 @@ class ShootShow extends Component
 
     public function mount(Shoot $shoot): void
     {
-        if (! auth()->user()->canManageSystem()) {
+        if (! auth()->user()->canViewManagementDashboard()) {
             abort(403);
         }
 
@@ -71,6 +71,8 @@ class ShootShow extends Component
 
     public function render(ShootingClientCommunicationService $communication)
     {
+        abort_unless(auth()->user()->canViewManagementDashboard(), 403);
+        $this->authorize('view', $this->shoot);
         return view('livewire.admin.shooting.shoot-show', [
             'communication' => $communication->for($this->shoot),
             'clientChannels' => ShootClientContactChannel::cases(),

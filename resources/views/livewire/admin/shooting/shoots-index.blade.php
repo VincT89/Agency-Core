@@ -1,9 +1,11 @@
 <div>
     <x-page-header eyebrow="Amministrazione" title="Gestione Shooting">
         <x-slot name="actions">
+            @can('create', \App\Models\Shooting\Shoot::class)
             <a href="{{ route('social.shooting.create') }}" class="btn btn-p u-flex u-items-center u-gap-xs">
                 <i data-lucide="plus" class="u-icon-sm"></i> Nuova Richiesta
             </a>
+            @endcan
         </x-slot>
     </x-page-header>
 

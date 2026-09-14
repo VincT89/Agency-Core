@@ -11,12 +11,12 @@ class MarketingCampaignPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isMarketing();
+        return $user->isMarketing() || $user->isAdministration();
     }
 
     public function view(User $user, MarketingCampaign $marketingCampaign): bool
     {
-        return $user->isMarketing();
+        return $user->isMarketing() || $user->isAdministration();
     }
 
     public function create(User $user): bool

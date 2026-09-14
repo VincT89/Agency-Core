@@ -9,9 +9,12 @@ class ClientQuery
 {
     public function forIndex(array $filters = []): Builder
     {
-        $query = Client::query()
-            ->withCount(['projects', 'tickets', 'invoices'])
-            ->orderBy('name');
+        $query = Client::query()->orderBy('name');
+        if (auth()->user()?->isCommercial()) {
+            $query->visibleTo(auth()->user());
+        } else {
+            $query->withCount(['projects', 'tickets', 'invoices']);
+        }
 
         if (!empty($filters['search'])) {
             $searchStr = '%' . strtolower($filters['search']) . '%';

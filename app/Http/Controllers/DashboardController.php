@@ -16,12 +16,12 @@ class DashboardController extends Controller
         $user = auth()->user();
         $data = [];
 
-        if ($user->canManageSystem()) {
+        if ($user->canViewManagementDashboard()) {
             $data = $this->getAdminData($user);
-        } elseif ($user->isAdministration()) {
-            $data = $this->getAdministrationData($user);
         } elseif ($user->isCommercial()) {
             $data = [
+                'commercialTasks' => Task::query()->with(['project.client:id,name', 'assignee:id,name', 'commercialShoot'])
+                    ->latest('updated_at')->limit(10)->get(),
                 'commercialTickets' => Ticket::query()->open()
                     ->with(['client:id,name', 'project', 'assignee:id,name,role'])
                     ->latest('updated_at')->limit(10)->get(),
@@ -52,7 +52,7 @@ class DashboardController extends Controller
                                     ->orderBy('due_date', 'asc')
                                     ->with(['project', 'assignee'])
                                     ->limit(5)->get(),
-            'recentActivity'   => AuditLog::with('user')->latest()->limit(8)->get(),
+            'recentActivity'   => $user->canViewAuditLogs() ? AuditLog::with('user')->latest()->limit(8)->get() : collect(),
             'recentTickets'    => Ticket::with(['project', 'assignee'])->latest()->limit(5)->get(),
             'upcomingEvents'   => \App\Models\CalendarEvent::where('start_at', '>=', now())
                                     ->where(function($q) use ($user) {

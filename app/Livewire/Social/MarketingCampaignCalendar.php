@@ -73,6 +73,7 @@ class MarketingCampaignCalendar extends Component
 
     private function baseQuery()
     {
+        $this->authorize('viewAny', MarketingCampaign::class);
         $query = MarketingCampaignPost::query()
             ->notArchived()
             ->calendarEligible()
@@ -90,7 +91,7 @@ class MarketingCampaignCalendar extends Component
         }
 
         // Applica le policy di sicurezza basate sui clienti visibili
-        if (! auth()->user()->canManageSystem() && ! auth()->user()->isMarketing()) {
+        if (! auth()->user()->canViewManagementDashboard() && ! auth()->user()->isMarketing()) {
             $query->whereHas('campaign', function ($query) {
                 $query->visibleTo(auth()->user());
             });
@@ -149,7 +150,7 @@ class MarketingCampaignCalendar extends Component
             $shootsQuery->where('marketing_campaign_id', $this->campaignFilter);
         }
 
-        if (! auth()->user()->canManageSystem() && ! auth()->user()->isMarketing()) {
+        if (! auth()->user()->canViewManagementDashboard() && ! auth()->user()->isMarketing()) {
             $shootsQuery->whereHas('marketingCampaign', function ($query) {
                 $query->visibleTo(auth()->user());
             });
@@ -179,7 +180,7 @@ class MarketingCampaignCalendar extends Component
                     'id' => 'shoot_'.$shoot->id,
                     'title' => '📷 '.($shoot->title ?? 'Shooting'),
                     'start' => $date.'T'.$time,
-                    'url' => route('social.shooting.show', $shoot->id),
+                    'url' => route(auth()->user()->canViewManagementDashboard() ? 'admin.shooting.show' : 'social.shooting.show', $shoot->id),
                     'backgroundColor' => '#ec4899', // Pink-500 for shooting
                     'borderColor' => '#db2777',
                     'extendedProps' => [

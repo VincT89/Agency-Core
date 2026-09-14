@@ -11,13 +11,13 @@ class ClientSocialAccountPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isMarketing();
+        return $user->isAdmin() || $user->isMarketing() || $user->isAdministration();
     }
 
 
     public function view(User $user, ClientSocialAccount $clientSocialAccount): bool
     {
-        return $user->isAdmin() || $user->isMarketing();
+        return $user->isAdmin() || $user->isMarketing() || $user->isAdministration();
     }
 
 

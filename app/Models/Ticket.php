@@ -145,6 +145,16 @@ class Ticket extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function requestedServices()
+    {
+        return $this->hasMany(TicketRequestedService::class)->orderBy('sort_order');
+    }
+
+    public function quotes()
+    {
+        return $this->hasMany(Quote::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

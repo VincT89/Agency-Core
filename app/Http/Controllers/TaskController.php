@@ -23,6 +23,17 @@ class TaskController extends Controller
     {
         $this->authorize('viewAny', Task::class);
 
+        if ($request->user()->isCommercial()) {
+            $query = $taskQuery->forIndex($request->all())->with('commercialShoot');
+            if ($request->filled('client_id')) {
+                $query->forClients([$request->integer('client_id')]);
+            }
+            return view('tasks.commercial.index', [
+                'tasks' => $query->paginate(20)->withQueryString(),
+                'clients' => Client::visibleTo($request->user())->orderBy('name')->get(['id', 'name']),
+            ]);
+        }
+
         $viewMode = $request->get('view') === 'kanban' ? 'kanban' : 'list';
         
         $taskList = null;
@@ -35,7 +46,7 @@ class TaskController extends Controller
         }
 
         $projects = Project::where('status', 'active')->orderBy('name')->get(['id', 'name']);
-        $users    = User::where('status', 'active')->where('role', '!=', \App\Enums\UserRole::Commercial)->orderBy('name')->get(['id', 'name']);
+        $users    = User::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('tasks.index', compact('viewMode', 'taskList', 'kanbanTasks', 'projects', 'users'));
     }
@@ -95,15 +106,21 @@ class TaskController extends Controller
     public function show(Task $task, \App\Domain\Core\Queries\TaskQuery $taskQuery): View
     {
         $this->authorize('view', $task);
+        if (auth()->user()->isCommercial()) {
+            $task->load(['project.client:id,name', 'assignee:id,name', 'ticket:id,title,code,client_id,created_by', 'commercialShoot']);
+            return view('tasks.commercial.show', compact('task'));
+        }
         $task->load([
             'project.client', 
             'creator', 
             'assignee', 
             'attachments', 
-            'auditLogs' => fn ($q) => $q->with('user')->latest()->limit(8),
             'comments.user',
             'checklistItems.completedBy',
         ]);
+        if (auth()->user()->canViewAuditLogs()) {
+            $task->load(['auditLogs' => fn ($q) => $q->with('user')->latest()->limit(8)]);
+        }
 
         $projectTasks = collect();
 

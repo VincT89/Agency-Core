@@ -153,6 +153,10 @@
     </x-panel>
 
 
+    @can('viewAny', \App\Models\Quote::class)
+        <div class="mt-panel">@include('quotes.partials.history')</div>
+        @can('create', \App\Models\Quote::class)<a href="{{ route('quotes.create', ['client_id' => $client->id]) }}" class="btn btn-p u-mt-lg">Prepara offerta</a>@endcan
+    @endcan
     <x-audit-timeline :logs="$client->auditLogs" />
     
     {{-- Allegati --}}

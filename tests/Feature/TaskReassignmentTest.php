@@ -107,7 +107,9 @@ class TaskReassignmentTest extends TestCase
     {
         $this->postJson(route('tasks.store'), $this->payload(['assigned_to' => $this->outsider->id]))
             ->assertUnprocessable()->assertJsonValidationErrors('assigned_to');
-        $this->postJson(route('tasks.store'), $this->payload(['assigned_to' => $this->user(UserRole::Administration)->id]))
+        $inactive = $this->user(UserRole::Administration);
+        $inactive->update(['status' => 'inactive']);
+        $this->postJson(route('tasks.store'), $this->payload(['assigned_to' => $inactive->id]))
             ->assertUnprocessable()->assertJsonValidationErrors('assigned_to');
         $this->assertDatabaseCount('tasks', 1);
     }

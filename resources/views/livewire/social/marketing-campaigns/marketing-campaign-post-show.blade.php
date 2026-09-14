@@ -58,6 +58,7 @@
         </x-slot:title>
         <x-slot:actions>
             <x-badge :status="$post->status->value" :label="$post->status->label()" />
+            @can('update', $post)
             @if($post->isArchived())
                 <span class="badge bd">Archiviato</span>
                 <button type="button" wire:click="restorePost" wire:confirm="Ripristinare questo post nelle viste operative?" class="btn btn-p btn-sm">
@@ -83,6 +84,7 @@
                     <span class="u-text-meta u-text-muted">Post storico: non eliminabile da questa schermata.</span>
                 </div>
             @endif
+            @endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -173,6 +175,7 @@
                 <div class="u-p-lg relative">
 
                     <form wire:submit.prevent class="form-stack">
+                        <fieldset class="permission-fieldset form-stack" @disabled(auth()->user()->cannot('update', $post))>
 
                         {{-- Blocco 1: Piattaforme --}}
                         <div class="panel cmp-panel-pad" x-data="{ platforms: $wire.entangle('form.publishing_platforms') }">
@@ -874,6 +877,7 @@
                                 @endif
                             </div>
 
+                        </fieldset>
                     </form>
                 </div>
             </div>
@@ -971,6 +975,7 @@
                     <div class="lw-modal-hd">
                         <div class="cmp-panel-title">Pubblicazione Social</div>
                     </div>
+                    <fieldset class="permission-fieldset" @disabled(auth()->user()->cannot('update', $post))>
                     <div class="u-p-lg u-flex-col u-gap-md">
                         @if(empty($form['publishing_platforms']))
                             <div class="u-text-meta u-text-muted">Nessuna piattaforma selezionata per questo post.</div>
@@ -1009,10 +1014,10 @@
                                         && $commercialSelectionComplete
                                         && (!$brandContent || $brandVisibilityAllowed)
                                         && $hasDirectConsent;
-                                    $canStartPublication = !$post->isArchived()
+                                    $canStartPublication = auth()->user()->can('update', $post) && !$post->isArchived()
                                         && $canPublish
                                         && (!$isTikTokDirect || $directOptionsReady);
-                                    $canRetryPublication = !$post->isArchived()
+                                    $canRetryPublication = auth()->user()->can('update', $post) && !$post->isArchived()
                                         && $canPublish
                                         && (!$isDirectRetry || $hasDirectConsent);
                                     $showTikTokDirectEditor = !$post->isArchived()
@@ -1303,6 +1308,7 @@
                             @endforeach
                         @endif
                     </div>
+                    </fieldset>
                 </div>
             @endif
 

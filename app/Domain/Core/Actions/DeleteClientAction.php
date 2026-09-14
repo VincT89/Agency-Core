@@ -22,6 +22,11 @@ class DeleteClientAction
 
         DB::transaction(function () use ($clientId) {
             $lockedClient = Client::where('id', $clientId)->lockForUpdate()->firstOrFail();
+            if ($lockedClient->quotes()->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'client' => 'Il cliente ha uno storico di offerte commerciali e non può essere eliminato. Puoi impostarlo come inattivo.',
+                ]);
+            }
 
             // Lock related campaigns
             $campaigns = $lockedClient->marketingCampaigns()->lockForUpdate()->get();

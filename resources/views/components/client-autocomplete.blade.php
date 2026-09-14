@@ -4,6 +4,7 @@
     'value' => null,
     'text' => null,
     'canCreate' => auth()->user()->can('quickCreate', \App\Models\Client::class),
+    'extended' => false,
 ])
 
 @php($resultsId = $name . '_autocomplete_results')
@@ -126,6 +127,19 @@
              </div>
 
              {{-- Notice for Default Status --}}
+             @if($extended)
+                 @foreach(array_chunk(['reference_person' => ['Referente', 255], 'tax_code' => ['Codice fiscale', 20], 'city' => ['Comune', 100], 'postal_code' => ['CAP', 10], 'province' => ['Provincia', 5], 'country' => ['Paese', 100]], 2, true) as $fields)
+                     <div class="form-row">
+                         @foreach($fields as $field => [$label, $length])
+                             <div>
+                                 <label for="{{ $name }}_new_{{ $field }}">{{ $label }}</label>
+                                 <input id="{{ $name }}_new_{{ $field }}" type="text" x-model="newClient.{{ $field }}" class="form-in ca-create-input" maxlength="{{ $length }}">
+                                 <div x-show="errors.{{ $field }}" class="ca-error-text" x-text="errors.{{ $field }}"></div>
+                             </div>
+                         @endforeach
+                     </div>
+                 @endforeach
+             @endif
              <div class="ca-info-text">
                 Il cliente verrà creato automaticamente con stato <strong>Attivo</strong>.
              </div>

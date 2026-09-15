@@ -10,13 +10,25 @@
 <x-app-layout :title="$quote ? 'Modifica bozza offerta' : 'Prepara offerta'">
     <x-page-header><x-slot:title>{{ $quote ? 'Modifica bozza offerta' : 'Prepara offerta' }}</x-slot:title></x-page-header>
     <x-panel padded>
-        <p class="u-mb-md">Cliente: <strong>{{ $client->name }}</strong></p>
+        @if($quote || $ticket)
+            <p class="u-mb-md">Cliente: <strong>{{ $client->name }}</strong></p>
+        @endif
         @if($errors->any())<div role="alert" class="ca-error-text">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
         <form method="POST" action="{{ $quote ? route('quotes.update', $quote) : route('quotes.store') }}" x-data="{ items: @js($initialItems) }">
             @csrf
-            @if($quote) @method('PUT') @else
+            @if($quote)
+                @method('PUT')
+            @elseif($ticket)
                 <input type="hidden" name="client_id" value="{{ $client->id }}">
-                @if($ticket)<input type="hidden" name="ticket_id" value="{{ $ticket->id }}">@endif
+                <input type="hidden" name="ticket_id" value="{{ $ticket->id }}">
+            @else
+                <x-form-group label="Cliente" name="client_id" for="client_id_search" required>
+                    <x-client-autocomplete
+                        name="client_id" :required="true" :extended="true"
+                        :value="$client?->id"
+                        :text="$client ? $client->name . ($client->company_name ? ' - ' . $client->company_name : '') : null"
+                    />
+                </x-form-group>
             @endif
             <x-form-group label="Oggetto dell’offerta" name="title" required>
                 <input name="title" class="form-in" value="{{ old('title', $quote?->title ?? $ticket?->title) }}" maxlength="255" required>
@@ -44,7 +56,7 @@
                 <textarea name="notes" class="form-ta" rows="4" maxlength="10000">{{ old('notes', $quote?->notes) }}</textarea>
             </x-form-group>
             <div class="modal-ft u-section-sep commercial-actions">
-                <a href="{{ $quote ? route('quotes.show', $quote) : route('clients.show', $client) }}" class="btn btn-g">Annulla</a>
+                <a href="{{ $quote ? route('quotes.show', $quote) : ($client ? route('clients.show', $client) : route('quotes.index')) }}" class="btn btn-g">Annulla</a>
                 <button class="btn btn-p" type="submit">Salva bozza</button>
             </div>
         </form>

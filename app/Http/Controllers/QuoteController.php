@@ -37,8 +37,18 @@ class QuoteController extends Controller
             $this->authorize('view', $ticket);
             abort_unless($ticket->type === 'quote', 422);
         }
-        $client = Client::findOrFail($ticket?->client_id ?? $request->integer('client_id'));
-        $this->authorize('view', $client);
+        $client = null;
+        if ($ticket) {
+            $client = Client::findOrFail($ticket->client_id);
+        } elseif ($request->session()->hasOldInput('client_id')) {
+            $clientId = filter_var($request->old('client_id'), FILTER_VALIDATE_INT);
+            $client = $clientId ? Client::find($clientId) : null;
+        } elseif ($request->filled('client_id')) {
+            $client = Client::findOrFail($request->integer('client_id'));
+        }
+        if ($client) {
+            $this->authorize('view', $client);
+        }
 
         return view('quotes.form', ['quote' => null, 'client' => $client, 'ticket' => $ticket]);
     }

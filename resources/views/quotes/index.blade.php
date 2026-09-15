@@ -1,5 +1,12 @@
 <x-app-layout title="Offerte commerciali">
-    <x-page-header><x-slot:title>Offerte commerciali</x-slot:title></x-page-header>
+    <x-page-header>
+        <x-slot:title>Offerte commerciali</x-slot:title>
+        @can('create', \App\Models\Quote::class)
+            <x-slot:actions>
+                <a href="{{ route('quotes.create') }}" class="btn btn-p">Nuova offerta</a>
+            </x-slot:actions>
+        @endcan
+    </x-page-header>
     <form method="GET" class="ticket-search-form">
         <x-form-group label="Stato" name="status">
             <select name="status" class="form-sel">

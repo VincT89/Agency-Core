@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateCalendarEventRequest;
 use App\Models\CalendarEvent;
 use App\Models\Client;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -37,9 +38,18 @@ class CalendarEventController extends Controller
 
         // Restituisci la risposta JSON formattata per FullCalendar
         if ($request->wantsJson() || $request->query('format') === 'json') {
+            $range = $request->validate([
+                'start' => ['nullable', 'date'],
+                'end' => ['nullable', 'date'],
+            ]);
+            $start = isset($range['start']) ? Carbon::parse($range['start'])->setTimezone(config('app.timezone')) : null;
+            $end = isset($range['end']) ? Carbon::parse($range['end'])->setTimezone(config('app.timezone')) : null;
+
             $events = $query
-                ->when($request->start, fn($q) => $q->where('start_at', '>=', $request->start))
-                ->when($request->end,   fn($q) => $q->where('start_at', '<=', $request->end))
+                ->when($start, fn($q) => $q->where(fn($overlap) => $overlap
+                    ->where('start_at', '>=', $start)
+                    ->orWhere('end_at', '>', $start)))
+                ->when($end, fn($q) => $q->where('start_at', '<', $end))
                 ->get();
 
             return response()->json($events->map(function($e) use ($request) {

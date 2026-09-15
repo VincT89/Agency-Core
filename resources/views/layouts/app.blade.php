@@ -361,10 +361,10 @@
       <div class="content page-transition-root" id="content-area" tabindex="-1">
         {{-- Flash messages --}}
         @if(session('success'))
-          <div class="flash flash-success">{{ session('success') }}</div>
+          <div class="flash flash-success" data-flash-toast="success">{{ session('success') }}</div>
         @endif
         @if(session('error'))
-          <div class="flash flash-error">{{ session('error') }}</div>
+          <div class="flash flash-error" data-flash-toast="error">{{ session('error') }}</div>
         @endif
 
         {{ $slot }}
@@ -380,14 +380,6 @@
       window.marketingCampaignDetailCalendar?.updateSize();
       window.dispatchEvent(new CustomEvent('app:layout-resized'));
     };
-
-    // Flash → toast automatico
-    @if(session('success'))
-      document.addEventListener('DOMContentLoaded', () => toast("{{ session('success') }}", 'success'));
-    @endif
-    @if(session('error'))
-      document.addEventListener('DOMContentLoaded', () => toast("{{ session('error') }}", 'error'));
-    @endif
   </script>
 
   @stack('scripts')

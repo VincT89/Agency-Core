@@ -114,7 +114,7 @@
             @endif
         </aside>
 
-        <main class="cal-gmain" x-data="calendarKanbanApp('{{ $startOfWeek->toDateString() }}', '{{ $endOfWeek->toDateString() }}')" @view-mode-changed.window="viewMode = $event.detail">
+        <main class="cal-gmain" x-data="calendarKanbanApp('{{ $startOfWeek->toDateString() }}', '{{ $endOfWeek->copy()->addDay()->toDateString() }}')" @view-mode-changed.window="viewMode = $event.detail">
             <div class="u-flex-between u-mb-md u-px-md">
                 <div x-show="viewMode === 'kanban'" class="u-flex u-items-center u-gap-md" style="display: none;">
                     <h3 class="u-text-lg u-font-medium">Vista Kanban ({{ $startOfWeek->format('d/m') }} - {{ $endOfWeek->format('d/m') }})</h3>
@@ -166,11 +166,11 @@
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
         {{-- FullCalendar via CDN --}}
-        <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/it.global.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/it.global.min.js"></script>
 
         <script>
+        (() => {
             const CREATE_URL = '{{ route('calendar-events.create') }}';
             const EVENTS_URL = '{{ route('calendar-events.index') }}';
             const CURRENT_DEPT = '{{ request('department') }}';
@@ -206,7 +206,7 @@
                     window.calendarEventsInstance = new FullCalendar.Calendar(calEl, {
                         locale: 'it',
                         firstDay: 1, // Start on Monday
-                        initialView: 'timeGridWeek',
+                        initialView: window.innerWidth < 640 ? 'timeGridDay' : 'timeGridWeek',
                         initialDate: '{{ $currentDateStr }}',
                         headerToolbar: {
                             left: 'today prev,next',
@@ -327,17 +327,15 @@
                 }
             }
 
-            document.addEventListener('livewire:navigating', cleanupCalendarEvents);
+            document.addEventListener('livewire:navigating', cleanupCalendarEvents, { once: true });
 
-            document.addEventListener('livewire:navigated', function () {
-                initCalendarEvents();
-            });
+            document.addEventListener('livewire:navigated', initCalendarEvents, { once: true });
 
-            document.addEventListener('alpine:init', () => {
-                Alpine.data('calendarKanbanApp', (startDate, endDate) => ({
+            window.calendarKanbanApp = (startDate, endDate) => ({
                     viewMode: localStorage.getItem('calendarViewMode') || 'calendar',
                     events: {},
                     rawEvents: [],
+                    isFetching: false,
                     
                     init() {
                         this.fetchEvents();
@@ -351,7 +349,13 @@
                         });
                     },
 
+                    destroy() {
+                        this.$el.querySelectorAll('.sortable-col').forEach(col => col._sortable?.destroy());
+                    },
+
                     async fetchEvents() {
+                        if (this.isFetching) return;
+                        this.isFetching = true;
                         try {
                             const params = new URLSearchParams({
                                 format: 'json',
@@ -372,6 +376,8 @@
                             }
                         } catch (e) {
                             console.error("Error fetching kanban events", e);
+                        } finally {
+                            this.isFetching = false;
                         }
                     },
 
@@ -456,8 +462,8 @@
                                         
                                         if (res.ok) {
                                             // Aggiorna lo state interno
-                                            eventObj.start = newStart.toISOString();
-                                            if (eventObj.end) eventObj.end = newEnd.toISOString();
+                                            eventObj.start = newStartStr.replace(' ', 'T');
+                                            if (newEndStr) eventObj.end = newEndStr.replace(' ', 'T');
                                             self.groupEvents();
                                             // Se il calendario FullCalendar è inizializzato, ricarica
                                             if (window.calendarEventsInstance) {
@@ -476,8 +482,8 @@
                             });
                         });
                     }
-                }));
             });
+        })();
         </script>
 
 

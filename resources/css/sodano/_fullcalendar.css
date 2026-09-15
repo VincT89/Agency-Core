@@ -227,6 +227,16 @@
 }
 
 /* --- timeGrid Google-like --- */
+@media (max-width: 639px) {
+    .fc .fc-view-harness {
+        overflow-x: auto;
+    }
+
+    .fc .fc-timeGridWeek-view {
+        min-width: 640px;
+    }
+}
+
 .fc .fc-timegrid-slot {
     height: 3em !important;
     /* slot più ampi */

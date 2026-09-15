@@ -136,6 +136,65 @@ class CommercialSalesWorkflowTest extends TestCase
         $this->get(route('quotes.create', ['ticket_id' => $ticket->id]))->assertOk()->assertSee('Servizio A');
     }
 
+    public function test_admin_creates_an_offer_from_the_offer_list_for_an_existing_or_new_client(): void
+    {
+        $this->get(route('quotes.index'))->assertOk()->assertSee('Nuova offerta')
+            ->assertSee('href="'.route('quotes.create').'"', false);
+        $this->get(route('quotes.create'))->assertOk()->assertViewHas('client', null)
+            ->assertSee('clientAutocomplete', false)->assertSee('Crea nuovo cliente')->assertSee('Codice fiscale');
+        $this->getJson(route('api.clients.search', ['q' => $this->client->name]))
+            ->assertOk()->assertJsonFragment(['id' => $this->client->id]);
+        $this->get(route('quotes.create', ['client_id' => $this->client->id]))->assertOk()
+            ->assertViewHas('client', fn ($client) => $client->is($this->client));
+
+        $existingOffer = $this->createQuote();
+        $this->assertNull($existingOffer->ticket_id);
+        $this->get(route('clients.show', $this->client))->assertOk()->assertSee($existingOffer->title);
+
+        $newClient = $this->postJson(route('api.clients.quick-store'), [
+            'name' => 'Cliente offerta diretta dimostrativa', 'city' => 'Comune dimostrativo',
+        ])->assertCreated();
+        $payload = array_replace($this->quotePayload(), ['client_id' => $newClient->json('id'), 'title' => 'Offerta diretta dimostrativa']);
+        $this->post(route('quotes.store'), $payload)->assertSessionHasNoErrors()->assertRedirect();
+        $quote = Quote::where('title', $payload['title'])->sole();
+        $this->assertSame($newClient->json('id'), $quote->client_id);
+        $this->assertSame($this->admin->id, $quote->created_by);
+        $this->assertSame('draft', $quote->status);
+        $this->assertSame('37.53', $quote->total);
+        $this->assertNull($quote->ticket_id);
+        $this->get(route('clients.show', $quote->client))->assertOk()->assertSee($quote->title);
+    }
+
+    public function test_direct_offer_form_preserves_the_selected_client_after_validation_errors(): void
+    {
+        $otherClient = Client::factory()->create(['name' => 'Cliente selezionato dimostrativo']);
+        $payload = array_replace($this->quotePayload(), ['client_id' => $otherClient->id]);
+        $payload['items'][0]['unit_price'] = '12.345';
+        $form = route('quotes.create', ['client_id' => $this->client->id]);
+        $this->from($form)->post(route('quotes.store'), $payload)
+            ->assertSessionHasErrors('items.0.unit_price')->assertRedirect($form);
+        $this->get($form)->assertOk()->assertViewHas('client', fn ($client) => $client->is($otherClient))
+            ->assertSee($otherClient->name);
+
+        $payload['client_id'] = ['invalid'];
+        $this->from(route('quotes.create'))->post(route('quotes.store'), $payload)->assertSessionHasErrors('client_id');
+        $this->get(route('quotes.create'))->assertOk()->assertViewHas('client', null);
+        $this->assertDatabaseCount('quotes', 0);
+    }
+
+    public function test_direct_offer_creation_keeps_existing_role_permissions(): void
+    {
+        $this->actingAs($this->administration)->get(route('quotes.index'))->assertOk()->assertSee('Nuova offerta');
+        $this->get(route('quotes.create'))->assertOk()->assertSee('clientAutocomplete', false);
+        $this->post(route('quotes.store'), $this->quotePayload())->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertDatabaseHas('quotes', ['client_id' => $this->client->id, 'created_by' => $this->administration->id]);
+
+        $this->actingAs($this->commercial)->get(route('quotes.index'))->assertOk()->assertDontSee('Nuova offerta');
+        $this->get(route('quotes.create'))->assertForbidden();
+        $this->post(route('quotes.store'), $this->quotePayload())->assertForbidden();
+        $this->assertDatabaseCount('quotes', 1);
+    }
+
     public function test_offer_totals_presentation_snapshot_and_readonly_commercial_access(): void
     {
         $quote = $this->createQuote();

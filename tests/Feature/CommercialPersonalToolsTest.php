@@ -105,6 +105,49 @@ class CommercialPersonalToolsTest extends TestCase
         }
     }
 
+    public function test_calendar_day_feed_includes_matching_and_overnight_appointments_with_iso_boundaries(): void
+    {
+        config(['app.timezone' => 'Europe/Rome']);
+        $create = fn (array $attributes) => CalendarEvent::create($this->payload(array_merge([
+            'created_by' => $this->commercial->id,
+            'assigned_to' => $this->commercial->id,
+        ], $attributes)));
+
+        $inside = $create(['start_at' => '2026-09-16T10:00', 'end_at' => '2026-09-16T11:00']);
+        $overnight = $create(['start_at' => '2026-09-15T23:00', 'end_at' => '2026-09-16T01:00']);
+        $instant = $create(['start_at' => '2026-09-16T00:00', 'end_at' => '2026-09-16T00:00']);
+        $create(['start_at' => '2026-09-15T23:00', 'end_at' => '2026-09-16T00:00']);
+        $create(['start_at' => '2026-09-17T00:00', 'end_at' => '2026-09-17T01:00']);
+        $create([
+            'start_at' => '2026-09-16T10:00', 'end_at' => '2026-09-16T11:00',
+            'created_by' => $this->other->id, 'assigned_to' => $this->other->id,
+        ]);
+
+        $response = $this->getJson(route('calendar-events.index', [
+            'format' => 'json', 'start' => '2026-09-16T00:00:00+02:00', 'end' => '2026-09-17T00:00:00+02:00',
+        ]))->assertOk();
+
+        $this->assertEqualsCanonicalizing([$inside->id, $overnight->id, $instant->id], array_column($response->json(), 'id'));
+    }
+
+    public function test_calendar_feed_converts_utc_boundaries_and_validates_dates(): void
+    {
+        config(['app.timezone' => 'Europe/Rome']);
+        $event = CalendarEvent::create($this->payload([
+            'created_by' => $this->commercial->id, 'assigned_to' => $this->commercial->id,
+            'start_at' => '2026-09-16T00:30', 'end_at' => '2026-09-16T01:00',
+        ]));
+
+        $this->getJson(route('calendar-events.index', [
+            'format' => 'json', 'start' => '2026-09-15T22:00:00Z', 'end' => '2026-09-16T00:00:00Z',
+        ]))->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $event->id);
+
+        $this->getJson(route('calendar-events.index', ['format' => 'json', 'start' => 'data non valida']))
+            ->assertUnprocessable()->assertJsonValidationErrors('start');
+        $this->getJson(route('calendar-events.index', ['format' => 'json', 'end' => ['2026-09-17']]))
+            ->assertUnprocessable()->assertJsonValidationErrors('end');
+    }
+
     public function test_daily_notes_and_checklists_remain_private_and_editable_for_their_owner(): void
     {
         $foreignNote = UserDailyNote::create(['user_id' => $this->other->id, 'date' => today()]);

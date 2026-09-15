@@ -13,6 +13,11 @@ export function initShell() {
     setTimeout(() => t.classList.remove('show'), 2600);
   };
 
+  document.querySelectorAll('[data-flash-toast]:not([data-toast-shown])').forEach(flash => {
+    flash.dataset.toastShown = 'true';
+    window.toast(flash.textContent.trim(), flash.dataset.flashToast);
+  });
+
   // --- Listener globali: solo una volta ---
   if (window._shellListenersAdded) return;
   window._shellListenersAdded = true;

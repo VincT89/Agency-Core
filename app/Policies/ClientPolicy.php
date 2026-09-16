@@ -47,7 +47,14 @@ class ClientPolicy
     
     public function create(User $user): bool   
     { 
-        return $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager;
+        return $user->isCommercial() || $user->role === UserRole::Administration || $user->role === UserRole::OperationsManager;
+    }
+
+    public function updateRegistry(User $user, Client $client): bool
+    {
+        return $user->isCommercial()
+            ? (int) $client->commercial_user_id === (int) $user->id
+            : $this->update($user, $client);
     }
     
     public function update(User $user, Client $client): bool  

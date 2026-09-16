@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\URL;
     'sdi_code',
     'status',
     'notes',
+    'commercial_notes',
     'logo_path',
     'activity_description',
     'nextcloud_folder_name',

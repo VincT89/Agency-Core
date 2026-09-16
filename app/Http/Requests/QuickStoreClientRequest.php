@@ -7,6 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class QuickStoreClientRequest extends FormRequest
 {
+    use Concerns\ValidatesClientRegistry;
+
     public function authorize(): bool
     {
         return $this->user()->can('quickCreate', Client::class);
@@ -14,31 +16,13 @@ class QuickStoreClientRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'company_name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255', 'unique:clients,email'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'vat_number' => ['nullable', 'string', 'max:20', 'unique:clients,vat_number'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'reference_person' => ['nullable', 'string', 'max:255'],
-            'tax_code' => ['nullable', 'string', 'max:20'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:10'],
-            'province' => ['nullable', 'string', 'max:5'],
-            'country' => ['nullable', 'string', 'max:100'],
+        return array_merge($this->clientRegistryRules(), [
             'commercial_user_id' => ['missing'],
-        ];
+        ]);
     }
 
-    public function messages(): array
+    protected function prepareForValidation(): void
     {
-        $duplicate = 'Già presente in anagrafica. Cerca il cliente oppure chiedi all’amministratore di associartelo.';
-
-        return [
-            'email.unique' => 'Email già utilizzata. '.$duplicate,
-            'vat_number.unique' => 'Partita IVA già utilizzata. '.$duplicate,
-            'commercial_user_id.missing' => 'Il commerciale viene associato automaticamente.',
-        ];
+        $this->prepareClientRegistryData();
     }
 }

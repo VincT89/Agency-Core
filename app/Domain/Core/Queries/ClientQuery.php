@@ -13,19 +13,10 @@ class ClientQuery
         if (auth()->user()?->isCommercial()) {
             $query->visibleTo(auth()->user());
         } else {
-            $query->withCount(['projects', 'tickets', 'invoices']);
+            $query->with('commercialUser:id,name')->withCount(['projects', 'tickets', 'invoices']);
         }
 
-        if (!empty($filters['search'])) {
-            $searchStr = '%' . strtolower($filters['search']) . '%';
-            $query->where(function($q) use ($searchStr) {
-                $q->whereRaw('LOWER(name) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(email) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(vat_number) LIKE ?', [$searchStr]);
-            });
-        }
-
-        return $query;
+        return $this->applySearch($query, $filters['search'] ?? '');
     }
 
     public function forSearch(string $search): Builder
@@ -35,19 +26,22 @@ class ClientQuery
         if (auth()->user()?->isCommercial()) {
             $query->visibleTo(auth()->user());
         }
-        
-        if (strlen($search) >= 1) {
-            $searchStr = '%' . strtolower($search) . '%';
-            $query->where(function($q) use ($searchStr) {
-                $q->whereRaw('LOWER(name) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(company_name) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(email) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(phone) LIKE ?', [$searchStr])
-                  ->orWhereRaw('LOWER(vat_number) LIKE ?', [$searchStr]);
-            });
+        return $this->applySearch($query->orderBy('name'), $search);
+    }
+
+    private function applySearch(Builder $query, string $search): Builder
+    {
+        if (trim($search) === '') {
+            return $query;
         }
 
-        return $query;
+        $searchStr = '%'.mb_strtolower(trim($search)).'%';
+
+        return $query->where(function (Builder $matches) use ($searchStr) {
+            foreach (['name', 'company_name', 'reference_person', 'email', 'phone', 'vat_number', 'tax_code'] as $field) {
+                $matches->orWhereRaw("LOWER({$field}) LIKE ?", [$searchStr]);
+            }
+        });
     }
 
     public function forDropdown(): Builder

@@ -7,6 +7,8 @@
 .commercial-history-row { padding: 18px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .commercial-history-row:first-child { padding-top: 0; }
 .commercial-history-row:last-child { border-bottom: 0; }
+.client-commercial-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.client-summary-grid .ticket-request-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .commercial-history-row h2, .commercial-history-row h3 { font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
 .commercial-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .commercial-actions form { margin: 0; }

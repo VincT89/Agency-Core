@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
             }
             $subject = $arguments[0] ?? null;
             if ((is_object($subject) || is_string($subject)) && is_a($subject, Client::class, true)
-                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket', 'viewAny', 'view'], true)) {
+                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket', 'viewAny', 'view', 'create', 'updateRegistry'], true)) {
                 return null;
             }
             foreach ([Task::class, \App\Models\Quote::class] as $readable) {

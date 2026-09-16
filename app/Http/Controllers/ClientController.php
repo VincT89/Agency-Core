@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\{QuickStoreClientRequest, StoreClientRequest, UpdateClientRequest};
 use App\Enums\UserRole;
 use App\Models\Client;
+use App\Models\Scopes\ProjectSupremacyScope;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ class ClientController extends Controller
     {
         $this->authorize('viewAny', Client::class);
 
-        $clients = $clientQuery->forIndex($request->all())->paginate(20)->withQueryString();
+        $filters = $request->validate(['search' => ['nullable', 'string', 'max:255']]);
+        $clients = $clientQuery->forIndex($filters)->paginate(20)->withQueryString();
 
         return view(auth()->user()->isCommercial() ? 'clients.commercial.index' : 'clients.index', compact('clients'));
     }
@@ -43,24 +45,37 @@ class ClientController extends Controller
     {
         $this->authorize('view', $client);
 
+        $client->load('commercialUser:id,name');
+        $tasks = Task::query()->forClients([$client->id])->with('assignee:id,name')
+            ->latest('updated_at')->orderByDesc('id')->paginate(15, ['*'], 'tasks_page')->withQueryString();
+        $quotes = $client->quotes()->visibleTo(auth()->user())->latest()
+            ->paginate(15, ['*'], 'offers_page')->withQueryString();
+
         if (auth()->user()->isCommercial()) {
+            // The client is authorized above. Expose only a project summary, never its internal details.
+            $projects = $client->projects()->withoutGlobalScope(ProjectSupremacyScope::class)
+                ->latest()->paginate(15, ['projects.id', 'projects.name', 'projects.status', 'projects.created_at'], 'projects_page')
+                ->withQueryString();
+
             return view('clients.commercial.show', [
                 'client' => $client,
-                'quotes' => $client->quotes()->visibleTo(auth()->user())->latest()->paginate(15, ['*'], 'offers_page'),
-                'tickets' => $client->tickets()->with(['assignee:id,name', 'project'])->latest()->paginate(15, ['*'], 'tickets_page'),
+                'quotes' => $quotes,
+                'tasks' => $tasks,
+                'projects' => $projects,
+                'tickets' => $client->tickets()->with(['assignee:id,name', 'project'])->latest()
+                    ->paginate(15, ['*'], 'tickets_page')->withQueryString(),
             ]);
         }
 
         $client->load(['projects', 'tickets' => fn($q) => $q->latest()->limit(5),
                         'invoices' => fn($q) => $q->latest()->limit(5), 'attachments.uploader']);
 
-        $quotes = $client->quotes()->visibleTo(auth()->user())->latest()->paginate(15, ['*'], 'offers_page');
-        return view('clients.show', compact('client', 'quotes'));
+        return view('clients.show', compact('client', 'quotes', 'tasks'));
     }
 
     public function edit(Client $client): View
     {
-        $this->authorize('update', $client);
+        $this->authorize('updateRegistry', $client);
         return view('clients.edit', ['client' => $client, 'commercialUsers' => $this->commercialUsers($client)]);
     }
 
@@ -184,7 +199,8 @@ class ClientController extends Controller
     {
         $this->authorize('lookup', Client::class);
 
-        $search = $request->get('q', '');
+        $filters = $request->validate(['q' => ['nullable', 'string', 'max:255']]);
+        $search = trim($filters['q'] ?? '');
 
         if (strlen($search) < 1) {
             return response()->json([]);

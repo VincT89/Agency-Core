@@ -11,8 +11,8 @@
     <x-slot:title><strong>{{ $client->name }}</strong></x-slot:title>
         <x-slot:actions>
             <x-badge :status="$client->status" :label="$client->status_label" />
-            @can('update', $client)
-                <a href="{{ route('clients.edit', $client) }}" class="btn btn-g">Modifica</a>
+            @can('updateRegistry', $client)
+                <a href="{{ route('clients.edit', $client) }}" class="btn btn-g">Modifica anagrafica</a>
             @endcan
         
             @can('delete', $client)
@@ -30,7 +30,7 @@
     </x-page-header>
 
     <div class="g-2col u-mb-lg client-summary-grid">
-        <x-panel title="Info Base" dot="var(--teal)" padded>
+        <x-panel title="Anagrafica" padded>
             <div class="u-flex u-flex-col u-gap-md">
                 
                 {{-- Header with Logo and Name --}}
@@ -56,47 +56,7 @@
                     </div>
                 </div>
 
-                {{-- 2-Col Grid for Details --}}
-                <div class="g-2col">
-                    <div class="form-g mb-0">
-                        <div class="form-lbl">Partita IVA / C.F.</div>
-                        <div class="u-text-strong u-font-mono">{{ $client->vat_number ?? '—' }}</div>
-                    </div>
-                    <div class="form-g mb-0">
-                        <div class="form-lbl">Referente</div>
-                        <div class="u-text-strong">{{ $client->reference_person ?? '—' }}</div>
-                    </div>
-                    <div class="form-g mb-0">
-                        <div class="form-lbl">Email / Telefono</div>
-                        <div class="u-text-strong">
-                            {{ $client->email ?? '—' }} <br> 
-                            {{ $client->phone ?? '—' }}
-                        </div>
-                    </div>
-                    <div class="form-g mb-0">
-                        <div class="form-lbl">Fatturazione (PEC / SDI)</div>
-                        <div class="u-text-strong u-font-mono">
-                            PEC: {{ $client->pec ?? '—' }} <br>
-                            SDI: {{ $client->sdi_code ?? '—' }} <br>
-                            Email: {{ $client->billing_email ?? '—' }}
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Full width details --}}
-                <div class="form-g mb-0">
-                    <div class="form-lbl">Sede</div>
-                    <div class="u-text-strong">
-                        {{ $client->address ?? '—' }}<br>
-                        {{ trim(implode(' ', array_filter([$client->postal_code, $client->city, $client->province ? "({$client->province})" : null, $client->country, $client->country_code ? "[{$client->country_code}]" : null]))) }}
-                    </div>
-                </div>
-                
-                <div class="form-g mb-0">
-                    <div class="form-lbl">Registrato il</div>
-                    <div class="u-text-strong u-font-mono">{{ $client->created_at->isoFormat('D MMMM YYYY') }}</div>
-                </div>
-
+                @include('clients.partials.registry-details')
             </div>
         </x-panel>
         <div>
@@ -119,13 +79,15 @@
         </div>
     </div>
 
+    @include('clients.partials.commercial-notes')
+
     @can('viewAny', \App\Models\ClientSocialAccount::class)
         <div class="u-mb-lg">
             <livewire:client.client-social-account-form :client="$client" />
         </div>
     @endcan
 
-    <x-panel title="Commesse Attive ({{ $client->projects->count() }})">
+    <x-panel title="Progetti del cliente ({{ $client->projects->count() }})" class="mt-panel">
         @if($client->projects->isEmpty())
             <div class="u-p-md">
                 <x-empty-state message="Nessuna commessa registrata per questo cliente." icon="folder-open" />
@@ -136,7 +98,7 @@
                     <tr>
                         <th>Nome Commessa</th>
                         <th>Stato</th>
-                        <th>Data avvio</th>
+                        <th>Registrato il</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -151,6 +113,10 @@
             </table>
         @endif
     </x-panel>
+
+    @can('viewAny', \App\Models\Task::class)
+        <div class="mt-panel">@include('clients.partials.task-history')</div>
+    @endcan
 
 
     @can('viewAny', \App\Models\Quote::class)

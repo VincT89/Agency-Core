@@ -22,7 +22,8 @@
     <x-slot name="actions">
       <div class="u-flex-center u-gap-lg">
           <x-badge :status="$campaign->status->value" :label="$campaign->status->label()" />
-          <div class="u-flex u-gap-sm">
+          <div class="u-flex u-gap-sm u-flex-wrap">
+            @can('viewMaterials', $campaign->client)<a href="{{ route('clients.materials.index', $campaign->client_id) }}" class="btn btn-g btn-sm">Materiali del cliente</a>@endcan
             @if(auth()->user()->isAdmin())
               <button type="button" wire:click="openCampaignModal" class="btn btn-g btn-sm">Modifica</button>
               <button type="button" wire:click="openExtendModal" class="btn btn-g btn-sm">Prolunga</button>

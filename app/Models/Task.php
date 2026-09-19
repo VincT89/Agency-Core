@@ -150,7 +150,7 @@ class Task extends Model
             return $query->forCommercial($user);
         }
 
-        if ($user->canAccessAllProjects() || $user->isMarketing()) {
+        if ($user->canAccessAllProjects() || $user->canManageMarketing()) {
             return $query;
         }
 

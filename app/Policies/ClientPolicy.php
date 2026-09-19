@@ -12,7 +12,18 @@ class ClientPolicy
 
     public function lookup(User $user): bool
     {
-        return $user->isCommercial() || $this->viewAny($user);
+        return $user->canManageMarketing() || $user->isCommercial() || $this->viewAny($user);
+    }
+
+    public function viewMaterials(User $user, Client $client): bool
+    {
+        return Client::visibleTo($user)->whereKey($client->id)->exists();
+    }
+
+    public function manageMaterials(User $user, Client $client): bool
+    {
+        return $this->viewMaterials($user, $client)
+            && ($user->canManageMarketing() || $this->updateRegistry($user, $client));
     }
 
     public function quickCreate(User $user): bool

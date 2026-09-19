@@ -13,7 +13,7 @@ class NextcloudPathAuthorizer
             return false;
         }
 
-        if ($user->canAccessAllProjects() || $user->isMarketing()) {
+        if ($user->canAccessAllProjects() || $user->canManageMarketing()) {
             return true;
         }
 

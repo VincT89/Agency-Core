@@ -9,7 +9,7 @@
     </x-page-header>
 
     <x-panel padded>
-        <form wire:submit="save">
+        <form wire:submit="save" class="finance-form">
             
             <div class="form-row full">
                 <x-form-group label="Titolo Spesa" name="title" required>
@@ -62,6 +62,34 @@
                     @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </x-form-group>
             </div>
+
+            <h2 class="sec-lbl u-mt-md">Documento e pagamento</h2>
+            <p class="u-text-meta u-mb-md">Puoi programmare la spesa senza documento. Per confermare il pagamento occorre collegare una fattura o il giustificativo appropriato.</p>
+            <div class="form-row">
+                <x-form-group label="Documento richiesto" name="document_kind" required>
+                    <select id="field-document-kind" wire:model="document_kind" class="form-sel">
+                        @foreach(\App\Models\ExpenseDocument::KINDS as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
+                    </select>
+                </x-form-group>
+                <x-form-group label="Documento collegato" name="expense_document_id">
+                    <select id="field-expense-document-id" wire:model="expense_document_id" class="form-sel">
+                        <option value="">In attesa del documento</option>
+                        @foreach($documents as $document)<option value="{{ $document->id }}">{{ $document->issuer }} - {{ $document->number }} ({{ number_format($document->amount, 2, ',', '.') }} EUR)</option>@endforeach
+                    </select>
+                    <a href="{{ route('expenses.documents.create') }}" target="_blank" rel="noopener">Carica un documento in una nuova scheda</a>
+                    <span class="u-text-meta">Dopo il caricamento torna qui e ricarica l’elenco.</span>
+                    <button type="button" wire:click="$refresh" class="btn btn-g btn-sm">Ricarica documenti</button>
+                </x-form-group>
+            </div>
+            <div class="form-row">
+                <x-form-group label="Data pagamento effettivo" name="paid_on">
+                    <input id="field-paid-on" type="date" wire:model="paid_on" class="form-in" max="{{ today()->toDateString() }}">
+                    <span class="u-text-meta">Utilizzata solo se la spesa è pagata. L’importo indicato sopra deve corrispondere all’uscita effettiva.</span>
+                </x-form-group>
+            </div>
+            @if($expense?->expense_recurrence_id)
+                <p class="u-text-meta">Stai modificando solo questa scadenza. <a href="{{ route('expenses.recurrences.edit', $expense->expense_recurrence_id) }}">Gestisci la ricorrenza</a> per aggiornare le previsioni future.</p>
+            @endif
 
             <div class="u-section-sep u-mt-md u-mb-md"></div>
             <div class="ticket-create-note u-mb-md">

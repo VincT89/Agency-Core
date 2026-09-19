@@ -10,6 +10,7 @@
     >
     <x-slot:title><strong>{{ $client->name }}</strong></x-slot:title>
         <x-slot:actions>
+            @can('viewMaterials', $client)<a href="{{ route('clients.materials.index', $client) }}" class="btn btn-g">Materiali del cliente</a>@endcan
             <x-badge :status="$client->status" :label="$client->status_label" />
             @can('updateRegistry', $client)
                 <a href="{{ route('clients.edit', $client) }}" class="btn btn-g">Modifica anagrafica</a>

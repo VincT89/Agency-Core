@@ -74,7 +74,7 @@ class TicketController extends Controller
             $relations[] = 'auditLogs.user';
         }
         $ticket->load($relations);
-        $quotes = $ticket->quotes()->visibleTo(auth()->user())->latest()->get();
+        $quotes = $ticket->quotes()->visibleTo(auth()->user())->commercialOrder()->get();
         return view(auth()->user()->isCommercial() ? 'tickets.commercial.show' : 'tickets.show', compact('ticket', 'quotes'));
     }
 

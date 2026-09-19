@@ -155,7 +155,7 @@ class DashboardController extends Controller
 
             'recentShoots' => \App\Models\Shooting\Shoot::query()
                                 ->where('created_by', $user->id)
-                                ->with(['project'])
+                                ->with(['project', 'marketingCampaign'])
                                 ->latest()
                                 ->limit(5)
                                 ->get(),

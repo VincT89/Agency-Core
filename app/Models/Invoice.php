@@ -45,6 +45,9 @@ class Invoice extends Model
         'fiscal_sequence_number',
         'fiscal_locked_at',
         'fiscal_snapshot',
+        'import_fingerprint',
+        'import_source',
+        'import_metadata',
     ];
 
     protected $casts = [
@@ -58,6 +61,7 @@ class Invoice extends Model
         'fiscal_sequence_number' => 'integer',
         'fiscal_locked_at' => 'datetime',
         'fiscal_snapshot' => 'array',
+        'import_metadata' => 'array',
     ];
 
     public function getResidualAttribute(): float
@@ -150,7 +154,7 @@ class Invoice extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->canManageSystem() || $user->isMarketing()) {
+        if ($user->canManageMarketing()) {
             return $query;
         }
 

@@ -22,6 +22,9 @@ class MyShootShow extends Component
         }
 
         $this->authorize('view', $shoot);
+        if (auth()->user()->isPhotographer()) {
+            $this->authorize('respond', $shoot);
+        }
         $this->shoot = $shoot;
         $this->loadShootRelations();
     }

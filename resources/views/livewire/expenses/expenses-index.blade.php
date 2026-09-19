@@ -8,6 +8,11 @@
         </x-slot:actions>
     </x-page-header>
 
+    @include('expenses.partials.navigation')
+    @if($recurrence_id)
+        <p class="u-mb-md">Stai visualizzando le scadenze di una ricorrenza. <a href="{{ route('expenses.index') }}">Mostra tutte le spese</a></p>
+    @endif
+
     <div class="filter-bar">
         <div class="pills u-m-0">
             <button type="button" wire:click="$set('status', '')" class="pill {{ !$status ? 'on' : '' }}">Tutte</button>
@@ -17,7 +22,7 @@
         </div>
 
         <div class="u-flex u-gap-sm filter-form u-ml-auto">
-            <select wire:model.live="expenseable_type" class="form-in form-in-sm u-w-150">
+            <select wire:model.live="expenseable_type" class="form-in form-in-sm u-w-150" aria-label="Filtra per collegamento">
                 <option value="">Tutti i collegamenti</option>
                 <option value="client">Clienti</option>
                 <option value="project">Progetti</option>
@@ -25,7 +30,7 @@
                 <option value="task">Task</option>
             </select>
 
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cerca spesa..." class="form-in form-in-sm filter-search">
+            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cerca spesa..." class="form-in form-in-sm filter-search" aria-label="Cerca spesa">
             @if($search || $status || $expenseable_type)
                 <button type="button" wire:click="$set('search', ''); $set('status', ''); $set('expenseable_type', '');" class="btn btn-g btn-sm">Azzera filtri</button>
             @endif
@@ -50,7 +55,8 @@
                     @forelse($expenses as $expense)
                     <tr x-data @click="window.Livewire.navigate('{{ route('expenses.show', $expense) }}')" class="u-cursor-pointer hover-bg">
                         <td class="name-col">
-                            {{ $expense->title }}
+                            <a href="{{ route('expenses.show', $expense) }}" wire:navigate @click.stop>{{ $expense->title }}</a>
+                            @if($expense->recurrence)<div class="u-text-meta">Ricorrente</div>@endif
                             @if($expense->category)
                                 <div class="u-text-meta u-text-muted u-mt-xs">{{ $expense->category }}</div>
                             @endif
@@ -60,6 +66,7 @@
                         </td>
                         <td>
                             {{ $expense->supplier ?? '—' }}
+                            <div class="u-text-meta">{{ $expense->document ? 'Documento collegato' : 'In attesa del documento' }}</div>
                         </td>
                         <td class="mono-col">
                             @if($expense->due_date)

@@ -118,7 +118,7 @@ class Project extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->canAccessAllProjects() || $user->isMarketing()) {
+        if ($user->canAccessAllProjects() || $user->canManageMarketing()) {
             return $query;
         }
 

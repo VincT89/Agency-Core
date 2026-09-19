@@ -12,7 +12,7 @@ class MarketingCampaignPostPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isMarketing() || $user->isAdministration();
+        return $user->canManageMarketing() || $user->isAdministration();
     }
 
     public function view(User $user, MarketingCampaignPost $post): bool
@@ -22,7 +22,7 @@ class MarketingCampaignPostPolicy
 
     public function create(User $user): bool
     {
-        return $user->isMarketing();
+        return $user->canManageMarketing();
     }
 
     public function update(User $user, MarketingCampaignPost $post): bool

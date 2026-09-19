@@ -15,8 +15,8 @@ class QuotePolicy
 
     public function view(User $user, Quote $quote): bool
     {
-        return $this->create($user) || ($user->isCommercial() && $quote->status !== 'draft'
-            && (int) $quote->client->commercial_user_id === (int) $user->id);
+        return ! $quote->trashed() && ($this->create($user) || ($user->isCommercial() && $quote->status !== 'draft'
+            && (int) $quote->client->commercial_user_id === (int) $user->id));
     }
 
     public function create(User $user): bool
@@ -26,7 +26,17 @@ class QuotePolicy
 
     public function update(User $user, Quote $quote): bool
     {
-        return $this->create($user) && $quote->status === 'draft';
+        return $this->create($user) && ! $quote->trashed() && $quote->status === 'draft';
+    }
+
+    public function delete(User $user, Quote $quote): bool
+    {
+        return $this->create($user) && ! $quote->trashed();
+    }
+
+    public function addAttachment(User $user, Quote $quote): bool
+    {
+        return $this->create($user) && ! $quote->trashed();
     }
 
     public function present(User $user, Quote $quote): bool
@@ -36,16 +46,16 @@ class QuotePolicy
 
     public function respond(User $user, Quote $quote): bool
     {
-        return $this->create($user) && $quote->status === 'presented' && ! $quote->nextQuote()->exists();
+        return $this->create($user) && ! $quote->trashed() && $quote->status === 'presented' && ! $quote->nextQuote()->withTrashed()->exists();
     }
 
     public function revise(User $user, Quote $quote): bool
     {
-        return $this->create($user) && in_array($quote->status, ['presented', 'rejected'], true);
+        return $this->create($user) && ! $quote->trashed() && in_array($quote->status, ['presented', 'rejected'], true);
     }
 
     public function createProject(User $user, Quote $quote): bool
     {
-        return $this->create($user) && $quote->status === 'accepted' && $user->can('create', Project::class);
+        return $this->create($user) && ! $quote->trashed() && $quote->status === 'accepted' && $user->can('create', Project::class);
     }
 }

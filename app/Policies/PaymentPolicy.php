@@ -27,11 +27,11 @@ class PaymentPolicy
 
     public function update(User $user, Payment $payment): bool
     {
-        return $user->can('update', $payment->invoice);
+        return $user->can('recordPayment', $payment->invoice);
     }
 
     public function delete(User $user, Payment $payment): bool
     {
-        return $user->can('update', $payment->invoice);
+        return $user->can('recordPayment', $payment->invoice);
     }
 }

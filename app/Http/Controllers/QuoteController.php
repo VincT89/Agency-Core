@@ -21,7 +21,7 @@ class QuoteController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Quote::class);
-        $quotes = Quote::visibleTo($request->user())->with('client:id,name')->latest()
+        $quotes = Quote::visibleTo($request->user())->with('client:id,name')->commercialOrder()
             ->when($request->filled('client_id'), fn ($q) => $q->where('client_id', $request->integer('client_id')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->paginate(20)->withQueryString();
@@ -63,7 +63,7 @@ class QuoteController extends Controller
     public function show(Quote $quote): View
     {
         $this->authorize('view', $quote);
-        $quote->load(['items', 'client', 'ticket', 'previousQuote', 'nextQuote']);
+        $quote->load(['items', 'client', 'ticket', 'previousQuote', 'nextQuote', 'attachments.uploader']);
 
         return view('quotes.show', compact('quote'));
     }
@@ -73,6 +73,17 @@ class QuoteController extends Controller
         $this->authorize('update', $quote);
 
         return view('quotes.form', ['quote' => $quote->load('items'), 'client' => $quote->client, 'ticket' => $quote->ticket]);
+    }
+
+    public function destroy(Quote $quote): RedirectResponse
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($quote) {
+            $quote = Quote::lockForUpdate()->findOrFail($quote->id);
+            $this->authorize('delete', $quote);
+            $quote->delete();
+        });
+
+        return redirect()->route('quotes.index')->with('success', 'Offerta eliminata. Gli eventuali progetti collegati restano disponibili.');
     }
 
     public function update(SaveQuoteRequest $request, Quote $quote, SaveQuoteAction $action): RedirectResponse

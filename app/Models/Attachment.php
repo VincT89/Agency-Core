@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Storage;
 
 class Attachment extends Model
 {
+    public const CLIENT_MATERIAL_CATEGORIES = [
+        'logo' => 'Loghi', 'vector' => 'Vettoriali', 'guidelines' => 'Linee guida',
+        'template' => 'Modelli e sorgenti', 'other' => 'Altri materiali',
+    ];
+
     protected $fillable = [
         'attachable_type',
         'attachable_id',
@@ -24,6 +29,7 @@ class Attachment extends Model
         'extension',
         'size',
         'description',
+        'client_material_category',
     ];
 
     protected $casts = [

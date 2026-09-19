@@ -43,6 +43,13 @@
             @endcan
             @can('revise', $quote)<form method="POST" action="{{ route('quotes.revise', $quote) }}">@csrf<button class="btn btn-g" type="submit">Prepara revisione</button></form>@endcan
             @can('createProject', $quote)<a href="{{ route('quotes.project.create', $quote) }}" class="btn btn-p">{{ $quote->project_id ? 'Apri progetto' : 'Crea progetto' }}</a>@endcan
+            @can('delete', $quote)
+                <form method="POST" action="{{ route('quotes.destroy', $quote) }}" class="js-confirm-form" data-confirm-message="Eliminare questa offerta? Verrà rimossa dalle liste e dallo storico visibile. Gli eventuali progetti collegati resteranno disponibili.">
+                    @csrf @method('DELETE')
+                    <button class="btn btn-g btn-danger-outline" type="submit">Elimina offerta</button>
+                </form>
+            @endcan
         </div>
     </x-panel>
+    <livewire:shared.attachment-manager :model="$quote" />
 </x-app-layout>

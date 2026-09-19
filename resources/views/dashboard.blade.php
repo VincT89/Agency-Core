@@ -21,7 +21,10 @@
     @elseif(auth()->user()->isCommercial())
         @include('partials.dashboard._commercial')
     @elseif(auth()->user()->isPhotographer())
-        <livewire:dashboard.photographer-dashboard />
+        <livewire:dashboard.photographer-dashboard :show-tasks="false" />
+        <div class="mt-panel">
+            @include('partials.dashboard._workspace')
+        </div>
     @else
         @include('partials.dashboard._workspace')
     @endif

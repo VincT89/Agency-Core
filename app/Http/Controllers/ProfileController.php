@@ -47,6 +47,10 @@ class ProfileController extends Controller
             return back()->with('error', 'Non puoi eliminare l’unico amministratore attivo. Crea o attiva prima un altro amministratore.');
         }
 
+        if ($user->hasExpenseHistory()) {
+            return back()->with('error', 'Il tuo account è collegato allo storico di entrate e spese. Chiedi a un amministratore di disattivarlo mantenendo le registrazioni.');
+        }
+
         Auth::logout();
 
         $user->delete();

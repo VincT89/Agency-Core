@@ -220,7 +220,7 @@ class Client extends Model
             return $query->where('commercial_user_id', $user->id);
         }
 
-        if ($user->canAccessAllProjects() || $user->isMarketing()) {
+        if ($user->canAccessAllProjects() || $user->canManageMarketing()) {
             return $query;
         }
 

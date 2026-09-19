@@ -145,6 +145,10 @@ class UserController extends Controller implements HasMiddleware
             return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
         }
 
+        if ($user->hasExpenseHistory()) {
+            return back()->with('error', 'Questo utente è collegato allo storico di entrate e spese. Puoi disattivarlo mantenendo le registrazioni.');
+        }
+
         $user->delete();
 
         return redirect()->route('users.index')

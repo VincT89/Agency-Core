@@ -5,6 +5,7 @@ namespace App\Enums\Finance;
 enum InvoiceFiscalStatus: string
 {
     case NotPrepared = 'not_prepared';
+    case Imported = 'imported';
     case Ready = 'ready';
     case Transmitting = 'transmitting';
     case Sent = 'sent';
@@ -21,6 +22,7 @@ enum InvoiceFiscalStatus: string
     {
         return match ($this) {
             self::NotPrepared => 'Da preparare',
+            self::Imported => 'Importata da documento esistente',
             self::Ready => 'Pronta, non inviata',
             self::Transmitting => 'Invio in corso',
             self::Sent => 'Inviata',
@@ -39,6 +41,7 @@ enum InvoiceFiscalStatus: string
     {
         return match ($this) {
             self::NotPrepared => 'draft',
+            self::Imported => 'issued',
             self::Ready => 'pending',
             self::Transmitting => 'processing',
             self::Sent => 'issued',

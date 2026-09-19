@@ -62,7 +62,7 @@
             </div>
         </x-panel>
 
-        @if(!auth()->user()->isMarketing())
+        @if(!auth()->user()->canManageMarketing())
         <div class="mt-panel">
             <x-panel title="Ticket nel Mio Perimetro" dot="var(--blue)">
                 <div class="table-responsive">
@@ -111,25 +111,20 @@
             </x-panel>
         </div>
         
-        @if(auth()->user()->isMarketing())
+        @if(auth()->user()->canManageMarketing())
         <div class="mt-panel">
             <x-panel title="Le Mie Richieste Shooting" dot="var(--purple)">
-                <div class="table-responsive">
-                    <table class="t-table">
-                        <thead><tr><th>Titolo</th><th>Commessa</th><th>Stato</th></tr></thead>
-                        <tbody>
-                            @forelse($recentShoots as $shoot)
-                            <tr x-data @click="window.Livewire.navigate('{{ route('social.shooting.index') }}')" class="u-cursor-pointer hover-bg">
-                                <td class="name-col">{{ $shoot->title }}</td>
-                                <td>{{ $shoot->project?->name ?? '—' }}</td>
-                                <td><x-badge :status="$shoot->status->value" :label="$shoot->status->labelForContext('social')" /></td>
-                            </tr>
-                            @empty
-                            <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessuna richiesta shooting effettuata</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                @forelse($recentShoots as $shoot)
+                    <div class="u-p-md u-border-b">
+                        <a href="{{ route('social.shooting.show', $shoot) }}" wire:navigate class="u-text-strong u-text-secondary">
+                            {{ $shoot->title }}
+                        </a>
+                        <div class="u-text-sm u-mt-xs">{{ $shoot->project?->name ?? $shoot->marketingCampaign?->name ?? '—' }}</div>
+                        <div class="u-text-sm u-text-muted u-mt-xs">{{ $shoot->status->labelForContext('social') }}</div>
+                    </div>
+                @empty
+                    <div class="u-text-center u-text-muted u-p-md">Nessuna richiesta shooting effettuata</div>
+                @endforelse
             </x-panel>
         </div>
         @endif

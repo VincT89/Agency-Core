@@ -48,7 +48,7 @@ class ClientController extends Controller
         $client->load('commercialUser:id,name');
         $tasks = Task::query()->forClients([$client->id])->with('assignee:id,name')
             ->latest('updated_at')->orderByDesc('id')->paginate(15, ['*'], 'tasks_page')->withQueryString();
-        $quotes = $client->quotes()->visibleTo(auth()->user())->latest()
+        $quotes = $client->quotes()->visibleTo(auth()->user())->commercialOrder()
             ->paginate(15, ['*'], 'offers_page')->withQueryString();
 
         if (auth()->user()->isCommercial()) {
@@ -68,7 +68,7 @@ class ClientController extends Controller
         }
 
         $client->load(['projects', 'tickets' => fn($q) => $q->latest()->limit(5),
-                        'invoices' => fn($q) => $q->latest()->limit(5), 'attachments.uploader']);
+                        'invoices' => fn($q) => $q->latest()->limit(5), 'attachments' => fn($q) => $q->whereNull('client_material_category')->with('uploader')]);
 
         return view('clients.show', compact('client', 'quotes', 'tasks'));
     }

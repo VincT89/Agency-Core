@@ -45,7 +45,7 @@ class MarketingCampaignsIndex extends Component
 
         // Admin/System vedono tutti i clienti, gli altri solo i propri
         $clientsQuery = Client::query()->where('status', 'active');
-        if (!$user->canViewManagementDashboard() && !$user->isMarketing()) {
+        if (!$user->canViewManagementDashboard() && !$user->canManageMarketing()) {
             $clientsQuery->whereHas('projects.users', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
@@ -65,7 +65,7 @@ class MarketingCampaignsIndex extends Component
             ->when($this->status, function (Builder $query) {
                 $query->where('status', $this->status);
             })
-            ->when(!$user->canViewManagementDashboard() && !$user->isMarketing(), function (Builder $query) use ($user) {
+            ->when(!$user->canViewManagementDashboard() && !$user->canManageMarketing(), function (Builder $query) use ($user) {
                 // Filtro sicurezza
                 $query->whereHas('client.projects.users', function ($q) use ($user) {
                     $q->where('users.id', $user->id);

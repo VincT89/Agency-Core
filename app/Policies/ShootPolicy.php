@@ -19,7 +19,7 @@ class ShootPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isOperationalStaff() || $user->isAdministration();
+        return $user->isOperationalStaff() || $user->canBypassProjectScope();
     }
 
     public function view(User $user, Shoot $shoot): bool
@@ -29,21 +29,12 @@ class ShootPolicy
 
     public function create(User $user): bool
     {
-        return $user->isMarketing();
+        return $user->canManageMarketing();
     }
 
     public function update(User $user, Shoot $shoot): bool
     {
-        // Consenti aggiornamento al team interno o al fotografo assegnato
-        if ($user->isMarketing()) {
-            return $this->canAccessShoot($user, $shoot);
-        }
-
-        if ($user->isPhotographer() && $shoot->photographer_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        return $user->canManageMarketing() && $this->canAccessShoot($user, $shoot);
     }
 
     public function delete(User $user, Shoot $shoot): bool
@@ -57,8 +48,8 @@ class ShootPolicy
             return true;
         }
 
-        if ($user->isPhotographer()) {
-            return $shoot->photographer_id === $user->id;
+        if ($user->isPhotographer() && $shoot->photographer_id === $user->id) {
+            return true;
         }
 
         if ($shoot->project_id) {
@@ -82,11 +73,11 @@ class ShootPolicy
 
     public function confirmClient(User $user, Shoot $shoot): bool
     {
-        return $user->isMarketing() && $this->canAccessShoot($user, $shoot);
+        return $user->canManageMarketing() && $this->canAccessShoot($user, $shoot);
     }
 
     public function revise(User $user, Shoot $shoot): bool
     {
-        return $user->isMarketing() && $this->canAccessShoot($user, $shoot);
+        return $user->canManageMarketing() && $this->canAccessShoot($user, $shoot);
     }
 }

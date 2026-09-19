@@ -108,7 +108,7 @@ class N8nChatbotController extends Controller
             }
 
             // Notifiche
-            $notifiables = User::whereIn('role', [UserRole::Admin, UserRole::Marketing])->get()->unique('id')->values();
+            $notifiables = User::whereIn('role', [UserRole::Admin, UserRole::Marketing, UserRole::Photographer])->get()->unique('id')->values();
             Notification::send($notifiables, new ChatbotClientInteractionNotification($post, $validated['type']));
 
         } elseif ($validated['session_type'] === 'ticket') {

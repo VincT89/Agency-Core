@@ -91,7 +91,7 @@ class MarketingCampaignCalendar extends Component
         }
 
         // Applica le policy di sicurezza basate sui clienti visibili
-        if (! auth()->user()->canViewManagementDashboard() && ! auth()->user()->isMarketing()) {
+        if (! auth()->user()->canViewManagementDashboard() && ! auth()->user()->canManageMarketing()) {
             $query->whereHas('campaign', function ($query) {
                 $query->visibleTo(auth()->user());
             });
@@ -150,7 +150,7 @@ class MarketingCampaignCalendar extends Component
             $shootsQuery->where('marketing_campaign_id', $this->campaignFilter);
         }
 
-        if (! auth()->user()->canViewManagementDashboard() && ! auth()->user()->isMarketing()) {
+        if (! auth()->user()->canViewManagementDashboard() && ! auth()->user()->canManageMarketing()) {
             $shootsQuery->whereHas('marketingCampaign', function ($query) {
                 $query->visibleTo(auth()->user());
             });

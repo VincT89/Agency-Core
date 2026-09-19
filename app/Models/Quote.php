@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Quote extends Model
 {
+    use SoftDeletes;
+
     public const STATUSES = ['draft' => 'Bozza', 'presented' => 'Presentata', 'accepted' => 'Accettata', 'rejected' => 'Rifiutata'];
 
     protected $fillable = ['client_id', 'ticket_id', 'created_by', 'previous_quote_id', 'project_id', 'revision', 'title', 'status', 'client_snapshot', 'notes', 'total', 'presented_at', 'accepted_at', 'rejected_at'];
@@ -49,6 +53,17 @@ class Quote extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    public function scopeCommercialOrder(Builder $query): Builder
+    {
+        return $query->orderByRaw('CASE WHEN quotes.status = ? THEN 1 ELSE 0 END', ['rejected'])
+            ->orderByDesc('quotes.created_at')->orderByDesc('quotes.id');
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

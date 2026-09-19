@@ -22,11 +22,13 @@ class ExpensesIndex extends Component
     public $status = '';
     public $expenseable_type = '';
     public $search = '';
+    public $recurrence_id = '';
 
     protected $queryString = [
         'status' => ['except' => ''],
         'expenseable_type' => ['except' => ''],
         'search' => ['except' => ''],
+        'recurrence_id' => ['except' => ''],
     ];
 
     public function updatingSearch()
@@ -46,9 +48,14 @@ class ExpensesIndex extends Component
 
     public function render()
     {
+        $this->authorize('viewAny', Expense::class);
+        $this->validate(['recurrence_id' => 'nullable|integer|exists:expense_recurrences,id']);
         $query = Expense::query()
-            ->ownedBy(auth()->id())
-            ->with(['expenseable', 'attachments']);
+            ->with(['expenseable', 'document', 'recurrence']);
+
+        if ($this->recurrence_id) {
+            $query->where('expense_recurrence_id', $this->recurrence_id);
+        }
 
         if ($this->status) {
             $query->where('status', $this->status);

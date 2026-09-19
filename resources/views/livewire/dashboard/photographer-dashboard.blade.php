@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    <div class="dash-grid mt-panel">
+    <div @class(['dash-grid' => $showTasks, 'mt-panel'])>
         <div>
             <x-panel title="Il tuo lavoro adesso" dot="var(--accent)">
                 @php
@@ -33,6 +33,7 @@
                         <div class="u-text-sm">Non ci sono shooting che richiedono la tua attenzione al momento.</div>
                     </div>
                 @else
+                    <div class="table-responsive">
                     <table class="t-table">
                         <thead>
                             <tr>
@@ -61,10 +62,12 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 @endif
             </x-panel>
         </div>
 
+        @if($showTasks)
         <div>
             <x-panel title="Task in scadenza" dot="var(--blue)" padded class="u-mb-lg">
                 @if(count($data->upcoming_tasks) > 0)
@@ -93,5 +96,6 @@
                 @endif
             </x-panel>
         </div>
+        @endif
     </div>
 </div>

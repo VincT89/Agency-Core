@@ -27,6 +27,7 @@ class StoreAttachmentRequest extends FormRequest
         'ticket' => Ticket::class,
         'calendar_event' => CalendarEvent::class,
         'invoice' => Invoice::class,
+        'quote' => \App\Models\Quote::class,
         'payment' => Payment::class,
         'expense' => \App\Models\Expense::class,
         'hosting_service' => \App\Models\HostingService::class,
@@ -50,7 +51,7 @@ class StoreAttachmentRequest extends FormRequest
         }
 
         // Intentionally resolving attachment capabilities by checking parent update rights
-        return $this->user()->can($attachable instanceof Ticket ? 'addAttachment' : 'update', $attachable);
+        return $this->user()->can($attachable instanceof Ticket || $attachable instanceof \App\Models\Quote ? 'addAttachment' : 'update', $attachable);
     }
 
     public function rules(): array

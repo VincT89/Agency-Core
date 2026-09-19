@@ -11,25 +11,25 @@ class ClientSocialAccountPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isMarketing() || $user->isAdministration();
+        return $user->canManageMarketing() || $user->isAdministration();
     }
 
 
     public function view(User $user, ClientSocialAccount $clientSocialAccount): bool
     {
-        return $user->isAdmin() || $user->isMarketing() || $user->isAdministration();
+        return $user->canManageMarketing() || $user->isAdministration();
     }
 
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isMarketing();
+        return $user->canManageMarketing();
     }
 
 
     public function update(User $user, ClientSocialAccount $clientSocialAccount): bool
     {
-        return $user->isAdmin() || $user->isMarketing();
+        return $user->canManageMarketing();
     }
 
 

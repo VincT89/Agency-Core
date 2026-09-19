@@ -196,6 +196,11 @@ class User extends Authenticatable
         return $this->role === UserRole::Photographer;
     }
 
+    public function canManageMarketing(): bool
+    {
+        return $this->isAdmin() || $this->isMarketing() || $this->isPhotographer();
+    }
+
     public function isGraphicDesigner(): bool
     {
         return $this->role === UserRole::GraphicDesigner;
@@ -204,6 +209,15 @@ class User extends Authenticatable
     public function canAccessFinance(): bool
     {
         return $this->isAdmin() || $this->isAdministration();
+    }
+
+    public function hasExpenseHistory(): bool
+    {
+        return Expense::where('user_id', $this->id)->exists()
+            || ExpenseRecurrence::where('user_id', $this->id)->exists()
+            || ExpenseDocument::where('user_id', $this->id)->exists()
+            || ManualIncome::where('user_id', $this->id)->exists()
+            || CashFlowSetting::where('updated_by', $this->id)->exists();
     }
 
     public function canViewManagementDashboard(): bool

@@ -2,6 +2,7 @@
     <div class="page-back-row"><a href="{{ route('clients.index') }}" class="btn btn-g">I miei clienti</a></div>
     <x-page-header><x-slot:title>{{ $client->name }}</x-slot:title>
         <x-slot:actions>
+            @can('viewMaterials', $client)<a href="{{ route('clients.materials.index', $client) }}" class="btn btn-g">Materiali del cliente</a>@endcan
             @can('updateRegistry', $client)<a href="{{ route('clients.edit', $client) }}" class="btn btn-g">Modifica anagrafica</a>@endcan
             <a href="{{ route('tickets.create', ['type' => 'quote', 'client_id' => $client->id]) }}" class="btn btn-p">Richiedi preventivo</a>
             <a href="{{ route('tickets.create', ['client_id' => $client->id]) }}" class="btn btn-g">Apri ticket</a>

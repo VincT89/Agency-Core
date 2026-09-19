@@ -62,7 +62,11 @@ class AttachmentController extends Controller
             abort(404);
         }
 
-        return $disk->download($attachment->path, $attachment->original_name);
+        $headers = $attachment->client_material_category !== null
+            ? ['Content-Type' => 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff', 'Content-Security-Policy' => "default-src 'none'; sandbox"]
+            : ['X-Content-Type-Options' => 'nosniff'];
+
+        return $disk->download($attachment->path, $attachment->original_name, $headers);
     }
 
     public function destroy(Attachment $attachment): RedirectResponse

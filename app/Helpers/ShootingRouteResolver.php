@@ -14,7 +14,7 @@ class ShootingRouteResolver
             return route('admin.shooting.show', $shoot);
         }
 
-        if ($user->isPhotographer()) {
+        if ($user->isPhotographer() && $shoot->photographer_id === $user->id) {
             return route('photography.shooting.show', $shoot);
         }
 

@@ -13,13 +13,17 @@ class ReviseQuoteAction
         return DB::transaction(function () use ($quote) {
             $quote = Quote::lockForUpdate()->findOrFail($quote->id);
             Gate::authorize('revise', $quote);
-            if ($next = $quote->nextQuote()->first()) {
-                return $next;
+            $previous = $quote;
+            while ($next = $previous->nextQuote()->withTrashed()->lockForUpdate()->first()) {
+                if (! $next->trashed()) {
+                    return $next;
+                }
+                $previous = $next;
             }
             $revision = Quote::create([
                 'client_id' => $quote->client_id, 'ticket_id' => $quote->ticket_id,
-                'project_id' => $quote->project_id, 'previous_quote_id' => $quote->id,
-                'revision' => $quote->revision + 1, 'created_by' => auth()->id(),
+                'project_id' => $quote->project_id, 'previous_quote_id' => $previous->id,
+                'revision' => $previous->revision + 1, 'created_by' => auth()->id(),
                 'title' => $quote->title, 'notes' => $quote->notes, 'total' => $quote->total, 'status' => 'draft',
             ]);
             foreach ($quote->items as $item) {

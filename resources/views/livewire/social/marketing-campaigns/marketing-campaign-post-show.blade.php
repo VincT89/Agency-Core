@@ -174,7 +174,7 @@
                 </div>
                 <div class="u-p-lg relative">
 
-                    <form wire:submit.prevent class="form-stack">
+                    <form wire:submit="{{ $post->status->isDraft() && ! $post->current_version_id ? 'saveDraft' : 'savePost' }}" class="form-stack">
                         <fieldset class="permission-fieldset form-stack" @disabled(auth()->user()->cannot('update', $post))>
 
                         {{-- Blocco 1: Piattaforme --}}
@@ -293,7 +293,7 @@
                             <div class="u-flex u-gap-lg u-mt-md">
                                 <div class="form-g mb-0 u-flex-1">
                                     <label class="form-lbl">Data Pubblicazione</label>
-                                    <input type="date" class="form-in" wire:model="form.scheduled_date">
+                                    <livewire:social.publication-date-picker :campaign="$campaign" :post-id="$post->id" wire:model.live="form.scheduled_date" :disabled="auth()->user()->cannot('update', $post)" />
                                     @error('form.scheduled_date') <span class="form-err">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="form-g mb-0 u-flex-1">
@@ -832,7 +832,15 @@
                                 @endif
 
                                 @if($post->status->isManuallyEditable())
+                                    @if($post->status->isDraft() && ! $post->current_version_id)
+                                        <button type="submit" class="btn btn-s"
+                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            <span wire:loading.remove wire:target="saveDraft">Salva Bozza</span>
+                                            <span wire:loading wire:target="saveDraft">Salvataggio...</span>
+                                        </button>
+                                    @endif
                                     @if($form['ai_analysis_enabled'])
+                                        @if(! $post->status->isDraft() || $post->current_version_id)
                                         <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
                                             wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
                                             <span wire:loading.remove wire:target="savePost">
@@ -840,6 +848,7 @@
                                             </span>
                                             <span wire:loading wire:target="savePost">Salvataggio...</span>
                                         </button>
+                                        @endif
                                         @if(!$post->currentVersion)
                                             <button type="button"
                                                 x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"

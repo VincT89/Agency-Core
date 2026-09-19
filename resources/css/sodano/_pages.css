@@ -349,12 +349,65 @@
   line-height: 1.5;
 }
 .fiscal-file-name { overflow-wrap: anywhere; }
-.inv-filter-stack {
-  align-items: stretch;
-  flex-direction: column;
-  gap: 14px;
+.inv-summary {
+  gap: 16px;
+  margin-bottom: 28px;
 }
-.inv-filter-stack form { align-self: flex-end; }
+.inv-filter-stack {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.inv-filter-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px 40px;
+}
+.inv-filter-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+.inv-filter-group:first-child { flex-basis: 520px; }
+.inv-filter-group .pills {
+  gap: 8px;
+  margin: 0;
+  overflow: visible;
+}
+.inv-filter-group .pill {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 12px;
+  text-decoration: none;
+}
+.inv-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.inv-search-field {
+  display: grid;
+  gap: 10px;
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 560px;
+}
+.inv-search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.inv-search-field .form-in,
+.inv-search-actions .btn { min-height: 40px; }
+.inv-list .t-table { min-width: 1100px; }
+.inv-list .t-table :is(th, td) { padding: 14px 18px; }
+.inv-list .t-table th,
+.inv-list .mono-col { white-space: nowrap; }
 
 /* Badge voce manuale */
 .inv-type-badge.manual       { background: color-mix(in srgb, var(--purple) 12%, transparent);

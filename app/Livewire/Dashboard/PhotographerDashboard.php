@@ -8,6 +8,8 @@ use App\Domain\Dashboard\Queries\PhotographerDashboardQuery;
 
 class PhotographerDashboard extends Component
 {
+    public bool $showTasks = true;
+
     public function render(PhotographerDashboardQuery $query)
     {
         $data = $query->getDashboardData(auth()->user());

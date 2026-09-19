@@ -223,7 +223,7 @@ class Ticket extends Model
             return $query->where('tickets.created_by', $user->id);
         }
 
-        if ($user->canAccessAllProjects() || $user->isMarketing()) {
+        if ($user->canAccessAllProjects() || $user->canManageMarketing()) {
             return $query;
         }
 

@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Domain\Shooting\Queries\ShootQuery;
 use App\Enums\Shooting\ShootStatus;
+use App\Models\Shooting\Shoot;
 
 class RequestsIndex extends Component
 {
@@ -21,9 +22,7 @@ class RequestsIndex extends Component
 
     public function mount()
     {
-        if (auth()->user()->isPhotographer() && !auth()->user()->canManageSystem()) {
-            abort(403, 'Accesso negato: sezione riservata a team interno.');
-        }
+        $this->authorize('viewAny', Shoot::class);
     }
 
     public function updating($name, $value)

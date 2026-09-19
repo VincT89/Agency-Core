@@ -22,8 +22,8 @@ class AttachmentManager extends Component
 
     public function mount(Model $model)
     {
-        abort_if(auth()->user()->isCommercial() && !$model instanceof \App\Models\Ticket, 403);
-        if ($model instanceof \App\Models\Ticket) {
+        abort_if(auth()->user()->isCommercial() && !$model instanceof \App\Models\Ticket && !$model instanceof \App\Models\Quote, 403);
+        if ($model instanceof \App\Models\Ticket || $model instanceof \App\Models\Quote) {
             $this->authorize('view', $model);
         }
         $this->model = $model;
@@ -49,7 +49,7 @@ class AttachmentManager extends Component
 
     public function upload()
     {
-        $this->authorize($this->model instanceof \App\Models\Ticket ? 'addAttachment' : 'update', $this->model);
+        $this->authorize($this->model instanceof \App\Models\Ticket || $this->model instanceof \App\Models\Quote ? 'addAttachment' : 'update', $this->model);
         
         $mimes = implode(',', StoreAttachmentRequest::ALLOWED_MIMES);
         $this->validate([
@@ -104,8 +104,8 @@ class AttachmentManager extends Component
 
     public function render()
     {
-        abort_if(auth()->user()->isCommercial() && !$this->model instanceof \App\Models\Ticket, 403);
-        if ($this->model instanceof \App\Models\Ticket) {
+        abort_if(auth()->user()->isCommercial() && !$this->model instanceof \App\Models\Ticket && !$this->model instanceof \App\Models\Quote, 403);
+        if ($this->model instanceof \App\Models\Ticket || $this->model instanceof \App\Models\Quote) {
             $this->authorize('view', $this->model);
         }
         return view('livewire.shared.attachment-manager');

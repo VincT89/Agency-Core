@@ -23,7 +23,7 @@
 
             <div class="form-row">
                 <x-form-group label="Progetto" name="project_id" required>
-                    <select name="project_id" class="form-sel @error('project_id') is-invalid @enderror" required>
+                    <select name="project_id" data-project-search class="form-sel @error('project_id') is-invalid @enderror" required>
                         <option value="">Seleziona progetto...</option>
                         @foreach($projects as $project)
                             <option value="{{ $project->id }}"

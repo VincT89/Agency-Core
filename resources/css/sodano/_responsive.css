@@ -311,14 +311,7 @@ pre {
     grid-column: 1 / -1;
   }
 
-  .inv-filter-stack form {
-    align-self: stretch;
-    flex-wrap: wrap;
-  }
-
-  .inv-filter-stack .filter-search {
-    flex: 1 1 220px;
-  }
+  .inv-search-field { max-width: none; }
   .topbar {
     padding-right: 10px;
   }
@@ -525,6 +518,23 @@ pre {
     min-width: 0;
     max-width: 100%;
   }
+
+  .inv-filter-group,
+  .inv-filter-group:first-child { flex-basis: 100%; }
+
+  .inv-filter-group .pill { min-height: var(--control-h-touch); }
+
+  .inv-search-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inv-search-field { flex-basis: auto; }
+
+  .inv-search-field .form-in,
+  .inv-search-actions .btn { min-height: var(--control-h-touch); }
+
+  .inv-search-actions .btn { flex: 1 1 auto; }
 
   .filter-search,
   .mkt-search-in,

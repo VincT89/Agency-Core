@@ -27,10 +27,6 @@ class RequestShow extends Component
 
     public function mount(Shoot $shoot): void
     {
-        if (auth()->user()->isPhotographer() && ! auth()->user()->canManageSystem()) {
-            abort(403, 'Accesso negato: sezione riservata al team marketing.');
-        }
-
         $this->authorize('view', $shoot);
         $this->shoot = $shoot;
         $this->reloadShoot();

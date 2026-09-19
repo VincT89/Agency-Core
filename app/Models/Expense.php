@@ -22,6 +22,8 @@ class Expense extends Model
         'paid_at',
         'status',
         'notes',
+        'expense_recurrence_id', 'recurrence_date', 'recurrence_overridden',
+        'expense_document_id', 'document_kind',
     ];
 
     protected $casts = [
@@ -29,9 +31,21 @@ class Expense extends Model
         'due_date' => 'date',
         'paid_at' => 'datetime',
         'amount' => 'decimal:2',
+        'recurrence_date' => 'date',
+        'recurrence_overridden' => 'boolean',
     ];
 
     // Relations
+    public function recurrence()
+    {
+        return $this->belongsTo(ExpenseRecurrence::class, 'expense_recurrence_id');
+    }
+
+    public function document()
+    {
+        return $this->belongsTo(ExpenseDocument::class, 'expense_document_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -82,6 +96,13 @@ class Expense extends Model
     }
 
     // Accessors
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'pending' => 'Da pagare', 'paid' => 'Pagata', 'cancelled' => 'Annullata', default => $this->status,
+        };
+    }
+
     public function getIsOverdueAttribute(): bool
     {
         return $this->status === 'pending'

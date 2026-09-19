@@ -43,7 +43,10 @@ class MyShootsIndex extends Component
         $filters = array_filter($filters);
 
         // Applica i filtri e recupera gli shooting dell'utente corrente
-        $shoots = $query->forIndex($filters)->latest('created_at')->paginate(20);
+        $shoots = $query->forIndex($filters)
+            ->when(auth()->user()->isPhotographer(), fn ($shoots) => $shoots->where('photographer_id', auth()->id()))
+            ->latest('created_at')
+            ->paginate(20);
 
         return view('livewire.photography.shooting.my-shoots-index', [
             'shoots' => $shoots,

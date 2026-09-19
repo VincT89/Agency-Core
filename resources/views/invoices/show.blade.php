@@ -161,6 +161,12 @@
                         Invio non disponibile.
                     </div>
                 @endif
+            @elseif($invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::Imported)
+                <div class="inv-fiscal-message">
+                    <div class="u-text-strong">Documento esistente importato</div>
+                    <p>Numero originale: {{ $invoice->import_metadata['number'] ?? '' }}. Provenienza: {{ $invoice->import_source === 'aruba' ? 'Aruba' : 'file' }}.</p>
+                    <p class="u-text-meta">L’importazione non ha effettuato un nuovo invio allo SdI. Il documento originale è disponibile negli allegati.</p>
+                </div>
             @else
                 <div class="inv-fiscal-message">
                     <div class="u-text-strong">{{ $invoice->fiscal_status_label }}</div>
@@ -401,6 +407,13 @@
                 </x-slot:headerActions>
             @endcan
 
+            @if($invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::Imported)
+                <div class="u-p-md">
+                    @forelse(($invoice->import_metadata['items'] ?? []) as $item)
+                        <div class="commercial-history-row"><p>{{ $item['description'] }}</p><p class="u-text-meta">Quantità {{ $item['quantity'] ?: 'non indicata' }}; prezzo unitario {{ $item['unit_price'] }}; imponibile {{ $item['total'] }}; IVA {{ $item['vat_rate'] }}%</p></div>
+                    @empty<p>Le voci sono consultabili nel documento originale allegato.</p>@endforelse
+                </div>
+            @else
             <table class="t-table">
                 <thead>
                     <tr>
@@ -454,6 +467,7 @@
                     @endforelse
                 </tbody>
             </table>
+            @endif
         </x-panel>
     </div>
 

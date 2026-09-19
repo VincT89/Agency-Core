@@ -1,0 +1,41 @@
+.finance-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.finance-nav [aria-current="page"] { border-color: var(--accent); font-weight: 700; }
+.finance-form .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.finance-form .form-row.full { grid-template-columns: minmax(0, 1fr); }
+.finance-form .form-g { min-width: 0; overflow-wrap: anywhere; }
+.t-table.finance-table thead th,
+.t-table.finance-table tbody th,
+.t-table.finance-table tbody td,
+.t-table.finance-table tfoot th,
+.t-table.finance-table tfoot td {
+    padding: 16px 22px;
+    white-space: nowrap;
+}
+.t-table.finance-table tbody th { text-align: left; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); }
+.t-table.finance-table tfoot th,
+.t-table.finance-table tfoot td { padding-top: 26px; padding-bottom: 26px; border-top: 2px solid var(--line); font-weight: 700; font-size: 12px; }
+.t-table.finance-table tfoot th { background: #c8102e; color: #fff; text-align: left; padding-right: 32px; border-bottom-left-radius: var(--r2); }
+.t-table.finance-table tbody tr:last-child th,
+.t-table.finance-table tbody tr:last-child td { border-bottom: 0; border-radius: 0; }
+.t-table.finance-table .finance-balance-negative { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.finance-document-details { overflow-wrap: anywhere; }
+.finance-document-details dt { font-weight: 600; margin-top: 12px; }
+.finance-document-details dd { margin: 4px 0 0; }
+.finance-list-item { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.finance-list-item > div { flex: 1 1 220px; min-width: 0; }
+.finance-list-item:last-of-type { border-bottom: 0; }
+.finance-expense-detail .ticket-badges { flex-wrap: wrap; }
+.finance-expense-detail .ticket-badges .badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.finance-expense-detail .panel-body { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+    .finance-form .form-row { grid-template-columns: minmax(0, 1fr); }
+    .finance-nav .btn { flex: 1 1 auto; justify-content: center; }
+}
+.invoice-import-filename { overflow-wrap: anywhere; }
+.invoice-import-check { display: flex; align-items: flex-start; gap: 10px; }
+.invoice-import-check input { margin-top: 3px; flex-shrink: 0; }
+.invoice-import-payments { margin: 12px 0 16px; padding-left: 20px; }
+@media (max-width: 600px) {
+    .invoice-import .form-row { grid-template-columns: minmax(0, 1fr); }
+    .invoice-import .finance-list-item { flex-direction: column; align-items: stretch; gap: 12px; }
+}

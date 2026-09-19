@@ -366,12 +366,11 @@ class MarketingCampaignPostShow extends Component
         $this->selected_media_items = $newSelected;
     }
 
-    private function syncLegacyMediaFields()
+    private function syncLegacyMediaFields(?int $mediaId)
     {
-        // Now sync legacy media fields using selected_media_items first item if existing
-        $first = collect($this->selected_media_items)->firstWhere('source', 'existing');
-        if ($first) {
-            $model = MarketingCampaignPostMedia::find($first['existing_id']);
+        // Il primo file è già stato verificato fra quelli appartenenti al post.
+        if ($mediaId !== null) {
+            $model = $this->post->mediaItems()->findOrFail($mediaId);
             if ($model) {
                 $isLocal = in_array(
                     $model->disk,
@@ -820,7 +819,18 @@ class MarketingCampaignPostShow extends Component
 
     public function savePost()
     {
+        return $this->persistPost();
+    }
+
+    public function saveDraft()
+    {
+        return $this->persistPost(saveDraft: true);
+    }
+
+    private function persistPost(bool $saveDraft = false)
+    {
         $this->authorize('update', $this->post);
+        $this->resetValidation();
 
         if ($this->mediaResolutionFailed) {
             $this->addError('media', 'Alcuni file del post non sono più disponibili. Rimuovili e selezionali di nuovo.');
@@ -834,15 +844,15 @@ class MarketingCampaignPostShow extends Component
             return;
         }
 
-        if (empty($this->selected_media_items)) {
+        if (! $saveDraft && empty($this->selected_media_items)) {
             $this->addError('media', 'Aggiungi almeno un media prima di salvare il post come pronto.');
 
             return;
         }
 
-        $this->validate();
+        $validated = $this->validate();
 
-        if (! $this->validateReelMedia()) {
+        if (! $saveDraft && ! $this->validateReelMedia()) {
             return;
         }
 
@@ -852,7 +862,7 @@ class MarketingCampaignPostShow extends Component
             return;
         }
 
-        $data = $this->form;
+        $data = $validated['form'];
         $preparedMedia = null;
         $newlyCreatedMediaPaths = [];
         $newlyCreatedNextcloudShares = [];
@@ -884,10 +894,40 @@ class MarketingCampaignPostShow extends Component
         }
 
         try {
-            $result = DB::transaction(function () use ($data, &$preparedMedia, &$newlyCreatedMediaPaths, &$newlyCreatedNextcloudShares, $ncService) {
+            $result = DB::transaction(function () use ($data, $saveDraft, &$preparedMedia, &$newlyCreatedMediaPaths, &$newlyCreatedNextcloudShares, $ncService) {
+                $lockedPost = MarketingCampaignPost::lockForUpdate()->findOrFail($this->post->id);
+                if ($lockedPost->current_version_id !== $this->expectedCurrentVersionId
+                    || ! $lockedPost->status->isManuallyEditable()
+                    || ($saveDraft && (! $lockedPost->status->isDraft() || $lockedPost->current_version_id !== null))) {
+                    throw new StaleMarketingCampaignPostVersionException;
+                }
+                $this->post = $lockedPost;
+
                 $preparedMedia = $this->buildPostDataAndStoredMedia($data, $newlyCreatedMediaPaths, $newlyCreatedNextcloudShares, $ncService);
                 if ($preparedMedia === false) {
                     throw new MediaPreparationException;
+                }
+
+                if ($saveDraft) {
+                    $ids = $preparedMedia['ordered_media_ids'];
+                    if (count(array_unique($ids)) !== count($ids)
+                        || $this->post->mediaItems()->whereIn('id', $ids)->count() !== count($ids)) {
+                        $this->addError('media', 'La selezione dei file non è valida. Ricarica il post e riprova.');
+                        throw new MediaPreparationException;
+                    }
+
+                    // Una bozza resta incompleta: non crea versioni né avvia approvazioni o invii.
+                    unset($data['status']);
+                    $this->post->update($data);
+                    foreach ($this->post->mediaItems()->whereNotIn('id', $ids)->get() as $removedMedia) {
+                        app(\App\Domain\Social\Actions\DeleteMarketingCampaignPostMediaAction::class)->execute($removedMedia);
+                    }
+                    foreach ($ids as $position => $id) {
+                        $this->post->mediaItems()->whereKey($id)->update(['sort_order' => $position]);
+                    }
+                    $this->syncLegacyMediaFields($ids[0] ?? null);
+
+                    return null;
                 }
 
                 // Metadati base (non cambiamo title, description e status direttamente qui se versionati)
@@ -909,7 +949,9 @@ class MarketingCampaignPostShow extends Component
                 return $action->execute($this->post, $dto);
             });
 
-            if ($result->isCreated()) {
+            if ($saveDraft) {
+                session()->flash('success', 'Bozza aggiornata.');
+            } elseif ($result->isCreated()) {
                 session()->flash('success', 'Nuova versione creata.');
             } else {
                 session()->flash('success', 'Nessuna modifica da salvare.');

@@ -28,6 +28,12 @@ class InvoicePolicy
         return $user->canAccessFinance() && $invoice->isFiscalEditable();
     }
 
+    public function recordPayment(User $user, Invoice $invoice): bool
+    {
+        return $user->canAccessFinance()
+            && ($invoice->isFiscalEditable() || $invoice->fiscal_status === InvoiceFiscalStatus::Imported);
+    }
+
     public function delete(User $user, Invoice $invoice): bool
     {
         return $user->canAccessFinance()

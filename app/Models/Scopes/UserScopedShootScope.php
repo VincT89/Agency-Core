@@ -18,19 +18,18 @@ class UserScopedShootScope implements Scope
             return;
         }
 
-        // Filtro assegnazione diretta per fotografi
-        if ($user->isPhotographer()) {
-            $builder->where('photographer_id', $user->id);
-            return;
-        }
-
-        // Filtro di progetto per team interno (Marketing, Developer)
+        // Progetti assegnati e campagne visibili, oltre agli incarichi personali.
         $builder->where(function($q) use ($user) {
             $q->whereHas('project', function ($q2) use ($user) {
                 $q2->whereIn('projects.id', $user->projects()->pluck('projects.id'));
-            })->orWhereHas('marketingCampaign.client.projects.users', function ($q2) use ($user) {
-                $q2->where('users.id', $user->id);
+            })->orWhere(function ($campaignShoots) use ($user) {
+                $campaignShoots->whereNull('project_id')
+                    ->whereHas('marketingCampaign', fn ($campaign) => $campaign->visibleTo($user));
             });
+
+            if ($user->isPhotographer()) {
+                $q->orWhere('photographer_id', $user->id);
+            }
         });
     }
 }

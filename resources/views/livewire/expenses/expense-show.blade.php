@@ -1,4 +1,4 @@
-<div>
+<div class="finance-expense-detail">
     <div class="page-back-row">
         <a href="{{ route('expenses.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
             <i data-lucide="arrow-left" class="u-icon-sm"></i> Torna alla lista
@@ -33,6 +33,19 @@
             </a>
         </x-slot:actions>
     </x-page-header>
+
+    @error('expense_document_id')<p role="alert" class="invalid-feedback u-mb-md">{{ $message }}</p>@enderror
+
+    <div class="u-mb-lg"><x-panel title="Documento della spesa" padded>
+        @if($expense->document)
+            <p><a href="{{ route('expenses.documents.show', $expense->document) }}">{{ \App\Models\ExpenseDocument::KINDS[$expense->document->kind] }} {{ $expense->document->number }} - {{ $expense->document->issuer }}</a></p>
+            <a href="{{ route('expenses.documents.download', $expense->document) }}" class="btn btn-g btn-sm u-mt-sm">Scarica documento</a>
+        @else
+            <p>Documento da collegare: {{ \App\Models\ExpenseDocument::KINDS[$expense->document_kind] ?? 'Giustificativo' }}. È necessario prima di confermare il pagamento.</p>
+            <a href="{{ route('expenses.edit', $expense) }}" class="btn btn-g btn-sm u-mt-sm">Collega documento</a>
+        @endif
+        @if($expense->recurrence)<p class="u-mt-md">Scadenza del {{ $expense->recurrence_date->format('d/m/Y') }}. <a href="{{ route('expenses.recurrences.edit', $expense->recurrence) }}">Gestisci ricorrenza</a></p>@endif
+    </x-panel></div>
 
     <div class="g-2col-main">
         
@@ -82,7 +95,7 @@
                     <div class="u-text-body u-text-strong u-mb-sm">
                         {{ $expense->expenseable->title ?? $expense->expenseable->name ?? $expense->expenseable->code ?? 'N/A' }}
                     </div>
-                    <a href="{{ route(strtolower(class_basename($expense->expenseable_type)) . 's.show', $expense->expenseable) }}" class="t-link u-text-meta">
+                    <a href="{{ route($expense->expenseable_type === \App\Models\HostingService::class ? 'hosting-services.show' : strtolower(class_basename($expense->expenseable_type)) . 's.show', $expense->expenseable) }}" class="t-link u-text-meta">
                         Vai all'elemento <i data-lucide="arrow-right" class="u-icon-xs u-ml-xs u-inline-middle"></i>
                     </a>
                 @else

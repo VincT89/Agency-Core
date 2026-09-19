@@ -11,26 +11,26 @@ class MarketingCampaignPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isMarketing() || $user->isAdministration();
+        return $user->canManageMarketing() || $user->isAdministration();
     }
 
     public function view(User $user, MarketingCampaign $marketingCampaign): bool
     {
-        return $user->isMarketing() || $user->isAdministration();
+        return $user->canManageMarketing() || $user->isAdministration();
     }
 
     public function create(User $user): bool
     {
-        return $user->isMarketing();
+        return $user->canManageMarketing();
     }
 
     public function update(User $user, MarketingCampaign $marketingCampaign): bool
     {
-        return $user->isMarketing();
+        return $user->canManageMarketing();
     }
 
     public function delete(User $user, MarketingCampaign $marketingCampaign): bool
     {
-        return $user->isMarketing();
+        return $user->canManageMarketing();
     }
 }

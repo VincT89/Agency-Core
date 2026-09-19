@@ -135,10 +135,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('invoices/import', \App\Livewire\Invoices\InvoiceImport::class)->name('invoices.import');
     Route::resource('clients', ClientController::class);
+    Route::get('clients/{client}/materials', [\App\Http\Controllers\ClientMaterialController::class, 'index'])->name('clients.materials.index');
+    Route::post('clients/{client}/materials', [\App\Http\Controllers\ClientMaterialController::class, 'store'])->name('clients.materials.store');
     Route::resource('projects', ProjectController::class);
     Route::resource('tickets', TicketController::class);
-    Route::resource('quotes', \App\Http\Controllers\QuoteController::class)->except(['destroy']);
+    Route::resource('quotes', \App\Http\Controllers\QuoteController::class);
     Route::post('quotes/{quote}/present', [\App\Http\Controllers\QuoteController::class, 'present'])->name('quotes.present');
     Route::post('quotes/{quote}/accept', [\App\Http\Controllers\QuoteController::class, 'accept'])->name('quotes.accept');
     Route::post('quotes/{quote}/reject', [\App\Http\Controllers\QuoteController::class, 'reject'])->name('quotes.reject');
@@ -237,6 +240,17 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/', SocialOperationsDashboard::class)->name('index');
     });
     // AMMINISTRAZIONE - SPESE
+    Route::prefix('expenses')->name('expenses.')->middleware('can:viewAny,App\Models\Expense')->group(function () {
+        Route::get('/forecast', [\App\Http\Controllers\CashFlowController::class, 'index'])->name('forecast');
+        Route::put('/forecast/balance', [\App\Http\Controllers\CashFlowController::class, 'updateBalance'])->name('forecast.balance');
+        Route::resource('recurrences', \App\Http\Controllers\ExpenseRecurrenceController::class)->parameters(['recurrences' => 'recurrence'])->except(['show', 'destroy']);
+        Route::resource('incomes', \App\Http\Controllers\ManualIncomeController::class)->parameters(['incomes' => 'income'])->except(['show', 'destroy']);
+        Route::get('/documents/aruba', [\App\Http\Controllers\ArubaExpenseDocumentController::class, 'index'])->name('documents.aruba');
+        Route::get('/documents/aruba/search', [\App\Http\Controllers\ArubaExpenseDocumentController::class, 'search'])->name('documents.aruba.search')->middleware('throttle:30,1');
+        Route::post('/documents/aruba/import', [\App\Http\Controllers\ArubaExpenseDocumentController::class, 'store'])->name('documents.aruba.import')->middleware('throttle:30,1');
+        Route::get('/documents/{document}/download', [\App\Http\Controllers\ExpenseDocumentController::class, 'download'])->name('documents.download');
+        Route::resource('documents', \App\Http\Controllers\ExpenseDocumentController::class)->parameters(['documents' => 'document'])->only(['index', 'create', 'store', 'show']);
+    });
     Route::get('/expenses', ExpensesIndex::class)->name('expenses.index');
     Route::get('/expenses/create', ExpenseForm::class)->name('expenses.create');
     Route::get('/expenses/{expense}', ExpenseShow::class)->name('expenses.show');

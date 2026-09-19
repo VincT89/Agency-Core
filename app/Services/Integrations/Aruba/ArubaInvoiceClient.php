@@ -174,6 +174,40 @@ class ArubaInvoiceClient
         ]);
     }
 
+    public function receivedInvoices(string $from, string $to, int $page, string $country, string $vat): array
+    {
+        $this->configuration->assertCanConnect();
+        return $this->getJson($this->configuration->apiBaseUrl().'/api/v2/invoices-in', 'received_invoice_list', [
+            'creationStartDate' => $from, 'creationEndDate' => $to, 'page' => (string) $page, 'size' => '20',
+            'receiverCountry' => $country, 'receiverVatcode' => $vat,
+        ]);
+    }
+
+    public function issuedInvoices(string $from, string $to, int $page, string $country, string $vat): array
+    {
+        $this->configuration->assertCanConnect();
+        return $this->getJson($this->configuration->apiBaseUrl().'/api/v2/invoices-out', 'issued_invoice_list', [
+            'creationStartDate' => $from, 'creationEndDate' => $to, 'page' => (string) $page, 'size' => '20',
+            'senderCountry' => $country, 'senderVatcode' => $vat,
+        ]);
+    }
+
+    public function issuedInvoiceFile(string $id): array
+    {
+        $this->configuration->assertCanConnect();
+        return $this->getJson($this->configuration->apiBaseUrl().'/api/v2/invoices-out/detail', 'issued_invoice_import_detail', [
+            'id' => $id, 'includeFile' => 'true', 'includePdf' => 'false',
+        ]);
+    }
+
+    public function receivedInvoiceDetail(string $id): array
+    {
+        $this->configuration->assertCanConnect();
+        return $this->getJson($this->configuration->apiBaseUrl().'/api/v2/invoices-in/detail', 'received_invoice_detail', [
+            'id' => $id, 'includeFile' => 'true', 'includeUnsignedFile' => 'true', 'includePdf' => 'false',
+        ]);
+    }
+
     private function request(): PendingRequest
     {
         return Http::acceptJson()
@@ -195,6 +229,9 @@ class ArubaInvoiceClient
         try {
             $response = $this->request()->get($endpoint, $query);
             $safePayload = ProviderErrorSanitizer::payload($response);
+            if (is_array($safePayload)) {
+                unset($safePayload['file'], $safePayload['unsignedFile'], $safePayload['pdfFile']);
+            }
             $log->update([
                 'status_code' => $response->status(),
                 'response' => $safePayload,

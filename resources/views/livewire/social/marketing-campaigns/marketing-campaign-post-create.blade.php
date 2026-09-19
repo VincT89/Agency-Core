@@ -198,7 +198,7 @@
             <div class="u-flex u-gap-lg u-mt-md">
               <div class="form-g mb-0 u-flex-1">
                 <label class="form-lbl">Data Pubblicazione</label>
-                <input type="date" class="form-in" wire:model="form.scheduled_date">
+                <livewire:social.publication-date-picker :campaign="$campaign" wire:model.live="form.scheduled_date" />
                 @error('form.scheduled_date') <span class="form-err">{{ $message }}</span> @enderror
               </div>
               <div class="form-g mb-0 u-flex-1">

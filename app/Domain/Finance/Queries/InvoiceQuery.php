@@ -26,9 +26,7 @@ class InvoiceQuery
             $query->where('fiscal_status', $filters['fiscal_status']);
         }
         if (! empty($filters['client_id'])) {
-            $query->whereHas('project', function ($q) use ($filters) {
-                $q->where('client_id', $filters['client_id']);
-            });
+            $query->where('client_id', $filters['client_id']);
         }
         if (! empty($filters['start_date'])) {
             $query->whereDate('issue_date', '>=', $filters['start_date']);

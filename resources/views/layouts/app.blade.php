@@ -233,8 +233,8 @@
         @endcan
       </div>
 
-      {{-- 2. SOCIAL MEDIA — marketing e admin --}}
-      @if(auth()->user()->isMarketing() || auth()->user()->canViewManagementDashboard() || auth()->user()->can('view_social_connections'))
+      {{-- Funzioni Marketing e incarichi fotografici --}}
+      @if(auth()->user()->canManageMarketing() || auth()->user()->canViewManagementDashboard() || auth()->user()->can('view_social_connections'))
         <div class="nav-divider"></div>
         <div class="nav-group">
           <div class="nav-group-label">Social Media</div>
@@ -245,9 +245,14 @@
           <x-nav-item href="{{ route('social.calendar') }}" icon="calendar-days" label="Calendario Campagne"
             :active="request()->routeIs('social.calendar')" />
 
-          @if(auth()->user()->isMarketing())
+          @if(auth()->user()->canManageMarketing() && !auth()->user()->canViewManagementDashboard())
             <x-nav-item href="{{ route('social.shooting.index') }}" icon="camera" label="Richieste Shooting"
               :active="request()->routeIs('social.shooting.*')" />
+          @endif
+
+          @if(auth()->user()->isPhotographer())
+            <x-nav-item href="{{ route('photography.shooting.index') }}" icon="camera" label="I Miei Shooting"
+              :active="request()->routeIs('photography.shooting.*')" />
           @endif
 
           @if(auth()->user()->canViewManagementDashboard())
@@ -264,16 +269,6 @@
             <x-nav-item href="{{ route('admin.social.operations.index') }}" icon="server-crash" label="Coda Social"
                 :active="request()->routeIs('admin.social.operations.*')" />
           @endcan
-        </div>
-      @endif
-
-      {{-- 2. SOCIAL MEDIA — fotografo --}}
-      @if(auth()->user()->isPhotographer())
-        <div class="nav-divider"></div>
-        <div class="nav-group">
-          <div class="nav-group-label">Social Media</div>
-          <x-nav-item href="{{ route('photography.shooting.index') }}" icon="camera" label="I Miei Shooting"
-            :active="request()->routeIs('photography.shooting.*')" />
         </div>
       @endif
 

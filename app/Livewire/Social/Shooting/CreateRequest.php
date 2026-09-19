@@ -33,10 +33,6 @@ class CreateRequest extends Component
 
     public function mount()
     {
-        if (auth()->user()->isPhotographer() && ! auth()->user()->canManageSystem()) {
-            abort(403, 'Accesso negato: sezione riservata a team interno.');
-        }
-
         $this->authorize('create', Shoot::class);
         $this->addSlot();
     }

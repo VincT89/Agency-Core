@@ -18,7 +18,7 @@ class StorePaymentRequest extends FormRequest
             return false;
         }
 
-        return $this->user()->can('update', $invoice);
+        return $this->user()->can('recordPayment', $invoice);
     }
 
     public function rules(): array

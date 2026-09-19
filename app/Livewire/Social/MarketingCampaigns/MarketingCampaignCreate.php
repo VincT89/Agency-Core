@@ -42,7 +42,7 @@ class MarketingCampaignCreate extends Component
         $client = Client::findOrFail($this->client_id);
         
         $user = auth()->user();
-        if (!$user->canManageSystem() && !$user->isMarketing()) {
+        if (!$user->canManageMarketing()) {
             if (!$client->projects()->whereHas('users', fn($q) => $q->where('users.id', $user->id))->exists()) {
                 abort(403, 'Non hai accesso a questo cliente.');
             }
@@ -72,7 +72,7 @@ class MarketingCampaignCreate extends Component
 
         // Admin/System vedono tutti i clienti, gli altri solo i propri
         $clientsQuery = Client::query()->where('status', 'active');
-        if (!$user->canManageSystem() && !$user->isMarketing()) {
+        if (!$user->canManageMarketing()) {
             $clientsQuery->whereHas('projects.users', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });

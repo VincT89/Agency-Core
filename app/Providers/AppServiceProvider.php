@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
             }
             $subject = $arguments[0] ?? null;
             if ((is_object($subject) || is_string($subject)) && is_a($subject, Client::class, true)
-                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket', 'viewAny', 'view', 'create', 'updateRegistry'], true)) {
+                && in_array($ability, ['lookup', 'quickCreate', 'selectForTicket', 'viewAny', 'view', 'create', 'updateRegistry', 'viewMaterials', 'manageMaterials'], true)) {
                 return null;
             }
             foreach ([Task::class, \App\Models\Quote::class] as $readable) {
@@ -107,10 +107,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('manage_social_operations', function (\App\Models\User $user) {
-            return $user->canManageSystem() || in_array($user->role, [\App\Enums\UserRole::Admin, \App\Enums\UserRole::Marketing]);
+            return $user->canManageMarketing();
         });
         Gate::define('view_social_connections', fn (\App\Models\User $user) => $user->canManageSystem() || $user->isAdministration());
-        Gate::define('view_social_operations', fn (\App\Models\User $user) => $user->canViewManagementDashboard() || $user->isMarketing());
+        Gate::define('view_social_operations', fn (\App\Models\User $user) => $user->canViewManagementDashboard() || $user->canManageMarketing());
 
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             if (auth()->check()) {

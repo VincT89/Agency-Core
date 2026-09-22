@@ -107,12 +107,14 @@
     <div class="cmp-post-detail-layout relative"
          x-data="{
              isUploadingLocalMedia: false,
+             localUploadProgress: 0,
              localBlobUrls: {},
              handleLocalFiles(event) {
                  const files = Array.from(event.target.files || []);
-                 if (!files.length) return;
+                 if (!files.length || this.isUploadingLocalMedia) return;
 
                  this.isUploadingLocalMedia = true;
+                 this.localUploadProgress = 0;
                  event.target.value = '';
 
                  const newMeta = [];
@@ -136,9 +138,10 @@
                          'media',
                          files,
                          () => { this.isUploadingLocalMedia = false; },
-                         () => { this.failLocalUpload(newMeta.map(item => item.uid)); }
+                         () => { this.failLocalUpload(newMeta.map(item => item.uid)); },
+                         (event) => { this.localUploadProgress = event.detail.progress; }
                      );
-                 });
+                 }).catch(() => this.failLocalUpload(newMeta.map(item => item.uid)));
              },
              failLocalUpload(uids) {
                  this.isUploadingLocalMedia = false;
@@ -268,7 +271,7 @@
                         <div class="panel cmp-panel-pad u-mb-md">
                             <div class="cmp-section-label mb-2">Dati Editoriali</div>
                             {{-- Blocco 3: Tipo + Stato + Data/Ora --}}
-                            <div class="u-flex u-gap-lg">
+                            <div class="cmp-post-fields">
                                 <div class="form-g mb-0 u-flex-1">
                                     <label class="form-lbl">Tipo Contenuto <span class="mkt-text-red">*</span></label>
                                     <select class="form-sel" wire:model="form.content_type" required>
@@ -280,17 +283,13 @@
                                 </div>
 
                                 <div class="form-g mb-0 u-flex-1">
-                                    <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
-                                    <select class="form-sel" wire:model="form.status" required {{ $post->currentVersion ? 'disabled' : '' }}>
-                                        @foreach(\App\Enums\Social\MarketingCampaignPostStatus::cases() as $statusEnum)
-                                            <option value="{{ $statusEnum->value }}">{{ $statusEnum->label() }}</option>
-                                        @endforeach
-                                    </select>
+                                    <label class="form-lbl" for="post-status-{{ $post->id }}">Stato attuale</label>
+                                    <input id="post-status-{{ $post->id }}" type="text" class="form-in" value="{{ $post->status->label() }}" readonly>
                                     @error('form.status') <span class="form-err">{{ $message }}</span> @enderror
                                 </div>
                             </div>
 
-                            <div class="u-flex u-gap-lg u-mt-md">
+                            <div class="cmp-post-fields u-mt-md">
                                 <div class="form-g mb-0 u-flex-1">
                                     <label class="form-lbl">Data Pubblicazione</label>
                                     <livewire:social.publication-date-picker :campaign="$campaign" :post-id="$post->id" wire:model.live="form.scheduled_date" :disabled="auth()->user()->cannot('update', $post)" />
@@ -327,8 +326,9 @@
                             </div>
 
                             @if($post->currentVersion && count($versionMedia) > 0)
-                                <div class="cmp-section-label mb-2 u-mt-md">Media Sody (Attivo)</div>
-                                <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md">
+                                {{-- Use video src for saved previews: a QuickTime source type makes Chromium skip playable H.264 MOV files. --}}
+                                <div class="cmp-section-label mb-2 u-mt-md">Media della versione attiva</div>
+                                <div class="cmp-media-preview-box cmp-post-media-grid u-mb-md">
                                     @foreach($versionMedia as $idx => $versionItem)
                                         <div class="cmp-media-preview-item" wire:key="active-version-media-{{ $versionItem['id'] }}">
                                             @if($versionItem['type'] === 'video')
@@ -339,6 +339,7 @@
                                                     <video
                                                         wire:key="active-version-video-{{ $versionItem['id'] }}"
                                                         data-persisted-video="{{ $versionItem['id'] }}"
+                                                        src="{{ $versionVideoUrl }}"
                                                         class="cmp-media-preview-video cmp-local-preview-img"
                                                         controls
                                                         muted
@@ -346,17 +347,18 @@
                                                         preload="metadata"
                                                         x-show="!videoFailed"
                                                         x-on:error="videoFailed = true"
+                                                        x-on:loadedmetadata="videoFailed = false"
                                                     >
-                                                        <source src="{{ $versionVideoUrl }}" type="{{ $versionItem['mime_type'] ?: 'video/mp4' }}">
                                                     </video>
-                                                    <div x-show="videoFailed" class="marketing-media-placeholder" x-cloak>
+                                                    <div x-show="videoFailed" class="marketing-media-placeholder u-flex-col u-gap-xs" x-cloak>
                                                         <span class="u-text-meta">Anteprima video non disponibile.</span>
+                                                        <a href="{{ $versionItem['url'] }}" target="_blank" rel="noopener" class="u-text-meta">Apri video originale</a>
                                                     </div>
                                                 </div>
                                             @else
                                                 <img src="{{ $versionItem['url'] }}" class="cmp-media-preview-img cmp-local-preview-img" alt="Media Sody {{ $idx + 1 }}">
                                             @endif
-                                            <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="Media Sody">Sody (v{{ $post->currentVersion->version_number }}) - {{ $idx + 1 }}</div>
+                                            <div class="u-text-truncate u-w-full u-text-meta u-mt-xs">Versione {{ $post->currentVersion->version_number }} - {{ $idx + 1 }}</div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -377,7 +379,7 @@
                             {{-- Unified Media Preview Block --}}
                             @if(count($selected_media_items) > 0)
                                 <div class="cmp-section-label mb-2 u-mt-md">Media Selezionati (Drag per riordinare)</div>
-                                <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md" x-data="{
+                                <div class="cmp-media-preview-box cmp-post-media-grid u-mb-md" x-data="{
                                     draggingIndex: null,
                                     dropIndex: null,
                                     dragStart(index) { this.draggingIndex = index; },
@@ -435,7 +437,6 @@
                                                     if ($item['type'] === 'video' && $url) {
                                                         $url .= '#t=0.001';
                                                     }
-                                                    $savedVideoMime = $item['mime_type'] ?? 'video/mp4';
                                                 @endphp
                                                 @if($url)
                                                     @if($item['type'] === 'video')
@@ -443,6 +444,7 @@
                                                             <video
                                                                 wire:key="selected-saved-video-{{ $item['existing_id'] }}"
                                                                 data-persisted-video="{{ $item['existing_id'] }}"
+                                                                src="{{ $url }}"
                                                                 class="cmp-media-preview-video cmp-local-preview-img"
                                                                 controls
                                                                 muted
@@ -450,11 +452,12 @@
                                                                 preload="metadata"
                                                                 x-show="!videoFailed"
                                                                 x-on:error="videoFailed = true"
+                                                                x-on:loadedmetadata="videoFailed = false"
                                                             >
-                                                                <source src="{{ $url }}" type="{{ $savedVideoMime }}">
                                                             </video>
-                                                            <div x-show="videoFailed" class="marketing-media-placeholder" x-cloak>
+                                                            <div x-show="videoFailed" class="marketing-media-placeholder u-flex-col u-gap-xs" x-cloak>
                                                                 <span class="u-text-meta">Anteprima video non disponibile.</span>
+                                                                <a href="{{ $item['preview_url'] }}" target="_blank" rel="noopener" class="u-text-meta">Apri video originale</a>
                                                             </div>
                                                         </div>
                                                     @else
@@ -478,16 +481,16 @@
                                             @endif
                                             
                                             <div class="cmp-media-preview-label u-flex u-align-center u-justify-between">
-                                                <span class="u-text-truncate" title="{{ $item['name'] }}">{{ $item['name'] }}</span>
-                                                <span class="u-text-meta u-text-muted" style="font-size: 0.65rem;">
+                                                <span title="{{ $item['name'] }}">{{ $item['name'] }}</span>
+                                                <span class="u-text-meta u-text-muted">
                                                     @if($item['source'] === 'local_pending')
-                                                        <i data-lucide="loader-2" class="u-icon-xs mkt-spin u-mr-xs"></i>(In upload...)
+                                                        In caricamento
                                                     @elseif($item['source'] === 'local')
-                                                        <i data-lucide="upload-cloud" class="u-icon-xs u-mr-xs"></i>(Caricato)
+                                                        Caricato
                                                     @elseif($item['source'] === 'nextcloud')
-                                                        <i data-lucide="cloud" class="u-icon-xs u-mr-xs"></i>(NC)
+                                                        Da Nextcloud
                                                     @elseif($item['source'] === 'existing')
-                                                        <i data-lucide="check" class="u-icon-xs u-mr-xs"></i>File salvato
+                                                        File salvato
                                                     @endif
                                                 </span>
                                             </div>
@@ -524,13 +527,11 @@
                                             class="form-in cmp-media-file-input"
                                             accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
                                             x-on:change="handleLocalFiles($event)"
+                                            x-bind:disabled="isUploadingLocalMedia"
+                                            aria-label="Aggiungi foto o video dal computer"
                                         >
 
-                                        <div class="u-mt-sm u-mb-md">
-                                            <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
-                                                <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Caricamento dei file in corso...
-                                            </div>
-                                        </div>
+                                        <x-social.media-upload-status />
                                     </div>
                                     @error('media') <span class="form-err">{{ $message }}</span> @enderror
                                     @error('media.*') <span class="form-err">{{ $message }}</span> @enderror
@@ -563,7 +564,7 @@
                             @endif
 
                                 {{-- Blocco 4.7: Copy / Descrizione --}}
-                                <div class="form-g mb-0 u-border-t u-border-line u-pt-md">
+                                <div class="form-g cmp-post-copy">
                                     <label class="form-lbl">Copy / Descrizione</label>
                                     <textarea class="form-ta" wire:model="form.description" rows="5"
                                         placeholder="Inserisci il testo del post..."></textarea>
@@ -823,7 +824,11 @@
                                 <div class="u-alert-error u-mt-lg">{{ $message }}</div>
                             @enderror
 
-                            <div class="u-mt-lg u-flex u-gap-sm">
+                            <div class="u-mt-lg cmp-post-actions">
+                                @if($post->status->isManuallyEditable())
+                                    <p class="cmp-post-help">{{ $post->status->isDraft() && ! $post->current_version_id ? 'La bozza può essere incompleta. Salvala per riprendere in seguito, oppure prepara il contenuto per l’approvazione.' : 'Salva le modifiche al contenuto prima di procedere con l’approvazione e la pubblicazione.' }}</p>
+                                    <p x-show="isUploadingLocalMedia" x-cloak class="cmp-post-help" data-upload-save-notice>Attendi il completamento del caricamento prima di salvare.</p>
+                                @endif
                                 @if(session()->has('success'))
                                     <div class="u-text-green u-text-meta u-mr-sm u-flex-center">{{ session('success') }}</div>
                                 @endif
@@ -831,10 +836,11 @@
                                     <div class="u-text-red u-text-meta u-mr-sm u-flex-center">{{ session('error') }}</div>
                                 @endif
 
+                                <div class="cmp-post-action-buttons">
                                 @if($post->status->isManuallyEditable())
                                     @if($post->status->isDraft() && ! $post->current_version_id)
                                         <button type="submit" class="btn btn-s"
-                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            wire:loading.attr="disabled" wire:target="saveDraft,savePost,saveAsManualVersion,saveAndSubmitToN8n" :disabled="isUploadingLocalMedia || sodyActionPending">
                                             <span wire:loading.remove wire:target="saveDraft">Salva Bozza</span>
                                             <span wire:loading wire:target="saveDraft">Salvataggio...</span>
                                         </button>
@@ -842,9 +848,9 @@
                                     @if($form['ai_analysis_enabled'])
                                         @if(! $post->status->isDraft() || $post->current_version_id)
                                         <button type="button" wire:click="savePost" class="btn {{ $post->currentVersion ? 'btn-p' : 'btn-s' }}"
-                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                            wire:loading.attr="disabled" wire:target="saveDraft,savePost,saveAsManualVersion,saveAndSubmitToN8n" :disabled="isUploadingLocalMedia || sodyActionPending">
                                             <span wire:loading.remove wire:target="savePost">
-                                                {{ $post->status->value !== 'draft' ? ($post->currentVersion ? 'Salva Versione Sody' : 'Salva Modifiche') : 'Salva Bozza' }}
+                                                Salva Modifiche
                                             </span>
                                             <span wire:loading wire:target="savePost">Salvataggio...</span>
                                         </button>
@@ -876,14 +882,15 @@
                                             </button>
                                         @endif
                                     @else
-                                        <button type="button" wire:click="saveAsManualVersion" class="btn btn-purple u-flex-center u-gap-xs"
-                                            wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                                        <button type="button" wire:click="saveAsManualVersion" class="btn btn-p u-flex-center u-gap-xs"
+                                            wire:loading.attr="disabled" wire:target="saveDraft,savePost,saveAsManualVersion,saveAndSubmitToN8n" :disabled="isUploadingLocalMedia || sodyActionPending">
                                             <i data-lucide="check-circle" class="u-icon-md"></i>
-                                            <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
+                                            <span wire:loading.remove wire:target="saveAsManualVersion">{{ $post->current_version_id ? 'Salva Modifiche' : 'Salva come pronto' }}</span>
                                             <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
                                         </button>
                                     @endif
                                 @endif
+                                </div>
                             </div>
 
                         </fieldset>
@@ -1367,12 +1374,12 @@
                                                 if (($previewMedia[0]['source'] ?? null) === 'existing' && !str_contains($previewVideoUrl, '#')) {
                                                     $previewVideoUrl .= '#t=0.001';
                                                 }
-                                                $previewVideoMime = $previewMedia[0]['mime_type'] ?? 'video/mp4';
                                             @endphp
                                             <div x-data="{ videoFailed: false }" class="u-w-full u-h-full u-flex-center">
                                                 <video
                                                     wire:key="post-preview-video-{{ $previewVideoId }}"
                                                     data-persisted-video="{{ $previewVideoId }}"
+                                                    src="{{ $previewVideoUrl }}"
                                                     controls
                                                     muted
                                                     playsinline
@@ -1380,12 +1387,13 @@
                                                     class="cmp-ig-preview-local-media"
                                                     x-show="!videoFailed"
                                                     x-on:error="videoFailed = true"
+                                                    x-on:loadedmetadata="videoFailed = false"
                                                 >
-                                                    <source src="{{ $previewVideoUrl }}" type="{{ $previewVideoMime }}">
                                                 </video>
                                                 <div x-show="videoFailed" class="cmp-ig-preview-placeholder" x-cloak>
                                                     <i data-lucide="video-off" class="u-icon-lg u-text-muted"></i>
                                                     <div class="u-mt-xs">Anteprima video non disponibile</div>
+                                                    <a href="{{ $previewMedia[0]['url'] }}" target="_blank" rel="noopener" class="u-text-meta u-mt-xs">Apri video originale</a>
                                                 </div>
                                             </div>
                                         @else
@@ -1418,24 +1426,25 @@
                                                             if (($item['source'] ?? null) === 'existing' && !str_contains($carouselVideoUrl, '#')) {
                                                                 $carouselVideoUrl .= '#t=0.001';
                                                             }
-                                                            $carouselVideoMime = $item['mime_type'] ?? 'video/mp4';
                                                         @endphp
                                                         <div x-data="{ videoFailed: false }" class="u-w-full u-h-full u-flex-center">
                                                             <video
                                                                 wire:key="carousel-preview-video-{{ $carouselVideoId }}"
                                                                 data-persisted-video="{{ $carouselVideoId }}"
+                                                                src="{{ $carouselVideoUrl }}"
                                                                 controls
                                                                 muted
                                                                 playsinline
                                                                 preload="metadata"
                                                                 x-show="!videoFailed"
                                                                 x-on:error="videoFailed = true"
+                                                                x-on:loadedmetadata="videoFailed = false"
                                                             >
-                                                                <source src="{{ $carouselVideoUrl }}" type="{{ $carouselVideoMime }}">
                                                             </video>
                                                             <div x-show="videoFailed" class="cmp-ig-preview-placeholder" x-cloak>
                                                                 <i data-lucide="video-off" class="u-icon-lg u-text-muted"></i>
                                                                 <div class="u-mt-xs">Anteprima video non disponibile</div>
+                                                                <a href="{{ $item['url'] }}" target="_blank" rel="noopener" class="u-text-meta u-mt-xs">Apri video originale</a>
                                                             </div>
                                                         </div>
                                                     @else

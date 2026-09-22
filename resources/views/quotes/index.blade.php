@@ -3,6 +3,7 @@
         <x-slot:title>Offerte commerciali</x-slot:title>
         @can('create', \App\Models\Quote::class)
             <x-slot:actions>
+                <a href="{{ route('quote-services.index') }}" class="btn btn-g">Voci salvate</a>
                 <a href="{{ route('quotes.create') }}" class="btn btn-p">Nuova offerta</a>
             </x-slot:actions>
         @endcan

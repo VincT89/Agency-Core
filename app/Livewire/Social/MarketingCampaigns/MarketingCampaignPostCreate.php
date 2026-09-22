@@ -497,7 +497,7 @@ class MarketingCampaignPostCreate extends Component
             ->contains(fn ($item) => ($item['source'] ?? null) === 'local_pending');
     }
 
-    private function executePostCreation(\Closure $onSuccess, bool $createManualVersion = false)
+    private function executePostCreation(\Closure $onSuccess, bool $createManualVersion = false, bool $saveDraft = false)
     {
         if ($this->hasPendingLocalMedia()) {
             $this->addError('media', 'Attendi il completamento del caricamento dei file locali prima di salvare.');
@@ -508,9 +508,10 @@ class MarketingCampaignPostCreate extends Component
         $this->validate();
 
         $data = $this->form;
+        // Readiness and publication are explicit actions, never a value selected in the form.
+        $data['status'] = MarketingCampaignPostStatus::Draft->value;
         if ($createManualVersion) {
             $data['ai_analysis_enabled'] = false;
-            $data['status'] = MarketingCampaignPostStatus::Draft->value;
         }
         $data['marketing_campaign_id'] = $this->campaign->id;
         $data['created_by'] = auth()->id();
@@ -539,7 +540,7 @@ class MarketingCampaignPostCreate extends Component
                 return null;
             }
 
-            if (! $this->validateReelMedia($storedMedia)) {
+            if (! $saveDraft && ! $this->validateReelMedia($storedMedia)) {
                 return null;
             }
 
@@ -636,7 +637,7 @@ class MarketingCampaignPostCreate extends Component
                     'campaign' => $this->campaign->id,
                     'post' => $post->id,
                 ]);
-            });
+            }, saveDraft: true);
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {

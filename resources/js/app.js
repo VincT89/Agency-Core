@@ -3,6 +3,7 @@ import './ticket-forms.js';
 import './task-assignee.js';
 import './project-search.js';
 import clientAutocomplete from './client-autocomplete.js';
+import quoteEditor from './quote-editor.js';
 import './password-fields.js';
 import './form-fields.js';
 import './dialog-accessibility.js';
@@ -15,6 +16,7 @@ import { initShell } from './app-shell.js';
 import { createIcons, icons } from 'lucide';
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('clientAutocomplete', clientAutocomplete);
+    window.Alpine.data('quoteEditor', quoteEditor);
 });
 
 import { initBgCanvas } from './bg-canvas.js';

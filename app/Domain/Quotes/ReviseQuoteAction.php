@@ -20,14 +20,14 @@ class ReviseQuoteAction
                 }
                 $previous = $next;
             }
-            $revision = Quote::create([
+            $revision = Quote::create($quote->only([...QuoteDocument::FIELDS, 'issuer_snapshot']) + [
                 'client_id' => $quote->client_id, 'ticket_id' => $quote->ticket_id,
                 'project_id' => $quote->project_id, 'previous_quote_id' => $previous->id,
                 'revision' => $previous->revision + 1, 'created_by' => auth()->id(),
                 'title' => $quote->title, 'notes' => $quote->notes, 'total' => $quote->total, 'status' => 'draft',
             ]);
             foreach ($quote->items as $item) {
-                $revision->items()->create($item->only(['name', 'description', 'quantity', 'unit_price', 'total', 'sort_order']));
+                $revision->items()->create($item->only(['name', 'summary', 'description', 'delivery_summary', 'delivery_terms', 'quantity', 'unit_price', 'total', 'sort_order']));
             }
 
             return $revision;

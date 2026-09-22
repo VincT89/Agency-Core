@@ -16,9 +16,9 @@ class Quote extends Model
 
     public const STATUSES = ['draft' => 'Bozza', 'presented' => 'Presentata', 'accepted' => 'Accettata', 'rejected' => 'Rifiutata'];
 
-    protected $fillable = ['client_id', 'ticket_id', 'created_by', 'previous_quote_id', 'project_id', 'revision', 'title', 'status', 'client_snapshot', 'notes', 'total', 'presented_at', 'accepted_at', 'rejected_at'];
+    protected $fillable = ['client_id', 'ticket_id', 'created_by', 'previous_quote_id', 'project_id', 'revision', 'title', 'status', 'client_snapshot', 'notes', 'total', 'presented_at', 'accepted_at', 'rejected_at', 'document_reference', 'document_date', 'introduction', 'payment_terms', 'ai_instructions', 'price_note', 'issuer_snapshot'];
 
-    protected $casts = ['client_snapshot' => 'array', 'total' => 'decimal:2', 'presented_at' => 'datetime', 'accepted_at' => 'datetime', 'rejected_at' => 'datetime'];
+    protected $casts = ['client_snapshot' => 'array', 'issuer_snapshot' => 'array', 'document_date' => 'date', 'total' => 'decimal:2', 'presented_at' => 'datetime', 'accepted_at' => 'datetime', 'rejected_at' => 'datetime'];
 
     public function client(): BelongsTo
     {

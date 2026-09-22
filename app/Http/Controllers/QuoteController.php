@@ -14,6 +14,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class QuoteController extends Controller
@@ -37,6 +38,13 @@ class QuoteController extends Controller
             $this->authorize('view', $ticket);
             abort_unless($ticket->type === 'quote', 422);
         }
+        $sourceQuote = null;
+        if ($request->filled('from_quote_id')) {
+            abort_if($ticket, 422, 'Scegli una richiesta oppure un’offerta da riutilizzare.');
+            $sourceQuote = Quote::findOrFail($request->integer('from_quote_id'));
+            $this->authorize('view', $sourceQuote);
+            $sourceQuote->load('items');
+        }
         $client = null;
         if ($ticket) {
             $client = Client::findOrFail($ticket->client_id);
@@ -45,19 +53,21 @@ class QuoteController extends Controller
             $client = $clientId ? Client::find($clientId) : null;
         } elseif ($request->filled('client_id')) {
             $client = Client::findOrFail($request->integer('client_id'));
+        } elseif ($sourceQuote) {
+            $client = $sourceQuote->client;
         }
         if ($client) {
             $this->authorize('view', $client);
         }
 
-        return view('quotes.form', ['quote' => null, 'client' => $client, 'ticket' => $ticket]);
+        return view('quotes.form', ['quote' => null, 'client' => $client, 'ticket' => $ticket, 'sourceQuote' => $sourceQuote]);
     }
 
     public function store(SaveQuoteRequest $request, SaveQuoteAction $action): RedirectResponse
     {
         $quote = $action->execute($request->validated());
 
-        return redirect()->route('quotes.show', $quote)->with('success', 'Bozza di offerta salvata.');
+        return redirect()->route($request->input('after_save') === 'preview' ? 'quotes.document' : 'quotes.show', $quote)->with('success', 'Bozza di offerta salvata.');
     }
 
     public function show(Quote $quote): View
@@ -77,7 +87,7 @@ class QuoteController extends Controller
 
     public function destroy(Quote $quote): RedirectResponse
     {
-        \Illuminate\Support\Facades\DB::transaction(function () use ($quote) {
+        DB::transaction(function () use ($quote) {
             $quote = Quote::lockForUpdate()->findOrFail($quote->id);
             $this->authorize('delete', $quote);
             $quote->delete();
@@ -90,7 +100,7 @@ class QuoteController extends Controller
     {
         $action->execute($request->validated(), $quote);
 
-        return redirect()->route('quotes.show', $quote)->with('success', 'Bozza aggiornata.');
+        return redirect()->route($request->input('after_save') === 'preview' ? 'quotes.document' : 'quotes.show', $quote)->with('success', 'Bozza aggiornata.');
     }
 
     public function present(Quote $quote, ChangeQuoteStatusAction $action): RedirectResponse

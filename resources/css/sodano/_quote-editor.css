@@ -1,0 +1,78 @@
+.quote-editor { display: grid; gap: 20px; min-width: 0; }
+.quote-editor h2 { font-size: 1.1rem; font-weight: 650; margin: 0 0 14px; }
+.quote-editor h3, .quote-editor h4 { font-size: 1rem; font-weight: 650; margin: 12px 0; }
+.quote-editor label, .quote-line-total > span { font-size: .85rem; line-height: 1.4; }
+.quote-help { color: var(--text-secondary, #626979); line-height: 1.55; font-size: .9rem; margin: 8px 0 16px; }
+.quote-basics, .quote-two-columns, .quote-issuer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.quote-basics { align-items: start; }
+.quote-client-name { padding: 9px 0; overflow-wrap: anywhere; }
+.quote-services { min-width: 0; }
+.quote-library { min-width: 0; margin-bottom: 8px; }
+.quote-library-search { display: flex; align-items: end; gap: 12px; }
+.quote-library-search > div { flex: 1; min-width: 0; }
+.quote-library-results { margin-top: 8px; padding: 8px; max-height: 280px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--bg2); }
+.quote-library-results ul { padding: 0; list-style: none; margin: 0; }
+.quote-library-results p { padding: 8px; line-height: 1.5; }
+.quote-library-results li + li { border-top: 1px solid var(--line); }
+.quote-library-results button { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px; width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: var(--text); cursor: pointer; border-radius: 4px; }
+.quote-library-results button:hover, .quote-library-results button:focus-visible { background: var(--bg); outline: 2px solid var(--line2); outline-offset: -2px; }
+.quote-library-results button:disabled { cursor: default; opacity: .6; }
+.quote-library-results button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.quote-library-description { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .85rem; color: var(--text2); margin-top: 4px; }
+.quote-library-price { flex-shrink: 0; font-size: .85rem; }
+.quote-service-row { min-width: 0; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.quote-service-main { display: grid; grid-template-columns: minmax(0, 1fr) 90px 155px minmax(100px, auto); gap: 14px; align-items: end; }
+.quote-line-total { display: flex; flex-direction: column; gap: 8px; padding-bottom: 9px; text-align: right; overflow-wrap: anywhere; }
+.quote-line-total strong { font-size: .95rem; }
+.quote-service-details { margin-top: 8px; min-width: 0; }
+.quote-editor summary { cursor: pointer; padding: 10px 0; line-height: 1.5; font-weight: 600; }
+.quote-editor summary:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+.quote-detail-excerpt { display: block; margin-left: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .85rem; font-weight: 400; color: var(--text2); }
+.quote-service-details[open] .quote-detail-excerpt { display: none; }
+.quote-detail-fields, .quote-option-fields { display: grid; gap: 16px; padding: 10px 0 16px; }
+.quote-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.quote-add-service { margin-top: 14px; }
+.quote-options { border-top: 1px solid var(--line); min-width: 0; }
+.quote-options + .quote-options { margin-top: -12px; }
+.quote-option-fields > .quote-help { margin: 0; }
+.quote-issuer, .quote-ai { border: 1px solid var(--line); border-radius: 6px; padding: 0 16px; min-width: 0; }
+.quote-issuer-grid { padding-bottom: 16px; }
+.quote-ai > label { display: block; margin-bottom: 8px; }
+.quote-ai > button { margin: 12px 0 16px; }
+.quote-ai-preview { margin-top: 16px; border-top: 1px solid var(--line); padding: 12px 0 16px; }
+.quote-ai-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 14px 0 24px; }
+.quote-ai-comparison p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; margin: 10px 0; }
+.quote-feedback { padding: 10px 0; overflow-wrap: anywhere; font-size: .9rem; line-height: 1.5; }
+/* Compensate for the bottom padding of the scrolling .content container. */
+.quote-savebar { position: sticky; bottom: -28px; z-index: 4; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 0; background: var(--bg2, #f4f6f9); border-top: 1px solid var(--line2); }
+.quote-total { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin: 0; font-size: .95rem; }
+.quote-total strong { font-size: 1.25rem; }
+.quote-save-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.quote-editor :is(input, textarea, select) { max-width: 100%; scroll-margin-block: 90px 170px; }
+.quote-editor textarea { resize: vertical; }
+@media (max-width: 1100px) {
+    .quote-service-main { grid-template-columns: minmax(0, 1fr) 72px 130px; }
+    .quote-line-total { grid-column: 1 / -1; flex-direction: row; justify-content: end; padding: 0; }
+}
+@media (max-width: 767px) {
+    .quote-savebar { bottom: -22px; }
+    .quote-editor .btn, .quote-editor summary { min-height: 44px; }
+}
+@media (max-width: 640px) {
+    .quote-basics, .quote-two-columns, .quote-issuer-grid, .quote-ai-comparison { grid-template-columns: minmax(0, 1fr); }
+    .quote-service-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 12px; }
+    .quote-service-name { grid-column: 1 / -1; }
+    .quote-library-search { flex-wrap: wrap; }
+    .quote-library-search > div { flex-basis: 100%; }
+    .quote-library-results button { align-items: start; flex-direction: column; gap: 6px; }
+    .quote-library-results button > span:first-child { width: 100%; }
+    .quote-row-actions .btn { flex: 1 1 auto; }
+    .quote-issuer, .quote-ai { padding-inline: 12px; }
+    .quote-savebar { gap: 8px; padding: 10px 0; }
+    .quote-save-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+    .quote-save-actions .btn { padding-inline: 8px; }
+    .quote-total { justify-content: space-between; width: 100%; }
+}
+@media (max-height: 600px) {
+    .quote-savebar { position: static; }
+}

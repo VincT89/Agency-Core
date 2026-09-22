@@ -18,6 +18,8 @@ class ChangeQuoteStatusAction
             $changes = ['status' => $status, $status.'_at' => now()];
             if ($status === 'presented') {
                 abort_unless($quote->items()->exists(), 422, 'Inserisci almeno un servizio.');
+                $changes['issuer_snapshot'] = $quote->issuer_snapshot ?? QuoteDocument::defaultIssuer();
+                $changes['document_date'] = $quote->document_date ?? $quote->created_at->toDateString();
                 $changes['client_snapshot'] = $quote->client->only([
                     'name', 'company_name', 'reference_person', 'email', 'phone', 'vat_number',
                     'tax_code', 'address', 'city', 'postal_code', 'province', 'country',

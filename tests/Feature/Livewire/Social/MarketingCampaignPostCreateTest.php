@@ -123,9 +123,9 @@ class MarketingCampaignPostCreateTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(MarketingCampaignPostCreate::class, ['campaign' => $campaign])
-            ->assertDontSee('Salva come pronto senza Sody')
+            ->assertDontSee('Salva come pronto')
             ->set('form.ai_analysis_enabled', false)
-            ->assertSee('Salva come pronto senza Sody')
+            ->assertSee('Salva come pronto')
             ->assertDontSee('Salva e genera solo testo');
     }
 

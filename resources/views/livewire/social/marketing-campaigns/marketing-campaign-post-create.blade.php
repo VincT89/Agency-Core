@@ -21,12 +21,14 @@
   <div class="cmp-post-detail-layout relative"
        x-data="{
            isUploadingLocalMedia: false,
+           localUploadProgress: 0,
            localBlobUrls: {},
            handleLocalFiles(event) {
                const files = Array.from(event.target.files || []);
-               if (files.length === 0) return;
+               if (files.length === 0 || this.isUploadingLocalMedia) return;
 
                this.isUploadingLocalMedia = true;
+               this.localUploadProgress = 0;
                event.target.value = '';
 
                const meta = files.map(file => {
@@ -45,9 +47,10 @@
                        'media',
                        files,
                        () => { this.isUploadingLocalMedia = false; },
-                       () => { this.failLocalUpload(meta.map(item => item.uid)); }
+                       () => { this.failLocalUpload(meta.map(item => item.uid)); },
+                       (event) => { this.localUploadProgress = event.detail.progress; }
                    );
-               });
+               }).catch(() => this.failLocalUpload(meta.map(item => item.uid)));
            },
            failLocalUpload(uids) {
                this.isUploadingLocalMedia = false;
@@ -76,7 +79,7 @@
           <div class="cmp-panel-title">Dati Principali</div>
         </div>
         <div class="u-p-lg relative">
-          <form wire:submit.prevent class="form-stack">
+          <form id="create-marketing-post" wire:submit="save" class="form-stack">
         @error('post')
             <div class="u-alert-error">{{ $message }}</div>
         @enderror
@@ -169,7 +172,7 @@
             </div>
 
             {{-- Blocco 3: Tipo Contenuto + Stato + Data/Ora --}}
-            <div class="u-flex u-gap-lg">
+            <div class="cmp-post-fields u-mt-md">
               <div class="form-g mb-0 u-flex-1">
                 <label class="form-lbl">Tipo Contenuto <span class="mkt-text-red">*</span></label>
                 <select class="form-sel" wire:model="form.content_type" required>
@@ -181,21 +184,13 @@
               </div>
 
               <div class="form-g mb-0 u-flex-1">
-                <label class="form-lbl">Stato <span class="mkt-text-red">*</span></label>
-                <select class="form-sel" wire:model="form.status" required>
-                  <option value="draft">Bozza</option>
-                  <option value="pending_n8n">In Coda Sody</option>
-                  <option value="submitted_to_n8n">In Elaborazione Sody</option>
-                  <option value="generated">Generato</option>
-                  <option value="approved">Approvato</option>
-                  <option value="published">Pubblicato</option>
-                  <option value="cancelled">Annullato</option>
-                </select>
+                <label class="form-lbl" for="new-post-status">Stato attuale</label>
+                <input id="new-post-status" type="text" class="form-in" value="Bozza" readonly>
                 @error('form.status') <span class="form-err">{{ $message }}</span> @enderror
               </div>
             </div>
 
-            <div class="u-flex u-gap-lg u-mt-md">
+            <div class="cmp-post-fields u-mt-md">
               <div class="form-g mb-0 u-flex-1">
                 <label class="form-lbl">Data Pubblicazione</label>
                 <livewire:social.publication-date-picker :campaign="$campaign" wire:model.live="form.scheduled_date" />
@@ -207,13 +202,14 @@
                 @error('form.scheduled_time') <span class="form-err">{{ $message }}</span> @enderror
               </div>
             </div>
+            <p class="cmp-post-help">Puoi completare titolo, testo e programmazione anche dopo aver salvato la bozza.</p>
         </div>
 
         {{-- Box 2: Media e Copy --}}
         <div class="panel cmp-panel-pad u-mb-md">
             {{-- Blocco 4: Preview Media Unificata --}}
             @if (count($selected_media_items) > 0)
-            <div class="cmp-media-preview-box u-flex u-gap-sm u-flex-wrap u-mb-md"
+            <div class="cmp-media-preview-box cmp-post-media-grid u-mb-md"
                  x-data="{
                     draggingIndex: null,
                     dropIndex: null,
@@ -273,7 +269,10 @@
                         @endif
                     @endif
 
-                    <div class="u-text-truncate u-w-full u-text-meta u-mt-xs" title="{{ $item['name'] }}">{{ $index + 1 }}. {{ $item['name'] }}</div>
+                    <div class="cmp-media-preview-label u-flex">
+                        <span title="{{ $item['name'] }}">{{ $item['name'] }}</span>
+                        <span class="u-text-meta u-text-muted">{{ $item['source'] === 'local_pending' ? 'In caricamento' : ($item['source'] === 'local' ? 'Caricato' : 'Da Nextcloud') }}</span>
+                    </div>
                     <button type="button" x-on:click="forgetLocalPreviews([@js($item['uid'])])" wire:click="removeSelectedMediaItem('{{ $item['uid'] }}')" class="btn btn-xs btn-sec u-w-full u-mt-xs">Rimuovi</button>
                 </div>
                 @endforeach
@@ -305,13 +304,11 @@
                         class="form-in cmp-media-file-input"
                         accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
                         x-on:change="handleLocalFiles($event)"
+                        x-bind:disabled="isUploadingLocalMedia"
+                        aria-label="Aggiungi foto o video dal computer"
                     >
 
-                    <div class="u-mt-sm u-mb-md">
-                        <div wire:loading wire:target="media" class="u-text-meta u-text-blue u-mb-xs u-flex u-align-center u-gap-xs">
-                            <i data-lucide="loader-2" class="u-icon-sm mkt-spin"></i> Caricamento dei file in corso...
-                        </div>
-                    </div>
+                    <x-social.media-upload-status />
                 </div>
                 @error('media') <span class="form-err">{{ $message }}</span> @enderror
                 @error('media.*') <span class="form-err">{{ $message }}</span> @enderror
@@ -335,7 +332,7 @@
                 </div>
             @endif
 
-            <div class="form-g mb-0 u-border-t u-border-line u-pt-md">
+            <div class="form-g cmp-post-copy">
               <label class="form-lbl">Copy / Descrizione</label>
               <textarea class="form-ta" wire:model.live="form.description" rows="5" placeholder="Inserisci il testo del post..."></textarea>
               @error('form.description') <span class="form-err">{{ $message }}</span> @enderror
@@ -348,6 +345,7 @@
             <input type="checkbox" wire:model.live="form.ai_analysis_enabled" class="cmp-ai-check-input">
             <div class="cmp-ai-check-content">
               <div class="cmp-ai-check-title">Richiedi Analisi Sody</div>
+              <p class="cmp-post-help">Puoi salvare la bozza anche senza Sody. L’elaborazione parte solo dal pulsante dedicato.</p>
             </div>
           </label>
 
@@ -426,21 +424,22 @@
           </form>
         </div>
 
-        <div class="u-p-lg u-bg-gray-50 u-border-t u-border-line u-flex u-justify-between">
-          <div></div>
-          <div class="u-flex u-gap-sm">
+        <div class="u-p-lg u-bg-gray-50 u-border-t u-border-line cmp-post-actions">
+          <p class="cmp-post-help">Salva la bozza per riprendere in seguito. Il contenuto pronto potrà essere approvato e pubblicato dalla sua scheda.</p>
+          <p x-show="isUploadingLocalMedia" x-cloak class="cmp-post-help" data-upload-save-notice>Attendi il completamento del caricamento prima di salvare.</p>
+          <div class="cmp-post-action-buttons">
             <a href="{{ route('marketing-campaigns.show', $campaign->id) }}" wire:navigate class="btn btn-s">Annulla</a>
-            
-            @if($form['ai_analysis_enabled'])
-                <button type="button" wire:click="save" class="btn btn-s" wire:loading.attr="disabled" :disabled="isUploadingLocalMedia">
+                <button type="submit" form="create-marketing-post" class="btn btn-s" wire:loading.attr="disabled" wire:target="save,saveAsManualVersion,saveAndSubmitToN8n" :disabled="isUploadingLocalMedia || sodyActionPending">
                   <span wire:loading.remove wire:target="save">Salva Bozza</span>
                   <span wire:loading wire:target="save">Salvataggio...</span>
                 </button>
+            @if($form['ai_analysis_enabled'])
                 <button type="button"
                     x-on:click="window.dispatchEvent(new CustomEvent('sody-processing-started'))"
                     wire:click="saveAndSubmitToN8n"
                     class="btn btn-p u-flex-center u-gap-xs"
                     wire:loading.attr="disabled"
+                    wire:target="save,saveAsManualVersion,saveAndSubmitToN8n"
                     x-bind:disabled="isUploadingLocalMedia || sodyActionPending">
                   <i data-lucide="sparkles" class="u-icon-md"></i>
                   <span wire:loading.remove wire:target="saveAndSubmitToN8n">Salva e avvia Sody</span>
@@ -450,10 +449,11 @@
                 <button type="button"
                     wire:click="saveAsManualVersion"
                     wire:loading.attr="disabled"
+                    wire:target="save,saveAsManualVersion,saveAndSubmitToN8n"
                     x-bind:disabled="isUploadingLocalMedia"
-                    class="btn btn-purple u-flex-center u-gap-xs">
+                    class="btn btn-p u-flex-center u-gap-xs">
                     <i data-lucide="check-circle" class="u-icon-md"></i>
-                    <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto senza Sody</span>
+                    <span wire:loading.remove wire:target="saveAsManualVersion">Salva come pronto</span>
                     <span wire:loading wire:target="saveAsManualVersion">Salvataggio...</span>
                 </button>
             @endif

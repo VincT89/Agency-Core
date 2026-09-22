@@ -142,6 +142,11 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::resource('projects', ProjectController::class);
     Route::resource('tickets', TicketController::class);
     Route::resource('quotes', \App\Http\Controllers\QuoteController::class);
+    Route::get('quotes/{quote}/document', \App\Http\Controllers\QuoteDocumentController::class)->name('quotes.document');
+    Route::get('quote-services', [\App\Http\Controllers\QuoteServiceController::class, 'index'])->name('quote-services.index');
+    Route::post('quote-services', [\App\Http\Controllers\QuoteServiceController::class, 'store'])->name('quote-services.store')->middleware('throttle:60,1');
+    Route::delete('quote-services/{service}', [\App\Http\Controllers\QuoteServiceController::class, 'destroy'])->name('quote-services.destroy');
+    Route::post('quote-text-suggestion', \App\Http\Controllers\QuoteTextSuggestionController::class)->name('quotes.text-suggestion')->middleware('throttle:5,1');
     Route::post('quotes/{quote}/present', [\App\Http\Controllers\QuoteController::class, 'present'])->name('quotes.present');
     Route::post('quotes/{quote}/accept', [\App\Http\Controllers\QuoteController::class, 'accept'])->name('quotes.accept');
     Route::post('quotes/{quote}/reject', [\App\Http\Controllers\QuoteController::class, 'reject'])->name('quotes.reject');

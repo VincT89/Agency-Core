@@ -16,15 +16,19 @@
                 @if(!empty($customer[$field]))<div><dt>{{ $label }}</dt><dd>{{ $customer[$field] }}</dd></div>@endif
             @endforeach
         </dl>
+        @if($quote->introduction)<h2 class="u-text-strong u-mt-lg">Descrizione progetto e preventivo</h2><p class="ticket-description">{{ $quote->introduction }}</p>@endif
         @foreach($quote->items as $item)
             <article class="commercial-history-row">
                 <h2>{{ $item->name }}</h2>
+                @if($item->summary)<p class="ticket-description">{{ $item->summary }}</p>@endif
                 <p class="ticket-description">{{ $item->description }}</p>
+                @if($item->delivery_terms || $item->delivery_summary)<p class="ticket-description">Tempistiche: {{ $item->delivery_terms ?: $item->delivery_summary }}</p>@endif
                 <p>Quantità {{ number_format((float) $item->quantity, 2, ',', '.') }}, prezzo unitario {{ number_format((float) $item->unit_price, 2, ',', '.') }} €</p>
                 <p>Importo: <strong>{{ number_format((float) $item->total, 2, ',', '.') }} €</strong></p>
             </article>
         @endforeach
-        <p class="u-text-strong u-mt-lg">Totale servizi: {{ number_format((float) $quote->total, 2, ',', '.') }} €</p>
+        <p class="u-text-strong u-mt-lg">Totale servizi: {{ number_format((float) $quote->total, 2, ',', '.') }} € @if($quote->price_note)({{ $quote->price_note }})@endif</p>
+        @if($quote->payment_terms)<h2 class="u-text-strong u-mt-lg">Forma di pagamento</h2><p class="ticket-description">{{ $quote->payment_terms }}</p>@endif
         @if($quote->notes)<h2 class="u-text-strong u-mt-lg">Condizioni e note</h2><p class="ticket-description">{{ $quote->notes }}</p>@endif
         @if($quote->previousQuote)
             @can('view', $quote->previousQuote)<p class="u-mt-lg"><a href="{{ route('quotes.show', $quote->previousQuote) }}">Consulta la revisione precedente</a></p>@endcan
@@ -34,6 +38,8 @@
         @endif
         <div class="commercial-actions u-mt-lg">
             <a href="{{ route('clients.show', $quote->client) }}" class="btn btn-g">Storico cliente</a>
+            <a href="{{ route('quotes.document', $quote) }}" class="btn btn-g">Anteprima e stampa PDF</a>
+            @can('create', \App\Models\Quote::class)<a href="{{ route('quotes.create', ['from_quote_id' => $quote->id]) }}" class="btn btn-g">Usa come modello</a>@endcan
             @if($quote->ticket) @can('view', $quote->ticket)<a href="{{ route('tickets.show', $quote->ticket) }}" class="btn btn-g">Richiesta originale</a>@endcan @endif
             @can('update', $quote)<a href="{{ route('quotes.edit', $quote) }}" class="btn btn-g">Modifica bozza</a>@endcan
             @can('present', $quote)<form method="POST" action="{{ route('quotes.present', $quote) }}">@csrf<button class="btn btn-p" type="submit">Registra come presentata</button></form>@endcan

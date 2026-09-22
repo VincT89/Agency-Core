@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class MarketingCampaignPostShowTest extends TestCase
@@ -594,51 +595,90 @@ class MarketingCampaignPostShowTest extends TestCase
             'campaign' => $campaign,
             'post' => $post,
         ])
-            ->assertDontSee('Salva come pronto senza Sody')
+            ->assertDontSee('Salva come pronto')
             ->set('form.ai_analysis_enabled', false)
-            ->assertSee('Salva come pronto senza Sody');
+            ->assertSee('Salva come pronto');
     }
 
-    public function test_saved_video_keeps_its_type_and_mime_in_the_persisted_preview(): void
+    public static function savedVideoPreviews(): array
     {
-        Storage::fake('social_media');
-        Storage::disk('social_media')->put('marketing/campaign-posts/saved-video.mp4', 'video-content');
+        return [
+            'MP4 version' => ['mp4', 'video/mp4', true, 1],
+            'MP4 draft carousel' => ['mp4', 'video/mp4', false, 2],
+            'MOV draft' => ['mov', 'video/quicktime', false, 1],
+            'MOV version' => ['mov', 'video/quicktime', true, 1],
+            'MOV draft carousel' => ['mov', 'video/quicktime', false, 2],
+            'MOV version carousel' => ['mov', 'video/quicktime', true, 2],
+        ];
+    }
 
-        $user = User::factory()->create(['role' => UserRole::Admin->value]);
+    #[DataProvider('savedVideoPreviews')]
+    public function test_saved_video_previews_load_the_file_without_a_mime_hint_while_preserving_its_metadata(
+        string $extension,
+        string $mime,
+        bool $versioned,
+        int $count,
+    ): void {
+        Storage::fake('social_media');
+
+        $user = User::factory()->create(['role' => UserRole::Photographer->value]);
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);
         $post = MarketingCampaignPost::factory()->create([
             'marketing_campaign_id' => $campaign->id,
-            'status' => MarketingCampaignPostStatus::Generated->value,
+            'status' => $versioned ? MarketingCampaignPostStatus::Generated->value : MarketingCampaignPostStatus::Draft->value,
             'content_type' => MarketingCampaignPostType::Post->value,
         ]);
-        $media = MarketingCampaignPostMedia::factory()->create([
-            'marketing_campaign_post_id' => $post->id,
-            'source' => 'local',
-            'disk' => 'social_media',
-            'path' => 'marketing/campaign-posts/saved-video.mp4',
-            'media_type' => 'video',
-            'mime_type' => 'video/mp4',
-            'original_name' => 'saved-video.mp4',
-        ]);
-        $version = MarketingCampaignPostVersion::factory()->create([
-            'marketing_campaign_post_id' => $post->id,
-            'version_number' => 1,
-        ]);
-        $version->mediaItems()->attach($media->id, ['sort_order' => 0]);
-        $post->update(['current_version_id' => $version->id]);
+        $mediaIds = [];
+        for ($index = 0; $index < $count; $index++) {
+            $name = "saved-video-{$index}.{$extension}";
+            $path = 'marketing/campaign-posts/'.$name;
+            Storage::disk('social_media')->put($path, 'video-content');
+            $mediaIds[] = MarketingCampaignPostMedia::factory()->create([
+                'marketing_campaign_post_id' => $post->id,
+                'source' => 'local',
+                'disk' => 'social_media',
+                'path' => $path,
+                'media_type' => 'video',
+                'mime_type' => $mime,
+                'original_name' => $name,
+                'sort_order' => $index,
+            ])->id;
+        }
+        if ($versioned) {
+            $version = MarketingCampaignPostVersion::factory()->create([
+                'marketing_campaign_post_id' => $post->id,
+                'version_number' => 1,
+            ]);
+            foreach ($mediaIds as $index => $id) {
+                $version->mediaItems()->attach($id, ['sort_order' => $index]);
+            }
+            $post->update(['current_version_id' => $version->id]);
+        }
 
         $this->actingAs($user);
 
-        Livewire::test(MarketingCampaignPostShow::class, [
+        $component = Livewire::test(MarketingCampaignPostShow::class, [
             'campaign' => $campaign,
             'post' => $post->fresh(),
         ])
             ->assertSet('selected_media_items.0.type', 'video')
-            ->assertSet('selected_media_items.0.mime_type', 'video/mp4')
-            ->assertSeeHtml('data-persisted-video="'.$media->id.'"')
-            ->assertSeeHtml('type="video/mp4"')
-            ->assertSee('Anteprima video non disponibile.');
+            ->assertSet('selected_media_items.0.mime_type', $mime)
+            ->assertSee('Anteprima video non disponibile.')
+            ->assertSee('Apri video originale');
+
+        $document = new \DOMDocument;
+        @$document->loadHTML($component->html());
+        $xpath = new \DOMXPath($document);
+        $videos = $xpath->query('//video[@data-persisted-video]');
+        $this->assertCount($count * ($versioned ? 3 : 2), $videos);
+        foreach ($videos as $video) {
+            $id = (int) $video->getAttribute('data-persisted-video');
+            $this->assertContains($id, $mediaIds);
+            $this->assertStringContainsString('/social/media/'.$id.'?', $video->getAttribute('src'));
+            $this->assertCount(0, $xpath->query('source[@type]', $video));
+        }
+        $this->assertSame($count, $post->mediaItems()->where('mime_type', $mime)->count());
     }
 
     public function test_historical_post_explains_why_delete_is_unavailable(): void

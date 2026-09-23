@@ -25,12 +25,10 @@
             @endcan
 
             @can('delete', $invoice)
-                <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
-                      onsubmit="return confirm('Eliminare questa bozza? L’operazione non può essere annullata.')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-g btn-danger-outline">Elimina bozza</button>
-                </form>
+                <x-delete-modal :action="route('invoices.destroy', $invoice)" title="Elimina bozza fattura"
+                    message="Eliminare questa bozza? L’operazione non può essere annullata.">
+                    <button type="button" class="btn btn-g btn-danger-outline">Elimina bozza</button>
+                </x-delete-modal>
             @endcan
         </x-slot:actions>
     </x-page-header>

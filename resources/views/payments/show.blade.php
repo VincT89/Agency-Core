@@ -15,13 +15,12 @@
             @endcan
         
             @can('delete', $payment)
-                <form action="{{ route('payments.destroy', $payment) }}" method="POST"
-                      onsubmit="return confirm('Eliminare questo pagamento? Il totale della fattura verrà ricalcolato.')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-g btn-danger-outline">
+                <x-delete-modal :action="route('payments.destroy', $payment)" title="Elimina pagamento"
+                    message="Eliminare questo pagamento? Il totale della fattura verrà ricalcolato.">
+                    <button type="button" class="btn btn-g btn-danger-outline">
                         Elimina
                     </button>
-                </form>
+                </x-delete-modal>
             @endcan
         </x-slot:actions>
     </x-page-header>

@@ -148,14 +148,14 @@
                         <strong>Revoca collegamento</strong>
                         <span>Rimuove l'autorizzazione TikTok da questo cliente. Non elimina contenuti pubblicati.</span>
                     </div>
-                    <button
-                        type="button"
-                        wire:click="disconnectOauth('{{ $platformValue }}')"
-                        class="btn btn-outline-danger"
-                        wire:confirm="Scollegare definitivamente questo account TikTok?"
-                    >
-                        Scollega TikTok
-                    </button>
+                    <x-confirm-modal title="Scollega TikTok"
+                        message="Scollegare definitivamente questo account TikTok?"
+                        confirm-method="disconnectOauth('{{ $platformValue }}')"
+                        confirm-text="Scollega TikTok" confirm-class="btn btn-p btn-danger" variant="danger">
+                        <button type="button" class="btn btn-outline-danger" wire:loading.attr="disabled">
+                            Scollega TikTok
+                        </button>
+                    </x-confirm-modal>
                 </div>
             @else
                 <div class="u-alert-warning social-state-message">
@@ -292,15 +292,14 @@
                             <strong>Rimuovi assegnazione</strong>
                             <span>Il profilo resta collegato all'agenzia, ma non sarà più associato a questo cliente.</span>
                         </div>
-                        <button
-                            type="button"
-                            wire:click="disconnect('{{ $platformValue }}')"
-                            class="btn btn-outline-danger"
-                            wire:loading.attr="disabled"
-                            wire:confirm="Rimuovere il profilo social assegnato a questo cliente?"
-                        >
-                            Rimuovi assegnazione
-                        </button>
+                        <x-confirm-modal title="Rimuovi assegnazione"
+                            message="Rimuovere il profilo social assegnato a questo cliente?"
+                            confirm-method="disconnect('{{ $platformValue }}')"
+                            confirm-text="Rimuovi assegnazione" confirm-class="btn btn-p btn-danger" variant="danger">
+                            <button type="button" class="btn btn-outline-danger" wire:loading.attr="disabled">
+                                Rimuovi assegnazione
+                            </button>
+                        </x-confirm-modal>
                     </div>
                 @endif
             @endif

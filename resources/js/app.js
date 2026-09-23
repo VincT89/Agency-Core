@@ -8,7 +8,6 @@ import './password-fields.js';
 import './form-fields.js';
 import './dialog-accessibility.js';
 import './hosting-services.js';
-import './confirm-forms.js';
 import './ui-helpers.js';
 import './projects/project-members.js';
 import './shared-checklist.js';

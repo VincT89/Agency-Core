@@ -11,7 +11,12 @@
                 @if($service->description)<details class="u-mt-md"><summary>Descrizione dettagliata</summary><p class="ticket-description">{{ $service->description }}</p></details>@endif
                 @if($service->delivery_terms || $service->delivery_summary)<p>Consegna: {{ $service->delivery_terms ?: $service->delivery_summary }}</p>@endif
                 <p>Quantità {{ number_format((float) $service->quantity, 2, ',', '.') }}, prezzo unitario {{ number_format((float) $service->unit_price, 2, ',', '.') }} €</p>
-                <form method="POST" action="{{ route('quote-services.destroy', $service) }}" class="js-confirm-form u-mt-md" data-confirm-message="Rimuovere questa voce dalla libreria? I preventivi esistenti resteranno invariati.">@csrf @method('DELETE')<button type="submit" class="btn btn-g btn-sm">Rimuovi dalla libreria</button></form>
+                <div class="u-mt-md">
+                    <x-delete-modal :action="route('quote-services.destroy', $service)" title="Rimuovi voce dalla libreria"
+                        message="Rimuovere questa voce dalla libreria? I preventivi esistenti resteranno invariati.">
+                        <button type="button" class="btn btn-g btn-sm">Rimuovi dalla libreria</button>
+                    </x-delete-modal>
+                </div>
             </article>
         @empty<p class="u-mt-lg">Nessuna voce salvata.</p>@endforelse
         {{ $services->links() }}

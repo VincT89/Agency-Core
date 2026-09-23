@@ -23,13 +23,12 @@
             @endcan
         
             @can('delete', $ticket)
-                <form action="{{ route('tickets.destroy', $ticket) }}" method="POST"
-                      class="js-confirm-form" data-confirm-message="Eliminare il ticket #{{ $ticket->id }}?">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-g btn-danger">
+                <x-delete-modal :action="route('tickets.destroy', $ticket)" title="Elimina ticket"
+                    :message="'Eliminare il ticket #'.$ticket->id.'?'">
+                    <button type="button" class="btn btn-g btn-danger">
                         Elimina
                     </button>
-                </form>
+                </x-delete-modal>
             @endcan
         </x-slot:actions>
     </x-page-header>

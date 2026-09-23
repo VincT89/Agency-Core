@@ -16,13 +16,12 @@
             @endcan
         
             @can('delete', $calendarEvent)
-                <form action="{{ route('calendar-events.destroy', $calendarEvent) }}" method="POST"
-                      onsubmit="return confirm('Eliminare l\'evento {{ addslashes($calendarEvent->title) }}?')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-g cal-btn-danger">
+                <x-delete-modal :action="route('calendar-events.destroy', $calendarEvent)" title="Elimina evento"
+                    :message="'Eliminare l’evento '.$calendarEvent->title.'?'">
+                    <button type="button" class="btn btn-g cal-btn-danger">
                         Elimina
                     </button>
-                </form>
+                </x-delete-modal>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -141,10 +140,10 @@
                                     <a href="{{ route('attachments.download', $att) }}" target="_blank" rel="noopener noreferrer"
                                        class="btn-icon" aria-label="Scarica allegato {{ $att->original_name ?? $att->filename ?? '' }}">↓</a>
                                     @can('delete', $att)
-                                        <form action="{{ route('attachments.destroy', $att) }}" method="POST" onsubmit="return confirm('Eliminare il file?')">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="btn-icon u-text-red">×</button>
-                                        </form>
+                                        <x-delete-modal :action="route('attachments.destroy', $att)" title="Elimina allegato"
+                                            :message="'Eliminare il file '.$att->original_name.'?'">
+                                            <button type="button" class="btn-icon u-text-red" aria-label="Elimina allegato {{ $att->original_name }}">×</button>
+                                        </x-delete-modal>
                                     @endcan
                                 </div>
                             </td>

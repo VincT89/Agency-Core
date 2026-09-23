@@ -232,10 +232,10 @@
                                 </td>
                                 <td>{{ $intervention->user->name ?? '—' }}</td>
                                 <td class="t-actions">
-                                    <form action="{{ route('hosting-services.interventions.destroy', [$hostingService, $intervention]) }}" method="POST" class="js-confirm-delete">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="btn-icon hosting-past-due">✕</button>
-                                    </form>
+                                    <x-delete-modal :action="route('hosting-services.interventions.destroy', [$hostingService, $intervention])" title="Elimina intervento"
+                                        :message="'Eliminare definitivamente l’intervento '.$intervention->title.'?'">
+                                        <button type="button" class="btn-icon hosting-past-due" aria-label="Elimina intervento {{ $intervention->title }}">✕</button>
+                                    </x-delete-modal>
                                 </td>
                             </tr>
                             @endforeach

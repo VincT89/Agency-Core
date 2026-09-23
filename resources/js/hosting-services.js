@@ -146,15 +146,6 @@ function initHostingServices() {
         });
     });
 
-    // Conferma eliminazione
-    document.querySelectorAll('.js-confirm-delete:not(.js-bound)').forEach(form => {
-        form.classList.add('js-bound');
-        form.addEventListener('submit', (e) => {
-            if (!confirm('Eliminare definitivamente questo elemento?')) {
-                e.preventDefault();
-            }
-        });
-    });
 }
 
 document.addEventListener('livewire:navigated', initHostingServices);

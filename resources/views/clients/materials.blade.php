@@ -47,9 +47,10 @@
                     <div class="commercial-actions">
                         <a href="{{ route('attachments.download', $material) }}" class="btn btn-g" aria-label="Scarica {{ $material->original_name }}">Scarica</a>
                         @can('delete', $material)
-                            <form action="{{ route('attachments.destroy', $material) }}" method="POST" class="js-confirm-form" data-confirm-message="Eliminare il materiale {{ $material->original_name }}?">
-                                @csrf @method('DELETE')<button type="submit" class="btn btn-g btn-danger-outline" aria-label="Elimina {{ $material->original_name }}">Elimina</button>
-                            </form>
+                            <x-delete-modal :action="route('attachments.destroy', $material)" title="Elimina materiale"
+                                :message="'Eliminare il materiale '.$material->original_name.'?'">
+                                <button type="button" class="btn btn-g btn-danger-outline" aria-label="Elimina {{ $material->original_name }}">Elimina</button>
+                            </x-delete-modal>
                         @endcan
                     </div>
                 </article>

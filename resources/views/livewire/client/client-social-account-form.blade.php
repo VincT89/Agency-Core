@@ -65,6 +65,7 @@
                     @endphp
                     <div
                         class="social-account-panel"
+                        wire:key="client-social-panel-{{ $client->id }}-{{ $platform->value }}"
                         id="social-panel-{{ $platform->value }}"
                         role="tabpanel"
                         aria-labelledby="social-tab-{{ $platform->value }}"

@@ -1,5 +1,4 @@
 document.addEventListener('submit', async (event) => {
-    // Let other handlers process first (like js-confirm-form)
     if (event.defaultPrevented) return;
 
     const toggleForm = event.target.closest('.js-checklist-toggle');
@@ -99,11 +98,6 @@ async function handleStore(form) {
         container.insertAdjacentHTML('beforeend', data.html);
         input.value = '';
 
-        // Re-init confirm forms so the new destroy button works
-        if (typeof window.initConfirmForms === 'function') {
-            window.initConfirmForms();
-        }
-
         if (counter) {
             counter.textContent = `${data.done}/${data.total} completati`;
         }
@@ -153,4 +147,3 @@ async function handleDestroy(form) {
         if (button) button.disabled = false;
     }
 }
-

@@ -33,7 +33,7 @@
     @else
         <div class="social-grid">
             @foreach($connections as $connection)
-                <x-panel padded class="social-card {{ $connection->status->value === 'connected' ? 'is-connected' : '' }}">
+                <x-panel padded wire:key="agency-social-connection-{{ $connection->id }}" class="social-card {{ $connection->status->value === 'connected' ? 'is-connected' : '' }}">
                     <div class="social-card-header">
                         <div class="social-card-title-row">
                             <h3 class="u-text-strong social-card-title">
@@ -88,18 +88,20 @@
                             </span>
                         </button>
                         
-                        <button type="button"
-                                wire:confirm="Revocare questa connessione Meta? I profili associati non saranno più disponibili per i clienti collegati."
-                                wire:click="revokeConnection({{ $connection->id }})" 
-                                wire:loading.attr="disabled"
-                                class="btn btn-red btn-sm u-flex u-items-center u-gap-xs">
-                            <span class="u-flex u-items-center u-gap-xs" wire:loading.remove wire:target="revokeConnection({{ $connection->id }})">
-                                <i data-lucide="unlink" class="u-icon-xs"></i> Revoca connessione
-                            </span>
-                            <span class="u-flex u-items-center u-gap-xs" wire:loading wire:target="revokeConnection({{ $connection->id }})">
-                                <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Disconnessione...
-                            </span>
-                        </button>
+                        <x-confirm-modal title="Revoca connessione"
+                            message="Revocare questa connessione Meta? I profili associati non saranno più disponibili per i clienti collegati."
+                            confirm-method="revokeConnection({{ $connection->id }})"
+                            confirm-text="Revoca connessione" confirm-class="btn btn-p btn-danger" variant="danger">
+                            <button type="button" wire:loading.attr="disabled"
+                                    class="btn btn-red btn-sm u-flex u-items-center u-gap-xs">
+                                <span class="u-flex u-items-center u-gap-xs" wire:loading.remove wire:target="revokeConnection({{ $connection->id }})">
+                                    <i data-lucide="unlink" class="u-icon-xs"></i> Revoca connessione
+                                </span>
+                                <span class="u-flex u-items-center u-gap-xs" wire:loading wire:target="revokeConnection({{ $connection->id }})">
+                                    <i data-lucide="loader" class="u-icon-xs icon-spin"></i> Disconnessione...
+                                </span>
+                            </button>
+                        </x-confirm-modal>
                     </div>
                     @endcan
                 </x-panel>

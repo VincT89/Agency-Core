@@ -34,6 +34,8 @@ Il PDF allegato dal cliente è un riferimento di impaginazione e non viene impor
 
 Le richieste inviano a OpenAI soltanto quei testi, i nomi dei servizi e le indicazioni stilistiche; non includono i campi anagrafici, allegati, importi, quantità, tempi o condizioni. Eventuali dati scritti liberamente nei testi sono naturalmente parte del testo inviato. Le risposte sono validate, i numeri contenuti nei testi devono rimanere invariati, l'output è mostrato come testo semplice. Una proposta superata da modifiche manuali non può sovrascrivere il lavoro successivo.
 
+La revisione riguarda solo i campi già compilati. Se l'AI aggiunge testo in un campo lasciato vuoto, quel campo resta vuoto e le revisioni valide degli altri testi rimangono disponibili nell'anteprima. Una modifica ai numeri o la cancellazione di un testo esistente continua a bloccare la proposta, indicando il campo interessato. Non vengono generati automaticamente servizi o descrizioni mancanti a partire dal solo nome.
+
 Per attivare il pulsante, configurare sul server:
 
 ```dotenv
@@ -59,8 +61,10 @@ Se le variabili OpenAI cambiano su un server con configurazione memorizzata in c
 
 ## Verifiche eseguite
 
+Correzione del 23 settembre 2026: una chiamata OpenAI reale ha riprodotto il rifiuto della proposta quando il solo testo compilato era «rifacimento della homepage con animazioni» e l'AI riempiva i dettagli vuoti del servizio. Dopo la correzione, una nuova chiamata reale è stata accettata mantenendo vuoti quei campi. Superati 36 test con 441 asserzioni e il controllo di formattazione PHP. Nel browser isolato è stata riutilizzata anche la risposta reale prima rifiutata: anteprima, applicazione, prezzo di prova e quantità invariati, salvataggio e riapertura verificati; nessun errore JavaScript o scorrimento orizzontale a 1440, 768, 390 e 320 pixel. La chiave locale è stata riconosciuta senza esporla; nessuna modifica al database reale e nessuna distribuzione in produzione.
+
 Semplificazione del modulo: 32 test, 421 asserzioni superate sulle offerte, documenti e flusso commerciale; build e formattazione PHP superate. Collaudo nel browser su database isolato: 6 flussi completi e 9 layout da 320 a 1440 pixel, senza errori JavaScript né controlli fuori schermo. Verificati inserimento dalla libreria con mouse e tastiera, duplicazione/riordino/rimozione righe, salvataggio con sezioni chiuse, apertura dei campi non validi, riuso per un altro cliente con originale invariato, permessi e anteprima AI simulata. Nessuna nuova migrazione o modifica al database applicativo per questa semplificazione.
 
 Suite offerte/documenti/flusso commerciale: 30 test, 384 asserzioni. Dopo il rafforzamento della validazione delle risposte AI: 9 test documenti/AI, 117 asserzioni. Build Vite e formattazione dei file PHP superate. Browser: 6 flussi e 12 layout fra 320 e 1440 pixel, senza errori JavaScript o controlli fuori schermo. PDF di riferimento su 2 pagine; prova estrema su 37 pagine, con 600 paragrafi e 300 riepiloghi conservati, numerazione corretta e nessun testo fuori pagina.
 
-La migrazione è stata applicata al solo database locale `agency_core` su `127.0.0.1`; i valori preesistenti di offerte e righe sono stati confrontati prima e dopo e risultano invariati. La chiave OpenAI non è configurata in locale. Nessuna chiamata AI reale, nessun push e nessuna distribuzione in produzione eseguiti per questa modifica.
+Alla consegna del 21 settembre, la migrazione era stata applicata al solo database locale `agency_core` su `127.0.0.1`; i valori preesistenti di offerte e righe erano stati confrontati prima e dopo e risultavano invariati. La chiave OpenAI non era ancora configurata in locale. Per quella consegna non erano state eseguite chiamate AI reali, push o distribuzioni in produzione.

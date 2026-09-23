@@ -220,6 +220,64 @@ class QuoteDocumentTest extends TestCase
         }
     }
 
+    public function test_ai_revises_a_sparse_quote_without_filling_empty_service_fields(): void
+    {
+        config(['quotes.ai.key' => 'fake-key']);
+        $data = ['introduction' => 'rifacimento della homepage con animazioni', 'instructions' => 'Tono professionale',
+            'items' => [['name' => 'restyling homepage', 'summary' => '', 'description' => '']]];
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->aiResponse([
+            'introduction' => 'Rifacimento della homepage con animazioni.',
+            'items' => [['index' => 0, 'summary' => 'Restyling della homepage.', 'description' => 'Homepage con animazioni e 2 revisioni.']],
+        ]))]);
+
+        $this->postJson(route('quotes.text-suggestion'), $data)->assertOk()
+            ->assertJsonPath('introduction', 'Rifacimento della homepage con animazioni.')
+            ->assertJsonPath('items.0.summary', '')->assertJsonPath('items.0.description', '');
+        $this->assertDatabaseCount('quotes', 0);
+        $this->assertDatabaseCount('quote_services', 0);
+    }
+
+    public function test_ai_preserves_an_empty_introduction_while_revising_existing_service_texts(): void
+    {
+        config(['quotes.ai.key' => 'fake-key']);
+        $data = $this->aiInput();
+        $data['introduction'] = '';
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->aiResponse([
+            'introduction' => 'Un nuovo testo con 2 servizi non richiesti.',
+        ]))]);
+
+        $this->postJson(route('quotes.text-suggestion'), $data)->assertOk()
+            ->assertJsonPath('introduction', '')
+            ->assertJsonPath('items.0.summary', 'Sito di 5 pagine');
+    }
+
+    public function test_ai_still_rejects_changed_numbers_in_populated_service_fields(): void
+    {
+        config(['quotes.ai.key' => 'fake-key']);
+        foreach (['summary' => 'riepilogo', 'description' => 'descrizione'] as $field => $label) {
+            $data = ['introduction' => '', 'items' => [['name' => 'Sito web', 'summary' => '', 'description' => '', $field => 'Sito di 5 pagine']]];
+            Http::fake(['api.openai.com/v1/responses' => Http::response($this->aiResponse([
+                'introduction' => '',
+                'items' => [['index' => 0, 'summary' => '', 'description' => '', $field => 'Sito di 10 pagine']],
+            ]))]);
+
+            $response = $this->postJson(route('quotes.text-suggestion'), $data)->assertUnprocessable()->assertJsonValidationErrors('ai');
+            $this->assertStringContainsString($label, $response->json('errors.ai.0'));
+        }
+    }
+
+    public function test_ai_cannot_erase_existing_text_without_numbers(): void
+    {
+        config(['quotes.ai.key' => 'fake-key']);
+        $data = ['introduction' => '', 'items' => [['name' => 'Design', 'summary' => 'Studio del logo', 'description' => '']]];
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->aiResponse([
+            'introduction' => '', 'items' => [['index' => 0, 'summary' => '', 'description' => '']],
+        ]))]);
+
+        $this->postJson(route('quotes.text-suggestion'), $data)->assertUnprocessable()
+            ->assertJsonValidationErrors('ai');
+    }
+
     public function test_ai_missing_key_and_provider_errors_are_safe(): void
     {
         config(['quotes.ai.key' => null]);

@@ -12,9 +12,11 @@ use App\Models\Client;
 use App\Models\Quote;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class QuoteController extends Controller
@@ -22,12 +24,67 @@ class QuoteController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Quote::class);
-        $quotes = Quote::visibleTo($request->user())->with('client:id,name')->commercialOrder()
-            ->when($request->filled('client_id'), fn ($q) => $q->where('client_id', $request->integer('client_id')))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
-            ->paginate(20)->withQueryString();
+        $pageNames = array_map(fn ($status) => $status.'_page', array_keys(Quote::STATUSES));
+        $input = $request->validate([
+            'q' => ['nullable', 'string', 'max:160'],
+            'client_id' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', Rule::in(array_keys(Quote::STATUSES))],
+            'view' => ['nullable', Rule::in(['list', 'kanban'])],
+            'page' => ['nullable', 'integer', 'min:1'],
+            ...array_fill_keys($pageNames, ['nullable', 'integer', 'min:1']),
+        ]);
+        $viewMode = $input['view'] ?? 'list';
+        $filters = array_filter([
+            'q' => trim($input['q'] ?? ''),
+            'client_id' => $input['client_id'] ?? null,
+            'status' => $input['status'] ?? null,
+            'view' => $viewMode,
+        ], fn ($value) => filled($value));
+        $selectedClient = isset($filters['client_id'])
+            ? Client::visibleTo($request->user())->findOrFail($filters['client_id'])
+            : null;
+        $statuses = Quote::STATUSES;
+        if (! $request->user()->can('create', Quote::class)) {
+            unset($statuses['draft']);
+        }
 
-        return view('quotes.index', compact('quotes'));
+        $query = Quote::visibleTo($request->user())->with('client:id,name,company_name')
+            ->when($selectedClient, fn (Builder $query) => $query->where('client_id', $selectedClient->id))
+            ->when(isset($filters['q']), function (Builder $query) use ($filters) {
+                $search = $filters['q'];
+                $term = '%'.$search.'%';
+                $reference = ltrim($search, '#');
+                $query->where(function (Builder $matches) use ($term, $reference) {
+                    $matches->where('quotes.title', 'like', $term)
+                        ->orWhereHas('client', fn (Builder $client) => $client->where(fn (Builder $names) => $names
+                            ->where('name', 'like', $term)->orWhere('company_name', 'like', $term)))
+                        ->when(ctype_digit($reference), fn (Builder $ids) => $ids->orWhere('quotes.id', (int) $reference));
+                });
+            });
+        $statusCounts = (clone $query)->select('quotes.status')->selectRaw('COUNT(*) as aggregate')
+            ->groupBy('quotes.status')->pluck('aggregate', 'status')->map(fn ($count) => (int) $count);
+        $total = isset($filters['status']) ? ($statusCounts[$filters['status']] ?? 0) : $statusCounts->sum();
+        $quotes = null;
+        $columns = [];
+
+        if ($viewMode === 'kanban') {
+            foreach ($statuses as $status => $label) {
+                if (isset($filters['status']) && $filters['status'] !== $status) {
+                    continue;
+                }
+                $pageName = $status.'_page';
+                $page = min($input[$pageName] ?? 1, max(1, (int) ceil(($statusCounts[$status] ?? 0) / 10)));
+                $columns[$status] = (clone $query)->where('quotes.status', $status)->commercialOrder()
+                    ->paginate(10, ['*'], $pageName, $page)
+                    ->appends($filters + array_intersect_key($input, array_flip($pageNames)))
+                    ->fragment('offers-'.$status);
+            }
+        } else {
+            $quotes = $query->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('quotes.status', $status))
+                ->commercialOrder()->paginate(20)->appends($filters);
+        }
+
+        return view('quotes.index', compact('quotes', 'columns', 'viewMode', 'filters', 'selectedClient', 'statuses', 'statusCounts', 'total'));
     }
 
     public function create(Request $request): View

@@ -15,7 +15,143 @@
 .commercial-actions form { margin: 0; }
 .commercial-members { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
 .commercial-members label { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.quote-list-filters { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-bottom: 16px; }
+.quote-filter-actions, .quote-quick-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quote-status-filters .pill { gap: 8px; min-height: 34px; font-size: 12px; letter-spacing: normal; text-decoration: none; }
+.quote-status-filters .pill span { font-variant-numeric: tabular-nums; }
+.quote-reference { color: var(--text2); font-size: 11px; font-weight: 400; margin-top: 5px; }
+.quote-list { table-layout: fixed; }
+.quote-list th:first-child { width: 27%; }
+.quote-list th:nth-child(2) { width: 21%; }
+.quote-list th:last-child { width: 18%; }
+.quote-list td { overflow-wrap: anywhere; }
+.quote-list .quote-list-row { cursor: pointer; }
+.quote-list .quote-amount-cell, .quote-list .quote-date-cell { font-variant-numeric: tabular-nums; }
+.quote-list .quote-amount-cell { font-weight: 600; color: var(--text); }
+.quotes-workspace .commercial-offer-title { color: var(--text); text-decoration: none; }
+.quotes-workspace .is-rejected :is(.commercial-offer-title, .commercial-offer-total) { text-decoration: line-through; }
+.quotes-workspace .commercial-offer-title:hover { text-decoration: underline; }
+.quotes-workspace .is-rejected .commercial-offer-title:hover { text-decoration: underline line-through; }
+.quote-list-pagination:not(:has(nav)) { display: none; }
+.quote-list-pagination { padding: 16px; border-top: 1px solid var(--line); }
+.quote-board { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; min-height: 0; }
+.quote-board-three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.quote-board.quote-board-filtered { grid-template-columns: minmax(0, 440px); }
+.quote-column { min-width: 0; scroll-margin-top: 70px; }
+.quote-column .k-col-title { font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: normal; text-transform: none; color: var(--text); }
+.quote-card { padding: 14px; overflow-wrap: anywhere; transition: none; }
+.quote-card:hover { transform: none; }
+.quote-card .k-card-title { font-size: 14px; line-height: 1.4; margin: 8px 0; }
+.quote-card .quote-reference { margin: 0; }
+.quote-card-client { font-size: 12px; color: var(--text2); margin: 0 0 14px; }
+.quote-card-details { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+.quote-card-details strong { font-size: 14px; }
+.quote-card-details time { font-size: 11px; color: var(--text2); }
+.quote-column-empty, .quote-list-empty { color: var(--text2); font-size: 13px; line-height: 1.5; }
+.quote-column-pagination { padding-top: 8px; font-size: 12px; color: var(--text2); }
+.quote-column-pagination p { margin-bottom: 8px; }
+.quote-column-pagination > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+.quote-detail .page-heading { align-items: flex-start; flex-wrap: wrap; gap: 16px 24px; margin-bottom: 24px; padding-bottom: 20px; }
+.quote-detail .ph-left { flex: 1 1 420px; }
+.quote-detail .ph-right { padding: 0; }
+.quote-detail .page-title { line-height: 1.15; }
+.quote-detail .page-meta { margin-top: 12px; font-size: 12px; letter-spacing: normal; }
+.quote-detail-reference { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.quote-detail .btn { white-space: normal; line-height: 1.4; padding-top: 7px; padding-bottom: 7px; }
+.quote-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; align-items: start; }
+.quote-detail-content, .quote-detail-sidebar { display: grid; min-width: 0; gap: 24px; align-content: start; }
+.quote-detail .panel { animation: none; }
+.quote-detail .panel-body.pad, .quote-detail .panel-header { padding: 22px 24px; }
+.quote-detail .panel-title { color: var(--text); font-size: 15px; letter-spacing: normal; text-transform: none; }
+.quote-detail .panel-title h2, .quote-detail-heading { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.45; }
+.quote-detail-heading { margin-bottom: 14px; }
+.quote-detail-copy { margin: 0; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.quote-service { padding: 24px; }
+.quote-service + .quote-service { border-top: 1px solid var(--line); }
+.quote-service-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.quote-service-heading h3 { flex: 1; min-width: 0; margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.quote-service-amount { flex: 0 0 auto; max-width: 50%; margin: 0; text-align: right; }
+.quote-service-amount dt, .quote-service-pricing dt, .quote-service-delivery dt, .quote-detail-facts dt { color: var(--text3); font-size: 12px; font-weight: 400; line-height: 1.5; }
+.quote-service-amount dd { margin: 4px 0 0; font-size: 17px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.quote-service-pricing { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 12px 0 0; }
+.quote-service-pricing > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.quote-service-pricing dd { margin: 0; font-size: 13px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.quote-service > .quote-detail-copy { margin-top: 14px; }
+.quote-service-summary { font-weight: 500; }
+.quote-service-delivery { margin: 16px 0 0; padding-left: 12px; border-left: 2px solid var(--line2); }
+.quote-service-delivery dd { margin-top: 4px; }
+.quote-detail-total { border-top: 1px solid var(--line2); padding: 22px 24px; background: var(--bg1); border-radius: 0 0 var(--r2) var(--r2); }
+.quote-detail-total dl { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 20px; margin: 0; }
+.quote-detail-total dt { font-size: 14px; font-weight: 600; }
+.quote-detail-total dd { margin: 0 0 0 auto; font-size: 24px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.quote-detail-total .quote-detail-copy { margin-top: 10px; color: var(--text3); font-size: 13px; }
+.quote-services-empty { margin: 0; padding: 24px; color: var(--text2); font-size: 14px; }
+.quote-detail-terms + .quote-detail-terms { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
+.quote-detail-sidebar .panel-body.pad { padding: 20px; }
+.quote-detail-facts { display: grid; gap: 16px; margin: 0; }
+.quote-detail-facts dd { margin: 4px 0 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.quote-detail-customer { margin-bottom: 24px; }
+.quote-detail-customer .panel-header { padding-top: 14px; padding-bottom: 14px; }
+.quote-client-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 24px; }
+.quote-client-facts > div { min-width: 0; }
+.quote-workflow-actions { display: grid; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+.quote-workflow-actions form { margin: 0; min-width: 0; }
+.quote-workflow-actions .btn, .quote-detail-delete .btn { width: 100%; }
+.quote-detail-links { display: grid; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.quote-detail-links:not(:has(a)) { display: none; }
+.quote-detail-links a { width: fit-content; max-width: 100%; color: var(--text); font-size: 13px; line-height: 1.5; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.quote-detail-links a:hover { color: var(--accent); }
+.quote-detail-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
+.quote-detail-delete { margin-top: 20px; }
+.quote-detail-attachments { margin-top: 24px; }
+.quote-detail-attachments > div { margin: 0; }
+
+@media (max-width: 1199px) {
+    .quote-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .quote-list-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .quote-filter-actions { grid-column: 1 / -1; }
+    .quote-detail-grid { grid-template-columns: minmax(0, 1fr); }
+    .quote-client-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+    .quote-list-filters { grid-template-columns: minmax(0, 1fr); }
+    .quotes-workspace .ph-right .tab-switcher { flex: 1 0 100%; }
+    .quotes-workspace .tab-btn { flex: 1; }
+    .quotes-workspace .quote-board { grid-template-columns: minmax(0, 1fr); }
+    .quotes-workspace .quote-list { display: block; width: 100%; overflow: visible; }
+    .quotes-workspace .quote-list thead { position: absolute; width: 1px; height: 1px; min-width: 0; padding: 0; overflow: hidden; clip-path: inset(50%); }
+    .quotes-workspace .quote-list tbody { display: block; width: 100%; min-width: 0; }
+    .quotes-workspace .quote-list-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 16px; border-bottom: 1px solid var(--line); }
+    .quotes-workspace .quote-list-row:last-child { border-bottom: 0; }
+    .quotes-workspace .quote-list td { display: block; padding: 0; border: 0; min-width: 0; }
+    .quote-list :is(.quote-title-cell, .quote-client-cell, .quote-actions-cell) { grid-column: 1 / -1; }
+    .quote-list td[data-label]::before { content: attr(data-label); display: block; color: var(--text2); font-size: 11px; font-weight: 400; margin-bottom: 4px; }
+    .quotes-workspace .quote-title-cell { font-size: 14px; }
+    .quote-list .quote-status-cell { grid-column: 2; grid-row: 4; align-self: center; text-align: right; }
+    .quote-list td.quote-status-cell::before { display: none; }
+    .quote-list .quote-date-cell { grid-column: 2; grid-row: 3; }
+    .quote-list .quote-actions-cell { grid-column: 1; grid-row: 4; }
+    .quote-detail .ph-left { flex-basis: auto; }
+    .quote-detail .ph-right { width: 100%; }
+    .quote-detail .btn { min-height: var(--control-h-touch); }
+    .quote-detail .panel-body.pad, .quote-detail .panel-header, .quote-service, .quote-detail-total, .quote-services-empty { padding: 18px; }
+    .quote-detail-grid, .quote-detail-content, .quote-detail-sidebar { gap: 18px; }
+    .quote-service-heading { gap: 14px; }
+    .quote-service-heading h3 { font-size: 15px; }
+    .quote-service-amount dd { font-size: 16px; }
+    .quote-service-pricing { gap: 8px 16px; }
+    .quote-detail-total dd { font-size: 22px; }
+    .quote-detail-links { gap: 2px; padding-top: 10px; }
+    .quote-detail-links a { display: flex; align-items: center; min-height: var(--control-h-touch); }
+    .quote-detail-attachments { margin-top: 18px; }
+    .quote-detail-customer { margin-bottom: 18px; }
+    .quote-client-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+}
 @media (max-width: 600px) {
     .commercial-actions > *, .commercial-actions form .btn { width: 100%; }
     .commercial-services .form-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 380px) {
+    .quote-client-facts { grid-template-columns: minmax(0, 1fr); }
 }

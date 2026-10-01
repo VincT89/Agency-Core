@@ -474,8 +474,15 @@
 }
 
 /* Attachments */
-.attachments-table-wrap { width: 100%; overflow-x: auto; }
-.attachments-table { width: 100%; min-width: 600px; }
+.attachments-table-region { min-width: 0; max-width: 100%; }
+.attachments-table-wrap { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: auto; }
+.attachments-table-wrap::-webkit-scrollbar { height: 10px; }
+.attachments-table-wrap::-webkit-scrollbar-track { background: var(--bg3); }
+.attachments-table-wrap::-webkit-scrollbar-thumb { background: var(--text2); border: 2px solid var(--bg3); border-radius: 6px; }
+.attachments-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.attachments-table-wrap > .t-table.attachments-table { display: table; width: 100%; min-width: 640px; max-width: none; overflow: visible; }
+.attachments-table .name-col { min-width: 200px; max-width: 360px; white-space: normal; overflow-wrap: anywhere; }
+.attachments-scroll-hint { margin: 0; padding: 10px 16px; font-size: 12px; line-height: 1.5; color: var(--text3); }
 .attachments-upload-footer { border-top: 1px solid var(--line); padding: 16px; }
 .attachments-file-input { display: none; }
 .attachments-upload-label { cursor: pointer; margin: 0; }

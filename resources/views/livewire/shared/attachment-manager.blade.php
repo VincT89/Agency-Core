@@ -1,8 +1,25 @@
 <div class="u-mt-lg u-mb-lg">
     <x-panel title="Allegati" dot="var(--accent)">
         @if(count($model->attachments ?? []))
-            <div class="attachments-table-wrap">
-                <table class="t-table attachments-table">
+            <div class="attachments-table-region" x-data="{
+                scrollable: false,
+                observer: null,
+                init() {
+                    this.$nextTick(() => {
+                        this.observer = new ResizeObserver(() => {
+                            this.scrollable = this.$refs.scrollArea.scrollWidth > this.$refs.scrollArea.clientWidth + 1;
+                        });
+                        this.observer.observe(this.$refs.scrollArea);
+                        this.observer.observe(this.$refs.table);
+                    });
+                },
+                destroy() { this.observer?.disconnect(); }
+            }">
+                <p id="attachment-scroll-help-{{ $this->getId() }}" class="attachments-scroll-hint" x-show="scrollable" x-cloak>Scorri orizzontalmente per vedere tutte le colonne.</p>
+                <div class="attachments-table-wrap" x-ref="scrollArea" role="region" aria-label="Tabella allegati"
+                     tabindex="0" :tabindex="scrollable ? 0 : -1"
+                     :aria-describedby="scrollable ? 'attachment-scroll-help-{{ $this->getId() }}' : null">
+                <table class="t-table attachments-table" x-ref="table">
                 <thead>
                     <tr>
                         <th>Nome File</th>
@@ -51,6 +68,7 @@
                     @endforeach
                 </tbody>
             </table>
+                </div>
             </div>
         @else
             <div class="u-text-center u-text-muted u-p-md u-mb-md">Nessun allegato presente.</div>

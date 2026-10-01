@@ -6,6 +6,10 @@ $map = [
     // generici
     'active'          => 'bg',
     'inactive'        => 'bd',
+    // offerte commerciali
+    'presented'       => 'bb',
+    'accepted'        => 'bg',
+    'rejected'        => 'br',
     // ticket / task status
     'open'            => 'ba',
     'in_progress'     => 'bb',

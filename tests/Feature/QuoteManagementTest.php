@@ -62,7 +62,7 @@ class QuoteManagementTest extends TestCase
         $active = $this->quote('presented', ['title' => 'Offerta attiva meno recente', 'ticket_id' => $ticket->id, 'created_at' => now()->subDays(5)]);
         $rejected = $this->quote('rejected', ['title' => 'Offerta rifiutata recente', 'ticket_id' => $ticket->id]);
         foreach ([route('quotes.index'), route('clients.show', $this->client), route('tickets.show', $ticket)] as $url) {
-            $this->get($url)->assertOk()->assertSeeInOrder([$active->title, $rejected->title])->assertSee('commercial-history-row is-rejected', false)->assertSee('Rifiutata');
+            $this->get($url)->assertOk()->assertSeeInOrder([$active->title, $rejected->title])->assertSee('is-rejected', false)->assertSee('Rifiutata');
         }
         $this->actingAs($this->commercial)->get(route('quotes.index'))->assertOk()->assertSeeInOrder([$active->title, $rejected->title]);
         $this->get(route('quotes.index', ['status' => 'rejected']))->assertOk()->assertSee($rejected->title)->assertDontSee($active->title);

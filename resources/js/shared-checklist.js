@@ -46,7 +46,10 @@ async function handleToggle(form) {
         const data = await response.json();
 
         if (state) {
-            button.textContent = data.is_completed ? 'Riapri' : 'Segna completata';
+            const actionLabel = data.is_completed ? 'Riapri' : 'Segna completata';
+            button.querySelector('[data-checklist-action]').textContent = actionLabel;
+            button.querySelector('[data-checklist-symbol]').textContent = data.is_completed ? '✓' : '○';
+            button.setAttribute('aria-label', actionLabel);
             state.textContent = data.is_completed ? 'Completata' : 'Da fare';
         } else {
             button.textContent = data.is_completed ? '✓' : '○';

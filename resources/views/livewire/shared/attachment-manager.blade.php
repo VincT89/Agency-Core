@@ -6,11 +6,14 @@
                 observer: null,
                 init() {
                     this.$nextTick(() => {
+                        const scrollArea = this.$el.querySelector('.attachments-table-wrap');
+                        const table = scrollArea?.querySelector('table');
+                        if (!this.$el.isConnected || !scrollArea || !table) return;
                         this.observer = new ResizeObserver(() => {
-                            this.scrollable = this.$refs.scrollArea.scrollWidth > this.$refs.scrollArea.clientWidth + 1;
+                            this.scrollable = scrollArea.scrollWidth > scrollArea.clientWidth + 1;
                         });
-                        this.observer.observe(this.$refs.scrollArea);
-                        this.observer.observe(this.$refs.table);
+                        this.observer.observe(scrollArea);
+                        this.observer.observe(table);
                     });
                 },
                 destroy() { this.observer?.disconnect(); }
@@ -76,6 +79,42 @@
 
         @can($model instanceof \App\Models\Ticket || $model instanceof \App\Models\Quote ? 'addAttachment' : 'update', $model)
         <div class="attachments-upload-footer">
+            @if($model instanceof \App\Models\Task)
+                @php
+                    $uploadOptions = [
+                        'maxSelection' => \App\Http\Requests\StoreAttachmentRequest::TASK_MAX_SELECTION,
+                        'maxBytes' => \App\Http\Requests\StoreAttachmentRequest::TASK_MAX_KILOBYTES * 1024,
+                        'maxMegabytes' => \App\Http\Requests\StoreAttachmentRequest::TASK_MAX_KILOBYTES / 1024,
+                        'extensions' => \App\Http\Requests\StoreAttachmentRequest::ALLOWED_MIMES,
+                    ];
+                @endphp
+                <div x-data="taskAttachmentUploads(@js($uploadOptions))" wire:key="task-attachment-uploader-{{ $model->id }}">
+                    <div class="attachments-upload-controls">
+                        <input type="file" multiple x-ref="files" class="attachments-file-input"
+                               accept="{{ '.'.implode(',.', $uploadOptions['extensions']) }}"
+                               :disabled="busy" @change="select(Array.from($event.target.files)); $event.target.value = ''"
+                               aria-label="Seleziona gli allegati da caricare">
+                        <button type="button" class="btn btn-p" :disabled="busy" @click="$refs.files.click()"
+                                aria-describedby="attachment-upload-help-{{ $this->getId() }}">Carica allegati</button>
+                        <p id="attachment-upload-help-{{ $this->getId() }}" class="attachments-upload-help">
+                            Fino a {{ $uploadOptions['maxSelection'] }} file per selezione, massimo {{ $uploadOptions['maxMegabytes'] }} MB ciascuno.
+                            I file vengono caricati uno alla volta.
+                        </p>
+                    </div>
+                    <p class="attachments-upload-error" role="alert" x-show="error" x-cloak x-text="error"></p>
+                    <p class="attachments-upload-summary" role="status" aria-live="polite" x-show="items.length" x-cloak x-text="summary"></p>
+                    <ul class="attachments-upload-queue" x-show="items.length" x-cloak aria-label="Esito del caricamento">
+                        <template x-for="(item, index) in items" :key="index">
+                            <li>
+                                <span class="attachments-upload-name" x-text="item.name"></span>
+                                <span class="attachments-upload-state" :class="{ 'attachments-upload-error': item.status === 'error' }" x-text="statusText(item)"></span>
+                                <progress x-show="item.status === 'uploading' || item.status === 'saving'" max="100" :value="item.progress" :aria-label="'Caricamento di ' + item.name"></progress>
+                                <p class="attachments-upload-error" x-show="item.error" x-text="item.error"></p>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            @else
             <div class="u-flex-between">
                 <div>
                     <input
@@ -95,6 +134,7 @@
                     <div class="u-text-red u-text-meta">{{ $message }}</div>
                 @enderror
             </div>
+            @endif
         </div>
         @endcan
     </x-panel>

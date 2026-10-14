@@ -23,10 +23,13 @@ async function handleToggle(form) {
     const title = row?.querySelector('[data-checklist-title]');
     const completedBy = row?.querySelector('[data-checklist-completed-by]');
     const counter = document.querySelector('[data-checklist-counter]');
+    const state = row?.querySelector('[data-checklist-status]');
+    const errorMessage = row?.querySelector('[data-checklist-error]');
 
     if (!row || !button || !title) return;
 
     button.disabled = true;
+    if (errorMessage) errorMessage.hidden = true;
 
     try {
         const response = await fetch(form.action, {
@@ -42,7 +45,12 @@ async function handleToggle(form) {
 
         const data = await response.json();
 
-        button.textContent = data.is_completed ? '✓' : '○';
+        if (state) {
+            button.textContent = data.is_completed ? 'Riapri' : 'Segna completata';
+            state.textContent = data.is_completed ? 'Completata' : 'Da fare';
+        } else {
+            button.textContent = data.is_completed ? '✓' : '○';
+        }
 
         title.classList.toggle('u-text-muted', data.is_completed);
         title.classList.toggle('task-checklist-completed', data.is_completed);
@@ -61,8 +69,13 @@ async function handleToggle(form) {
             counter.textContent = `${data.done}/${data.total} completati`;
         }
     } catch (error) {
-        console.error(error);
-        alert('Non riesco ad aggiornare la checklist. Riprova.');
+        if (errorMessage) {
+            errorMessage.textContent = 'Non è stato possibile aggiornare questa voce. Riprova.';
+            errorMessage.hidden = false;
+        } else {
+            console.error(error);
+            alert('Non riesco ad aggiornare la checklist. Riprova.');
+        }
     } finally {
         button.disabled = false;
     }

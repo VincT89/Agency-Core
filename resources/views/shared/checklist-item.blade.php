@@ -1,3 +1,6 @@
+@if($type === 'task')
+    @include('tasks.partials.checklist-item', ['item' => $item])
+@else
 <div class="u-flex-center u-gap-sm task-checklist-item" data-checklist-item="{{ $item->id }}">
     <form action="{{ route($type . '-checklist-items.toggle', $item) }}" method="POST" class="js-checklist-toggle">
         @csrf
@@ -32,3 +35,4 @@
         <button type="button" class="btn-icon u-text-red">✕</button>
     </x-delete-modal>
 </div>
+@endif

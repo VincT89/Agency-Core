@@ -4,9 +4,12 @@ namespace App\Http\Requests;
 
 use App\Models\CalendarEvent;
 use App\Models\Client;
+use App\Models\Expense;
+use App\Models\HostingService;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Project;
+use App\Models\Quote;
 use App\Models\Task;
 use App\Models\Ticket;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +17,15 @@ use Illuminate\Validation\Validator;
 
 class StoreAttachmentRequest extends FormRequest
 {
+    public const TASK_MAX_KILOBYTES = 15 * 1024;
+
+    public const TASK_MAX_SELECTION = 10;
+
+    public static function maxKilobytesFor(string $type): int
+    {
+        return $type === 'task' ? self::TASK_MAX_KILOBYTES : 10 * 1024;
+    }
+
     public const ALLOWED_MIMES = [
         'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp',
         'doc', 'docx', 'xls', 'xlsx', 'csv',
@@ -27,10 +39,10 @@ class StoreAttachmentRequest extends FormRequest
         'ticket' => Ticket::class,
         'calendar_event' => CalendarEvent::class,
         'invoice' => Invoice::class,
-        'quote' => \App\Models\Quote::class,
+        'quote' => Quote::class,
         'payment' => Payment::class,
-        'expense' => \App\Models\Expense::class,
-        'hosting_service' => \App\Models\HostingService::class,
+        'expense' => Expense::class,
+        'hosting_service' => HostingService::class,
     ];
 
     public function authorize(): bool
@@ -51,7 +63,7 @@ class StoreAttachmentRequest extends FormRequest
         }
 
         // Intentionally resolving attachment capabilities by checking parent update rights
-        return $this->user()->can($attachable instanceof Ticket || $attachable instanceof \App\Models\Quote ? 'addAttachment' : 'update', $attachable);
+        return $this->user()->can($attachable instanceof Ticket || $attachable instanceof Quote ? 'addAttachment' : 'update', $attachable);
     }
 
     public function rules(): array
@@ -63,8 +75,8 @@ class StoreAttachmentRequest extends FormRequest
             'file' => [
                 'required',
                 'file',
-                'max:10240',
-                'mimes:' . implode(',', self::ALLOWED_MIMES),
+                'max:'.self::maxKilobytesFor($this->input('attachable_type', '')),
+                'mimes:'.implode(',', self::ALLOWED_MIMES),
             ],
             'description' => ['nullable', 'string', 'max:500'],
         ];

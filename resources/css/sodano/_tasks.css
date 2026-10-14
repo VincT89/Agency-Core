@@ -81,6 +81,72 @@
     text-decoration: line-through;
 }
 
+.task-checklist-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "content content" "toggle delete" "error error";
+    align-items: center;
+    gap: 10px 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+}
+
+.task-checklist-content {
+    grid-area: content;
+    min-width: 0;
+}
+
+.task-checklist-title {
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.task-checklist-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.task-checklist-status {
+    font-weight: 600;
+}
+
+.task-checklist-toggle {
+    grid-area: toggle;
+    margin: 0;
+}
+
+.task-checklist-delete {
+    grid-area: delete;
+    justify-self: end;
+}
+
+.task-checklist-toggle button,
+.task-checklist-delete button {
+    min-height: 44px;
+}
+
+.task-checklist-error {
+    grid-area: error;
+    margin: 0;
+    color: var(--red);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+@media (min-width: 769px) {
+    .task-checklist-entry {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        grid-template-areas: "content toggle delete" "error error error";
+    }
+}
+
 /* Storico Commenti Task */
 .task-comment-item {
     padding: 12px 0;
@@ -90,6 +156,13 @@
 .task-comment-body {
     line-height: 1.6;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.task-comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
 }
 
 /* Allegati Task */

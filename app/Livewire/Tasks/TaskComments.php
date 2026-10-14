@@ -2,19 +2,21 @@
 
 namespace App\Livewire\Tasks;
 
-use Livewire\Component;
-use App\Models\Task;
-use App\Models\ChatbotClientSession;
 use App\Enums\Social\CommentSource;
-use App\Services\Integrations\N8n\N8nClient;
+use App\Models\Task;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Attributes\Locked;
+use Livewire\Component;
 
 class TaskComments extends Component
 {
     use AuthorizesRequests;
 
+    #[Locked]
     public Task $task;
+
     public string $body = '';
+
     public string $delivery_mode = 'internal';
 
     protected function rules()
@@ -48,8 +50,18 @@ class TaskComments extends Component
 
         $this->body = '';
         $this->delivery_mode = 'internal';
-        
+
         // Refresh the task to reload comments
+        $this->task->load('comments.user');
+    }
+
+    public function deleteComment(int $id): void
+    {
+        $this->authorize('update', $this->task);
+        $comment = $this->task->comments()->whereKey($id)->firstOrFail();
+        $this->authorize('delete', $comment);
+
+        $comment->delete();
         $this->task->load('comments.user');
     }
 
@@ -57,6 +69,7 @@ class TaskComments extends Component
     {
         abort_if(auth()->user()->isCommercial(), 403);
         $this->authorize('view', $this->task);
+
         return view('livewire.tasks.task-comments');
     }
 }

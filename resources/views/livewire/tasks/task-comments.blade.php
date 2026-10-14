@@ -9,7 +9,7 @@
                  x-init="setTimeout(() => $el.scrollTop = $el.scrollHeight, 10); $watch('count', () => setTimeout(() => $el.scrollTop = $el.scrollHeight, 50))">
                  
                 @forelse($task->comments->sortBy('created_at') as $comment)
-                    <div class="task-comment-item">
+                    <div class="task-comment-item" wire:key="task-comment-{{ $comment->id }}">
                         <div class="u-flex-between u-mb-sm">
                             <span class="u-flex u-items-center u-gap-xs">
                                 <strong class="u-text-strong">
@@ -39,6 +39,21 @@
                             </div>
                         </div>
                         <div class="u-text-muted task-comment-body">{{ $comment->body }}</div>
+                        @can('delete', $comment)
+                            <div class="task-comment-actions">
+                                <x-confirm-modal
+                                    title="Elimina commento"
+                                    message="Vuoi eliminare questo commento? L'operazione non può essere annullata."
+                                    confirmText="Elimina"
+                                    confirmMethod="deleteComment({{ $comment->id }})"
+                                    confirmClass="btn btn-p btn-danger"
+                                    icon="trash-2"
+                                    variant="danger"
+                                >
+                                    <button type="button" class="btn-ghost-danger btn-xs" wire:loading.attr="disabled" wire:target="deleteComment">Elimina commento</button>
+                                </x-confirm-modal>
+                            </div>
+                        @endcan
                     </div>
                 @empty
                     <div class="u-empty-state-sm comments-empty">Nessun commento ancora presente.</div>

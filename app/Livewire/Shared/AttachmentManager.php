@@ -85,11 +85,10 @@ class AttachmentManager extends Component
         $this->authorize($this->model instanceof Ticket || $this->model instanceof Quote ? 'addAttachment' : 'update', $this->model);
 
         $this->resetValidation('file');
-        $mimes = implode(',', StoreAttachmentRequest::ALLOWED_MIMES);
         $maxKilobytes = StoreAttachmentRequest::maxKilobytesFor($this->type);
         $maxMegabytes = $maxKilobytes / 1024;
         $this->validate([
-            'file' => "required|file|max:{$maxKilobytes}|mimes:{$mimes}",
+            'file' => StoreAttachmentRequest::fileRulesFor($this->type),
         ], [
             'file.required' => 'Seleziona un file da caricare.',
             'file.file' => 'Il file selezionato non è valido.',

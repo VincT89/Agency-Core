@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Support\LegacyExcelFixture;
 use Tests\TestCase;
 
 class TaskAttachmentUploadTest extends TestCase
@@ -71,6 +72,39 @@ class TaskAttachmentUploadTest extends TestCase
             ->set('file', UploadedFile::fake()->create('DEMO-invalid.xls', 100, 'application/x-php'))
             ->call('saveTaskAttachment')
             ->assertReturned(fn ($result) => $result['saved'] === false && str_contains($result['message'], 'Formato non riconosciuto'));
+        $this->assertSame(0, $this->task->attachments()->count());
+    }
+
+    public function test_generic_ole_excel_is_saved_and_downloaded_unchanged_in_both_upload_flows(): void
+    {
+        $contents = LegacyExcelFixture::make();
+        $file = fn (string $name) => UploadedFile::fake()->createWithContent($name, $contents)->mimeType('application/x-ole-storage');
+        $this->assertNull($file('DEMO.xls')->guessExtension());
+        Livewire::test(AttachmentManager::class, ['model' => $this->task])
+            ->set('file', $file('DEMO-export.XLS'))
+            ->call('saveTaskAttachment')->assertReturned(['saved' => true]);
+        $this->post(route('attachments.store'), [
+            'attachable_type' => 'task', 'attachable_id' => $this->task->id, 'type' => 'document',
+            'file' => $file('DEMO-export-http.xls'),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(2, $this->task->attachments()->count());
+        foreach ($this->task->attachments()->get() as $attachment) {
+            $this->assertSame($contents, Storage::disk('attachments')->get($attachment->path));
+            $download = $this->get(route('attachments.download', $attachment))->assertOk();
+            $this->assertSame($contents, $download->streamedContent());
+        }
+    }
+
+    public function test_generic_ole_fallback_requires_excel_structure_and_an_excel_filename(): void
+    {
+        $valid = LegacyExcelFixture::make();
+        $invalid = substr_replace($valid, "<?php echo 'test'; ?>", 1536, 20);
+        foreach ([['DEMO-fake.xls', $invalid], ['DEMO-renamed.bin', $valid], ['DEMO-code.php', $valid]] as [$name, $contents]) {
+            $file = UploadedFile::fake()->createWithContent($name, $contents)->mimeType('application/x-ole-storage');
+            Livewire::test(AttachmentManager::class, ['model' => $this->task])
+                ->set('file', $file)->call('saveTaskAttachment')
+                ->assertReturned(fn ($result) => $result['saved'] === false && str_contains($result['message'], 'Formato non riconosciuto'));
+        }
         $this->assertSame(0, $this->task->attachments()->count());
     }
 

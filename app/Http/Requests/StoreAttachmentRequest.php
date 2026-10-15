@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\Quote;
 use App\Models\Task;
 use App\Models\Ticket;
+use App\Rules\TaskAttachmentFileType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -24,6 +25,17 @@ class StoreAttachmentRequest extends FormRequest
     public static function maxKilobytesFor(string $type): int
     {
         return $type === 'task' ? self::TASK_MAX_KILOBYTES : 10 * 1024;
+    }
+
+    public static function fileRulesFor(string $type): array
+    {
+        return [
+            'bail',
+            'required',
+            'file',
+            'max:'.self::maxKilobytesFor($type),
+            $type === 'task' ? new TaskAttachmentFileType(self::ALLOWED_MIMES) : 'mimes:'.implode(',', self::ALLOWED_MIMES),
+        ];
     }
 
     public const ALLOWED_MIMES = [
@@ -72,12 +84,7 @@ class StoreAttachmentRequest extends FormRequest
             'attachable_type' => ['required', 'string'],
             'attachable_id' => ['required', 'integer'],
             'type' => ['required', 'string', 'in:document,image,media,other'],
-            'file' => [
-                'required',
-                'file',
-                'max:'.self::maxKilobytesFor($this->input('attachable_type', '')),
-                'mimes:'.implode(',', self::ALLOWED_MIMES),
-            ],
+            'file' => self::fileRulesFor($this->input('attachable_type', '')),
             'description' => ['nullable', 'string', 'max:500'],
         ];
     }

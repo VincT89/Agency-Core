@@ -107,7 +107,9 @@
                 </x-form-group>
                 <x-form-group label="IBAN" name="iban">
                     <input name="iban" class="form-in @error('iban') is-invalid @enderror"
+                           aria-describedby="billing-iban-help"
                            value="{{ old('iban', $billingProfile->iban) }}">
+                    <p id="billing-iban-help" class="u-text-meta u-mt-md">Facoltativo per importare fatture. Necessario per preparare nuove fatture con bonifico o altre modalità che lo richiedono.</p>
                 </x-form-group>
             </div>
 

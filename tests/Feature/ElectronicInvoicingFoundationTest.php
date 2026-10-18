@@ -79,6 +79,28 @@ class ElectronicInvoicingFoundationTest extends TestCase
         ]);
     }
 
+    public function test_profile_without_iban_can_be_saved_but_bank_transfer_invoice_preparation_still_requires_it(): void
+    {
+        Http::preventStrayRequests();
+        $this->actingAs($this->admin)
+            ->put(route('billing-profile.update'), $this->profileData(['iban' => '']))
+            ->assertSessionHasNoErrors()->assertRedirect(route('billing-profile.edit'));
+        $invoice = $this->createReadyInvoice('BOZZA-SENZA-IBAN');
+
+        $this->post(route('invoices.fiscal.prepare', $invoice))->assertSessionHasErrors([
+            'fiscal' => 'Inserisci l’IBAN richiesto dalla modalità di pagamento selezionata.',
+        ]);
+        $this->assertSame(InvoiceFiscalStatus::NotPrepared, $invoice->fresh()->fiscal_status);
+        $this->assertNull($invoice->fresh()->fiscal_number);
+        $this->assertDatabaseCount('invoice_number_sequences', 0);
+        $this->assertDatabaseCount('electronic_invoice_transmissions', 0);
+
+        $this->put(route('billing-profile.update'), $this->profileData())->assertSessionHasNoErrors();
+        $this->post(route('invoices.fiscal.prepare', $invoice))->assertSessionHasNoErrors();
+        $this->assertSame(InvoiceFiscalStatus::Ready, $invoice->fresh()->fiscal_status);
+        Http::assertNothingSent();
+    }
+
     public function test_incomplete_invoice_does_not_consume_a_fiscal_number(): void
     {
         $this->createBillingProfile();

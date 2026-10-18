@@ -31,6 +31,7 @@ class UpdateBillingProfileRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'pec' => ['nullable', 'email', 'max:255'],
             'recipient_code' => ['nullable', 'string', 'min:6', 'max:7', 'regex:/^[A-Z0-9]+$/'],
+            /** Imports allow an empty IBAN; fiscal preparation still requires it for applicable payment methods. */
             'iban' => ['nullable', 'string', 'min:15', 'max:34', 'regex:/^[A-Z]{2}\d{2}[A-Z0-9]+$/'],
             'default_payment_method' => ['required', Rule::enum(FatturaPaPaymentMethod::class)],
             'invoice_series' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9-]+$/'],
@@ -60,17 +61,6 @@ class UpdateBillingProfileRequest extends FormRequest
                     $validator->errors()->add(
                         'tax_code',
                         'Il codice fiscale non è formalmente valido.'
-                    );
-                }
-
-                $paymentMethod = FatturaPaPaymentMethod::tryFrom(
-                    (string) $this->input('default_payment_method')
-                );
-
-                if ($paymentMethod?->requiresIban() && blank($this->input('iban'))) {
-                    $validator->errors()->add(
-                        'iban',
-                        'La modalità di pagamento selezionata richiede l’IBAN.'
                     );
                 }
             },

@@ -4,6 +4,8 @@
 
 Da **Fatture > Importa fattura**, Admin e Amministrazione possono acquisire fatture già emesse ai clienti oppure ricevute dai fornitori. Si sceglie un file locale o la ricerca su Aruba, si verifica l’anteprima e si conferma il salvataggio.
 
+Il modulo **Dati fiscali** permette di salvare il profilo senza IBAN, anche con Bonifico come pagamento predefinito, e procedere all’importazione XML o ZIP. Il controllo sull’identità dell’agenzia resta obbligatorio. Un IBAN compilato deve rispettare il formato previsto; per preparare nuove fatture con modalità che lo richiedono, il controllo di completezza fiscale continua a bloccare la preparazione finché manca l’IBAN, senza assegnare numeri o inviare documenti.
+
 - I file XML FatturaPA e XML.P7M vengono letti automaticamente. Per P7M occorre l’estensione PHP OpenSSL con supporto CMS. L’estrazione legge il contenuto, senza certificare l’attendibilità della firma.
 - Per i PDF si compilano numero, data, importi e controparte. Il PDF viene conservato come documento originale, senza OCR o servizi esterni.
 - Il limite è 10 MB per file. In un XML con più fatture si seleziona il singolo documento da importare.

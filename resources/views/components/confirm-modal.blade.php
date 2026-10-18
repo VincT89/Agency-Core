@@ -3,6 +3,7 @@
     'message' => 'Sei sicuro di voler procedere?',
     'confirmText' => 'Conferma',
     'confirmMethod' => null,
+    'formId' => null,
     'confirmClass' => 'btn btn-p',
     'icon' => 'alert-circle',
     'variant' => 'warning',
@@ -33,7 +34,7 @@
             
             <div class="confirm-modal-footer">
                 <button type="button" @click="open = false" class="btn btn-g confirm-modal-btn" data-dialog-initial-focus>Annulla</button>
-                <button type="button" class="{{ $confirmClass }} confirm-modal-btn" 
+                <button type="{{ $formId ? 'submit' : 'button' }}" @if($formId) form="{{ $formId }}" @endif class="{{ $confirmClass }} confirm-modal-btn"
                         @if($confirmMethod) wire:click="{{ $confirmMethod }}" @endif
                         @click="open = false">
                     {{ $confirmText }}

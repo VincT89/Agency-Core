@@ -31,7 +31,7 @@
                     <td class="mono-col">{{ $payment->payment_date?->format('d/m/Y') }}</td>
                     <td>
                         @if($payment->invoice)
-                            <a href="{{ route('invoices.show', $payment->invoice) }}" class="u-text-accent-link">{{ $payment->invoice->number }}</a>
+                            <a href="{{ route('invoices.show', $payment->invoice) }}" class="u-text-accent-link">{{ $payment->invoice->display_number }}</a>
                         @else
                             —
                         @endif

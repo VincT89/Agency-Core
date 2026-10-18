@@ -13,7 +13,51 @@ Da **Fatture > Importa fattura**, Admin e Amministrazione possono acquisire fatt
 - I riferimenti del documento permettono di riconoscere le importazioni ripetute; dati economici discordanti richiedono una verifica. Una fattura già registrata non viene sovrascritta.
 - L’anteprima scade dopo 20 minuti. Per le fatture emesse da Aruba l’esito e il contenuto vengono ricontrollati alla conferma.
 
-La lettura automatica gestisce euro e i tipi TD01, TD02, TD03, TD06, TD24 e TD25. Note di credito, autofatture, ritenute e split payment vengono segnalati e non trasformati in fatture ordinarie con importi potenzialmente errati. Il PDF manuale non va usato per aggirare queste differenze contabili. Le rate originali restano nel documento: la registrazione utilizza una sola scadenza, scelta nell’anteprima quando vi sono più rate.
+La lettura automatica gestisce euro e i tipi TD01, TD02, TD03, TD06, TD24 e TD25. Per i documenti emessi supporta anche TD04 e split payment: le note di credito sono documenti separati e il netto da incassare viene distinto dal totale IVA inclusa. Per i documenti ricevuti, TD04 e split payment richiedono ancora una gestione distinta. Autofatture e ritenute vengono segnalate senza importarle come fatture ordinarie. Il PDF manuale non va usato per aggirare queste differenze contabili. Le rate originali restano nel documento: la registrazione utilizza una sola scadenza, scelta nell’anteprima quando vi sono più rate.
+
+### ZIP Aruba e duplicati
+
+Da **Fatture > Importa ZIP** si legge l’esportazione dei documenti emessi e si confermano i nuovi documenti e gli eventuali clienti mancanti. Occorre l’estensione PHP ZIP. Limiti: 100 documenti XML/XML.P7M, 10 MB per archivio o singolo documento e 20 MB complessivi decompressi. Non vengono estratti percorsi sul disco; archivi cifrati, percorsi anomali e compressioni eccessive sono rifiutati.
+
+FPA e FPR restano nella stessa lista con il numero originale completo, per esempio `FPA 1/26` e `FPR 1/26`, e il tipo documento. Il progetto è facoltativo anche nella creazione e modifica delle fatture gestionali.
+
+La lista offre i filtri **Emessa dal / Emessa al** (estremi inclusi) e **Numero documento**, anche parziale. Si possono usare insieme a tipo documento, ricerca libera, cliente e stato; restano applicati cambiando pagina. Il numero dedicato cerca la numerazione visibile del documento, senza includere i nomi dei clienti o gli identificativi interni di importazione.
+
+Il contatore **Fatture** nella sidebar indica le fatture ancora da incassare, comprese quelle importate e senza progetto. Conta i documenti emessi, parzialmente incassati o scaduti con residuo positivo, al netto di incassi, split payment e note di credito collegate. Esclude bozze, fatture annullate, saldate e interamente stornate; le note non sono conteggiate come fatture da incassare. È visibile solo ai profili abilitati alla finanza e si aggiorna al caricamento della pagina successivo a ogni operazione. Quando non ci sono residui, il contatore scompare come gli altri contatori della sidebar.
+
+Nella pagina **Fatture**, **Da incassare** mostra anche il numero di fatture con residuo aperto. Il contatore, il filtro e l’indicatore **Scadute** usano la scadenza precedente a oggi e il residuo positivo, comprese le importate e quelle parzialmente incassate. La scadenza odierna non è ancora scaduta. La visualizzazione non attende lo scheduler e non riscrive lo stato o i dati originali del documento. Il dettaglio e i contatori della dashboard usano lo stesso criterio.
+
+L’identità di importazione comprende emittente, anno e numero completo. Il contenuto commerciale viene confrontato anche quando cambiano soltanto descrizioni o condizioni; nome del file, prefissi XML, spaziatura tra elementi e progressivo di trasmissione non determinano una nuova fattura. I duplicati vengono saltati; i conflitti sono mostrati nell’esito senza sostituire documenti, allegati, anagrafiche, incassi o collegamenti esistenti. Il controllo è ripetuto nella transazione di salvataggio.
+
+Le nuove fatture importate partono da **Da incassare**, senza progetto e senza incassi creati dai dati di pagamento dell’XML. Più corrispondenze fiscali per un cliente richiedono una verifica anziché una scelta automatica. Gli originali sono scaricabili e protetti dall’eliminazione anche per l’amministratore.
+
+### Visualizzazione e stato delle fatture importate
+
+Nel dettaglio, **Visualizza fattura** apre una copia di cortesia leggibile dell’XML originale, con emittente, cliente, righe, riepiloghi IVA e pagamenti previsti. Il pulsante **Stampa / Salva PDF** usa la stampa del browser in formato A4. Anche le note di credito hanno un’anteprima dedicata. I dati anagrafici provengono dall’originale conservato, senza dipendere dalle modifiche successive all’anagrafica o al profilo fiscale. Il documento non è un PDF originale di Aruba.
+
+La dicitura delle fatture importate è **Importata manualmente**. **Modifica stato** consente agli utenti abilitati di gestire Da incassare, Parzialmente incassata, Incassata, Scaduta e Annullata nel gestionale. Un incasso totale registra solo il saldo ancora dovuto, tenendo conto di split payment e note di credito; un incasso parziale richiede l’importo del nuovo pagamento. Data e metodo sono obbligatori. Per ridurre un incasso già registrato occorre correggere il relativo pagamento.
+
+**Modifica scadenza**, nel dettaglio della fattura, consente agli stessi utenti di aggiornare la scadenza gestionale, anche sui documenti importati. La nuova data non può precedere l’emissione. Il salvataggio aggiorna gli indicatori di scadenza e la previsione degli incassi, senza cambiare pagamenti, importi, XML o dati fiscali originali; è registrato nello storico. Un modulo superato da una modifica concorrente viene respinto. Reimportare il documento conserva la scadenza gestionale scelta.
+
+L’annullamento richiede la conferma standard, non invia richieste ad Aruba o allo SdI e conserva XML e dati importati. È bloccato in presenza di incassi o note di credito collegate. Una fattura annullata ha residuo zero e può tornare Da incassare. Il salvataggio controlla autorizzazione e versione degli importi all’interno della transazione, impedendo doppi incassi da invii ripetuti. Una nuova importazione conserva gli stati e gli incassi esistenti.
+
+### Note di credito
+
+Le TD04 importate si consultano nella stessa lista delle fatture, con numerazione originale e dettaglio separato. Il filtro Tipo documento permette di vedere tutti i documenti, solo fatture TD01 o solo note TD04. Ricerca, ordinamento per data e paginazione includono entrambi i tipi; i filtri d’incasso riguardano soltanto le fatture. Per le note sono mostrati il credito ancora da collegare e gli eventuali collegamenti, senza presentarli come incassi. Una nota può essere collegata a più fatture dello stesso cliente e valuta, indicando la quota da stornare dal dovuto, entro il credito disponibile e la parte ancora stornabile della fattura.
+
+I riferimenti strutturati o scritti nelle descrizioni sono suggerimenti da verificare, senza collegamenti automatici. Le proposte e il salvataggio confrontano gli identificativi fiscali originali di cliente ed emittente: paese (`IdPaese`) e partita IVA (`IdCodice`), con controllo dei codici fiscali quando presenti. Se entrambi i documenti non hanno partita IVA, occorrono paese e codice fiscale corrispondenti. Le modifiche successive all’anagrafica non sostituiscono i dati dell’XML; identità discordanti o incomplete bloccano il collegamento.
+
+Il pulsante **Usa suggerimento** compila fattura e importo senza salvare. Compare solo se numero, anno ed eventuale data individuano una sola fattura compatibile e la quota delle righe XML è ricostruibile senza ambiguità: imponibile, IVA e totale devono tornare, rispettando il netto dello split payment. Prefissi FPA/FPR espliciti vengono conservati; riferimenti incompleti o ambigui richiedono verifica manuale. Si conferma con **Collega fattura**, entro i limiti disponibili. Fatture mancanti possono essere importate e collegate successivamente. Una nuova importazione non modifica i collegamenti già confermati. Rimuovere un collegamento richiede la conferma standard e conserva entrambi i documenti.
+
+Il collegamento riduce il residuo senza modificare il totale originale né creare pagamenti. Per una fattura già pagata viene esposto il credito del cliente da regolare; la registrazione di rimborsi non è inclusa. I riepiloghi sottraggono le note dal fatturato alla data della nota e calcolano il residuo sul netto dovuto, al netto dei crediti collegati e degli incassi. Per progetto sono attribuite soltanto le quote collegate, riproporzionate al totale lordo della nota. L’emissione o l’invio allo SdI di nuove TD04 non è incluso nel flusso di importazione.
+
+La migrazione `2026_10_16_120000_add_credit_notes_and_invoice_payable_amounts.php` deve essere applicata durante il rilascio, prima di usare le nuove schermate. Aggiunge le tabelle delle note e dei collegamenti e le colonne per netto e crediti sulle fatture; non sostituisce i documenti esistenti.
+
+### Report e previsione
+
+Nei riepiloghi economici, grafici e tabelle usano lo stesso intervallo di date, inclusi i giorni iniziale e finale. Gli incassi seguono la data del pagamento anche quando la fattura è stata emessa in un altro periodo. Il fatturato esposto include l’IVA e sottrae le note alla data della loro emissione; un mese con sole note di credito può quindi essere negativo. Il residuo è quello attuale delle fatture emesse nel periodo selezionato, non una ricostruzione storica alla data finale. Le spese annullate sono escluse dai costi per cliente e progetto.
+
+Le note ancora da collegare sono segnalate nei riepiloghi e nella previsione: non riducono automaticamente il residuo di una fattura. Il riepilogo per progetto comprende solo movimenti associati a un progetto e quote di credito confermate; le fatture senza progetto restano nel riepilogo generale e per cliente. Senza un saldo iniziale configurato, la previsione mostra i movimenti e la variazione, lasciando il saldo previsto come «Non impostato».
 
 ### Aruba
 

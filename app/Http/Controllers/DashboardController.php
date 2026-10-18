@@ -46,7 +46,7 @@ class DashboardController extends Controller
         return [
             'activeClients'    => Client::where('status', 'active')->count(),
             'openTicketsCount' => Ticket::whereIn('status', ['open', 'in_progress'])->count(),
-            'overdueInvoices'  => Invoice::where('status', 'overdue')->count(),
+            'overdueInvoices'  => Invoice::pastDue()->count(),
             'expiringTasks'    => Task::whereBetween('due_date', [today(), today()->addDays(7)])
                                     ->where('status', '!=', 'done')
                                     ->orderBy('due_date', 'asc')
@@ -91,7 +91,7 @@ class DashboardController extends Controller
             'totalCollected30d'    => $totalCollected30d,
             'totalOutstanding'     => $totalOutstanding,
             'openInvoicesCount'    => Invoice::whereIn('status', ['draft', 'issued', 'partially_paid'])->count(),
-            'overdueInvoicesCount' => Invoice::where('status', 'overdue')->count(),
+            'overdueInvoicesCount' => Invoice::pastDue()->count(),
             'recentPayments'       => \App\Models\Payment::with('invoice.client')->latest()->limit(5)->get(),
             'upcomingDeadlines'    => Invoice::where('status', 'issued')
                                         ->whereDate('due_date', '<=', now()->addDays(14))

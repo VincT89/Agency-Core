@@ -118,7 +118,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($user->isCommercial()) {
                     $view->with([
-                        'clientsCount' => Client::visibleTo($user)->count(), 'projectsCount' => 0, 'overdueInvoices' => 0,
+                        'clientsCount' => Client::visibleTo($user)->count(), 'projectsCount' => 0, 'outstandingInvoices' => 0,
                         'openTasks' => Task::query()->open()->count(), 'marketingProjectsCount' => 0,
                         'activeAvailabilityUsersCount' => 0, 'newTickets' => 0,
                         'openTickets' => Ticket::query()->open()->count(),
@@ -133,11 +133,15 @@ class AppServiceProvider extends ServiceProvider
                         'clientsCount'    => \App\Models\Client::visibleTo($user)->where('status', 'active')->count(),
                         'projectsCount'   => \App\Models\Project::visibleTo($user)->where('status', 'active')->count(),
                         'openTickets'     => \App\Models\Ticket::visibleTo($user)->whereIn('status', ['open', 'in_progress'])->count(),
-                        'overdueInvoices' => \App\Models\Invoice::visibleTo($user)->where('status', 'overdue')->count(),
                         'openTasks'       => \App\Models\Task::visibleTo($user)->open()->count(),
                         'marketingProjectsCount' => \App\Models\MarketingCampaign::visibleTo($user)->whereIn('status', ['draft', 'active'])->count(),
                     ];
                 });
+
+                /** Read the finance counter afresh so payments and credit allocations appear on the next page load. */
+                $outstandingInvoices = $user->canAccessFinance()
+                    ? Invoice::query()->awaitingPayment()->count()
+                    : 0;
 
                 $activeAvailabilityUsersCount = 0;
                 if ($user->canManageSystem()) {
@@ -166,7 +170,7 @@ class AppServiceProvider extends ServiceProvider
                     'clientsCount'    => $counts['clientsCount'],
                     'projectsCount'   => $counts['projectsCount'],
                     'openTickets'     => $counts['openTickets'],
-                    'overdueInvoices' => $counts['overdueInvoices'],
+                    'outstandingInvoices' => $outstandingInvoices,
                     'openTasks'       => $counts['openTasks'],
                     'marketingProjectsCount' => $counts['marketingProjectsCount'],
                     'activeAvailabilityUsersCount' => $activeAvailabilityUsersCount,

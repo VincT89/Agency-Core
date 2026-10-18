@@ -15,7 +15,7 @@ class PaymentObserver
             $user = auth()->user();
             $userName = $user?->name ?? 'Sistema';
             $amt = number_format((float) $payment->amount, 2, ',', '.');
-            $desc = "{$userName} ha registrato un pagamento di €{$amt} sulla fattura {$payment->invoice->number}";
+            $desc = "{$userName} ha registrato un pagamento di €{$amt} sulla fattura {$payment->invoice->display_number}";
             $this->auditLog->log('registered_payment', $payment->invoice, null, null, $desc);
         }
     }
@@ -34,7 +34,7 @@ class PaymentObserver
             $user = auth()->user();
             $userName = $user?->name ?? 'Sistema';
             $amt = number_format((float) $payment->amount, 2, ',', '.');
-            $desc = "{$userName} ha eliminato un pagamento di €{$amt} dalla fattura {$payment->invoice->number}";
+            $desc = "{$userName} ha eliminato un pagamento di €{$amt} dalla fattura {$payment->invoice->display_number}";
             $this->auditLog->log('deleted_payment', $payment->invoice, null, null, $desc);
         }
     }

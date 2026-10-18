@@ -22,7 +22,7 @@
                     @forelse($upcomingDeadlines as $invoice)
                     <tr x-data @click="window.Livewire.navigate('{{ route('invoices.show', $invoice) }}')" class="u-cursor-pointer hover-bg">
                         <td class="mono-col {{ $invoice->due_date < now() ? 'u-text-danger' : '' }}">{{ $invoice->due_date->format('d/m/Y') }}</td>
-                        <td>{{ $invoice->number }}</td>
+                        <td>{{ $invoice->display_number }}</td>
                         <td class="mono-col">€ {{ number_format($invoice->total, 2, ',', '.') }}</td>
                     </tr>
                     @empty
@@ -42,7 +42,7 @@
                     <tr>
                         <td class="mono-col">{{ $payment->payment_date->format('d/m/Y') }}</td>
                         <td class="mono-col">€ {{ number_format($payment->amount, 2, ',', '.') }}</td>
-                        <td><a href="{{ route('invoices.show', $payment->invoice_id) }}" class="u-text-inherit u-no-underline">{{ $payment->invoice?->number }}</a></td>
+                        <td><a href="{{ route('invoices.show', $payment->invoice_id) }}" class="u-text-inherit u-no-underline">{{ $payment->invoice?->display_number }}</a></td>
                     </tr>
                     @empty
                     <tr><td colspan="3" class="u-text-center u-text-muted u-p-md">Nessun pagamento recente</td></tr>

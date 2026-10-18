@@ -338,7 +338,7 @@
               <tbody>
                 @forelse(($campaign->invoices ?? collect())->sortByDesc('issue_date') as $invoice)
                   <tr>
-                    <td class="name-col">Fattura #{{ $invoice->number }}</td>
+                    <td class="name-col">Fattura #{{ $invoice->display_number }}</td>
                     <td class="mono-col">{{ $invoice->issue_date->format('d/m/Y') }}</td>
                     <td class="mono-col">{{ $invoice->due_date ? $invoice->due_date->format('d/m/Y') : 'Non indicata' }}</td>
                     <td class="mono-col u-text-right">€ {{ number_format($invoice->tax_amount, 2, ',', '.') }}</td>

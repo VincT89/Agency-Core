@@ -46,7 +46,7 @@
                         @foreach($invoices as $invoice)
                             <option value="{{ $invoice->id }}"
                                     {{ (old('invoice_id') ?? $preselectedInvoice?->id) == $invoice->id ? 'selected' : '' }}>
-                                {{ $invoice->number }} — {{ $invoice->client?->name }}
+                                {{ $invoice->display_number }} — {{ $invoice->client?->name }}
                                 (Residuo: € {{ number_format($invoice->residual, 2, ',', '.') }})
                             </option>
                         @endforeach

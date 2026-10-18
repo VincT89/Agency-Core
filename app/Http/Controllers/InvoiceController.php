@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Client;
+use App\Models\CreditNote;
 use App\Models\Invoice;
+use App\Domain\Finance\Queries\InvoiceDocumentQuery;
+use App\Enums\Finance\InvoiceFiscalStatus;
 use App\Domain\Finance\Services\InvoiceAmountsCalculator;
 use App\Domain\Finance\Services\FatturaPaXmlBuilder;
 use App\Domain\Finance\Services\InvoiceFiscalReadinessService;
@@ -15,30 +18,44 @@ use App\Exceptions\Finance\ElectronicInvoiceXmlException;
 use App\Services\Integrations\Aruba\ArubaConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 class InvoiceController extends Controller
 {
-    public function index(Request $request, \App\Domain\Finance\Queries\InvoiceQuery $invoiceQuery): View
+    public function index(Request $request, \App\Domain\Finance\Queries\InvoiceQuery $invoiceQuery, InvoiceDocumentQuery $documentQuery): View
     {
         $this->authorize('viewAny', Invoice::class);
+        $this->authorize('viewAny', CreditNote::class);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'document_number' => ['nullable', 'string', 'max:100'],
+            'document_type' => ['nullable', Rule::in(['TD01', 'TD04'])],
+            'status' => ['nullable', Rule::in([...Invoice::STATUSES, 'pending', 'credited'])],
+            'fiscal_status' => ['nullable', Rule::enum(InvoiceFiscalStatus::class)],
+            'client_id' => ['nullable', 'integer', 'min:1'],
+            'start_date' => ['nullable', 'date_format:Y-m-d'],
+            'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
 
         // Calcola i KPI globali applicando automaticamente il ProjectSupremacyScope
         $globalQuery = $invoiceQuery->forIndex([]);
         
-        $overdueCount = (clone $globalQuery)->where('status', 'overdue')->count();
+        $overdueCount = (clone $globalQuery)->pastDue()->count();
+        $outstandingCount = (clone $globalQuery)->awaitingPayment()->count();
         $draftCount   = (clone $globalQuery)->where('status', 'draft')->count();
         $readyFiscalCount = (clone $globalQuery)->where('fiscal_status', 'ready')->count();
         $unpaidTotal  = (clone $globalQuery)
-            ->whereIn('status', ['issued', 'partially_paid', 'overdue'])
+            ->awaitingPayment()
             ->get()
             ->sum(fn($i) => $i->residual);
 
-        // Genera la lista fatture paginata applicando i filtri di ricerca
-        $invoices = $invoiceQuery->forIndex($request->all())->paginate(15)->withQueryString();
+        $documents = $documentQuery->paginate($filters);
 
         return view('invoices.index', compact(
-            'invoices',
+            'documents',
             'overdueCount',
+            'outstandingCount',
             'draftCount',
             'readyFiscalCount',
             'unpaidTotal',
@@ -81,6 +98,7 @@ class InvoiceController extends Controller
             'creator',
             'items',
             'payments',
+            'creditAllocations.creditNote',
             'auditLogs.user',
             'attachments.uploader',
             'electronicInvoiceTransmissions' => fn ($query) => $query

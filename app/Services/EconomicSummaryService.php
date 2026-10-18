@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Client;
+use App\Models\CreditNote;
+use App\Models\CreditNoteAllocation;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Project;
@@ -17,6 +19,7 @@ class EconomicSummaryService
         'partially_paid',
         'paid',
         'overdue',
+        'credited',
     ];
 
     // Applica il perimetro di autorizzazione per gli utenti Finance
@@ -42,10 +45,10 @@ class EconomicSummaryService
     protected function applyPeriod(Builder $query, string $dateColumn, ?string $from, ?string $to): Builder
     {
         if ($from) {
-            $query->where($dateColumn, '>=', $from);
+            $query->whereDate($dateColumn, '>=', $from);
         }
         if ($to) {
-            $query->where($dateColumn, '<=', $to);
+            $query->whereDate($dateColumn, '<=', $to);
         }
         return $query;
     }
@@ -60,8 +63,15 @@ class EconomicSummaryService
         $invoiceStats = $invoicesQuery->selectRaw('
             COUNT(id) as invoices_count,
             SUM(total) as total_invoiced,
-            SUM(total - paid_total) as total_outstanding
+            SUM('.Invoice::OUTSTANDING_SQL.') as total_outstanding
         ')->first();
+
+        $creditQuery = $this->applyRolePerimeterSafe(CreditNote::query(), $user, 'credit_notes');
+        $creditQuery = $this->applyPeriod($creditQuery, 'issue_date', $from, $to);
+        $credits = (clone $creditQuery)->sum('total');
+        $unallocatedCredit = (clone $creditQuery)->select(['id', 'payable_total'])->withSum('allocations', 'amount')->get()
+            ->sum(fn ($note) => max(0, \App\Domain\Finance\Services\CashAmount::cents($note->payable_total)
+                - \App\Domain\Finance\Services\CashAmount::cents($note->allocations_sum_amount ?? 0))) / 100;
 
         // 2. INCASSATO (Su base pagamenti, filtrati per payment_date)
         $paymentsQuery = Payment::query();
@@ -71,10 +81,11 @@ class EconomicSummaryService
         $totalCollected = (float) $paymentsQuery->sum('amount');
 
         return [
-            'total_invoiced' => round((float) $invoiceStats->total_invoiced, 2),
+            'total_invoiced' => round((float) $invoiceStats->total_invoiced - (float) $credits, 2),
             'total_collected' => round($totalCollected, 2),
             'total_outstanding' => round((float) $invoiceStats->total_outstanding, 2),
             'invoices_count' => (int) $invoiceStats->invoices_count,
+            'unallocated_credit' => $unallocatedCredit,
         ];
     }
 
@@ -90,11 +101,15 @@ class EconomicSummaryService
                 client_id,
                 COUNT(id) as invoices_count,
                 SUM(total) as total_invoiced,
-                SUM(total - paid_total) as total_outstanding
+                SUM('.Invoice::OUTSTANDING_SQL.') as total_outstanding
             ')
             ->groupBy('client_id')
             ->get()
             ->keyBy('client_id');
+
+        $creditQuery = $this->applyRolePerimeterSafe(CreditNote::query(), $user, 'credit_notes');
+        $creditsByClient = $this->applyPeriod($creditQuery, 'issue_date', $from, $to)
+            ->selectRaw('client_id, SUM(total) as total_credited')->groupBy('client_id')->get()->keyBy('client_id');
 
         // 2. PAYMENTS (Aggregate by client)
         $paymentsQuery = Payment::query();
@@ -111,7 +126,7 @@ class EconomicSummaryService
             ->keyBy('client_id');
 
         // 3. EXPENSES (Aggregate by client directly + via projects)
-        $expensesQuery = \App\Models\Expense::query();
+        $expensesQuery = \App\Models\Expense::query()->whereIn('expenses.status', ['pending', 'paid']);
         $expensesQuery = $this->applyRolePerimeterSafe($expensesQuery, $user, 'expenses');
         $expensesQuery = $this->applyPeriod($expensesQuery, 'expense_date', $from, $to);
 
@@ -132,6 +147,7 @@ class EconomicSummaryService
 
         // 4. MERGE in PHP su aggregati piccolissimi
         $clientIds = collect(array_keys($invoicesByClient->toArray()))
+            ->merge($creditsByClient->keys())
             ->merge(array_keys($paymentsByClient->toArray()))
             ->merge(array_keys($directClientExpenses->toArray()))
             ->merge(array_keys($projectExpensesForClient->toArray()))
@@ -141,7 +157,7 @@ class EconomicSummaryService
             ->whereIn('id', $clientIds)
             ->pluck('name', 'id');
 
-        return $clientIds->map(function ($clientId) use ($invoicesByClient, $paymentsByClient, $directClientExpenses, $projectExpensesForClient, $clientNames) {
+        return $clientIds->map(function ($clientId) use ($invoicesByClient, $creditsByClient, $paymentsByClient, $directClientExpenses, $projectExpensesForClient, $clientNames) {
             $inv = $invoicesByClient->get($clientId);
             $pay = $paymentsByClient->get($clientId);
             $dirExp = $directClientExpenses->get($clientId);
@@ -153,7 +169,7 @@ class EconomicSummaryService
                 'client_id' => $clientId,
                 'client_name' => $clientNames->get($clientId, 'N/D'),
                 'invoices_count' => $inv ? (int) $inv->invoices_count : 0,
-                'total_invoiced' => $inv ? (float) $inv->total_invoiced : 0.0,
+                'total_invoiced' => round((float) ($inv?->total_invoiced ?? 0) - (float) ($creditsByClient->get($clientId)?->total_credited ?? 0), 2),
                 'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,
                 'total_collected' => $pay ? (float) $pay->total_collected : 0.0,
                 'total_expenses' => $totalExpenses,
@@ -174,11 +190,21 @@ class EconomicSummaryService
                 project_id,
                 COUNT(id) as invoices_count,
                 SUM(total) as total_invoiced,
-                SUM(total - paid_total) as total_outstanding
+                SUM('.Invoice::OUTSTANDING_SQL.') as total_outstanding
             ')
             ->groupBy('project_id')
             ->get()
             ->keyBy('project_id');
+
+        /** Only confirmed links assign credits to projects; gross credit follows the note's gross/net ratio. */
+        $creditsQuery = CreditNoteAllocation::query()
+            ->join('invoices', 'invoices.id', '=', 'credit_note_allocations.invoice_id')
+            ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_allocations.credit_note_id')
+            ->whereNotNull('invoices.project_id');
+        $creditsQuery = $this->applyRolePerimeterSafe($creditsQuery, $user, 'credit_note_allocations');
+        $creditsByProject = $this->applyPeriod($creditsQuery, 'credit_notes.issue_date', $from, $to)
+            ->selectRaw('invoices.project_id, SUM(ROUND(credit_note_allocations.amount * credit_notes.total / NULLIF(credit_notes.payable_total, 0), 2)) as total_credited')
+            ->groupBy('invoices.project_id')->get()->keyBy('project_id');
 
         // 2. PAYMENTS
         $paymentsQuery = Payment::query();
@@ -196,7 +222,7 @@ class EconomicSummaryService
             ->keyBy('project_id');
 
         // 3. EXPENSES
-        $expensesQuery = \App\Models\Expense::query();
+        $expensesQuery = \App\Models\Expense::query()->whereIn('expenses.status', ['pending', 'paid']);
         $expensesQuery = $this->applyRolePerimeterSafe($expensesQuery, $user, 'expenses');
         $expensesQuery = $this->applyPeriod($expensesQuery, 'expense_date', $from, $to);
 
@@ -209,6 +235,7 @@ class EconomicSummaryService
 
         // 4. MERGE
         $projectIds = collect(array_keys($invoicesByProject->toArray()))
+            ->merge($creditsByProject->keys())
             ->merge(array_keys($paymentsByProject->toArray()))
             ->merge(array_keys($expensesByProject->toArray()))
             ->unique();
@@ -219,7 +246,7 @@ class EconomicSummaryService
             ->get()
             ->keyBy('id');
 
-        return $projectIds->map(function ($projectId) use ($invoicesByProject, $paymentsByProject, $expensesByProject, $projectsInfo) {
+        return $projectIds->map(function ($projectId) use ($invoicesByProject, $creditsByProject, $paymentsByProject, $expensesByProject, $projectsInfo) {
             $inv = $invoicesByProject->get($projectId);
             $pay = $paymentsByProject->get($projectId);
             $exp = $expensesByProject->get($projectId);
@@ -230,7 +257,7 @@ class EconomicSummaryService
                 'project_name' => $proj ? $proj->name : 'N/D',
                 'client_name' => ($proj && $proj->client) ? $proj->client->name : 'N/D',
                 'invoices_count' => $inv ? (int) $inv->invoices_count : 0,
-                'total_invoiced' => $inv ? (float) $inv->total_invoiced : 0.0,
+                'total_invoiced' => round((float) ($inv?->total_invoiced ?? 0) - (float) ($creditsByProject->get($projectId)?->total_credited ?? 0), 2),
                 'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,
                 'total_collected' => $pay ? (float) $pay->total_collected : 0.0,
                 'total_expenses' => $exp ? (float) $exp->total_expenses : 0.0,

@@ -28,8 +28,8 @@ class UpdateInvoiceRequest extends FormRequest
 
         return [
             'client_id' => ['required', 'exists:clients,id'],
-            'project_id' => ['nullable', 'exists:projects,id', 'prohibits:marketing_campaign_id', 'required_without:marketing_campaign_id'],
-            'marketing_campaign_id' => ['nullable', 'exists:marketing_campaigns,id', 'prohibits:project_id', 'required_without:project_id'],
+            'project_id' => ['nullable', 'exists:projects,id', 'prohibits:marketing_campaign_id'],
+            'marketing_campaign_id' => ['nullable', 'exists:marketing_campaigns,id', 'prohibits:project_id'],
 
             'number' => [
                 'required',

@@ -288,8 +288,11 @@ class InvoiceImport extends Component
                 abort(422);
             }
             $invoice = app(ImportIssuedInvoice::class)->execute($document, $source, $this->clientId ? (int) $this->clientId : null, $this->createClient, $this->dueDate ?: null);
-            session()->flash('success', $invoice->wasRecentlyCreated ? 'Fattura importata. Gli incassi vanno registrati separatamente.' : 'Fattura già presente: è stata aperta senza duplicarla.');
-            $route = route('invoices.show', $invoice);
+            $isCredit = $invoice instanceof \App\Models\CreditNote;
+            session()->flash('success', $invoice->wasRecentlyCreated
+                ? ($isCredit ? 'Nota di credito importata. Verifica e collega le fatture interessate.' : 'Fattura importata da incassare. Gli incassi vanno registrati separatamente.')
+                : 'Documento già presente: nessuna modifica ai dati o agli incassi.');
+            $route = route($isCredit ? 'credit-notes.show' : 'invoices.show', $invoice);
         } else {
             Gate::authorize('create', Expense::class);
             $party = $document['counterparty'];

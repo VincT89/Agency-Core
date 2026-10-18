@@ -136,6 +136,17 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('invoices/import', \App\Livewire\Invoices\InvoiceImport::class)->name('invoices.import');
+    Route::get('invoices/import/archive', \App\Livewire\Invoices\InvoiceBatchImport::class)->name('invoices.import.archive');
+    Route::get('invoices/{invoice}/document', [\App\Http\Controllers\InvoiceDocumentController::class, 'invoice'])->name('invoices.document');
+    Route::get('invoices/{invoice}/status/edit', [\App\Http\Controllers\InvoiceStatusController::class, 'edit'])->name('invoices.status.edit');
+    Route::patch('invoices/{invoice}/status', [\App\Http\Controllers\InvoiceStatusController::class, 'update'])->name('invoices.status.update');
+    Route::get('invoices/{invoice}/due-date/edit', [\App\Http\Controllers\InvoiceDueDateController::class, 'edit'])->name('invoices.due-date.edit');
+    Route::patch('invoices/{invoice}/due-date', [\App\Http\Controllers\InvoiceDueDateController::class, 'update'])->name('invoices.due-date.update');
+    Route::get('credit-notes/{creditNote}/document', [\App\Http\Controllers\InvoiceDocumentController::class, 'creditNote'])->name('credit-notes.document');
+    Route::get('credit-notes', [\App\Http\Controllers\CreditNoteController::class, 'index'])->name('credit-notes.index');
+    Route::get('credit-notes/{creditNote}', [\App\Http\Controllers\CreditNoteController::class, 'show'])->name('credit-notes.show');
+    Route::post('credit-notes/{creditNote}/allocations', [\App\Http\Controllers\CreditNoteController::class, 'allocate'])->name('credit-notes.allocate');
+    Route::delete('credit-notes/{creditNote}/allocations/{allocation}', [\App\Http\Controllers\CreditNoteController::class, 'remove'])->name('credit-notes.allocations.destroy');
     Route::resource('clients', ClientController::class);
     Route::get('clients/{client}/materials', [\App\Http\Controllers\ClientMaterialController::class, 'index'])->name('clients.materials.index');
     Route::post('clients/{client}/materials', [\App\Http\Controllers\ClientMaterialController::class, 'store'])->name('clients.materials.store');

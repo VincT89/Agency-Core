@@ -11,6 +11,11 @@ class AttachmentPolicy
 
     public function before(User $user, string $ability, ?Attachment $attachment = null): ?bool
     {
+        /** Imported originals remain immutable even for users who can manage other attachments. */
+        if ($attachment && $attachment->description === 'Documento originale importato'
+            && in_array($attachment->attachable_type, [(new \App\Models\Invoice)->getMorphClass(), (new \App\Models\CreditNote)->getMorphClass()], true)) {
+            return $ability === 'download' && $attachment->attachable && $user->can('view', $attachment->attachable);
+        }
         if ($attachment?->client_material_category !== null && $attachment?->attachable_type === (new \App\Models\Client)->getMorphClass()) {
             $client = \App\Models\Client::find($attachment->attachable_id);
 

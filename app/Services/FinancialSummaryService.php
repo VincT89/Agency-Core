@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Invoice;
+use App\Models\CreditNote;
 use App\Models\Expense;
 use App\Models\Payment;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -33,8 +35,8 @@ class FinancialSummaryService
 
         // Fatturato (Invoices issued/partially_paid/paid/overdue)
         $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
-        $invoices = Invoice::where('issue_date', '>=', $startDate)
-            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue'])
+        $invoices = Invoice::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
+            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
             ->selectRaw("{$dateFormat} as month, SUM(total) as total")
             ->groupBy('month')
             ->get();
@@ -45,9 +47,15 @@ class FinancialSummaryService
             }
         }
 
+        foreach (CreditNote::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])->selectRaw("{$dateFormat} as month, SUM(total) as total")->groupBy('month')->get() as $credit) {
+            if (isset($monthsArray[$credit->month])) {
+                $monthsArray[$credit->month]['issued'] = round($monthsArray[$credit->month]['issued'] - (float) $credit->total, 2);
+            }
+        }
+
         // Incassato (Payments)
         $paymentFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', payment_date)" : "DATE_FORMAT(payment_date, '%Y-%m')";
-        $payments = Payment::where('payment_date', '>=', $startDate)
+        $payments = Payment::whereBetween('payment_date', [$startDate, $startDate->copy()->endOfYear()])
             ->selectRaw("{$paymentFormat} as month, SUM(amount) as total")
             ->groupBy('month')
             ->get();
@@ -60,7 +68,7 @@ class FinancialSummaryService
 
         // Spese pagate (Expenses)
         $expenseFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', paid_at)" : "DATE_FORMAT(paid_at, '%Y-%m')";
-        $expenses = Expense::where('paid_at', '>=', $startDate)
+        $expenses = Expense::whereBetween('paid_at', [$startDate, $startDate->copy()->endOfYear()])
             ->where('status', 'paid')
             ->selectRaw("{$expenseFormat} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -108,9 +116,9 @@ class FinancialSummaryService
     {
         $startDate = now()->startOfYear();
 
-        $invoices = Invoice::where('issue_date', '>=', $startDate)
-            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue'])
-            ->selectRaw('SUM(paid_total) as collected, SUM(total - paid_total) as pending')
+        $invoices = Invoice::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
+            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
+            ->selectRaw('SUM(paid_total) as collected, SUM('.Invoice::OUTSTANDING_SQL.') as pending')
             ->first();
 
         $collected = (float) ($invoices->collected ?? 0);
@@ -127,46 +135,40 @@ class FinancialSummaryService
      */
     public function getIncassatoVsDaIncassareMonthlyData(int $months = 12): array
     {
-        $startDate = now()->startOfYear();
-        $months = 12;
-        
-        $monthsArray = [];
+        return $this->getReportMonthlyData(now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString());
+    }
+
+    public function getReportMonthlyData(?string $from = null, ?string $to = null): array
+    {
+        $period = fn ($query, string $column) => $query
+            ->when($from, fn ($q) => $q->whereDate($column, '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate($column, '<=', $to));
+        $monthExpression = fn (string $column) => DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', {$column})" : "DATE_FORMAT({$column}, '%Y-%m')";
+        $invoiceMonth = $monthExpression('issue_date');
+        $paymentMonth = $monthExpression('payment_date');
+        $invoices = $period(Invoice::query(), 'issue_date')
+            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
+            ->selectRaw("{$invoiceMonth} as month, SUM(total) as invoiced, SUM(".Invoice::OUTSTANDING_SQL.') as pending')
+            ->groupBy('month')->get()->keyBy('month');
+        $credits = $period(CreditNote::query(), 'issue_date')
+            ->selectRaw("{$invoiceMonth} as month, SUM(total) as total")->groupBy('month')->get()->keyBy('month');
+        /** Receipts follow their payment date, including payments for invoices issued outside the selected period. */
+        $payments = $period(Payment::query(), 'payment_date')
+            ->selectRaw("{$paymentMonth} as month, SUM(amount) as total")->groupBy('month')->get()->keyBy('month');
+        $keys = $invoices->keys()->merge($credits->keys())->merge($payments->keys())->unique()->sort()->values();
+        $first = CarbonImmutable::parse($from ?: ($keys->first() ? $keys->first().'-01' : ($to ?: now()->startOfYear()->toDateString())))->startOfMonth();
+        $last = CarbonImmutable::parse($to ?: ($keys->last() ? $keys->last().'-01' : ($from ?: now()->endOfYear()->toDateString())))->startOfMonth();
         $labels = [];
-        for ($i = 0; $i < $months; $i++) {
-            $date = $startDate->copy()->addMonths($i);
-            $key = $date->format('Y-m');
-            $monthsArray[$key] = [
-                'invoiced' => 0,
-                'collected' => 0,
-                'pending' => 0,
-            ];
-            $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
-        }
-
-        // We can approximate pending by month based on invoice issue date
-        $dateFormat2 = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
-        $invoices = Invoice::where('issue_date', '>=', $startDate)
-            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue'])
-            ->selectRaw("{$dateFormat2} as month, SUM(total) as invoiced, SUM(paid_total) as collected, SUM(total - paid_total) as pending")
-            ->groupBy('month')
-            ->get();
-
-        foreach ($invoices as $inv) {
-            if (isset($monthsArray[$inv->month])) {
-                $monthsArray[$inv->month]['invoiced'] = (float) $inv->invoiced;
-                $monthsArray[$inv->month]['collected'] = (float) $inv->collected;
-                $monthsArray[$inv->month]['pending'] = (float) $inv->pending;
-            }
-        }
-
         $invoicedData = [];
         $collectedData = [];
         $pendingData = [];
-
-        foreach ($monthsArray as $data) {
-            $invoicedData[] = $data['invoiced'];
-            $collectedData[] = $data['collected'];
-            $pendingData[] = $data['pending'];
+        for ($date = $first; $date->lte($last); $date = $date->addMonth()) {
+            $key = $date->format('Y-m');
+            $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
+            $invoicedData[] = round((float) ($invoices->get($key)?->invoiced ?? 0) - (float) ($credits->get($key)?->total ?? 0), 2);
+            $collectedData[] = round((float) ($payments->get($key)?->total ?? 0), 2);
+            $pendingData[] = round((float) ($invoices->get($key)?->pending ?? 0), 2);
         }
 
         return [

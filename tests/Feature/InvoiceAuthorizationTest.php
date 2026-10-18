@@ -265,7 +265,7 @@ class InvoiceAuthorizationTest extends TestCase
         $this->assertDatabaseHas('invoices', ['number' => 'FAT-NEW-M-OUT']);
     }
 
-    public function test_requires_project_id_for_invoice_creation(): void
+    public function test_allows_invoice_creation_without_project(): void
     {
         $this->actingAs($this->admin)
             ->post(route('invoices.store'), [
@@ -277,7 +277,8 @@ class InvoiceAuthorizationTest extends TestCase
                 'tax_amount' => 100,
                 'currency'   => 'EUR',
             ])
-            ->assertSessionHasErrors('project_id'); // Fallirà validazione
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertDatabaseHas('invoices', ['number' => 'FAT-NO-PROJ', 'project_id' => null]);
     }
 
     public function test_denies_invoice_if_project_does_not_belong_to_client(): void
@@ -317,12 +318,12 @@ class InvoiceAuthorizationTest extends TestCase
             ->assertRedirect(route('invoices.show', $this->invoice));
     }
 
-    public function test_cannot_remove_project_id_on_update(): void
+    public function test_can_remove_project_id_on_update(): void
     {
         $this->actingAs($this->admin)
             ->patch(route('invoices.update', $this->invoice), [
                 'client_id'  => $this->client->id,
-                'project_id' => null, // Tentativo di rimozione
+                'project_id' => null,
                 'number'     => 'FAT-001-MOD',
                 'issue_date' => now()->toDateString(),
                 'status'     => 'issued',
@@ -331,7 +332,8 @@ class InvoiceAuthorizationTest extends TestCase
                 'tax_amount' => 220,
                 'paid_total' => 0,
             ])
-            ->assertSessionHasErrors('project_id');
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertNull($this->invoice->fresh()->project_id);
     }
 
     public function test_residual_accessor_is_consistent(): void

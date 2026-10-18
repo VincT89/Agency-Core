@@ -21,6 +21,7 @@
     @if($overdue['incoming'] || $overdue['outgoing'])<p class="u-mb-md">Nel primo mese sono riportati anche gli importi ancora aperti con scadenza precedente alla data iniziale: {{ number_format($overdue['incoming'] / 100, 2, ',', '.') }} EUR da incassare e {{ number_format($overdue['outgoing'] / 100, 2, ',', '.') }} EUR da pagare. Le date originali restano nelle rispettive schede.</p>@endif
     @if($missingDueDates)<p class="u-mb-md">{{ $missingDueDates }} fatture da incassare non hanno una scadenza: sono incluse nel primo mese. Completa le date per una previsione più precisa.</p>@endif
     @if($excludedCurrencies)<p class="u-mb-md">Sono escluse {{ $excludedCurrencies }} fatture in valuta diversa dall’euro e i relativi incassi. Il prospetto non applica conversioni automatiche.</p>@endif
+    @if($unallocatedCredit > 0)<p class="u-mb-md">Note di credito ancora da collegare: <strong>{{ number_format($unallocatedCredit / 100, 2, ',', '.') }} EUR</strong>. Le entrate attese si riducono solo per le note collegate alle rispettive fatture. <a href="{{ route('invoices.index', ['document_type' => 'TD04']) }}">Verifica le note di credito</a>.</p>@endif
     <x-panel>
         <div class="t-table-wrap" tabindex="0" role="region" aria-label="Previsione mensile, tabella scorrevole"><table class="t-table finance-table">
             <thead><tr><th>Mese</th><th>Entrate registrate</th><th>Entrate attese</th><th>Uscite pagate</th><th>Uscite previste</th><th>Variazione</th><th>Saldo previsto</th></tr></thead>

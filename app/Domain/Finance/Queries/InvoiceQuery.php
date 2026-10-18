@@ -18,6 +18,8 @@ class InvoiceQuery
         if (! empty($filters['status'])) {
             if ($filters['status'] === 'pending') {
                 $query->whereIn('status', ['issued', 'partially_paid']);
+            } elseif ($filters['status'] === 'overdue') {
+                $query->pastDue();
             } else {
                 $query->where('status', $filters['status']);
             }
@@ -33,6 +35,12 @@ class InvoiceQuery
         }
         if (! empty($filters['end_date'])) {
             $query->whereDate('issue_date', '<=', $filters['end_date']);
+        }
+        if (filled($filters['document_number'] ?? '')) {
+            /** Match the number displayed to the user, preserving literal percent and underscore characters. */
+            $number = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($filters['document_number'])).'%';
+            $importedNumber = $query->getQuery()->getGrammar()->wrap('import_metadata->number');
+            $query->whereRaw("LOWER(COALESCE({$importedNumber}, fiscal_number, number)) LIKE ? ESCAPE '!'", [$number]);
         }
 
         if (! empty($filters['search'])) {

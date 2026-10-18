@@ -43,7 +43,7 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (activeRequest !== requestNumber) return;
-            setDefaultOption(data.length ? 'Seleziona progetto...' : 'Nessun progetto disponibile');
+            setDefaultOption(projectEl.dataset.emptyOption || (data.length ? 'Seleziona progetto...' : 'Nessun progetto disponibile'));
             projectEl.disabled = false;
             data.forEach(p => {
                 const opt = document.createElement('option');

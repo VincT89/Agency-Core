@@ -1,475 +1,151 @@
-<x-app-layout title="Fattura {{ $invoice->number }}">
-    <div class="page-back-row">
-        <a href="{{ route('invoices.index') }}" wire:navigate class="btn btn-g btn-sm u-flex-center u-gap-xs">
-            <i data-lucide="arrow-left" class="u-icon-sm"></i>
-            Torna alle fatture
-        </a>
-    </div>
-
-    <x-page-header eyebrow="Riferimento interno">
-        <x-slot:title><strong>{{ $invoice->number }}</strong></x-slot:title>
-        <x-slot:actions>
-            <x-badge :status="$invoice->fiscal_badge_status" :label="$invoice->fiscal_status_label" />
-            <x-badge :status="$invoice->status" :label="$invoice->status_label" />
-
-            @can('update', $invoice)
-                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-g">Modifica</a>
-            @endcan
-
-            @can('create', App\Models\Payment::class)
-                @if(! in_array($invoice->status, ['paid', 'cancelled'], true))
-                    <a href="{{ route('payments.create', ['invoice_id' => $invoice->id]) }}" class="btn btn-p">
-                        Registra pagamento
-                    </a>
-                @endif
-            @endcan
-
-            @can('delete', $invoice)
-                <x-delete-modal :action="route('invoices.destroy', $invoice)" title="Elimina bozza fattura"
-                    message="Eliminare questa bozza? L’operazione non può essere annullata.">
-                    <button type="button" class="btn btn-g btn-danger-outline">Elimina bozza</button>
-                </x-delete-modal>
-            @endcan
-        </x-slot:actions>
-    </x-page-header>
-
-    <div class="inv-panel-gap">
-        <x-panel title="Fattura elettronica" dot="var(--accent)" padded>
-            <div class="inv-fiscal-status-head">
-                <div>
-                    <div class="form-lbl inv-lbl">Stato fiscale</div>
-                    <div class="inv-client-name">{{ $invoice->fiscal_status_label }}</div>
+<x-app-layout title="Fattura {{ $invoice->display_number }}">
+    @php
+        $imported = $invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::Imported;
+        $original = $invoice->attachments->firstWhere('description', 'Documento originale importato');
+        $previewAvailable = $imported && $original && in_array($original->extension, ['xml', 'p7m'], true);
+        $customer = $imported ? ($invoice->import_metadata['counterparty'] ?? []) : [];
+        $money = fn ($value) => number_format((float) $value, 2, ',', '.').' '.($invoice->currency === 'EUR' ? '€' : $invoice->currency);
+    @endphp
+    <div class="invoice-detail">
+        <div class="page-back-row"><a href="{{ route('invoices.index') }}" wire:navigate class="btn btn-g btn-sm">Torna alle fatture</a></div>
+        <x-page-header>
+            <x-slot:title>Fattura {{ $invoice->display_number }}</x-slot:title>
+            <x-slot:meta>
+                <div class="invoice-detail-status">
+                    <span>{{ $invoice->fiscal_status_label }}</span>
+                    <x-badge :status="$invoice->status" :label="$invoice->status_label" />
                 </div>
-                @if($invoice->fiscal_number)
-                    <div>
-                        <div class="form-lbl inv-lbl">Numero fiscale riservato</div>
-                        <div class="mono-col u-text-strong">{{ $invoice->fiscal_number }}</div>
-                    </div>
-                @endif
-                <div>
-                    <div class="form-lbl inv-lbl">Collegamento Aruba</div>
-                    <div class="u-text-strong">{{ $arubaStatus['ready_for_validation'] ? 'Disponibile' : 'Non disponibile' }}</div>
-                </div>
-            </div>
-
-            <div class="fiscal-action-row fiscal-action-row-top">
-                <a href="{{ route('billing-profile.edit') }}" class="btn btn-g btn-sm">
-                    Dati fiscali
-                </a>
-                @can('downloadFiscalXml', $invoice)
-                    <a href="{{ route('invoices.fiscal.xml', $invoice) }}" class="btn btn-g btn-sm">
-                        Scarica XML
-                    </a>
+            </x-slot:meta>
+            <x-slot:actions>
+                @if($previewAvailable)<a href="{{ route('invoices.document', $invoice) }}" class="btn btn-p">Visualizza fattura</a>@endif
+                @can('changeStatus', $invoice)
+                    <a href="{{ route('invoices.status.edit', $invoice) }}" class="btn btn-g">Modifica stato</a>
                 @endcan
-            </div>
-
-            @if($invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::NotPrepared)
-                @if($fiscalReadiness->isReady())
-                    <div class="inv-fiscal-message is-ready">
-                        <div class="u-text-strong">Fattura pronta</div>
-                    </div>
-
-                    @can('prepareFiscal', $invoice)
-                        <form action="{{ route('invoices.fiscal.prepare', $invoice) }}" method="POST"
-                              class="u-mt-md" x-data="{ submitting: false }"
-                              @submit="if (submitting || !confirm('Preparare e bloccare la fattura? Non verrà inviata ad Aruba o allo SdI.')) { $event.preventDefault(); return; } submitting = true">
-                            @csrf
-                            <button type="submit" class="btn btn-p" :disabled="submitting">
-                                <span x-show="!submitting">Prepara fattura elettronica</span>
-                                <span x-show="submitting" x-cloak class="btn-loading-copy">
-                                    <span class="inline-loader" aria-hidden="true"></span>
-                                    Preparazione in corso
-                                </span>
-                            </button>
-                        </form>
-                    @endcan
-                @else
-                    <div class="inv-fiscal-message">
-                        <div class="u-text-strong">Dati mancanti</div>
-                        <ul class="inv-fiscal-issues">
-                            @foreach($fiscalReadiness->issues as $issue)
-                                <li>{{ $issue }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-            @elseif($invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::Ready)
-                <div class="inv-fiscal-message is-ready">
-                    <div class="u-text-strong">
-                        {{ $matchingValidation ? 'Controlli Aruba superati' : 'Pronta nel gestionale, non inviata' }}
-                    </div>
-                    <div class="u-text-meta">
-                        I dati fiscali sono stati copiati in una versione bloccata
-                        {{ $invoice->fiscal_locked_at ? 'il '.$invoice->fiscal_locked_at->format('d/m/Y \a\l\l\e H:i') : '' }}.
-                        @if($matchingValidation)
-                            XML verificato da Aruba.
-                        @endif
-                    </div>
-                </div>
-
-                <div class="fiscal-action-row">
-                    @can('validateFiscal', $invoice)
-                        @if($arubaStatus['ready_for_validation'])
-                            <form action="{{ route('invoices.fiscal.validate', $invoice) }}" method="POST"
-                                  x-data="{ submitting: false }"
-                                  @submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
-                                @csrf
-                                <button type="submit" class="btn btn-p" :disabled="submitting">
-                                    <span x-show="!submitting">{{ $matchingValidation ? 'Verifica di nuovo' : 'Verifica con Aruba' }}</span>
-                                    <span x-show="submitting" x-cloak class="btn-loading-copy">
-                                        <span class="inline-loader" aria-hidden="true"></span>
-                                        Controllo XML in corso
-                                    </span>
-                                </button>
-                            </form>
-                        @endif
-                    @endcan
-
-                    @can('sendFiscal', $invoice)
-                        @if($matchingValidation && $arubaStatus['ready_for_send'])
-                            <form action="{{ route('invoices.fiscal.send', $invoice) }}" method="POST"
-                                  x-data="{ submitting: false }"
-                                  @submit="if (submitting || !confirm('{{ $arubaStatus['environment'] === 'production' ? 'Confermi l’invio effettivo ad Aruba e allo SdI? Dopo la trasmissione la fattura non potrà più essere modificata.' : 'Confermi l’invio nell’ambiente di collaudo Aruba? La fattura verrà considerata trasmessa nel gestionale.' }}')) { $event.preventDefault(); return; } submitting = true">
-                                @csrf
-                                <button type="submit" class="btn btn-p" :disabled="submitting">
-                                    <span x-show="!submitting">
-                                        {{ $arubaStatus['environment'] === 'production' ? 'Invia ad Aruba e allo SdI' : 'Invia nel collaudo Aruba' }}
-                                    </span>
-                                    <span x-show="submitting" x-cloak class="btn-loading-copy">
-                                        <span class="inline-loader" aria-hidden="true"></span>
-                                        Invio protetto in corso
-                                    </span>
-                                </button>
-                            </form>
-                        @endif
-                    @endcan
-
-                    @can('reopenFiscal', $invoice)
-                        <form action="{{ route('invoices.fiscal.reopen', $invoice) }}" method="POST"
-                              x-data="{ submitting: false }"
-                              @submit="if (submitting || !confirm('Riaprire la fattura? Il numero fiscale già riservato verrà mantenuto.')) { $event.preventDefault(); return; } submitting = true">
-                            @csrf
-                            <button type="submit" class="btn btn-g" :disabled="submitting">Riapri per correggere</button>
-                        </form>
-                    @endcan
-                </div>
-
-                @if($matchingValidation && ! $arubaStatus['ready_for_send'])
-                    <div class="u-text-meta u-mt-md">
-                        Invio non disponibile.
-                    </div>
-                @endif
-            @elseif($invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::Imported)
-                <div class="inv-fiscal-message">
-                    <div class="u-text-strong">Documento esistente importato</div>
-                    <p>Numero originale: {{ $invoice->import_metadata['number'] ?? '' }}. Provenienza: {{ $invoice->import_source === 'aruba' ? 'Aruba' : 'file' }}.</p>
-                    <p class="u-text-meta">L’importazione non ha effettuato un nuovo invio allo SdI. Il documento originale è disponibile negli allegati.</p>
-                </div>
-            @else
-                <div class="inv-fiscal-message">
-                    <div class="u-text-strong">{{ $invoice->fiscal_status_label }}</div>
-                    <div class="u-text-meta">
-                        La trasmissione fiscale è iniziata e i dati della fattura non sono più modificabili.
-                        @if($latestLiveTransmission?->error_message)
-                            {{ $latestLiveTransmission->error_message }}
-                        @endif
-                    </div>
-                </div>
-
-                @can('syncFiscal', $invoice)
-                    @if($arubaStatus['ready_for_validation'])
-                        <div class="fiscal-action-row">
-                            <form action="{{ route('invoices.fiscal.sync', $invoice) }}" method="POST"
-                                  x-data="{ submitting: false }"
-                                  @submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
-                                @csrf
-                                <button type="submit" class="btn btn-g" :disabled="submitting">
-                                    <span x-show="!submitting">Aggiorna stato da Aruba</span>
-                                    <span x-show="submitting" x-cloak class="btn-loading-copy">
-                                        <span class="inline-loader" aria-hidden="true"></span>
-                                        Aggiornamento in corso
-                                    </span>
-                                </button>
-                            </form>
-                        </div>
+                @can('changeDueDate', $invoice)
+                    <a href="{{ route('invoices.due-date.edit', $invoice) }}" class="btn btn-g">Modifica scadenza</a>
+                @endcan
+                @can('create', App\Models\Payment::class)
+                    @if($invoice->residual > 0 && ! in_array($invoice->status, ['draft', 'cancelled'], true))
+                        <a href="{{ route('payments.create', ['invoice_id' => $invoice->id]) }}" class="btn {{ $previewAvailable ? 'btn-g' : 'btn-p' }}">Registra pagamento</a>
                     @endif
                 @endcan
-
-                @can('reopenFiscal', $invoice)
-                    <div class="fiscal-action-row">
-                        <form action="{{ route('invoices.fiscal.reopen', $invoice) }}" method="POST"
-                              x-data="{ submitting: false }"
-                              @submit="if (submitting || !confirm('Riaprire la fattura per correggerla? Il numero fiscale e la cronologia degli invii verranno mantenuti.')) { $event.preventDefault(); return; } submitting = true">
-                            @csrf
-                            <button type="submit" class="btn btn-g" :disabled="submitting">
-                                Riapri dopo l’esito negativo
-                            </button>
-                        </form>
-                    </div>
+                @can('update', $invoice)<a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-g">Modifica</a>@endcan
+                @can('delete', $invoice)
+                    <x-delete-modal :action="route('invoices.destroy', $invoice)" title="Elimina bozza fattura" message="Eliminare questa bozza? L’operazione non può essere annullata.">
+                        <button type="button" class="btn btn-g btn-danger-outline">Elimina bozza</button>
+                    </x-delete-modal>
                 @endcan
-            @endif
+            </x-slot:actions>
+        </x-page-header>
 
-            @if($errors->has('fiscal'))
-                <div class="inv-fiscal-message has-errors u-mt-md">
-                    <div class="u-text-strong">L’operazione non è stata completata</div>
-                    <ul class="inv-fiscal-issues">
-                        @foreach($errors->get('fiscal') as $message)
-                            <li>{{ $message }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @if($invoice->electronicInvoiceTransmissions->isNotEmpty())
-                <div class="fiscal-history">
-                    <div class="sec-lbl">Cronologia Aruba</div>
-                    <div class="fiscal-history-list">
-                        @foreach($invoice->electronicInvoiceTransmissions as $transmission)
-                            <article class="fiscal-history-item">
-                                <div class="fiscal-history-main">
-                                    <div class="fiscal-history-title">
-                                        <x-badge :status="$transmission->status->badgeStatus()" :label="$transmission->status_label" />
-                                        <span class="u-text-strong">
-                                            {{ $transmission->mode === 'dry_run' ? 'Verifica tecnica' : 'Invio fattura' }}
-                                        </span>
-                                    </div>
-                                    <div class="u-text-meta">
-                                        {{ $transmission->environment === 'production' ? 'Produzione' : 'Collaudo' }}
-                                        , tentativo {{ $transmission->attempt_number }}
-                                        , {{ $transmission->submitted_at?->format('d/m/Y H:i') ?? 'data non disponibile' }}
-                                        @if($transmission->submitter)
-                                            , {{ $transmission->submitter->name }}
-                                        @endif
-                                    </div>
-                                    @if($transmission->error_message)
-                                        <div class="fiscal-history-error">{{ $transmission->error_message }}</div>
-                                    @endif
-                                </div>
-                                <div class="fiscal-history-side">
-                                    @if($transmission->sdi_id)
-                                        <div class="form-lbl inv-lbl">Identificativo SdI</div>
-                                        <div class="mono-col">{{ $transmission->sdi_id }}</div>
-                                    @elseif($transmission->upload_filename)
-                                        <div class="form-lbl inv-lbl">Riferimento Aruba</div>
-                                        <div class="mono-col fiscal-file-name">{{ $transmission->upload_filename }}</div>
-                                    @endif
-                                </div>
-                            </article>
-                        @endforeach
+        <div class="invoice-detail-grid">
+            <div class="invoice-detail-main">
+                <x-panel padded class="invoice-detail-customer">
+                    <x-slot:title><h2>Cliente e dati della fattura</h2></x-slot:title>
+                    <div class="invoice-customer-heading">
+                        <h3>{{ $customer['name'] ?? ($invoice->client?->company_name ?: $invoice->client?->name ?: 'Cliente non disponibile') }}</h3>
+                        @if($invoice->client)<a href="{{ route('clients.show', $invoice->client) }}" class="invoice-text-link">Anagrafica cliente</a>@endif
                     </div>
-                </div>
-            @endif
-        </x-panel>
-    </div>
-
-    <div class="g-invoice inv-panel-gap">
-        <div class="g-invoice-left">
-            <x-panel title="Dati della fattura" dot="var(--accent)" padded>
-                <div class="g-2col">
-                    <div>
-                        <div class="form-lbl inv-lbl">Cliente</div>
-                        <div class="inv-client-name">
-                            @if($invoice->client)
-                                <a href="{{ route('clients.show', $invoice->client) }}">
-                                    {{ $invoice->client->company_name ?: $invoice->client->name }}
-                                </a>
-                            @else
-                                Non disponibile
+                    @if(filled($customer['address'] ?? null))<p class="invoice-detail-muted">{{ $customer['address'] }}, {{ $customer['postal_code'] ?? '' }} {{ $customer['city'] ?? '' }} @if(filled($customer['province'] ?? null))({{ $customer['province'] }})@endif</p>@endif
+                    <dl class="invoice-detail-facts">
+                        <div><dt>Data fattura</dt><dd>{{ $invoice->issue_date?->format('d/m/Y') ?? 'Non indicata' }}</dd></div>
+                        <div><dt>Scadenza</dt><dd class="{{ $invoice->is_overdue ? 'invoice-overdue' : '' }}">{{ $invoice->due_date?->format('d/m/Y') ?? 'Non indicata' }}@if($invoice->is_overdue) <x-badge status="overdue" label="Scaduta" />@endif</dd></div>
+                        <div><dt>Tipo documento</dt><dd>{{ $invoice->fiscal_document_type ?: 'Non indicato' }}</dd></div>
+                        <div><dt>{{ $invoice->marketingCampaign ? 'Campagna' : 'Progetto' }}</dt><dd>
+                            @if($invoice->project)<a href="{{ route('projects.show', $invoice->project) }}">{{ $invoice->project->name }}</a>
+                            @elseif($invoice->marketingCampaign)<a href="{{ route('marketing-campaigns.show', $invoice->marketingCampaign) }}">{{ $invoice->marketingCampaign->name }}</a>
+                            @else<span class="invoice-detail-muted">Nessun progetto associato</span>@endif
+                        </dd></div>
+                    </dl>
+                    @if($imported)
+                        <div class="invoice-source-row">
+                            <p>Numero originale conservato. {{ $invoice->import_source === 'aruba' ? 'Importazione da Aruba.' : 'Importazione da file '.strtoupper($invoice->import_metadata['format'] ?? '').'.' }}</p>
+                            @if($original)
+                                @can('download', $original)
+                                    <a href="{{ route('attachments.download', $original) }}" class="invoice-text-link">Scarica originale</a>
+                                @endcan
                             @endif
                         </div>
-                    </div>
-                    <div>
-                        <div class="form-lbl inv-lbl">
-                            {{ $invoice->marketingCampaign ? 'Campagna' : 'Progetto' }}
-                        </div>
-                        <div class="inv-project-name">
-                            @if($invoice->project)
-                                <a href="{{ route('projects.show', $invoice->project) }}">
-                                    {{ $invoice->project->name }}
-                                </a>
-                            @elseif($invoice->marketingCampaign)
-                                <a href="{{ route('marketing-campaigns.show', $invoice->marketingCampaign) }}">
-                                    {{ $invoice->marketingCampaign->name }}
-                                </a>
-                            @else
-                                Non disponibile
-                            @endif
-                        </div>
-                    </div>
-                </div>
+                    @endif
+                </x-panel>
 
-                <div class="g-2col inv-section-sep">
-                    <div>
-                        <div class="form-lbl inv-lbl">Data fattura</div>
-                        <div class="inv-date">{{ $invoice->issue_date?->format('d/m/Y') ?? 'Non indicata' }}</div>
+                <x-panel class="invoice-detail-items">
+                    <x-slot:title><h2>Voci della fattura</h2></x-slot:title>
+                    @can('update', $invoice)
+                        <x-slot:headerActions><a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-g btn-sm">Modifica voci e IVA</a></x-slot:headerActions>
+                    @endcan
+                    <div class="invoice-items-scroll" role="region" aria-label="Voci della fattura" tabindex="0">
+                        <table class="invoice-items-table">
+                            <thead><tr><th scope="col">Descrizione</th><th scope="col">Quantità</th><th scope="col">Prezzo unitario</th><th scope="col">IVA</th><th scope="col">Imponibile</th>@unless($imported)<th scope="col">Imposta</th><th scope="col">Totale</th>@endunless</tr></thead>
+                            <tbody>
+                                @if($imported)
+                                    @forelse($invoice->import_metadata['items'] ?? [] as $item)
+                                        <tr><td class="invoice-item-description">{{ $item['description'] }}</td>
+                                            <td data-label="Quantità">{{ $item['quantity'] !== '' ? number_format((float) $item['quantity'], 2, ',', '.') : 'Non indicata' }}</td>
+                                            <td data-label="Prezzo unitario">{{ $item['unit_price'] !== '' ? $money($item['unit_price']) : 'Non indicato' }}</td>
+                                            <td data-label="IVA">{{ $item['vat_rate'] !== '' ? number_format((float) $item['vat_rate'], 2, ',', '.').'%' : 'Non indicata' }}</td>
+                                            <td data-label="Imponibile">{{ $item['total'] !== '' ? $money($item['total']) : 'Non indicato' }}</td></tr>
+                                    @empty<tr><td colspan="5" class="invoice-detail-empty">Le voci sono consultabili nel documento originale allegato.</td></tr>@endforelse
+                                @else
+                                    @forelse($invoice->items as $item)
+                                        <tr><td class="invoice-item-description">{{ $item->description }}@if($item->vat_nature)<p class="invoice-detail-muted">{{ $item->vat_nature }} {{ $item->vat_reference }}</p>@endif</td>
+                                            <td data-label="Quantità">{{ number_format((float) $item->quantity, 2, ',', '.') }} {{ $item->unit_of_measure }}</td>
+                                            <td data-label="Prezzo unitario">{{ $money($item->unit_price) }}</td>
+                                            <td data-label="IVA">{{ $item->vat_rate === null ? 'Da completare' : number_format((float) $item->vat_rate, 2, ',', '.').'%' }}</td>
+                                            <td data-label="Imponibile">{{ $money($item->total) }}</td>
+                                            <td data-label="Imposta">{{ $money($item->tax_amount) }}</td>
+                                            <td data-label="Totale">{{ $item->total_with_tax === null ? 'Da ricalcolare' : $money($item->total_with_tax) }}</td></tr>
+                                    @empty<tr><td colspan="7" class="invoice-detail-empty">Nessuna voce presente.</td></tr>@endforelse
+                                @endif
+                            </tbody>
+                        </table>
                     </div>
-                    <div>
-                        <div class="form-lbl inv-lbl">Scadenza</div>
-                        <div class="{{ $invoice->due_date?->isPast() && $invoice->residual > 0 ? 'inv-date-overdue' : 'inv-date' }}">
-                            {{ $invoice->due_date?->format('d/m/Y') ?? 'Non indicata' }}
-                        </div>
-                    </div>
-                </div>
+                    <p class="invoice-items-footer">Totale imponibile <strong>{{ $money($invoice->subtotal) }}</strong></p>
+                </x-panel>
 
                 @if($invoice->notes)
-                    <div class="inv-section-sep">
-                        <div class="form-lbl inv-lbl">Note interne</div>
-                        <div>{{ $invoice->notes }}</div>
-                    </div>
+                    <x-panel padded><x-slot:title><h2>Note interne</h2></x-slot:title><p class="invoice-detail-copy">{{ $invoice->notes }}</p></x-panel>
                 @endif
-            </x-panel>
-
-            <div class="inv-panel-gap">
-                <x-panel title="Pagamenti associati">
-                    <table class="t-table">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Metodo</th>
-                                <th>Importo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($invoice->payments as $payment)
-                                <tr x-data
-                                    @click="window.Livewire.navigate('{{ route('payments.show', $payment) }}')"
-                                    class="u-cursor-pointer hover-bg">
-                                    <td>{{ $payment->payment_date?->format('d/m/Y') }}</td>
-                                    <td>
-                                        <x-badge :status="$payment->method" :label="$payment->method_label" />
-                                    </td>
-                                    <td class="mono-col">
-                                        {{ $invoice->currency }} {{ number_format($payment->amount, 2, ',', '.') }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="inv-empty-cell">Nessun pagamento registrato</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </x-panel>
+                @if($invoice->creditAllocations->isNotEmpty())
+                    <x-panel padded><x-slot:title><h2>Note di credito collegate</h2></x-slot:title>
+                        <dl class="invoice-credit-links">@foreach($invoice->creditAllocations as $allocation)
+                            <div><dt><a href="{{ route('credit-notes.show', $allocation->creditNote) }}">{{ $allocation->creditNote->number }}</a></dt><dd>{{ $money($allocation->amount) }}</dd></div>
+                        @endforeach</dl>
+                    </x-panel>
+                @endif
             </div>
+
+            <aside class="invoice-detail-side" aria-label="Importi e incassi">
+                <x-panel padded class="invoice-detail-summary">
+                    <x-slot:title><h2>Riepilogo importi</h2></x-slot:title>
+                    <dl class="invoice-totals">
+                        <div><dt>Imponibile</dt><dd>{{ $money($invoice->subtotal) }}</dd></div>
+                        <div><dt>IVA</dt><dd>{{ $money($invoice->tax_amount) }}</dd></div>
+                        <div class="invoice-total"><dt>Totale fattura</dt><dd>{{ $money($invoice->total) }}</dd></div>
+                        @if($invoice->payable_total !== null && (float) $invoice->payable_total !== (float) $invoice->total)
+                            @if((float) ($invoice->import_metadata['split_payment_tax'] ?? 0) > 0)<div><dt>IVA in split payment</dt><dd>{{ $money($invoice->import_metadata['split_payment_tax']) }}</dd></div>@endif
+                            <div><dt>Netto dovuto dal cliente</dt><dd>{{ $money($invoice->payable_total) }}</dd></div>
+                        @endif
+                        @if((float) $invoice->credited_total > 0)<div><dt>Storni collegati sul dovuto</dt><dd>{{ $money($invoice->credited_total) }}</dd></div>@endif
+                        <div><dt>Incassato</dt><dd>{{ $money($invoice->paid_total) }}</dd></div>
+                        <div class="invoice-outstanding"><dt>Da incassare</dt><dd>{{ $money($invoice->residual) }}</dd></div>
+                        @if($invoice->customer_credit > 0)<div><dt>Credito cliente da regolare</dt><dd>{{ $money($invoice->customer_credit) }}</dd></div>@endif
+                    </dl>
+                </x-panel>
+
+                <x-panel padded>
+                    <x-slot:title><h2>Pagamenti registrati</h2></x-slot:title>
+                    @forelse($invoice->payments as $payment)
+                        <a class="invoice-payment" href="{{ route('payments.show', $payment) }}"><span>{{ $payment->payment_date?->format('d/m/Y') }}<small>{{ $payment->method_label }}</small></span><strong>{{ $money($payment->amount) }}</strong></a>
+                    @empty<p class="invoice-detail-muted">Nessun pagamento registrato.</p>@endforelse
+                </x-panel>
+            </aside>
         </div>
 
-        <div class="g-invoice-right">
-            <x-panel title="Riepilogo economico" dot="var(--green)" padded>
-                <div class="inv-total-hero">
-                    <div class="form-lbl inv-lbl">Totale fattura</div>
-                    <div class="inv-total-hero-value">
-                        {{ $invoice->currency }} {{ number_format($invoice->total, 2, ',', '.') }}
-                    </div>
-                    <div class="inv-total-hero-sub">
-                        Imponibile {{ number_format($invoice->subtotal, 2, ',', '.') }}
-                        · IVA {{ number_format($invoice->tax_amount, 2, ',', '.') }}
-                    </div>
-                </div>
-
-                <div class="inv-summary-row">
-                    <span class="inv-summary-label">Incassato</span>
-                    <strong class="inv-summary-value green">
-                        {{ $invoice->currency }} {{ number_format($invoice->paid_total, 2, ',', '.') }}
-                    </strong>
-                </div>
-                <div class="inv-summary-row inv-summary-row-last">
-                    <span class="inv-summary-label">Da incassare</span>
-                    <strong class="inv-summary-value {{ $invoice->residual > 0 ? 'red' : 'muted' }}">
-                        {{ $invoice->currency }} {{ number_format($invoice->residual, 2, ',', '.') }}
-                    </strong>
-                </div>
-
-                @php
-                    $percent = $invoice->total > 0
-                        ? min(100, ($invoice->paid_total / $invoice->total) * 100)
-                        : 0;
-                @endphp
-                <div class="inv-progress-wrap">
-                    <div class="inv-progress-hd">
-                        <span>Incasso completato</span>
-                        <span>{{ round($percent) }}%</span>
-                    </div>
-                    <x-workload-bar :percent="$percent" />
-                </div>
-            </x-panel>
-        </div>
+        @unless($imported)
+            @include('invoices.partials.fiscal')
+        @endunless
+        <div class="invoice-detail-attachments"><livewire:shared.attachment-manager :model="$invoice" /></div>
+        <div class="invoice-detail-history"><x-audit-timeline :logs="$invoice->auditLogs" /></div>
     </div>
-
-    <div class="inv-panel-gap">
-        <x-panel title="Voci della fattura" dot="var(--accent)">
-            @can('update', $invoice)
-                <x-slot:headerActions>
-                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-g btn-sm">
-                        Modifica voci e IVA
-                    </a>
-                </x-slot:headerActions>
-            @endcan
-
-            @if($invoice->fiscal_status === \App\Enums\Finance\InvoiceFiscalStatus::Imported)
-                <div class="u-p-md">
-                    @forelse(($invoice->import_metadata['items'] ?? []) as $item)
-                        <div class="commercial-history-row"><p>{{ $item['description'] }}</p><p class="u-text-meta">Quantità {{ $item['quantity'] ?: 'non indicata' }}; prezzo unitario {{ $item['unit_price'] }}; imponibile {{ $item['total'] }}; IVA {{ $item['vat_rate'] }}%</p></div>
-                    @empty<p>Le voci sono consultabili nel documento originale allegato.</p>@endforelse
-                </div>
-            @else
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Descrizione</th>
-                        <th>Quantità</th>
-                        <th>Prezzo unitario</th>
-                        <th>Imponibile</th>
-                        <th>IVA</th>
-                        <th>Imposta</th>
-                        <th>Totale</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($invoice->items as $item)
-                        <tr>
-                            <td>
-                                <div>{{ $item->description }}</div>
-                                @if($item->vat_nature)
-                                    <div class="u-text-meta">
-                                        {{ $item->vat_nature }}
-                                        @if($item->vat_reference)
-                                            · {{ $item->vat_reference }}
-                                        @endif
-                                    </div>
-                                @endif
-                            </td>
-                            <td>
-                                {{ fmod((float) $item->quantity, 1) === 0.0 ? (int) $item->quantity : $item->quantity }}
-                                {{ $item->unit_of_measure }}
-                            </td>
-                            <td class="mono-col">{{ number_format($item->unit_price, 2, ',', '.') }}</td>
-                            <td class="mono-col">{{ number_format($item->total, 2, ',', '.') }}</td>
-                            <td>
-                                @if($item->vat_rate === null)
-                                    <x-badge status="overdue" label="Da completare" />
-                                @else
-                                    {{ number_format($item->vat_rate, 2, ',', '.') }}%
-                                @endif
-                            </td>
-                            <td class="mono-col">{{ number_format($item->tax_amount, 2, ',', '.') }}</td>
-                            <td class="mono-col">
-                                {{ $item->total_with_tax === null
-                                    ? 'Da ricalcolare'
-                                    : number_format($item->total_with_tax, 2, ',', '.') }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7" class="inv-empty-cell">Nessuna voce presente</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            @endif
-        </x-panel>
-    </div>
-
-    <x-audit-timeline :logs="$invoice->auditLogs" />
-
-    <livewire:shared.attachment-manager :model="$invoice" />
 </x-app-layout>

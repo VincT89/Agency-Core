@@ -26,6 +26,7 @@ class EconomicSummaryController extends Controller
         $globalSummary = $economicSummaryService->globalSummary($user, $from, $to);
         $summaryByClient = $economicSummaryService->summaryByClient($user, $from, $to);
         $summaryByProject = $economicSummaryService->summaryByProject($user, $from, $to);
+        $chartData = $financialService->getReportMonthlyData($from, $to);
 
         return view('economic-summary.index', [
             'from' => $from,
@@ -33,9 +34,9 @@ class EconomicSummaryController extends Controller
             'globalSummary' => $globalSummary,
             'summaryByClient' => $summaryByClient,
             'summaryByProject' => $summaryByProject,
-            'lineChartData'    => json_encode($financialService->getIncassatoVsDaIncassareMonthlyData(12)),
-            'donutChartData'   => json_encode($financialService->getYearlyDonutData()),
-            'sparklineData'    => json_encode($financialService->getSparklineData(12)),
+            'sparklineData' => json_encode(['labels' => $chartData['labels'],
+                'invoiced' => $chartData['series'][0]['data'], 'collected' => $chartData['series'][1]['data'],
+                'pending' => $chartData['series'][2]['data']], JSON_THROW_ON_ERROR),
         ]);
     }
 }

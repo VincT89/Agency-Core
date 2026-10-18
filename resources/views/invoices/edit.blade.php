@@ -53,7 +53,7 @@
                     <select name="client_id" id="client_sel"
                             class="form-sel @error('client_id') is-invalid @enderror" required
                             data-client-select data-project-select="project_sel"
-                            data-current-project="{{ old('project_id', $invoice->project_id) }}">
+                            data-current-project="{{ old('project_id', $invoice->project_id) }}" data-empty-project-help="Puoi salvare la fattura senza associarla a un progetto.">
                         <option value="">Seleziona cliente...</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}"
@@ -72,9 +72,9 @@
                                readonly>
                     </div>
                 @else
-                    <x-form-group label="Progetto" name="project_id" required>
+                    <x-form-group label="Progetto (facoltativo)" name="project_id">
                         <select name="project_id" id="project_sel"
-                                class="form-sel @error('project_id') is-invalid @enderror" required
+                                class="form-sel @error('project_id') is-invalid @enderror" data-empty-option="Nessun progetto"
                                 aria-describedby="project_sel_help">
                             <option value="">Seleziona progetto...</option>
                             @if($invoice->project)

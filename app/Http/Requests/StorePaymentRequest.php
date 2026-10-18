@@ -26,7 +26,7 @@ class StorePaymentRequest extends FormRequest
         return [
             'invoice_id' => ['required', 'exists:invoices,id'],
             'payment_date' => ['required', 'date'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999.99'],
             'method' => ['required', Rule::in(Payment::METHODS)],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
@@ -49,7 +49,7 @@ class StorePaymentRequest extends FormRequest
                 $alreadyPaid = (float) $invoice->payments()->sum('amount');
                 $newPaidTotal = $alreadyPaid + $amount;
 
-                if ($newPaidTotal > (float) $invoice->total) {
+                if ($newPaidTotal > $invoice->receivable_total) {
                     $validator->errors()->add(
                         'amount',
                         'Il pagamento supera il totale residuo della fattura.'

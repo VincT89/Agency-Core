@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Finance\Services\CashAmount;
 use App\Enums\Finance\InvoiceFiscalStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +15,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Invoice extends Model
 {
     use HasFactory;
+
+    public const OUTSTANDING_SQL = 'CASE WHEN COALESCE(payable_total, total) - credited_total - paid_total > 0 THEN COALESCE(payable_total, total) - credited_total - paid_total ELSE 0 END';
+    public const OUTSTANDING_STATUSES = ['issued', 'partially_paid', 'overdue'];
 
     public const STATUSES = [
         'draft',
@@ -38,6 +42,8 @@ class Invoice extends Model
         'tax_amount',
         'total',
         'paid_total',
+        'payable_total',
+        'credited_total',
         'notes',
         'fiscal_status',
         'fiscal_document_type',
@@ -57,6 +63,8 @@ class Invoice extends Model
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
         'paid_total' => 'decimal:2',
+        'payable_total' => 'decimal:2',
+        'credited_total' => 'decimal:2',
         'fiscal_status' => InvoiceFiscalStatus::class,
         'fiscal_sequence_number' => 'integer',
         'fiscal_locked_at' => 'datetime',
@@ -66,7 +74,43 @@ class Invoice extends Model
 
     public function getResidualAttribute(): float
     {
-        return (float) max(0, $this->total - $this->paid_total);
+        if ($this->status === 'cancelled') {
+            return 0;
+        }
+
+        return max(0, CashAmount::cents($this->receivable_total) - CashAmount::cents($this->paid_total)) / 100;
+    }
+
+    public function scopeAwaitingPayment(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::OUTSTANDING_STATUSES)->whereRaw(self::OUTSTANDING_SQL.' > 0');
+    }
+
+    public function scopePastDue(Builder $query): Builder
+    {
+        /** Deadline indicators must work before the scheduled job updates stored invoice statuses. */
+        return $query->awaitingPayment()->whereDate('due_date', '<', today());
+    }
+
+    public function getIsOverdueAttribute(): bool
+    {
+        return in_array($this->status, self::OUTSTANDING_STATUSES, true)
+            && $this->due_date !== null && $this->due_date->lt(today()) && $this->residual > 0;
+    }
+
+    public function getReceivableTotalAttribute(): float
+    {
+        return max(0, CashAmount::cents($this->payable_total ?? $this->total) - CashAmount::cents($this->credited_total ?? 0)) / 100;
+    }
+
+    public function getCustomerCreditAttribute(): float
+    {
+        return max(0, CashAmount::cents($this->paid_total) - CashAmount::cents($this->receivable_total)) / 100;
+    }
+
+    public function getDisplayNumberAttribute(): string
+    {
+        return $this->import_metadata['number'] ?? $this->fiscal_number ?? $this->number;
     }
 
     public function getStatusLabelAttribute(): string
@@ -78,6 +122,7 @@ class Invoice extends Model
             'paid' => 'Pagata',
             'overdue' => 'Scaduta',
             'cancelled' => 'Annullata',
+            'credited' => 'Stornata',
             default => ucfirst((string) $this->status),
         };
     }
@@ -130,6 +175,11 @@ class Invoice extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function creditAllocations(): HasMany
+    {
+        return $this->hasMany(CreditNoteAllocation::class);
     }
 
     public function attachments(): MorphMany

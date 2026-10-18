@@ -5,7 +5,8 @@
      x-on:livewire-upload-cancel="uploading = false">
     <div class="page-back-row"><a href="{{ route('invoices.index') }}" class="btn btn-g">Torna alle fatture</a></div>
     <x-page-header><x-slot:title>Importa fattura</x-slot:title></x-page-header>
-    <p class="u-mb-md">Acquisisci una fattura esistente da file o da Aruba. Verifica l’anteprima e conferma il salvataggio. L’importazione non invia fatture allo SdI e non registra incassi o pagamenti.</p>
+    <p class="u-mb-md"><a href="{{ route('invoices.import.archive') }}" class="btn btn-g">Importa più XML da ZIP Aruba</a></p>
+    <p class="u-mb-md">Acquisisci fatture e note di credito emesse da file o da Aruba. Verifica l’anteprima e conferma il salvataggio. L’importazione non invia documenti allo SdI e non registra incassi o pagamenti.</p>
     @if($errors->any())<div class="invalid-feedback u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
     <x-panel padded>
         <div class="form-row">
@@ -86,11 +87,13 @@
             <dl class="ticket-request-details">
                 <div><dt>{{ $direction === 'in' ? 'Fornitore' : 'Destinatario' }}</dt><dd>{{ $selected['counterparty']['name'] }}</dd></div>
                 <div><dt>Identificativo fiscale</dt><dd>{{ ($selected['counterparty']['vat_number'] ?? '') ?: ($selected['counterparty']['tax_code'] ?? 'Non indicato') }}</dd></div>
-                <div><dt>Numero fattura</dt><dd>{{ $selected['number'] }}</dd></div>
+                <div><dt>Numero documento</dt><dd>{{ $selected['number'] }}</dd></div>
+                <div><dt>Tipo documento</dt><dd>{{ $selected['document_type'] }}{{ $selected['document_type'] === 'TD04' ? ' - Nota di credito' : ' - Fattura' }}</dd></div>
                 <div><dt>Data</dt><dd>{{ \Carbon\Carbon::parse($selected['issue_date'])->format('d/m/Y') }}</dd></div>
                 @if($selected['subtotal'] !== null)<div><dt>Imponibile</dt><dd>{{ number_format((float)$selected['subtotal'], 2, ',', '.') }} €</dd></div>@endif
                 @if($selected['tax_amount'] !== null)<div><dt>IVA</dt><dd>{{ number_format((float)$selected['tax_amount'], 2, ',', '.') }} €</dd></div>@endif
                 <div><dt>Totale fattura</dt><dd><strong>{{ number_format((float)$selected['total'], 2, ',', '.') }} €</strong></dd></div>
+                @if(isset($selected['payable_total']) && $selected['payable_total'] !== $selected['total'])<div><dt>Netto dovuto</dt><dd>{{ number_format((float)$selected['payable_total'], 2, ',', '.') }} €</dd></div>@endif
             </dl>
             @if($direction === 'out') @include('invoices.partials.import-client') @endif
             @if(count($selected['payments']) > 1)
@@ -106,7 +109,7 @@
                     @foreach($selected['items'] as $item)<div class="commercial-history-row"><p>{{ $item['description'] }}</p><p class="u-text-meta">Quantità {{ $item['quantity'] ?: 'non indicata' }}; prezzo unitario {{ $item['unit_price'] }}; imponibile {{ $item['total'] }}; IVA {{ $item['vat_rate'] }}%</p></div>@endforeach
                 </details>
             @endif
-            <label class="invoice-import-check u-mt-lg"><input type="checkbox" wire:model="confirmed"> Ho verificato i dati e confermo che il documento corrisponde a una fattura {{ $direction === 'out' ? 'già emessa' : 'ricevuta' }}.</label>
+            <label class="invoice-import-check u-mt-lg"><input type="checkbox" wire:model="confirmed"> Ho verificato i dati e confermo che il documento è {{ $direction === 'out' ? 'già emesso' : 'ricevuto' }}.</label>
             @if($direction === 'in')<p class="u-text-meta u-mt-md">Dopo l’importazione collega il documento a una spesa esistente oppure crea una nuova uscita.</p>@endif
             <div class="commercial-actions u-mt-lg">
                 <button type="button" class="btn btn-p" wire:click="import" wire:loading.attr="disabled">Conferma importazione</button>

@@ -25,13 +25,23 @@ class InvoicePolicy
 
     public function update(User $user, Invoice $invoice): bool
     {
-        return $user->canAccessFinance() && $invoice->isFiscalEditable();
+        return $user->canAccessFinance() && $invoice->isFiscalEditable() && ! $invoice->creditAllocations()->exists();
     }
 
     public function recordPayment(User $user, Invoice $invoice): bool
     {
         return $user->canAccessFinance()
             && ($invoice->isFiscalEditable() || $invoice->fiscal_status === InvoiceFiscalStatus::Imported);
+    }
+
+    public function changeStatus(User $user, Invoice $invoice): bool
+    {
+        return $this->recordPayment($user, $invoice);
+    }
+
+    public function changeDueDate(User $user, Invoice $invoice): bool
+    {
+        return $this->recordPayment($user, $invoice);
     }
 
     public function delete(User $user, Invoice $invoice): bool

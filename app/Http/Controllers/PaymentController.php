@@ -83,10 +83,18 @@ class PaymentController extends Controller
         $this->authorize('update', $payment);
 
         $data = $request->validated();
-        $payment->update($data);
-
-        $payment->refresh();
-        $this->invoicePaymentSyncService->sync($payment->invoice);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($payment, $data) {
+            $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
+            $payment->refresh();
+            $alreadyPaid = \App\Domain\Finance\Services\CashAmount::cents($invoice->payments()->whereKeyNot($payment->id)->sum('amount'));
+            /** A later credit may exceed the remaining debt; existing receipts can still be corrected without increasing them. */
+            if ($alreadyPaid + \App\Domain\Finance\Services\CashAmount::cents($data['amount']) > \App\Domain\Finance\Services\CashAmount::cents($invoice->receivable_total)
+                && \App\Domain\Finance\Services\CashAmount::cents($data['amount']) > \App\Domain\Finance\Services\CashAmount::cents($payment->amount)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['amount' => 'Il pagamento supera il totale residuo della fattura.']);
+            }
+            $payment->update($data);
+            $this->invoicePaymentSyncService->sync($invoice);
+        });
 
         return redirect()
             ->route('invoices.show', $payment->invoice)
@@ -96,13 +104,15 @@ class PaymentController extends Controller
     public function destroy(Payment $payment): RedirectResponse
     {
         $this->authorize('delete', $payment);
-        $invoice = $payment->invoice;
+        $invoice = \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
+            $invoice = Invoice::lockForUpdate()->find($payment->invoice_id);
+            $payment->delete();
+            if ($invoice) {
+                $this->invoicePaymentSyncService->sync($invoice);
+            }
 
-        $payment->delete();
-
-        if ($invoice) {
-            $this->invoicePaymentSyncService->sync($invoice);
-        }
+            return $invoice;
+        });
 
         if ($invoice) {
             return redirect()

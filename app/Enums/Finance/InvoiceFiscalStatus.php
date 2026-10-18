@@ -22,7 +22,7 @@ enum InvoiceFiscalStatus: string
     {
         return match ($this) {
             self::NotPrepared => 'Da preparare',
-            self::Imported => 'Importata da documento esistente',
+            self::Imported => 'Importata manualmente',
             self::Ready => 'Pronta, non inviata',
             self::Transmitting => 'Invio in corso',
             self::Sent => 'Inviata',

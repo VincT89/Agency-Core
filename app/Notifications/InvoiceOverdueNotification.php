@@ -20,7 +20,7 @@ class InvoiceOverdueNotification extends Notification
         return [
             'type'    => 'invoice_overdue',
             'title'   => 'Fattura scaduta',
-            'message' => "La fattura {$this->invoice->number} risulta scaduta e insoluta.",
+            'message' => "La fattura {$this->invoice->display_number} risulta scaduta e insoluta.",
             'url'     => route('invoices.show', $this->invoice),
             'invoice_id' => $this->invoice->id,
         ];

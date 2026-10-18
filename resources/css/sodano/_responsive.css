@@ -535,6 +535,10 @@ pre {
   .inv-search-actions .btn { min-height: var(--control-h-touch); }
 
   .inv-search-actions .btn { flex: 1 1 auto; }
+  .inv-document-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inv-document-filters .inv-search-field,
+  .inv-document-filters .inv-search-actions { grid-column: 1 / -1; }
+  .inv-document-filters .inv-date-field { grid-column: auto; }
 
   .filter-search,
   .mkt-search-in,

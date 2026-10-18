@@ -52,7 +52,7 @@
                 <div class="form-lbl">Fattura di Riferimento</div>
                 <div class="u-text-strong">
                     @if($payment->invoice)
-                        <a href="{{ route('invoices.show', $payment->invoice) }}" class="u-text-accent-link">{{ $payment->invoice->number }}</a>
+                        <a href="{{ route('invoices.show', $payment->invoice) }}" class="u-text-accent-link">{{ $payment->invoice->display_number }}</a>
                     @else
                         —
                     @endif

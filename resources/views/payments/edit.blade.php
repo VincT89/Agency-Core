@@ -42,7 +42,7 @@
             <div class="form-row">
                 <x-form-group label="Fattura di riferimento" name="invoice_id" required>
                     <div class="u-fake-input-disabled">
-                        {{ $payment->invoice->number }} — {{ $payment->invoice->client?->name }}
+                        {{ $payment->invoice->display_number }} — {{ $payment->invoice->client?->name }}
                         <span class="u-ml-auto u-text-sm">(Fissa)</span>
                     </div>
                 </x-form-group>

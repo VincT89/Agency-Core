@@ -28,20 +28,21 @@
         </div>
     @endif
 
-    @if($from || $to)
     <div class="finance-note-wrap">
         <x-panel padded class="finance-note-panel">
             <div class="finance-note-text">
-                <strong class="u-text-main">Nota sul periodo:</strong> "Fatturato" e "Da Incassare" si basano sulla data di emissione delle fatture nel periodo. L'"Incassato" si basa sulla data dei pagamenti ricevuti nel periodo.
+                Il fatturato include l’IVA e sottrae le note di credito alla loro data di emissione. Gli incassi seguono la data dei pagamenti; il residuo riguarda le fatture emesse nel periodo, al netto di incassi, split payment e note collegate. Grafici e tabelle rispettano lo stesso periodo.
             </div>
         </x-panel>
     </div>
+    @if($globalSummary['unallocated_credit'] > 0)
+        <p class="u-mb-lg">Note di credito ancora da collegare: <strong>€ {{ number_format($globalSummary['unallocated_credit'], 2, ',', '.') }}</strong>. Il residuo delle fatture si aggiorna dopo il collegamento. <a href="{{ route('invoices.index', ['document_type' => 'TD04']) }}">Verifica le note di credito</a>.</p>
     @endif
 
     <div class="g-3col u-mb-lg">
         <x-panel padded>
             <x-stat-card 
-                label="Fatturato" 
+                label="Fatturato (IVA inclusa)"
                 value="€ {{ number_format($globalSummary['total_invoiced'], 2, ',', '.') }}" 
                 sub="Da {{ $globalSummary['invoices_count'] }} fatture valide" 
                 color="var(--purple)"
@@ -61,7 +62,7 @@
             <x-stat-card 
                 label="Da Incassare" 
                 value="€ {{ number_format($globalSummary['total_outstanding'], 2, ',', '.') }}" 
-                sub="Credito sospeso isolato"
+                sub="Residuo attuale delle fatture nel periodo"
                 color="var(--orange)"
                 :subAlert="$globalSummary['total_outstanding'] > 0"
             />
@@ -93,10 +94,10 @@
                                 rotate: isCompactChart ? -45 : 0,
                                 rotateAlways: isCompactChart,
                                 style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
-                                formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                                formatter: (val) => val
                             }
                         },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
+                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => Math.abs(value) >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, forceNiceScale: true },
                         colors: ['var(--purple)'],
                         stroke: { curve: 'smooth', width: 3 },
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
@@ -136,7 +137,7 @@
                                 rotate: isCompactChart ? -45 : 0,
                                 rotateAlways: isCompactChart,
                                 style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
-                                formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                                formatter: (val) => val
                             }
                         },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
@@ -179,7 +180,7 @@
                                 rotate: isCompactChart ? -45 : 0,
                                 rotateAlways: isCompactChart,
                                 style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
-                                formatter: (val) => val ? val.split(' ')[0].slice(0, 3) : val
+                                formatter: (val) => val
                             }
                         },
                         yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
@@ -202,6 +203,7 @@
     {{-- Client Table --}}
     <div class="u-mb-lg">
         <x-panel title="Riepilogo per Cliente" dot="var(--blue)">
+            <div class="t-table-wrap" role="region" aria-label="Riepilogo per cliente, tabella scorrevole" tabindex="0">
             <table class="t-table">
                 <thead>
                     <tr>
@@ -230,11 +232,13 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </x-panel>
     </div>
 
     {{-- Project Table --}}
     <x-panel title="Riepilogo per Progetto" dot="var(--teal)">
+        <div class="t-table-wrap" role="region" aria-label="Riepilogo per progetto, tabella scorrevole" tabindex="0">
         <table class="t-table">
             <thead>
                 <tr>
@@ -265,5 +269,6 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </x-panel>
 </x-app-layout>

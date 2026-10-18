@@ -3,6 +3,7 @@
 namespace App\Domain\Finance\Services;
 
 use App\Models\CashFlowSetting;
+use App\Models\CreditNote;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\ManualIncome;
@@ -38,7 +39,7 @@ class CashFlowForecast
             $add($payment->payment_date, 'received', CashAmount::cents($payment->amount));
         }
         foreach (Invoice::where('currency', 'EUR')->whereIn('status', ['issued', 'partially_paid', 'overdue'])->cursor() as $invoice) {
-            $residual = max(0, CashAmount::cents($invoice->total) - CashAmount::cents($invoice->paid_total));
+            $residual = CashAmount::cents($invoice->residual);
             if ($residual > 0 && ! $invoice->due_date) {
                 $missingDueDates++;
             }
@@ -68,6 +69,10 @@ class CashFlowForecast
         }
         unset($row);
 
-        return compact('rows', 'totals', 'start', 'end', 'overdue', 'missingDueDates', 'excludedCurrencies');
+        /** Unconfirmed links must remain visible without silently reducing expected receipts. */
+        $unallocatedCredit = CreditNote::where('currency', 'EUR')->select(['id', 'payable_total'])->withSum('allocations', 'amount')->get()
+            ->sum(fn ($note) => max(0, CashAmount::cents($note->payable_total) - CashAmount::cents($note->allocations_sum_amount ?? 0)));
+
+        return compact('rows', 'totals', 'start', 'end', 'overdue', 'missingDueDates', 'excludedCurrencies', 'unallocatedCredit');
     }
 }

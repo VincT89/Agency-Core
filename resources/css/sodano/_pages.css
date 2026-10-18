@@ -404,6 +404,9 @@
 }
 .inv-search-field .form-in,
 .inv-search-actions .btn { min-height: 40px; }
+.inv-document-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.inv-document-filters .inv-search-field { max-width: none; }
+.inv-document-filters .inv-search-actions { align-self: end; }
 .inv-list .t-table { min-width: 1100px; }
 .inv-list .t-table :is(th, td) { padding: 14px 18px; }
 .inv-list .t-table th,

@@ -93,7 +93,7 @@ XML;
             $this->assertFalse(Gate::allows($ability, $invoice), $ability);
         }
         $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('DEMO-001')->assertSee('Servizio dimostrativo')->assertDontSee('Invia ad Aruba e allo SdI');
-        $this->get(route('invoices.index', ['client_id' => $this->client->id]))->assertOk()->assertSee($invoice->number);
+        $this->get(route('invoices.index', ['client_id' => $this->client->id]))->assertOk()->assertSee($invoice->display_number);
         $this->assertDatabaseCount('payments', 0);
         $this->assertDatabaseCount('electronic_invoice_transmissions', 0);
         Http::assertNothingSent();
@@ -274,7 +274,7 @@ XML;
     {
         return [
             'wrong agency' => ['01234567897', '99999999999'],
-            'credit note' => ['TD01', 'TD04'],
+            'unsupported document type' => ['TD01', 'TD17'],
             'foreign currency' => ['EUR', 'USD'],
             'invalid date' => ['2026-09-17', '2026-02-31'],
             'invalid amount' => ['<Imposta>22.00', '<Imposta>text'],

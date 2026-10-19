@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Domain\Core\Actions\ProtectAdministratorAccess;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,7 @@ class UserController extends Controller implements HasMiddleware
             'name'                  => ['required', 'string', 'max:255'],
             'email'                 => ['required', 'email', 'max:255', 'unique:users,email'],
             'role'                  => ['required', Rule::enum(UserRole::class)],
+            'admin_access'          => ['missing'],
             'primary_specialization'=> ['nullable', 'string', 'max:255'],
             'phone'                 => ['nullable', 'string', 'max:50'],
             'password'              => ['required', 'confirmed', Password::min(8)],
@@ -80,24 +82,24 @@ class UserController extends Controller implements HasMiddleware
             'name'                   => ['required', 'string', 'max:255'],
             'email'                  => ['required', 'email', Rule::unique('users')->ignore($user)],
             'role'                   => ['required', Rule::enum(UserRole::class)],
+            'admin_access'           => ['missing'],
             'primary_specialization' => ['nullable', 'string', 'max:255'],
             'phone'                  => ['nullable', 'string', 'max:50'],
             'status'                 => ['required', 'in:active,inactive'],
         ]);
 
-        if (
-            $user->isLastActiveAdministrator()
-            && ($data['role'] !== UserRole::Admin->value || $data['status'] !== 'active')
-        ) {
-            return back()->withInput()->withErrors([
-                'role' => 'Deve rimanere almeno un amministratore attivo.',
-            ]);
-        }
+        return app(ProtectAdministratorAccess::class)->execute($user, function (User $user) use ($data) {
+            if ($user->isLastActiveAdministrator()
+                && (! (clone $user)->fill($data)->isAdmin() || $data['status'] !== 'active')) {
+                return back()->withInput()->withErrors([
+                    'role' => 'Deve rimanere almeno un amministratore attivo.',
+                ]);
+            }
 
-        $user->update($data);
+            $user->update($data);
 
-        return redirect()->route('users.index')
-            ->with('success', 'Utente aggiornato correttamente.');
+            return redirect()->route('users.index')->with('success', 'Utente aggiornato correttamente.');
+        });
     }
 
     // Genera una password temporanea visualizzata una sola volta
@@ -124,34 +126,34 @@ class UserController extends Controller implements HasMiddleware
         // Impedisce l'autodisattivazione del proprio account
         abort_if($user->id === auth()->id(), 403, 'Non puoi disattivare il tuo account.');
 
-        if ($user->isLastActiveAdministrator()) {
-            return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
-        }
+        return app(ProtectAdministratorAccess::class)->execute($user, function (User $user) {
+            if ($user->isLastActiveAdministrator()) {
+                return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
+            }
 
-        $user->update([
-            'status' => $user->status === 'active' ? 'inactive' : 'active',
-        ]);
+            $user->update(['status' => $user->status === 'active' ? 'inactive' : 'active']);
+            $label = $user->status === 'active' ? 'riattivato' : 'disattivato';
 
-        $label = $user->status === 'active' ? 'riattivato' : 'disattivato';
-
-        return back()->with('success', "Utente {$label} correttamente.");
+            return back()->with('success', "Utente {$label} correttamente.");
+        });
     }
 
     public function destroy(User $user): RedirectResponse
     {
         abort_if($user->id === auth()->id(), 403, 'Non puoi eliminare il tuo account.');
 
-        if ($user->isLastActiveAdministrator()) {
-            return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
-        }
+        return app(ProtectAdministratorAccess::class)->execute($user, function (User $user) {
+            if ($user->isLastActiveAdministrator()) {
+                return back()->with('error', 'Deve rimanere almeno un amministratore attivo.');
+            }
 
-        if ($user->hasExpenseHistory()) {
-            return back()->with('error', 'Questo utente è collegato allo storico di entrate e spese. Puoi disattivarlo mantenendo le registrazioni.');
-        }
+            if ($user->hasExpenseHistory()) {
+                return back()->with('error', 'Questo utente è collegato allo storico di entrate e spese. Puoi disattivarlo mantenendo le registrazioni.');
+            }
 
-        $user->delete();
+            $user->delete();
 
-        return redirect()->route('users.index')
-            ->with('success', 'Utente eliminato correttamente.');
+            return redirect()->route('users.index')->with('success', 'Utente eliminato correttamente.');
+        });
     }
 }

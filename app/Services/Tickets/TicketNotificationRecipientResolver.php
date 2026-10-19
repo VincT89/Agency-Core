@@ -12,7 +12,7 @@ class TicketNotificationRecipientResolver
     public function admins(): Collection
     {
         return User::query()
-            ->where('role', UserRole::Admin->value)
+            ->administrators()
             ->where('status', 'active')
             ->get();
     }
@@ -37,8 +37,11 @@ class TicketNotificationRecipientResolver
     public function intakeRecipients(Ticket $ticket): Collection
     {
         return User::query()->where('status', 'active')
-            ->whereIn('role', $ticket->type === 'quote'
-                ? [UserRole::Admin->value, UserRole::Administration->value]
-                : [UserRole::Admin->value])->get();
+            ->where(function ($query) use ($ticket) {
+                $query->administrators();
+                if ($ticket->type === 'quote') {
+                    $query->orWhere('role', UserRole::Administration->value);
+                }
+            })->get();
     }
 }

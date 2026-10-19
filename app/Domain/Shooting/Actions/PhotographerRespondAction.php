@@ -95,7 +95,7 @@ class PhotographerRespondAction
         string $message
     ): void {
         $usersToNotify = User::query()
-            ->where('role', 'admin')
+            ->administrators()
             ->orWhere('id', $shoot->created_by)
             ->get()
             ->unique('id');

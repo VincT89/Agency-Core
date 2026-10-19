@@ -7,7 +7,6 @@ use App\Services\AuditLogService;
 use App\Notifications\TaskAssignedNotification;
 use App\Notifications\TaskCreatedAdminNotification;
 use App\Models\User;
-use App\Enums\UserRole;
 
 class TaskObserver
 {
@@ -18,7 +17,7 @@ class TaskObserver
         $this->auditLog->log('created', $task, null, $task->getAttributes());
 
         // 2. Notifica agli Admin (escluso chi l'ha creata e l'eventuale assegnatario se admin)
-        $admins = User::where('role', UserRole::Admin)->get();
+        $admins = User::administrators()->where('status', 'active')->get();
         foreach ($admins as $admin) {
             if ($admin->id !== $task->created_by && $admin->id !== $task->assigned_to) {
                 $admin->notify(new TaskCreatedAdminNotification($task));

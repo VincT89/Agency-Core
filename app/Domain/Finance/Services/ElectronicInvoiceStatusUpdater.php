@@ -355,10 +355,7 @@ class ElectronicInvoiceStatusUpdater
     ): void {
         $users = User::query()
             ->where('status', 'active')
-            ->whereIn('role', [
-                UserRole::Admin->value,
-                UserRole::Administration->value,
-            ])
+            ->where(fn ($query) => $query->administrators()->orWhere('role', UserRole::Administration->value))
             ->get();
 
         if ($users->isEmpty()) {

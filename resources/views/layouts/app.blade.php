@@ -226,7 +226,7 @@
           :active="request()->routeIs('availability.*')" />
 
         @can('viewAny', \App\Models\Team::class)
-          @if(!auth()->user()->isPhotographer() && !auth()->user()->isMarketing() && !auth()->user()->isDeveloper())
+          @if(auth()->user()->canManageSystem() || (!auth()->user()->isPhotographer() && !auth()->user()->isMarketing() && !auth()->user()->isDeveloper()))
             <x-nav-item href="{{ route('teams.index') }}" icon="users" label="Team"
               :active="request()->routeIs('teams.*')" />
           @endif

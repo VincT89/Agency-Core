@@ -14,7 +14,7 @@ class SendPaymentRecordedNotification
     {
         $payment = $event->payment;
 
-        $notifiableUsers = User::whereIn('role', [UserRole::Admin, UserRole::Administration])
+        $notifiableUsers = User::where(fn ($query) => $query->administrators()->orWhere('role', UserRole::Administration))
             ->where('status', 'active')
             ->get();
 

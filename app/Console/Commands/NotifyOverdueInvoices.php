@@ -39,7 +39,7 @@ class NotifyOverdueInvoices extends Command
             }
 
             // Recupero gli utenti notificabili (Admin e Administration)
-            $notifiableUsers = User::whereIn('role', [UserRole::Admin, UserRole::Administration])
+            $notifiableUsers = User::where(fn ($query) => $query->administrators()->orWhere('role', UserRole::Administration))
                 ->where('status', 'active')
                 ->get();
 

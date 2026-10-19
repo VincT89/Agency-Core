@@ -13,6 +13,7 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'admin_access' => ['missing'],
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',

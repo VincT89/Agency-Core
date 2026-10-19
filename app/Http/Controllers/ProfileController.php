@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Core\Actions\ProtectAdministratorAccess;
+use App\Models\User;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,17 +45,24 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        if ($user->isLastActiveAdministrator()) {
-            return back()->with('error', 'Non puoi eliminare l’unico amministratore attivo. Crea o attiva prima un altro amministratore.');
+        $blocked = app(ProtectAdministratorAccess::class)->execute($user, function (User $user) {
+            if ($user->isLastActiveAdministrator()) {
+                return back()->with('error', 'Non puoi eliminare l’unico amministratore attivo. Crea o attiva prima un altro amministratore.');
+            }
+
+            if ($user->hasExpenseHistory()) {
+                return back()->with('error', 'Il tuo account è collegato allo storico di entrate e spese. Chiedi a un amministratore di disattivarlo mantenendo le registrazioni.');
+            }
+
+            /** Clear the actor before deletion so the audit entry cannot reference a deleted user. */
+            Auth::logout();
+            $user->delete();
+
+            return null;
+        });
+        if ($blocked) {
+            return $blocked;
         }
-
-        if ($user->hasExpenseHistory()) {
-            return back()->with('error', 'Il tuo account è collegato allo storico di entrate e spese. Chiedi a un amministratore di disattivarlo mantenendo le registrazioni.');
-        }
-
-        Auth::logout();
-
-        $user->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -12,6 +12,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Enums\UserRole;
+use Illuminate\Database\Eloquent\Builder;
 
 #[Fillable([
     'name',
@@ -27,6 +28,7 @@ use App\Enums\UserRole;
 #[Hidden([
     'password',
     'remember_token',
+    'admin_access',
 ])]
 class User extends Authenticatable
 {
@@ -39,6 +41,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'admin_access' => 'boolean',
             'last_tickets_viewed_at' => 'datetime',
         ];
     }
@@ -145,7 +148,15 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::Admin;
+        /** The database-only override applies to developers without changing their operational role. */
+        return $this->role === UserRole::Admin
+            || ($this->role === UserRole::Developer && $this->admin_access === true);
+    }
+
+    public function scopeAdministrators(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $admins) => $admins->where('role', UserRole::Admin->value)
+            ->orWhere(fn (Builder $developers) => $developers->where('role', UserRole::Developer->value)->where('admin_access', true)));
     }
 
     public function isLastActiveAdministrator(): bool
@@ -155,7 +166,7 @@ class User extends Authenticatable
         }
 
         return ! static::query()
-            ->where('role', UserRole::Admin->value)
+            ->administrators()
             ->where('status', 'active')
             ->whereKeyNot($this->getKey())
             ->exists();

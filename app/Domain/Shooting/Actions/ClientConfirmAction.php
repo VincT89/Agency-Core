@@ -143,7 +143,7 @@ class ClientConfirmAction
         string $message
     ): void {
         $usersToNotify = User::query()
-            ->where('role', 'admin')
+            ->administrators()
             ->orWhere('id', $shoot->created_by)
             ->orWhere('id', $shoot->photographer_id)
             ->get()

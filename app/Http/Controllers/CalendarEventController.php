@@ -22,7 +22,7 @@ class CalendarEventController extends Controller
             ->with(['client', 'project', 'creator', 'assignee']);
 
         // Applica il filtro per reparto se l'utente è amministratore
-        if ($request->filled('department') && $request->user()->role === \App\Enums\UserRole::Admin) {
+        if ($request->filled('department') && $request->user()->canManageSystem()) {
             $query->whereHas('assignee', function ($q) use ($request) {
                 $q->where('role', $request->department);
             });

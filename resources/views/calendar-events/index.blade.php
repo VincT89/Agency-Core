@@ -97,7 +97,7 @@
                 <a href="{{ request()->fullUrlWithQuery(['scope' => 'personal', 'department' => null]) }}"
                     class="cal-sidebar-filter {{ request('scope') === 'personal' ? 'is-active' : '' }}">I miei Personali</a>
                 
-                @if(auth()->user()->role === \App\Enums\UserRole::Admin)
+                @if(auth()->user()->canManageSystem())
                     <div class="u-mt-sm u-mb-xs" style="height: 1px; background: var(--border);"></div>
                     <a href="{{ request()->fullUrlWithQuery(['department' => 'developer', 'scope' => null]) }}"
                         class="cal-sidebar-filter {{ $currentDept === 'developer' ? 'is-active' : '' }}">Developer</a>

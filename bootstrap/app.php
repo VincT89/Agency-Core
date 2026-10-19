@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ForcePasswordChange;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\N8nAuth;
 use App\Http\Middleware\N8nIdempotency;
 use App\Http\Middleware\ArubaCallbackAuth;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+        $middleware->web(append: [EnsureActiveUser::class]);
 
         $middleware->alias([
             'force.password.change' => ForcePasswordChange::class,

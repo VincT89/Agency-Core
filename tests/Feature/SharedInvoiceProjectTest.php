@@ -138,17 +138,17 @@ class SharedInvoiceProjectTest extends TestCase
         $project = $response->viewData('summaryByProject')->sole();
         $this->assertEquals($this->container->id, $project->project_id);
         $this->assertSame('Tutti i clienti', $project->client_name);
-        $this->assertEquals(122, $project->total_invoiced);
+        $this->assertEquals(200, $project->total_invoiced);
         $this->assertEquals(20, $project->total_collected);
         $this->assertEquals(102, $project->total_outstanding);
         $clients = $response->viewData('summaryByClient')->keyBy('client_id');
         $this->assertCount(2, $clients);
-        $this->assertEquals(0, $clients[$this->firstClient->id]->total_invoiced);
+        $this->assertEquals(100, $clients[$this->firstClient->id]->total_invoiced);
         $this->assertEquals(0, $clients[$this->firstClient->id]->total_outstanding);
-        $this->assertEquals(122, $clients[$this->secondClient->id]->total_invoiced);
+        $this->assertEquals(100, $clients[$this->secondClient->id]->total_invoiced);
         $this->assertEquals(20, $clients[$this->secondClient->id]->total_collected);
         $this->assertEquals(102, $clients[$this->secondClient->id]->total_outstanding);
-        $this->assertEquals(122, $response->viewData('globalSummary')['total_invoiced']);
+        $this->assertEquals(200, $response->viewData('globalSummary')['total_invoiced']);
     }
 
     public function test_container_cannot_be_deleted_or_converted_to_a_single_client_project(): void

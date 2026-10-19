@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Invoice;
-use App\Models\CreditNote;
 use App\Models\Expense;
 use App\Models\Payment;
 use Carbon\CarbonImmutable;
@@ -33,23 +32,17 @@ class FinancialSummaryService
             $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
         }
 
-        // Fatturato (Invoices issued/partially_paid/paid/overdue)
+        /** Turnover uses invoice taxable amounts only; credit notes affect receivables, not this metric. */
         $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
         $invoices = Invoice::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
-            ->selectRaw("{$dateFormat} as month, SUM(total) as total")
+            ->selectRaw("{$dateFormat} as month, SUM(subtotal) as total")
             ->groupBy('month')
             ->get();
 
         foreach ($invoices as $inv) {
             if (isset($monthsArray[$inv->month])) {
                 $monthsArray[$inv->month]['issued'] = (float) $inv->total;
-            }
-        }
-
-        foreach (CreditNote::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])->selectRaw("{$dateFormat} as month, SUM(total) as total")->groupBy('month')->get() as $credit) {
-            if (isset($monthsArray[$credit->month])) {
-                $monthsArray[$credit->month]['issued'] = round($monthsArray[$credit->month]['issued'] - (float) $credit->total, 2);
             }
         }
 
@@ -94,7 +87,7 @@ class FinancialSummaryService
             'labels' => $labels,
             'series' => [
                 [
-                    'name' => 'Fatturato',
+                    'name' => 'Fatturato (IVA esclusa)',
                     'data' => $issuedData
                 ],
                 [
@@ -149,14 +142,12 @@ class FinancialSummaryService
         $paymentMonth = $monthExpression('payment_date');
         $invoices = $period(Invoice::query(), 'issue_date')
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
-            ->selectRaw("{$invoiceMonth} as month, SUM(total) as invoiced, SUM(".Invoice::OUTSTANDING_SQL.') as pending')
+            ->selectRaw("{$invoiceMonth} as month, SUM(subtotal) as invoiced, SUM(".Invoice::OUTSTANDING_SQL.') as pending')
             ->groupBy('month')->get()->keyBy('month');
-        $credits = $period(CreditNote::query(), 'issue_date')
-            ->selectRaw("{$invoiceMonth} as month, SUM(total) as total")->groupBy('month')->get()->keyBy('month');
         /** Receipts follow their payment date, including payments for invoices issued outside the selected period. */
         $payments = $period(Payment::query(), 'payment_date')
             ->selectRaw("{$paymentMonth} as month, SUM(amount) as total")->groupBy('month')->get()->keyBy('month');
-        $keys = $invoices->keys()->merge($credits->keys())->merge($payments->keys())->unique()->sort()->values();
+        $keys = $invoices->keys()->merge($payments->keys())->unique()->sort()->values();
         $first = CarbonImmutable::parse($from ?: ($keys->first() ? $keys->first().'-01' : ($to ?: now()->startOfYear()->toDateString())))->startOfMonth();
         $last = CarbonImmutable::parse($to ?: ($keys->last() ? $keys->last().'-01' : ($from ?: now()->endOfYear()->toDateString())))->startOfMonth();
         $labels = [];
@@ -166,7 +157,7 @@ class FinancialSummaryService
         for ($date = $first; $date->lte($last); $date = $date->addMonth()) {
             $key = $date->format('Y-m');
             $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
-            $invoicedData[] = round((float) ($invoices->get($key)?->invoiced ?? 0) - (float) ($credits->get($key)?->total ?? 0), 2);
+            $invoicedData[] = round((float) ($invoices->get($key)?->invoiced ?? 0), 2);
             $collectedData[] = round((float) ($payments->get($key)?->total ?? 0), 2);
             $pendingData[] = round((float) ($invoices->get($key)?->pending ?? 0), 2);
         }
@@ -175,7 +166,7 @@ class FinancialSummaryService
             'labels' => $labels,
             'series' => [
                 [
-                    'name' => 'Fatturato',
+                    'name' => 'Fatturato (IVA esclusa)',
                     'data' => $invoicedData
                 ],
                 [

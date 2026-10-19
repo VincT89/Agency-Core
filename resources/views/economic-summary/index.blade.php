@@ -28,21 +28,10 @@
         </div>
     @endif
 
-    <div class="finance-note-wrap">
-        <x-panel padded class="finance-note-panel">
-            <div class="finance-note-text">
-                Il fatturato include l’IVA e sottrae le note di credito alla loro data di emissione. Gli incassi seguono la data dei pagamenti; il residuo riguarda le fatture emesse nel periodo, al netto di incassi, split payment e note collegate. Grafici e tabelle rispettano lo stesso periodo.
-            </div>
-        </x-panel>
-    </div>
-    @if($globalSummary['unallocated_credit'] > 0)
-        <p class="u-mb-lg">Note di credito ancora da collegare: <strong>€ {{ number_format($globalSummary['unallocated_credit'], 2, ',', '.') }}</strong>. Il residuo delle fatture si aggiorna dopo il collegamento. <a href="{{ route('invoices.index', ['document_type' => 'TD04']) }}">Verifica le note di credito</a>.</p>
-    @endif
-
     <div class="g-3col u-mb-lg">
         <x-panel padded>
             <x-stat-card 
-                label="Fatturato (IVA inclusa)"
+                label="Fatturato (IVA esclusa)"
                 value="€ {{ number_format($globalSummary['total_invoiced'], 2, ',', '.') }}" 
                 sub="Da {{ $globalSummary['invoices_count'] }} fatture valide" 
                 color="var(--purple)"
@@ -70,7 +59,7 @@
     </div>
 
     <div class="g-3col u-mb-lg">
-        <x-panel title="Trend Fatturato" dot="var(--purple)" padded>
+        <x-panel title="Trend Fatturato (IVA esclusa)" dot="var(--purple)" padded>
             <div x-data="{
                 initChart() {
                     const data = {{ $sparklineData }};
@@ -83,7 +72,7 @@
                     
                     const opt0 = {
                         chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
-                        series: [{ name: 'Fatturato', data: data.invoiced }],
+                        series: [{ name: 'Fatturato (IVA esclusa)', data: data.invoiced }],
                         xaxis: {
                             categories: data.labels,
                             tickPlacement: 'on',
@@ -208,7 +197,7 @@
                 <thead>
                     <tr>
                         <th>Cliente</th>
-                        <th class="text-right">Fatturato</th>
+                        <th class="text-right">Fatturato (IVA esclusa)</th>
                         <th class="text-right">Incassato</th>
                         <th class="text-right">Da Incassare</th>
                         <th class="text-center">Costi</th>
@@ -244,7 +233,7 @@
                 <tr>
                     <th>Progetto</th>
                     <th>Cliente</th>
-                    <th class="text-right">Fatturato</th>
+                    <th class="text-right">Fatturato (IVA esclusa)</th>
                     <th class="text-right">Incassato</th>
                     <th class="text-right">Da Incassare</th>
                     <th class="text-center">Costi</th>

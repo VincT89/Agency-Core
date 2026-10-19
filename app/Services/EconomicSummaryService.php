@@ -255,7 +255,7 @@ class EconomicSummaryService
             return (object) [
                 'project_id' => $projectId,
                 'project_name' => $proj ? $proj->name : 'N/D',
-                'client_name' => ($proj && $proj->client) ? $proj->client->name : 'N/D',
+                'client_name' => $proj?->isInvoiceContainer() ? 'Tutti i clienti' : ($proj?->client?->name ?? 'N/D'),
                 'invoices_count' => $inv ? (int) $inv->invoices_count : 0,
                 'total_invoiced' => round((float) ($inv?->total_invoiced ?? 0) - (float) ($creditsByProject->get($projectId)?->total_credited ?? 0), 2),
                 'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,

@@ -44,7 +44,7 @@
                     tabindex="0" role="link" aria-label="Apri progetto {{ $project->name }}"
                     class="u-cursor-pointer hover-bg">
                     <td class="name-col">{{ $project->name }}</td>
-                    <td>{{ $project->client?->name ?? '—' }}</td>
+                    <td>{{ $project->isInvoiceContainer() ? 'Tutti i clienti' : ($project->client?->name ?? '—') }}</td>
                     <td class="mono-col">{{ $project->tasks_count }}</td>
                     <td class="mono-col">{{ $project->tickets_count }}</td>
                     <td><x-badge :status="$project->status" :label="$project->status_label" /></td>

@@ -65,7 +65,9 @@
             <div class="form-g mb-2">
                 <div class="form-lbl">Cliente</div>
                 <div class="u-text-strong">
-                    @if($project->client)
+                    @if($project->isInvoiceContainer())
+                        Tutti i clienti
+                    @elseif($project->client)
                         <a href="{{ route('clients.show', $project->client) }}" class="u-text-accent-link">{{ $project->client->name }}</a>
                     @else
                         —

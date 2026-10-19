@@ -1,6 +1,7 @@
 <div class="invoice-import" x-data="{ uploading: false }" x-on:livewire-upload-start="uploading = true" x-on:livewire-upload-finish="uploading = false" x-on:livewire-upload-error="uploading = false" x-on:livewire-upload-cancel="uploading = false">
     <x-page-header><x-slot:title>Importa XML da ZIP</x-slot:title><x-slot:actions><a href="{{ route('invoices.index') }}" class="btn btn-g">Fatture</a><a href="{{ route('credit-notes.index') }}" class="btn btn-g">Note di credito</a></x-slot:actions></x-page-header>
     <p class="u-mb-md">Carica l’esportazione XML di Aruba. Le fatture mantengono il numero originale e vengono registrate da incassare; le note di credito sono conservate separatamente. I documenti già presenti vengono saltati, senza modificare dati o incassi.</p>
+    <p class="u-mb-md">Le nuove fatture vengono associate al contenitore condiviso {{ \App\Models\Project::invoiceContainer()->name }}. Ogni fattura mantiene il proprio cliente; i documenti già presenti conservano il progetto attuale.</p>
     @if($errors->any())<div class="invalid-feedback u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
     <x-panel padded>
         <x-form-group label="Archivio ZIP" name="file" for="invoice-zip" required>

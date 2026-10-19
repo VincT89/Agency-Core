@@ -57,7 +57,7 @@ class StoreInvoiceRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                $this->withProjectOwnershipCheck($validator);
+                $this->withProjectOwnershipCheck($validator, allowInvoiceContainer: true);
                 $this->addInvoiceLineTaxErrors($validator);
 
                 if ($this->input('marketing_campaign_id') && $this->input('client_id')) {

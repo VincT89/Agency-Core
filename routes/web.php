@@ -335,6 +335,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])
         ->name('notifications.destroy');
 
+    Route::get('/api/invoice-clients/{client}/projects', [InvoiceController::class, 'clientProjects'])
+        ->name('invoices.client-projects');
+
     // API interna: progetti per cliente (usata dai form JS)
     Route::get('/api/clients/{client}/projects', function (Client $client) {
         Gate::authorize('view', $client);

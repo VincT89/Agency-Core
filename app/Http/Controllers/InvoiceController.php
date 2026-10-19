@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Client;
 use App\Models\CreditNote;
 use App\Models\Invoice;
+use App\Models\Project;
 use App\Domain\Finance\Queries\InvoiceDocumentQuery;
 use App\Enums\Finance\InvoiceFiscalStatus;
 use App\Domain\Finance\Services\InvoiceAmountsCalculator;
@@ -18,6 +19,7 @@ use App\Exceptions\Finance\ElectronicInvoiceXmlException;
 use App\Services\Integrations\Aruba\ArubaConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 class InvoiceController extends Controller
@@ -69,9 +71,21 @@ class InvoiceController extends Controller
 
         return view('invoices.create', [
             'clients' => $clients,
+            'invoiceContainer' => Project::invoiceContainer(),
             'statuses' => Invoice::STATUSES,
             'vatNatures' => \App\Enums\Finance\VatNature::cases(),
         ]);
+    }
+
+    public function clientProjects(Client $client): JsonResponse
+    {
+        $this->authorize('create', Invoice::class);
+        $this->authorize('view', $client);
+
+        return response()->json(Project::query()->where('status', 'active')
+            ->where(fn ($query) => $query->where('client_id', $client->id)
+                ->orWhere('system_key', Project::INVOICE_CONTAINER_KEY))
+            ->orderBy('name')->get(['id', 'name']));
     }
 
     public function store(StoreInvoiceRequest $request, \App\Domain\Finance\Actions\CreateInvoiceAction $action): RedirectResponse

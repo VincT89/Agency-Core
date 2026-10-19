@@ -72,7 +72,7 @@ function initProjectSelect(clientSelectId, projectSelectId, currentProjectId = n
     const isInput = clientEl.matches('select, input');
     const clientValue = () => isInput ? clientEl.value : clientEl.querySelector('input[type="hidden"]')?.value;
     clientEl.addEventListener(isInput ? 'change' : 'client-updated', (event) => {
-        currentProjectId = null;
+        currentProjectId = projectEl.dataset.defaultProject || null;
         loadProjects(isInput ? clientValue() : event.detail);
     });
 

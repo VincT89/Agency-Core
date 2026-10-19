@@ -8,7 +8,16 @@ use App\Policies\Concerns\HandlesRoleAuthorization;
 
 class ProjectPolicy
 {
-    use HandlesRoleAuthorization;
+    use HandlesRoleAuthorization { before as private roleBefore; }
+
+    public function before(User $user, string $ability, mixed $subject = null): ?bool
+    {
+        if ($ability === 'delete' && $subject instanceof Project && $subject->isInvoiceContainer()) {
+            return false;
+        }
+
+        return $this->roleBefore($user, $ability);
+    }
 
     public function viewAny(User $user): bool  
     {

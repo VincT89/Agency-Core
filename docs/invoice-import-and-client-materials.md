@@ -31,7 +31,11 @@ Nella pagina **Fatture**, **Da incassare** mostra anche il numero di fatture con
 
 L’identità di importazione comprende emittente, anno e numero completo. Il contenuto commerciale viene confrontato anche quando cambiano soltanto descrizioni o condizioni; nome del file, prefissi XML, spaziatura tra elementi e progressivo di trasmissione non determinano una nuova fattura. I duplicati vengono saltati; i conflitti sono mostrati nell’esito senza sostituire documenti, allegati, anagrafiche, incassi o collegamenti esistenti. Il controllo è ripetuto nella transazione di salvataggio.
 
-Le nuove fatture importate partono da **Da incassare**, senza progetto e senza incassi creati dai dati di pagamento dell’XML. Più corrispondenze fiscali per un cliente richiedono una verifica anziché una scelta automatica. Gli originali sono scaricabili e protetti dall’eliminazione anche per l’amministratore.
+Le nuove fatture importate partono da **Da incassare**, nel progetto condiviso **Interventi e vendite**, senza incassi creati dai dati di pagamento dell’XML. Più corrispondenze fiscali per un cliente richiedono una verifica anziché una scelta automatica. Gli originali sono scaricabili e protetti dall’eliminazione anche per l’amministratore.
+
+Il contenitore **Interventi e vendite** è unico per tutti i clienti e viene creato dalla migrazione dedicata, senza modificare le fatture già presenti. Nella creazione manuale è preselezionato: si può scegliere un progetto specifico del cliente oppure nessun progetto. Soltanto questo contenitore è selezionabile per clienti diversi; gli altri progetti conservano il controllo sul cliente. Le fatture esistenti, anche se prive di progetto, mantengono la loro associazione durante le importazioni ripetute. Le note di credito restano separate e le quote collegate seguono il progetto della fattura nei report.
+
+Nel riepilogo per progetto il contenitore aggrega le fatture associate; nel riepilogo per cliente ogni fattura e incasso resta attribuito al proprio cliente. Il contenitore può essere rinominato e avere un team, ma deve restare attivo, senza un cliente esclusivo, e non può essere eliminato. Nessun dato preesistente viene trasferito automaticamente nel contenitore.
 
 ### Visualizzazione e stato delle fatture importate
 

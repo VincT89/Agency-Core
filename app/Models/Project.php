@@ -27,11 +27,27 @@ class Project extends Model
 {
     use HasFactory;
 
+    public const INVOICE_CONTAINER_KEY = 'invoice_container';
+
     protected static function booted()
     {
         static::addGlobalScope(new \App\Models\Scopes\ProjectSupremacyScope);
 
+        static::updating(function (Project $project) {
+            if ($project->getRawOriginal('system_key') === self::INVOICE_CONTAINER_KEY
+                && ($project->client_id !== null || $project->status !== 'active' || $project->isDirty('system_key'))) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'project' => 'Il contenitore delle fatture deve restare attivo e condiviso tra tutti i clienti.',
+                ]);
+            }
+        });
+
         static::deleting(function ($project) {
+            if ($project->isInvoiceContainer()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'project' => 'Il contenitore condiviso delle fatture non può essere eliminato.',
+                ]);
+            }
             if (Quote::where('project_id', $project->id)->exists()) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'project' => 'Il progetto è collegato allo storico delle offerte e non può essere eliminato. Puoi chiuderlo o annullarlo.',
@@ -47,6 +63,16 @@ class Project extends Model
         'start_date' => 'date',
         'end_date' => 'date',
     ];
+
+    public function isInvoiceContainer(): bool
+    {
+        return $this->system_key === self::INVOICE_CONTAINER_KEY;
+    }
+
+    public static function invoiceContainer(): self
+    {
+        return static::query()->where('system_key', self::INVOICE_CONTAINER_KEY)->firstOrFail();
+    }
 
     public function getStatusLabelAttribute(): string
     {

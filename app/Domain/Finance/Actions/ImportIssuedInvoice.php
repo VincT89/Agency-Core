@@ -102,6 +102,7 @@ class ImportIssuedInvoice
                     'import_metadata' => $document + collect($source)->only(['environment', 'aruba_id', 'filename', 'format'])->all(),
                 ];
                 $invoice = $isCredit ? CreditNote::create($attributes + ['number' => $document['number']]) : Invoice::create($attributes + [
+                    'project_id' => \App\Models\Project::invoiceContainer()->id,
                     'number' => 'IMP-'.substr($document['issue_date'], 0, 4).'-'.$document['number'].'-'.substr($fingerprint, 0, 8),
                     'due_date' => $dueDate, 'status' => 'issued', 'paid_total' => '0.00',
                     'fiscal_status' => InvoiceFiscalStatus::Imported, 'fiscal_locked_at' => now(),

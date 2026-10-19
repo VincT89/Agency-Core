@@ -65,20 +65,29 @@
                     }
                 @endphp
                 <x-form-group label="Cliente (opzionale)" name="client_id">
+                    @if($project->isInvoiceContainer())
+                        <p class="u-text-meta">Tutti i clienti. Ogni fattura mantiene il proprio cliente.</p>
+                    @else
                     <x-client-autocomplete 
                         name="client_id" 
                         :value="$currentClientId" 
                         :text="$currentClientText" 
                         :required="false"
                     />
+                    @endif
                 </x-form-group>
                 <x-form-group label="Stato" name="status">
+                    @if($project->isInvoiceContainer())
+                        <input type="hidden" name="status" value="active">
+                        <p class="u-text-meta">Attivo: disponibile per le nuove fatture.</p>
+                    @else
                     <select name="status" class="form-sel @error('status') is-invalid @enderror" required>
                         <option value="active" {{ old('status', $project->status) == 'active' ? 'selected' : '' }}>Attivo</option>
                         <option value="completed" {{ old('status', $project->status) == 'completed' ? 'selected' : '' }}>Completato</option>
                         <option value="on_hold" {{ old('status', $project->status) == 'on_hold' ? 'selected' : '' }}>Sospeso</option>
                         <option value="cancelled" {{ old('status', $project->status) == 'cancelled' ? 'selected' : '' }}>Annullato</option>
                     </select>
+                    @endif
                 </x-form-group>
             </div>
             <div class="sec-lbl u-mt-md">Tempi e Note</div>

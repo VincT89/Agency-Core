@@ -7,6 +7,9 @@
     <x-page-header><x-slot:title>Importa fattura</x-slot:title></x-page-header>
     <p class="u-mb-md"><a href="{{ route('invoices.import.archive') }}" class="btn btn-g">Importa più XML da ZIP Aruba</a></p>
     <p class="u-mb-md">Acquisisci fatture e note di credito emesse da file o da Aruba. Verifica l’anteprima e conferma il salvataggio. L’importazione non invia documenti allo SdI e non registra incassi o pagamenti.</p>
+    @if($direction === 'out')
+        <p class="u-mb-md">Le nuove fatture vengono associate al contenitore condiviso {{ \App\Models\Project::invoiceContainer()->name }}. I documenti già presenti conservano il progetto attuale.</p>
+    @endif
     @if($errors->any())<div class="invalid-feedback u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
     <x-panel padded>
         <div class="form-row">

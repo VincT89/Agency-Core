@@ -43,7 +43,8 @@
                     <select name="client_id" id="client_sel"
                             class="form-sel @error('client_id') is-invalid @enderror" required
                             data-client-select data-project-select="project_sel"
-                            data-current-project="{{ old('project_id') }}" data-empty-project-help="Puoi salvare la fattura senza associarla a un progetto.">
+                            data-project-url="{{ url('/api/invoice-clients/{client}/projects') }}"
+                            data-current-project="{{ old('project_id', $invoiceContainer->id) }}" data-empty-project-help="Puoi salvare la fattura senza associarla a un progetto.">
                         <option value="">Seleziona cliente...</option>
                         @foreach($clients as $client)
                             <option value="{{ $client->id }}" @selected((int) old('client_id') === $client->id)>
@@ -55,10 +56,12 @@
                 <x-form-group label="Progetto (facoltativo)" name="project_id">
                     <select name="project_id" id="project_sel"
                             class="form-sel @error('project_id') is-invalid @enderror" data-empty-option="Nessun progetto"
+                            data-default-project="{{ $invoiceContainer->id }}"
                             aria-describedby="project_sel_help">
                         <option value="">Seleziona prima un cliente</option>
                     </select>
                     <div id="project_sel_help" class="u-text-meta" aria-live="polite">Seleziona un cliente per caricare i progetti disponibili.</div>
+                    <div class="u-text-meta">{{ $invoiceContainer->name }} è il contenitore condiviso per i lavori occasionali di tutti i clienti.</div>
                 </x-form-group>
             </div>
 

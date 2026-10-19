@@ -13,12 +13,14 @@ class UpdateProjectRequest extends FormRequest
 
     public function rules(): array
     {
+        $sharedContainer = $this->route('project')->isInvoiceContainer();
+
         return [
-            'client_id'   => ['nullable', 'exists:clients,id'],
+            'client_id'   => $sharedContainer ? ['prohibited'] : ['nullable', 'exists:clients,id'],
             'name'        => ['required', 'string', 'max:255'],
             'code'        => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
-            'status'      => ['required', 'string', 'max:50'],
+            'status'      => $sharedContainer ? ['required', 'in:active'] : ['required', 'string', 'max:50'],
             'start_date'  => ['nullable', 'date'],
             'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
             'notes'       => ['nullable', 'string'],

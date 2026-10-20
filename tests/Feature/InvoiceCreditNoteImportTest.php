@@ -193,7 +193,7 @@ class InvoiceCreditNoteImportTest extends TestCase
         $this->assertSame('122.00', $invoice->total);
         $this->assertSame('100.00', $invoice->payable_total);
         $this->assertEquals(100, $invoice->residual);
-        $this->assertEquals(100, app(EconomicSummaryService::class)->globalSummary(auth()->user())['total_outstanding']);
+        $this->assertEquals(122, app(EconomicSummaryService::class)->globalSummary(auth()->user())['total_outstanding']);
         $this->assertEquals([0, 100], app(FinancialSummaryService::class)->getYearlyDonutData()['series']);
         $this->assertSame(10000, app(CashFlowForecast::class)->calculate(3, null)['totals']['expected']);
         $data = ['invoice_id' => $invoice->id, 'amount' => '100.01', 'payment_date' => '2026-10-16', 'method' => 'bank_transfer'];

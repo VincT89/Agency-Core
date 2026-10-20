@@ -49,9 +49,9 @@
         
         <x-panel padded>
             <x-stat-card 
-                label="Da Incassare" 
+                label="Da incassare (IVA 22%)"
                 value="€ {{ number_format($globalSummary['total_outstanding'], 2, ',', '.') }}" 
-                sub="Residuo attuale delle fatture nel periodo"
+                sub="Imponibile residuo al 22%, meno incassi"
                 color="var(--orange)"
                 :subAlert="$globalSummary['total_outstanding'] > 0"
             />
@@ -145,7 +145,7 @@
             </div>
         </x-panel>
 
-        <x-panel title="Trend Da Incassare" dot="var(--orange)" padded>
+        <x-panel title="Trend Da incassare (IVA 22%)" dot="var(--orange)" padded>
             <div x-data="{
                 initChart() {
                     const data = {{ $sparklineData }};
@@ -158,7 +158,7 @@
                     
                     const opt2 = {
                         chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
-                        series: [{ name: 'Da Incassare', data: data.pending }],
+                        series: [{ name: 'Da incassare (IVA 22%)', data: data.pending }],
                         xaxis: {
                             categories: data.labels,
                             tickPlacement: 'on',
@@ -199,7 +199,7 @@
                         <th>Cliente</th>
                         <th class="text-right">Fatturato netto (IVA esclusa)</th>
                         <th class="text-right">Incassato</th>
-                        <th class="text-right">Da Incassare</th>
+                        <th class="text-right">Da incassare (IVA 22%)</th>
                         <th class="text-center">Costi</th>
                     </tr>
                 </thead>
@@ -235,7 +235,7 @@
                     <th>Cliente</th>
                     <th class="text-right">Fatturato netto (IVA esclusa)</th>
                     <th class="text-right">Incassato</th>
-                    <th class="text-right">Da Incassare</th>
+                    <th class="text-right">Da incassare (IVA 22%)</th>
                     <th class="text-center">Costi</th>
                 </tr>
             </thead>

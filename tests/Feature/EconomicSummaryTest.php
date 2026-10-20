@@ -134,7 +134,7 @@ class EconomicSummaryTest extends TestCase
         ]);
 
         // CASO A: Filtro GENNAIO 
-        // Mi aspetto: Fatturato = 2000, Incassato = 0, Da Incassare = 1500
+        /** The report adds a fixed 22% to the taxable amount before deducting the actual payment. */
         $responseJan = $this->actingAs($this->admin)->get(route('economic-summary.index', [
             'from' => '2026-01-01',
             'to' => '2026-01-31'
@@ -145,8 +145,7 @@ class EconomicSummaryTest extends TestCase
         $responseJan->assertSee('2.000,00');
         // Incassato: '0,00'
         $responseJan->assertSee('0,00');
-        // Residuo Da Incassare: '1.500,00'
-        $responseJan->assertSee('1.500,00');
+        $responseJan->assertSee('1.940,00');
 
         // CASO B: Filtro FEBBRAIO
         // Mi aspetto: Fatturato = 0, Incassato = 500, Da Incassare = 0 (nessuna fattura emessa a feb)

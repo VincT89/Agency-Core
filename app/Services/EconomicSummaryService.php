@@ -63,7 +63,7 @@ class EconomicSummaryService
         $invoiceStats = $invoicesQuery->selectRaw('
             COUNT(id) as invoices_count,
             SUM(subtotal) as total_invoiced,
-            SUM('.Invoice::OUTSTANDING_SQL.') as total_outstanding
+            SUM('.ReportInvoiceAmounts::outstandingSql().') as total_outstanding
         ')->first();
 
         $creditQuery = $this->applyRolePerimeterSafe(CreditNote::query(), $user, 'credit_notes');
@@ -101,7 +101,7 @@ class EconomicSummaryService
                 client_id,
                 COUNT(id) as invoices_count,
                 SUM(subtotal) as total_invoiced,
-                SUM('.Invoice::OUTSTANDING_SQL.') as total_outstanding
+                SUM('.ReportInvoiceAmounts::outstandingSql().') as total_outstanding
             ')
             ->groupBy('client_id')
             ->get()
@@ -191,7 +191,7 @@ class EconomicSummaryService
                 project_id,
                 COUNT(id) as invoices_count,
                 SUM(subtotal) as total_invoiced,
-                SUM('.Invoice::OUTSTANDING_SQL.') as total_outstanding
+                SUM('.ReportInvoiceAmounts::outstandingSql().') as total_outstanding
             ')
             ->groupBy('project_id')
             ->get()

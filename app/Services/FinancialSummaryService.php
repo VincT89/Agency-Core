@@ -152,7 +152,7 @@ class FinancialSummaryService
         $paymentMonth = $monthExpression('payment_date');
         $invoices = $period(Invoice::query(), 'issue_date')
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
-            ->selectRaw("{$invoiceMonth} as month, SUM(subtotal) as invoiced, SUM(".Invoice::OUTSTANDING_SQL.') as pending')
+            ->selectRaw("{$invoiceMonth} as month, SUM(subtotal) as invoiced, SUM(".ReportInvoiceAmounts::outstandingSql().') as pending')
             ->groupBy('month')->get()->keyBy('month');
         $credits = $period(CreditNote::query(), 'issue_date')
             ->selectRaw("{$invoiceMonth} as month, SUM(subtotal) as total")
@@ -187,7 +187,7 @@ class FinancialSummaryService
                     'data' => $collectedData
                 ],
                 [
-                    'name' => 'Da Incassare',
+                    'name' => 'Da incassare (IVA 22%)',
                     'data' => $pendingData
                 ]
             ]

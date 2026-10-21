@@ -43,8 +43,14 @@ class ExpensesIndex extends Component
 
     public function selectCategory(string $id): void
     {
+        $this->authorize('viewAny', Expense::class);
+        if ($id !== '' && $id !== 'none' && (! preg_match('/^[1-9][0-9]*$/', $id)
+            || ! ExpenseCategory::whereNull('parent_id')->whereKey($id)->exists())) {
+            throw ValidationException::withMessages(['category_id' => 'Seleziona una categoria principale esistente.']);
+        }
         $this->category_id = $id;
         $this->subcategory_id = '';
+        $this->resetValidation('category_id');
         $this->resetValidation('subcategory_id');
         $this->resetPage();
     }
@@ -93,14 +99,32 @@ class ExpensesIndex extends Component
             ->select('expenses.*')->orderBy('root_category.name')->orderBy('child_category.name');
         $column = match ($this->sort) { 'date_desc', 'date_asc' => 'expenses.expense_date', 'amount_desc', 'amount_asc' => 'expenses.amount', default => 'expenses.due_date' };
         $query->orderBy($column, str_ends_with($this->sort, '_desc') ? 'desc' : 'asc')->orderBy('expenses.id');
-        $groups = $builder->query($filters, false)->leftJoin('expense_categories as root_category', 'root_category.id', '=', 'expenses.category_id')
+        $categoryTotals = $builder->query($filters, false)
             ->whereNotNull('expenses.category_id')
-            ->selectRaw("expenses.category_id, COALESCE(root_category.name, 'Senza categoria') AS name, COUNT(*) AS count,
+            ->selectRaw("expenses.category_id, COUNT(*) AS count,
                 SUM(CASE WHEN expenses.status = 'cancelled' THEN 0 ELSE expenses.amount END) AS amount")
-            ->groupBy('expenses.category_id', 'root_category.name')->orderBy('root_category.name')->paginate(15, ['*'], 'categories_page');
+            ->groupBy('expenses.category_id');
+        /** Anche una categoria appena creata deve comparire; i conteggi rispettano i filtri sulle spese. */
+        $groups = ExpenseCategory::whereNull('expense_categories.parent_id')
+            ->leftJoinSub($categoryTotals, 'category_totals', 'category_totals.category_id', '=', 'expense_categories.id')
+            ->where(fn ($query) => $query->where('expense_categories.active', true)->orWhereNotNull('category_totals.category_id')
+                ->when(is_numeric($this->category_id), fn ($query) => $query->orWhere('expense_categories.id', $this->category_id)))
+            ->selectRaw('expense_categories.id AS category_id, expense_categories.name, COALESCE(category_totals.count, 0) AS count, COALESCE(category_totals.amount, 0) AS amount')
+            ->orderBy('expense_categories.name')->paginate(15, ['*'], 'categories_page');
+        $selectedCategory = is_numeric($this->category_id)
+            ? ExpenseCategory::whereNull('parent_id')->with(['children' => fn ($query) => $query->orderBy('name')])->find($this->category_id)
+            : null;
+        $subcategoryCounts = collect();
+        if (is_numeric($this->category_id)) {
+            /** Il conteggio mantiene tutte le sottocategorie del gruppo, anche quando una sola è selezionata. */
+            $subcategoryCounts = $builder->query(array_replace($filters, ['subcategory_id' => null]))
+                ->selectRaw('expenses.subcategory_id, COUNT(*) AS count')->groupBy('expenses.subcategory_id')->get()
+                ->mapWithKeys(fn ($group) => [$group->subcategory_id ?? 'none' => (int) $group->count]);
+        }
         return view('livewire.expenses.expenses-index', [
             'expenses' => $query->paginate(20), 'groups' => $groups,
-            'subcategories' => ExpenseCategory::whereNotNull('parent_id')->where('parent_id', is_numeric($this->category_id) ? $this->category_id : 0)->orderBy('name')->get(),
+            'subcategoryCounts' => $subcategoryCounts,
+            'selectedCategory' => $selectedCategory, 'subcategories' => $selectedCategory?->children ?? collect(),
             'clientLabel' => $this->client_id ? Client::find($this->client_id)?->name : '',
             'projectLabel' => $this->project_id ? Project::find($this->project_id)?->name : '',
         ])->layout('layouts.app', ['title' => 'Spese']);

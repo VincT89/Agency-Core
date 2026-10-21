@@ -17,10 +17,10 @@
 
     <div class="filter-bar">
         <div class="pills u-m-0">
-            <a href="{{ request()->fullUrlWithQuery(['status_filter' => null]) }}" class="pill {{ !request('status_filter') ? 'on' : '' }}">Tutti</a>
-            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'expiring']) }}" class="pill {{ request('status_filter') === 'expiring' ? 'on' : '' }}">In Scadenza</a>
-            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'expired']) }}" class="pill {{ request('status_filter') === 'expired' ? 'on' : '' }}">Scaduti</a>
-            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'active']) }}" class="pill {{ request('status_filter') === 'active' ? 'on' : '' }}">Attivi</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => null]) }}" wire:navigate class="pill {{ !request('status_filter') ? 'on' : '' }}">Tutti</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'expiring']) }}" wire:navigate class="pill {{ request('status_filter') === 'expiring' ? 'on' : '' }}">In Scadenza</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'expired']) }}" wire:navigate class="pill {{ request('status_filter') === 'expired' ? 'on' : '' }}">Scaduti</a>
+            <a href="{{ request()->fullUrlWithQuery(['status_filter' => 'active']) }}" wire:navigate class="pill {{ request('status_filter') === 'active' ? 'on' : '' }}">Attivi</a>
         </div>
 
         <form method="GET" action="{{ route('hosting-services.index') }}" class="hosting-filters-panel u-ml-auto" x-data>

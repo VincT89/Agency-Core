@@ -17,6 +17,7 @@ use App\Enums\Finance\ElectronicInvoiceTransmissionStatus;
 use App\Exceptions\Finance\ArubaConfigurationException;
 use App\Exceptions\Finance\ElectronicInvoiceXmlException;
 use App\Services\Integrations\Aruba\ArubaConfiguration;
+use App\Services\FinanceReportQuery;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 class InvoiceController extends Controller
 {
-    public function index(Request $request, \App\Domain\Finance\Queries\InvoiceQuery $invoiceQuery, InvoiceDocumentQuery $documentQuery): View|JsonResponse
+    public function index(Request $request, \App\Domain\Finance\Queries\InvoiceQuery $invoiceQuery, InvoiceDocumentQuery $documentQuery, FinanceReportQuery $reports): View|JsonResponse
     {
         $this->authorize('viewAny', Invoice::class);
         $this->authorize('viewAny', CreditNote::class);
@@ -58,10 +59,8 @@ class InvoiceController extends Controller
         $outstandingCount = (clone $globalQuery)->awaitingPayment()->count();
         $draftCount   = (clone $globalQuery)->where('status', 'draft')->count();
         $readyFiscalCount = (clone $globalQuery)->where('fiscal_status', 'ready')->count();
-        $unpaidTotal  = (clone $globalQuery)
-            ->awaitingPayment()
-            ->get()
-            ->sum(fn($i) => $i->residual);
+        /** Il totale generale usa lo stesso calcolo del Riepilogo, comprese le note di credito non ancora collegate. */
+        $unpaidTotal = $reports->totals()['total_outstanding'];
 
         return view('invoices.index', compact(
             'documents',

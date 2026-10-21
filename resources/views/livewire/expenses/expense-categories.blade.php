@@ -3,6 +3,7 @@
         <x-slot:title>Categorie delle spese</x-slot:title>
         <x-slot:actions><a href="{{ route('expenses.index') }}" class="btn btn-g" wire:navigate>Torna alle spese</a></x-slot:actions>
     </x-page-header>
+    @error('delete')<p class="u-alert-error" role="alert">{{ $message }}</p>@enderror
     <x-panel padded class="u-mb-lg">
         <h2 class="u-mb-md">{{ $editingId ? 'Modifica categoria' : 'Nuova categoria o sottocategoria' }}</h2>
         <form wire:submit="save" class="finance-form">
@@ -25,9 +26,16 @@
         <input id="category-search" type="search" class="form-in u-mb-md" wire:model.live.debounce.300ms="search">
         <div class="finance-directory">
             @forelse($categories as $category)
-                <div class="finance-directory-entry" wire:key="category-{{ $category->id }}">
+                <div class="finance-directory-entry" wire:key="category-{{ $category->id }}-{{ md5($category->name.'|'.$category->children_count) }}">
                     <div><strong>{{ $category->name }}</strong><p class="u-text-meta">{{ $category->parent?->name ?? 'Categoria principale' }}{{ $category->active ? '' : ' · Archiviata' }}</p></div>
-                    <button type="button" class="btn btn-g btn-sm" wire:click="edit({{ $category->id }})" aria-label="Modifica {{ $category->name }}">Modifica</button>
+                    <div class="u-flex u-gap-sm u-flex-wrap">
+                        <button type="button" class="btn btn-g btn-sm" wire:click="edit({{ $category->id }})" aria-label="Modifica {{ $category->name }}">Modifica</button>
+                        <x-confirm-modal :title="$category->parent_id ? 'Elimina sottocategoria' : 'Elimina categoria'"
+                            :message="'Eliminare '.$category->name.($category->children_count ? ' e le sue '.$category->children_count.' sottocategorie' : '').'? Le voci già usate da spese o ricorrenze devono essere archiviate.'"
+                            confirmText="Conferma eliminazione" :confirm-method="'delete('.$category->id.')'" confirmClass="btn btn-p btn-danger" variant="danger">
+                            <button type="button" class="btn btn-g btn-sm u-text-red" wire:loading.attr="disabled" wire:target="delete" aria-label="Elimina {{ $category->name }}">Elimina</button>
+                        </x-confirm-modal>
+                    </div>
                 </div>
             @empty<p>Nessuna categoria trovata.</p>@endforelse
         </div>

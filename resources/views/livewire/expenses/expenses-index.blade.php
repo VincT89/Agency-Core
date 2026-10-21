@@ -4,6 +4,7 @@
         meta="Gestione delle spese e dei costi operativi">
         <x-slot:title><strong>Spese</strong> Generali</x-slot:title>
         <x-slot:actions>
+            <a href="{{ route('expenses.categories') }}" wire:navigate class="btn btn-g">Gestisci categorie</a>
             <a href="{{ route('expenses.create') }}" wire:navigate class="btn btn-p">+ Nuova Spesa</a>
         </x-slot:actions>
     </x-page-header>
@@ -30,36 +31,47 @@
             <x-finance-lookup type="projects" name="project_id" label="Progetto" :value="$project_id" :text="$projectLabel" :client="$client_id" />
             <x-form-group label="Collegamento" name="expenseable_type"><select id="field-expenseable-type" name="expenseable_type" class="form-sel">@foreach(['' => 'Tutti', 'client' => 'Cliente', 'project' => 'Progetto', 'task' => 'Task', 'ticket' => 'Ticket', 'hosting_service' => 'Dominio o hosting'] as $value => $label)<option value="{{ $value }}" @selected($expenseable_type === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
             <x-form-group label="Ordine nelle sottocategorie" name="sort"><select id="field-sort" name="sort" class="form-sel">@foreach(['due_asc' => 'Scadenza crescente', 'date_desc' => 'Data decrescente', 'date_asc' => 'Data crescente', 'amount_desc' => 'Importo decrescente', 'amount_asc' => 'Importo crescente'] as $value => $label)<option value="{{ $value }}" @selected($sort === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
-        </div><a href="{{ route('expenses.categories') }}" wire:navigate>Gestisci categorie</a></details>
+        </div></details>
         <div class="u-flex u-gap-sm u-mt-md"><button type="submit" class="btn btn-p">Applica filtri</button><a href="{{ route('expenses.index') }}" class="btn btn-g">Azzera filtri</a></div>
     </form>
     @if($groups->isNotEmpty() || $category_id !== '')
-        <div class="finance-category-filters u-mb-md">
+        <div class="finance-category-filters u-mb-md" x-data="expenseCategoryMenu" @resize.window="place()" @scroll.window.capture="place()">
             <div class="finance-category-badges" role="group" aria-label="Filtra spese per categoria">
-                <button type="button" class="btn btn-g" wire:click="selectCategory('')" wire:loading.attr="disabled" wire:target="selectCategory,selectSubcategory" aria-pressed="{{ $category_id === '' ? 'true' : 'false' }}">Tutte le categorie</button>
+                <button type="button" class="btn btn-g" @click="reset()" :disabled="loading" aria-pressed="{{ $category_id === '' ? 'true' : 'false' }}">Tutte le categorie</button>
                 @foreach($groups as $category)
-                    <button type="button" class="btn btn-g" wire:key="expense-category-{{ $category->category_id }}" wire:click="selectCategory('{{ $category->category_id }}')"
-                        wire:loading.attr="disabled" wire:target="selectCategory,selectSubcategory" aria-pressed="{{ (string) $category_id === (string) $category->category_id ? 'true' : 'false' }}"
+                    <button id="expense-category-{{ $category->category_id }}" type="button" class="btn btn-g expense-category-trigger" wire:key="expense-category-{{ $category->category_id }}"
+                        @click="toggle(@js((string) $category->category_id))" @keydown.arrow-down.prevent="show(@js((string) $category->category_id))"
+                        :disabled="loading" aria-pressed="{{ (string) $category_id === (string) $category->category_id ? 'true' : 'false' }}"
+                        aria-haspopup="listbox" aria-controls="expense-subcategory-menu" :aria-expanded="open && activeId === @js((string) $category->category_id)"
                         title="{{ $category->count }} spese · {{ number_format((float) $category->amount, 2, ',', '.') }} €">
-                        {{ $category->name }} ({{ $category->count }})
+                        <span>{{ $category->name }} ({{ $category->count }})</span><span class="expense-category-arrow" aria-hidden="true"></span>
                     </button>
                 @endforeach
             </div>
             @if($groups->hasPages())<div class="u-mt-sm">{{ $groups->links() }}</div>@endif
-            @if(is_numeric($category_id) && ($subcategories->isNotEmpty() || $subcategory_id !== ''))
-                <div class="finance-subcategory-filters" wire:key="expense-subcategories-{{ $category_id }}">
-                    <div class="finance-category-badges" role="group" aria-label="Filtra spese per sottocategoria">
-                        <button type="button" class="btn btn-g" wire:click="selectSubcategory('')" wire:loading.attr="disabled" wire:target="selectCategory,selectSubcategory"
-                            aria-pressed="{{ $subcategory_id === '' ? 'true' : 'false' }}">Tutte le sottocategorie</button>
+            <template x-teleport="body">
+                <div id="expense-subcategory-menu" class="finance-lookup-results expense-subcategory-menu" x-ref="options" x-show="open" x-cloak :style="position"
+                    role="listbox" aria-label="Sottocategorie {{ $selectedCategory?->name }}" :aria-busy="loading ? 'true' : 'false'"
+                    @click.outside="if (!document.getElementById('expense-category-' + activeId)?.contains($event.target)) close()"
+                    @keydown.escape.stop.prevent="close(true)" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)"
+                    @keydown.home.prevent="edge(false)" @keydown.end.prevent="edge(true)" @keydown.tab="close()">
+                    @if($selectedCategory)
+                        <p class="expense-subcategory-heading">{{ $selectedCategory->name }}</p>
+                        <button type="button" role="option" @click="select('')" :disabled="loading"
+                            aria-selected="{{ $subcategory_id === '' ? 'true' : 'false' }}">Tutte le sottocategorie ({{ $subcategoryCounts->sum() }})</button>
                         @foreach($subcategories as $subcategory)
-                            <button type="button" class="btn btn-g" wire:key="expense-subcategory-{{ $subcategory->id }}" wire:click="selectSubcategory('{{ $subcategory->id }}')"
-                                wire:loading.attr="disabled" wire:target="selectCategory,selectSubcategory" aria-pressed="{{ (string) $subcategory_id === (string) $subcategory->id ? 'true' : 'false' }}">{{ $subcategory->name }}</button>
+                            <button type="button" role="option" wire:key="expense-subcategory-{{ $subcategory->id }}" @click="select(@js((string) $subcategory->id))" :disabled="loading"
+                                aria-selected="{{ (string) $subcategory_id === (string) $subcategory->id ? 'true' : 'false' }}">{{ $subcategory->name }} ({{ $subcategoryCounts->get($subcategory->id, 0) }})</button>
                         @endforeach
-                        <button type="button" class="btn btn-g" wire:click="selectSubcategory('none')" wire:loading.attr="disabled" wire:target="selectCategory,selectSubcategory"
-                            aria-pressed="{{ $subcategory_id === 'none' ? 'true' : 'false' }}">Senza sottocategoria</button>
-                    </div>
+                        <button type="button" role="option" @click="select('none')" :disabled="loading"
+                            aria-selected="{{ $subcategory_id === 'none' ? 'true' : 'false' }}">Senza sottocategoria ({{ $subcategoryCounts->get('none', 0) }})</button>
+                        @if($subcategories->isEmpty())<p>Nessuna sottocategoria creata.</p>@endif
+                    @endif
                 </div>
-            @endif
+            </template>
+            @if($subcategory_id !== '')<p class="u-text-meta u-mt-sm">Sottocategoria: {{ $subcategory_id === 'none' ? 'Senza sottocategoria' : $subcategories->firstWhere('id', $subcategory_id)?->name }}</p>@endif
+            <p x-show="error" x-cloak x-text="error" class="form-err" role="alert"></p>
+            @error('category_id')<p class="form-err" role="alert">{{ $message }}</p>@enderror
             @error('subcategory_id')<p class="form-err" role="alert">{{ $message }}</p>@enderror
         </div>
     @endif

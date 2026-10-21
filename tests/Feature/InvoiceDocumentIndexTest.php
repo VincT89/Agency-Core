@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Domain\Finance\Actions\AllocateCreditNote;
+use App\Domain\Finance\Actions\ChangeInvoiceStatus;
+use App\Domain\Finance\Actions\RegisterPaymentAction;
 use App\Enums\Finance\InvoiceFiscalStatus;
 use App\Enums\UserRole;
 use App\Models\Client;
@@ -131,7 +133,7 @@ class InvoiceDocumentIndexTest extends TestCase
         $this->document('FPR 17/26', true);
         $response = $this->get(route('invoices.index', ['status' => 'issued']))->assertOk()->assertDontSee('FPR 17/26');
         $this->assertSame(1, $response->viewData('documents')->total());
-        $this->assertSame(122.0, $response->viewData('unpaidTotal'));
+        $this->assertEquals(0, $response->viewData('unpaidTotal'));
         $response = $this->get(route('invoices.index', ['fiscal_status' => 'imported']))->assertOk();
         $this->assertSame(2, $response->viewData('documents')->total());
         $response = $this->get(route('invoices.index', ['fiscal_status' => 'ready']))->assertOk();
@@ -177,10 +179,69 @@ class InvoiceDocumentIndexTest extends TestCase
         $response = $this->get(route('invoices.index', ['document_type' => 'TD04']))->assertOk()
             ->assertSee('Collegata a')->assertSee(route('invoices.show', $invoice))->assertSee('Collegata parzialmente')
             ->assertSee('Credito da collegare')->assertSee('100,00');
-        $this->assertSame(100.0, $response->viewData('unpaidTotal'));
+        $this->assertEquals(0, $response->viewData('unpaidTotal'));
         $this->assertDatabaseCount('payments', 0);
         $this->assertSame('122.00', $invoice->fresh()->total);
         $this->assertSame('122.00', $note->fresh()->total);
+    }
+
+    public function test_outstanding_amount_matches_the_summary_with_split_payment_receipts_and_unallocated_credits(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 21)->setTime(12, 0));
+        $invoice = $this->document('FPR 1/26');
+        $split = $this->document('FPA 2/26');
+        $split->update(['payable_total' => '100.00']);
+        $this->document('FPR 3/26')->update(['status' => 'cancelled']);
+        $this->document('FPR 4/26')->update(['status' => 'draft']);
+        $note = $this->document('FPR 17/26', true);
+        app(RegisterPaymentAction::class)->execute(['invoice_id' => $invoice->id, 'amount' => '30.00',
+            'payment_date' => '2026-10-20', 'method' => 'bank_transfer']);
+        $original = $split->fresh()->getAttributes();
+
+        $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
+        $this->assertEquals(92, $summary['total_outstanding']);
+        foreach ([[], ['status' => 'issued'], ['document_type' => 'TD04'], ['search' => 'nessun-documento']] as $filters) {
+            $response = $this->get(route('invoices.index', $filters))->assertOk()
+                ->assertSee('Da incassare (IVA 22%)')->assertSee('Fatturato netto × 1,22 − incassato');
+            $this->assertSame($summary['total_outstanding'], $response->viewData('unpaidTotal'));
+            $this->assertSame(2, $response->viewData('outstandingCount'));
+        }
+        $this->assertDatabaseCount('credit_note_allocations', 0);
+        $this->assertSame($original, $split->fresh()->getAttributes());
+        $this->assertSame(100.0, $split->fresh()->residual);
+        app(AllocateCreditNote::class)->execute($note, $split->id, '22.00');
+        $this->assertEquals(92, $this->get(route('invoices.index'))->assertOk()->viewData('unpaidTotal'));
+        $this->assertSame(78.0, $split->fresh()->residual);
+    }
+
+    public function test_outstanding_summary_amount_updates_after_receipts_and_cancellation(): void
+    {
+        $invoice = $this->document('FPR 1/26');
+        $cancelled = $this->document('FPR 2/26');
+        foreach ([[null, null, null, 244, 2], [$invoice, 'partially_paid', '30.00', 214, 2],
+            [$invoice, 'paid', null, 122, 1], [$cancelled, 'cancelled', null, 0, 0]] as [$target, $status, $amount, $expected, $count]) {
+            if ($target) {
+                $this->patch(route('invoices.status.update', $target), [
+                    'status' => $status, 'amount' => $amount, 'payment_date' => '2026-10-21', 'method' => 'bank_transfer',
+                    'version' => ChangeInvoiceStatus::version($target->fresh()),
+                ])->assertRedirect(route('invoices.show', $target))->assertSessionHasNoErrors();
+            }
+            $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
+            $response = $this->get(route('invoices.index'))->assertOk();
+            $this->assertEquals($expected, $response->viewData('unpaidTotal'));
+            $this->assertSame($summary['total_outstanding'], $response->viewData('unpaidTotal'));
+            $this->assertSame($count, $response->viewData('outstandingCount'));
+        }
+    }
+
+    public function test_outstanding_amount_preserves_the_summary_negative_credit_balance(): void
+    {
+        $this->document('FPR 17/26', true);
+        $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
+        $response = $this->get(route('invoices.index'))->assertOk()->assertSee('EUR -122,00');
+        $this->assertEquals(-122, $response->viewData('unpaidTotal'));
+        $this->assertSame($summary['total_outstanding'], $response->viewData('unpaidTotal'));
+        $this->assertSame(0, $response->viewData('outstandingCount'));
     }
 
     public function test_pagination_orders_the_combined_set_without_missing_rows_or_colliding_ids(): void

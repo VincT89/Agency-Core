@@ -12,6 +12,8 @@
   @if(request()->routeIs('dashboard', 'economic-summary.*'))
     @vite('resources/js/charts.js')
   @endif
+  {{-- Livewire attende le librerie nell'head prima di inizializzare la nuova pagina. --}}
+  @stack('page-assets')
   @livewireStyles
 </head>
 
@@ -72,7 +74,10 @@
       </div>
       <div class="topbar-right">
         <span class="tb-date">{{ strtoupper(now()->locale('it')->isoFormat('ddd D MMM YYYY')) }}</span>
-        @livewire('notifications.notification-dropdown')
+        {{-- Il polling mantiene un componente valido anche se la risposta arriva durante la navigazione. --}}
+        @persist('notifications-'.auth()->id())
+          @livewire('notifications.notification-dropdown')
+        @endpersist
 
         <div class="dropdown" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="if(open){ open = false; $nextTick(() => $refs.profileTrigger.focus()) }">
           <button

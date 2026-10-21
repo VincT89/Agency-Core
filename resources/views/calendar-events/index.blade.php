@@ -93,22 +93,22 @@
                 <span class="cal-sidebar-label">Filtra Vista</span>
                 @php $currentDept = request('department'); @endphp
                 <a href="{{ request()->fullUrlWithQuery(['department' => null, 'scope' => null]) }}"
-                    class="cal-sidebar-filter {{ !$currentDept && !request('scope') ? 'is-active' : '' }}">Tutti gli Eventi</a>
+                    wire:navigate class="cal-sidebar-filter {{ !$currentDept && !request('scope') ? 'is-active' : '' }}">Tutti gli Eventi</a>
                 <a href="{{ request()->fullUrlWithQuery(['scope' => 'personal', 'department' => null]) }}"
-                    class="cal-sidebar-filter {{ request('scope') === 'personal' ? 'is-active' : '' }}">I miei Personali</a>
+                    wire:navigate class="cal-sidebar-filter {{ request('scope') === 'personal' ? 'is-active' : '' }}">I miei Personali</a>
                 
                 @if(auth()->user()->canManageSystem())
                     <div class="u-mt-sm u-mb-xs" style="height: 1px; background: var(--border);"></div>
                     <a href="{{ request()->fullUrlWithQuery(['department' => 'developer', 'scope' => null]) }}"
-                        class="cal-sidebar-filter {{ $currentDept === 'developer' ? 'is-active' : '' }}">Developer</a>
+                        wire:navigate class="cal-sidebar-filter {{ $currentDept === 'developer' ? 'is-active' : '' }}">Developer</a>
                     <a href="{{ request()->fullUrlWithQuery(['department' => 'marketing', 'scope' => null]) }}"
-                        class="cal-sidebar-filter {{ $currentDept === 'marketing' ? 'is-active' : '' }}">Marketing</a>
+                        wire:navigate class="cal-sidebar-filter {{ $currentDept === 'marketing' ? 'is-active' : '' }}">Marketing</a>
                     <a href="{{ request()->fullUrlWithQuery(['department' => 'photographer', 'scope' => null]) }}"
-                        class="cal-sidebar-filter {{ $currentDept === 'photographer' ? 'is-active' : '' }}">Fotografo</a>
+                        wire:navigate class="cal-sidebar-filter {{ $currentDept === 'photographer' ? 'is-active' : '' }}">Fotografo</a>
                     <a href="{{ request()->fullUrlWithQuery(['department' => 'graphic_designer', 'scope' => null]) }}"
-                        class="cal-sidebar-filter {{ $currentDept === 'graphic_designer' ? 'is-active' : '' }}">Grafica</a>
+                        wire:navigate class="cal-sidebar-filter {{ $currentDept === 'graphic_designer' ? 'is-active' : '' }}">Grafica</a>
                     <a href="{{ request()->fullUrlWithQuery(['department' => 'administration', 'scope' => null]) }}"
-                        class="cal-sidebar-filter {{ $currentDept === 'administration' ? 'is-active' : '' }}">Amministrazione</a>
+                        wire:navigate class="cal-sidebar-filter {{ $currentDept === 'administration' ? 'is-active' : '' }}">Amministrazione</a>
                 @endif
             </div>
             @endif
@@ -163,12 +163,13 @@
         </main>
     </div>
 
-    @push('scripts')
+    @push('page-assets')
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
         {{-- FullCalendar via CDN --}}
         <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/it.global.min.js"></script>
-
+    @endpush
+    @push('scripts')
         <script>
         (() => {
             const CREATE_URL = '{{ route('calendar-events.create') }}';

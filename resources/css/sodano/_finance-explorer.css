@@ -16,6 +16,10 @@
 .finance-report-tabs { display: flex; flex-wrap: wrap; gap: 12px 24px; border-bottom: 1px solid var(--line); }
 .finance-report-tabs a { display: block; padding: 12px 0; color: inherit; text-decoration: none; border-bottom: 2px solid transparent; }
 .finance-report-tabs a[aria-current=page] { border-color: var(--accent); font-weight: 700; }
+.expense-navigation { position: relative; flex-wrap: nowrap; gap: 24px; max-width: 100%; margin-bottom: 24px; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line3) transparent; }
+.expense-navigation a { display: flex; flex: 0 0 auto; align-items: center; min-height: var(--control-h-touch); padding: 12px 2px; white-space: nowrap; font-size: 13px; }
+.expense-navigation a:hover { color: var(--accent); }
+.expense-navigation a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .finance-chart-heading { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-bottom: 12px; }
 .finance-chart-heading h2 { font-size: 17px; margin: 0; }
 .finance-chart-controls { display: flex; gap: 10px; }
@@ -60,7 +64,11 @@
 .finance-category-badges { display: flex; flex-wrap: wrap; gap: 8px; }
 .finance-category-badges .btn { max-width: 100%; padding: 8px 12px; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; text-align: left; }
 .finance-category-badges .btn[aria-pressed=true] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg2)); }
-.finance-subcategory-filters { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line2); }
+.expense-category-trigger { display: inline-flex; align-items: center; gap: 12px; }
+.expense-category-arrow { flex-shrink: 0; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.expense-category-trigger[aria-expanded=true] .expense-category-arrow { transform: translateY(2px) rotate(225deg); }
+.expense-subcategory-menu { position: fixed; z-index: 90; right: auto; margin: 0; }
+.expense-subcategory-menu .expense-subcategory-heading { color: var(--text); font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 .finance-category-heading { background: var(--line); text-align: left; }
 .finance-category-heading th { padding: 12px 14px; font-size: 13px; font-weight: 600; }
 .finance-expense-list .t-table td a { color: var(--text); text-decoration: none; }

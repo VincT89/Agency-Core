@@ -10,6 +10,7 @@ use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Models\Shooting\Shoot;
 use Carbon\Carbon;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class MarketingCampaignCalendar extends Component
@@ -100,6 +101,8 @@ class MarketingCampaignCalendar extends Component
         return $query;
     }
 
+    /** Restituisce solo gli eventi: una risposta tardiva non deve ricreare il calendario dopo la navigazione. */
+    #[Renderless]
     public function fetchEvents()
     {
         $posts = $this->baseQuery()

@@ -14,8 +14,9 @@
 
     <div class="kpi-strip u-grid-3 inv-summary">
         <div class="kpi-cell">
-            <div class="kpi-label-t">Da incassare</div>
+            <div class="kpi-label-t">Da incassare (IVA 22%)</div>
             <div class="kpi-val-t">EUR {{ number_format($unpaidTotal, 2, ',', '.') }}</div>
+            <div class="kpi-delta-t">Fatturato netto × 1,22 − incassato</div>
             <div class="kpi-delta-t">{{ $outstandingCount }} {{ $outstandingCount === 1 ? 'fattura con residuo aperto' : 'fatture con residuo aperto' }}</div>
         </div>
         <div class="kpi-cell {{ $overdueCount > 0 ? 'accent-line' : '' }}">

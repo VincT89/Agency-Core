@@ -5,6 +5,7 @@ import './project-search.js';
 import clientAutocomplete from './client-autocomplete.js';
 import { financeLookup, financeChart, financeDistribution } from './finance-tools.js';
 import { financeRegion, invoiceColumnFilter } from './finance-navigation.js';
+import expenseCategoryMenu from './expense-category-menu.js';
 import quoteEditor from './quote-editor.js';
 import taskAttachmentUploads from './task-attachment-uploads.js';
 import './password-fields.js';
@@ -21,6 +22,7 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('financeLookup', financeLookup);
     window.Alpine.data('financeRegion', financeRegion);
     window.Alpine.data('invoiceColumnFilter', invoiceColumnFilter);
+    window.Alpine.data('expenseCategoryMenu', expenseCategoryMenu);
     window.Alpine.data('financeChart', financeChart);
     window.Alpine.data('financeDistribution', financeDistribution);
     window.Alpine.data('quoteEditor', quoteEditor);

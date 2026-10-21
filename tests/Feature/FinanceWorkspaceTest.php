@@ -103,28 +103,32 @@ class FinanceWorkspaceTest extends TestCase
         $view->set('from', '2026-10-01')->set('search', 'Spesa 26')->assertViewHas('expenses', fn ($expenses) => $expenses->total() === 1);
     }
 
-    public function test_expense_category_badges_only_appear_after_assignment_and_filter_without_changing_other_filters(): void
+    public function test_new_categories_have_badges_before_assignment_and_keep_other_filters(): void
     {
+        $view = Livewire::test(ExpensesIndex::class)->assertDontSeeHtml('class="finance-category-badges"');
         $category = app(SaveExpenseCategory::class)->execute(['name' => 'Licenze operative']);
         app(SaveExpenseCategory::class)->execute(['name' => 'Categoria non usata']);
+        app(SaveExpenseCategory::class)->execute(['name' => 'Categoria archiviata', 'active' => false]);
         $child = app(SaveExpenseCategory::class)->execute(['name' => 'Software', 'parent_id' => $category->id]);
-        $view = Livewire::test(ExpensesIndex::class)->assertDontSeeHtml('class="finance-category-badges"');
+        $view->call('$refresh')->assertSee('Licenze operative (0)')->assertSee('Categoria non usata (0)')->assertDontSee('Categoria archiviata');
         $expense = app(SaveExpense::class)->execute(['title' => 'Spesa senza classificazione', 'amount' => 10,
             'expense_date' => '2026-10-10', 'status' => 'pending', 'document_kind' => 'invoice']);
-        $view->call('$refresh')->assertDontSeeHtml('class="finance-category-badges"');
+        $view->call('$refresh')->assertSee('Licenze operative (0)');
         Livewire::test(ExpenseForm::class, ['expense' => $expense])->set('category_id', $category->id)
             ->set('subcategory_id', $child->id)->call('save')->assertHasNoErrors();
         app(SaveExpense::class)->execute(['title' => 'Altra spesa senza categoria', 'amount' => 20,
             'expense_date' => '2026-10-10', 'status' => 'pending', 'document_kind' => 'invoice']);
-        $view->call('$refresh')->assertSee('Licenze operative (1)')->assertDontSee('Categoria non usata')
+        $view->call('$refresh')->assertSee('Licenze operative (1)')->assertSee('Categoria non usata (0)')
             ->set('status', 'pending')->set('from', '2026-10-01')->set('subcategory_id', (string) $child->id)
             ->call('selectCategory', (string) $category->id)->assertSet('subcategory_id', '')
             ->assertSet('status', 'pending')->assertSet('from', '2026-10-01')
             ->assertViewHas('expenses', fn ($expenses) => $expenses->total() === 1 && $expenses->first()->id === $expense->id)
             ->call('selectCategory', '')->assertViewHas('expenses', fn ($expenses) => $expenses->total() === 2);
+        $view->call('selectCategory', (string) $child->id)->assertHasErrors('category_id')->assertSet('category_id', '');
+        $view->call('selectCategory', '999999')->assertHasErrors('category_id')->assertSet('category_id', '');
     }
 
-    public function test_subcategory_badges_filter_the_selected_parent_reset_pagination_and_reject_other_parents(): void
+    public function test_subcategory_menu_filters_the_selected_parent_resets_pagination_and_rejects_other_parents(): void
     {
         $saveCategory = app(SaveExpenseCategory::class);
         $parent = $saveCategory->execute(['name' => 'Strumenti']);
@@ -138,7 +142,7 @@ class FinanceWorkspaceTest extends TestCase
                 'expense_date' => '2026-10-10', 'status' => 'pending']);
         }
         $view = Livewire::test(ExpensesIndex::class)->set('status', 'pending')->set('from', '2026-10-01')
-            ->assertDontSeeHtml('class="finance-subcategory-filters"')->call('selectCategory', (string) $parent->id)
+            ->assertViewHas('selectedCategory', null)->call('selectCategory', (string) $parent->id)
             ->assertViewHas('subcategories', fn ($children) => $children->modelKeys() === [$hardware->id, $software->id])
             ->call('gotoPage', 2)->assertSet('paginators.page', 2)
             ->call('selectSubcategory', (string) $hardware->id)->assertHasNoErrors()->assertSet('paginators.page', 1)
@@ -151,8 +155,41 @@ class FinanceWorkspaceTest extends TestCase
             ->call('selectCategory', (string) $other->id)->assertSet('subcategory_id', '')
             ->assertViewHas('subcategories', fn ($children) => $children->modelKeys() === [$transport->id]);
         $view->call('selectSubcategory', (string) $hardware->id)->assertHasErrors('subcategory_id')->assertSet('subcategory_id', '');
-        $view->call('selectCategory', '')->assertHasNoErrors()->assertDontSeeHtml('class="finance-subcategory-filters"');
+        $view->call('selectCategory', '')->assertHasNoErrors()->assertViewHas('selectedCategory', null);
         $view->call('selectSubcategory', (string) $software->id)->assertHasErrors('subcategory_id')->assertSet('subcategory_id', '');
+    }
+
+    public function test_subcategory_counts_cover_all_pages_and_respect_filters_without_hiding_sibling_totals(): void
+    {
+        $saveCategory = app(SaveExpenseCategory::class);
+        $parent = $saveCategory->execute(['name' => 'Strumenti']);
+        $software = $saveCategory->execute(['name' => 'Software', 'parent_id' => $parent->id]);
+        $hardware = $saveCategory->execute(['name' => 'Hardware', 'parent_id' => $parent->id]);
+        $empty = $saveCategory->execute(['name' => 'Vuota', 'parent_id' => $parent->id]);
+        $other = $saveCategory->execute(['name' => 'Altra categoria']);
+        $foreign = $saveCategory->execute(['name' => 'Software', 'parent_id' => $other->id]);
+        foreach ([...array_fill(0, 24, $software), $hardware, null, $foreign] as $index => $child) {
+            Expense::create(['user_id' => auth()->id(), 'title' => 'Spesa '.($index + 1), 'amount' => 10,
+                'category_id' => $child?->parent_id ?? $parent->id, 'subcategory_id' => $child?->id,
+                'expense_date' => '2026-10-10', 'status' => 'pending']);
+        }
+        foreach ([['status' => 'cancelled'], ['expense_date' => '2026-09-01']] as $excluded) {
+            Expense::create(array_replace(['user_id' => auth()->id(), 'title' => 'Spesa fuori filtro', 'amount' => 10,
+                'category_id' => $parent->id, 'subcategory_id' => $software->id, 'expense_date' => '2026-10-10', 'status' => 'pending'], $excluded));
+        }
+        $countsMatch = fn ($counts) => $counts->get($software->id) === 24 && $counts->get($hardware->id) === 1
+            && $counts->get($empty->id, 0) === 0 && $counts->get('none') === 1 && ! $counts->has($foreign->id) && $counts->sum() === 26;
+        Livewire::test(ExpensesIndex::class)->set('status', 'pending')->set('from', '2026-10-01')
+            ->call('selectCategory', (string) $parent->id)->assertViewHas('subcategoryCounts', $countsMatch)
+            ->assertSee('Software (24)')->assertSee('Hardware (1)')->assertSee('Vuota (0)')
+            ->assertSee('Senza sottocategoria (1)')->assertSee('Tutte le sottocategorie (26)')
+            ->assertViewHas('expenses', fn ($expenses) => $expenses->count() === 20 && $expenses->total() === 26)
+            ->call('gotoPage', 2)->assertViewHas('subcategoryCounts', $countsMatch)
+            ->call('selectSubcategory', (string) $hardware->id)->assertViewHas('subcategoryCounts', $countsMatch)
+            ->assertViewHas('expenses', fn ($expenses) => $expenses->total() === 1)
+            ->call('selectSubcategory', 'none')->assertViewHas('subcategoryCounts', $countsMatch)
+            ->set('from', '2026-10-11')->assertSee('Software (0)')->assertSee('Tutte le sottocategorie (0)')
+            ->set('from', '2026-09-01')->assertSee('Software (25)')->assertSee('Tutte le sottocategorie (27)');
     }
 
     public function test_imported_invoice_associations_preserve_fiscal_data_and_move_payment_attribution(): void

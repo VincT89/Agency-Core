@@ -41,7 +41,7 @@ class MarketingCampaignCalendarTest extends TestCase
     {
         [$publishedPost, $scheduledPost, $cancelledPost] = $this->calendarPosts();
 
-        Livewire::actingAs($this->admin)
+        $component = Livewire::actingAs($this->admin)
             ->test(MarketingCampaignCalendar::class)
             ->call('fetchEvents')
             ->assertReturned(function (array $events) use ($publishedPost, $scheduledPost, $cancelledPost): bool {
@@ -53,13 +53,15 @@ class MarketingCampaignCalendarTest extends TestCase
                     && $events->get('post_'.$scheduledPost->id)['allDay'] === false
                     && ! $events->has('post_'.$cancelledPost->id);
             });
+
+        $this->assertArrayNotHasKey('html', $component->effects);
     }
 
     public function test_campaign_calendar_uses_real_publication_time_and_keeps_unscheduled_time_visible(): void
     {
         [$publishedPost, $scheduledPost, $cancelledPost] = $this->calendarPosts();
 
-        Livewire::actingAs($this->admin)
+        $component = Livewire::actingAs($this->admin)
             ->test(MarketingCampaignShow::class, ['campaign' => $this->campaign])
             ->call('fetchEvents')
             ->assertReturned(function (array $events) use ($publishedPost, $scheduledPost, $cancelledPost): bool {
@@ -71,6 +73,19 @@ class MarketingCampaignCalendarTest extends TestCase
                     && $events->get($scheduledPost->id)['allDay'] === false
                     && ! $events->has($cancelledPost->id);
             });
+
+        $this->assertArrayNotHasKey('html', $component->effects);
+    }
+
+    public function test_event_requests_recheck_access_when_the_user_loses_marketing_permissions(): void
+    {
+        $global = Livewire::actingAs($this->admin)->test(MarketingCampaignCalendar::class);
+        $detail = Livewire::actingAs($this->admin)->test(MarketingCampaignShow::class, ['campaign' => $this->campaign]);
+
+        $this->admin->update(['role' => UserRole::Developer]);
+
+        $global->call('fetchEvents')->assertForbidden();
+        $detail->call('fetchEvents')->assertForbidden();
     }
 
     private function calendarPosts(): array

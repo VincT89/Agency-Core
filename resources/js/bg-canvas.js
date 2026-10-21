@@ -1,10 +1,19 @@
+let destroyBackground;
+
+document.addEventListener('livewire:navigating', () => {
+  destroyBackground?.();
+  destroyBackground = null;
+});
+
 export function initBgCanvas(canvasId) {
   const canvas = document.getElementById(canvasId);
   if (!canvas || canvas.dataset.initialized) return;
   canvas.dataset.initialized = 'true';
+  destroyBackground?.();
 
   const ctx = canvas.getContext('2d');
   let resizeTimeout;
+  let drawFrame;
 
   function draw() {
     const parent = canvas.parentElement;
@@ -27,10 +36,16 @@ export function initBgCanvas(canvasId) {
   const resizeObserver = new ResizeObserver(() => {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
-      requestAnimationFrame(draw);
+      drawFrame = requestAnimationFrame(draw);
     }, 100);
   });
 
   resizeObserver.observe(document.body);
+  /** Il vecchio canvas viene rimosso da Livewire: libera observer e callback prima della pagina successiva. */
+  destroyBackground = () => {
+    resizeObserver.disconnect();
+    clearTimeout(resizeTimeout);
+    cancelAnimationFrame(drawFrame);
+  };
   draw();
 }

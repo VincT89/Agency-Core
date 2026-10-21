@@ -6,10 +6,10 @@
     >
     <x-slot:title><strong>Task</strong></x-slot:title>
         <x-slot:actions>
-            <div class="tab-switcher u-mr-sm u-flex-center u-inline-flex">
-                <a href="{{ request()->fullUrlWithQuery(['view' => 'list']) }}" class="tab-btn {{ $viewMode === 'list' ? 'active' : '' }} u-text-decoration-none">Lista</a>
-                <a href="{{ request()->fullUrlWithQuery(['view' => 'kanban']) }}" class="tab-btn {{ $viewMode === 'kanban' ? 'active' : '' }} u-text-decoration-none">Kanban</a>
-            </div>
+            <nav class="tab-switcher u-mr-sm u-flex-center u-inline-flex" aria-label="Visualizzazione task">
+                <a href="{{ request()->fullUrlWithQuery(['view' => 'list']) }}" wire:navigate class="tab-btn {{ $viewMode === 'list' ? 'active' : '' }} u-text-decoration-none" @if($viewMode === 'list') aria-current="page" @endif>Lista</a>
+                <a href="{{ request()->fullUrlWithQuery(['view' => 'kanban']) }}" wire:navigate class="tab-btn {{ $viewMode === 'kanban' ? 'active' : '' }} u-text-decoration-none" @if($viewMode === 'kanban') aria-current="page" @endif>Kanban</a>
+            </nav>
             @can('create', App\Models\Task::class)
                 <a href="{{ route('tasks.create') }}" class="btn btn-p">+ Nuovo task</a>
             @endcan
@@ -27,15 +27,15 @@
 
         {{-- Status pills --}}
         <div class="pills u-m-0">
-            <a href="{{ route('tasks.index', array_filter(['priority'=>$currentPriority,'project_id'=>$currentProject,'assigned_to'=>$currentUser])) }}"
+            <a href="{{ request()->fullUrlWithQuery(['status' => null, 'page' => null]) }}" wire:navigate
                class="pill {{ !$currentStatus ? 'on' : '' }}">Tutti</a>
-            <a href="{{ route('tasks.index', array_filter(['status'=>'todo','priority'=>$currentPriority,'project_id'=>$currentProject,'assigned_to'=>$currentUser])) }}"
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'todo', 'page' => null]) }}" wire:navigate
                class="pill {{ $currentStatus==='todo' ? 'on' : '' }}">Da fare</a>
-            <a href="{{ route('tasks.index', array_filter(['status'=>'in_progress','priority'=>$currentPriority,'project_id'=>$currentProject,'assigned_to'=>$currentUser])) }}"
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'in_progress', 'page' => null]) }}" wire:navigate
                class="pill {{ $currentStatus==='in_progress' ? 'on' : '' }}">In corso</a>
-            <a href="{{ route('tasks.index', array_filter(['status'=>'waiting','priority'=>$currentPriority,'project_id'=>$currentProject,'assigned_to'=>$currentUser])) }}"
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'waiting', 'page' => null]) }}" wire:navigate
                class="pill {{ $currentStatus==='waiting' ? 'on' : '' }}">In attesa</a>
-            <a href="{{ route('tasks.index', array_filter(['status'=>'done','priority'=>$currentPriority,'project_id'=>$currentProject,'assigned_to'=>$currentUser])) }}"
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'done', 'page' => null]) }}" wire:navigate
                class="pill {{ $currentStatus==='done' ? 'on' : '' }}">Completati</a>
         </div>
 
@@ -165,16 +165,18 @@
     @endif
 
     @if($viewMode === 'kanban')
-        @push('scripts')
+        @push('page-assets')
             <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+        @endpush
+        @push('scripts')
             <script>
-                document.addEventListener('livewire:navigated', function () {
-                    initTaskSortable();
-                });
-
-                document.addEventListener('DOMContentLoaded', function () {
-                    initTaskSortable();
-                });
+                document.addEventListener('livewire:navigated', initTaskSortable, { once: true });
+                document.addEventListener('livewire:navigating', () => {
+                    document.querySelectorAll('.sortable-task-col').forEach(col => {
+                        col._sortable?.destroy();
+                        delete col._sortable;
+                    });
+                }, { once: true });
 
                 function initTaskSortable() {
                     if (typeof Sortable === 'undefined') return;

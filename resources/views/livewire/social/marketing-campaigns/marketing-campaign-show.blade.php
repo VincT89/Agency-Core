@@ -680,9 +680,11 @@
 
 </div>
 
-@push('scripts')
+@push('page-assets')
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/it.global.min.js"></script>
+@endpush
+@push('scripts')
 <script>
     function cleanupMarketingCampaignDetailCalendar() {
         if (window.marketingCampaignDetailCalendar) {
@@ -699,6 +701,8 @@
 
     function initMarketingCampaignDetailCalendar(component) {
         cleanupMarketingCampaignDetailCalendar();
+        let active = true;
+        window.marketingCampaignDetailUnsubscribers.push(() => { active = false; });
 
         var calendarEl = document.getElementById('marketing-campaign-detail-calendar');
         if (!calendarEl || typeof FullCalendar === 'undefined') return;
@@ -743,7 +747,11 @@
             },
 
             events: function(fetchInfo, successCallback, failureCallback) {
-                component.fetchEvents().then(events => successCallback(events)).catch(err => failureCallback(err));
+                component.fetchEvents().then(events => {
+                    if (active && calendarEl.isConnected) successCallback(events);
+                }).catch(err => {
+                    if (active && calendarEl.isConnected) failureCallback(err);
+                });
             },
             eventClick: function(info) {
                 info.jsEvent.preventDefault();
@@ -799,7 +807,7 @@
         window.marketingCampaignDetailUnsubscribers.push(Livewire.on('campaign-invoice-generated', refetchDetailEvents));
     }
 
-    document.addEventListener('livewire:navigating', cleanupMarketingCampaignDetailCalendar);
+    document.addEventListener('livewire:navigating', cleanupMarketingCampaignDetailCalendar, { once: true });
 
     function bootMarketingCampaignDetailCalendar(retries = 20) {
         const calendarEl = document.getElementById('marketing-campaign-detail-calendar');
@@ -824,8 +832,6 @@
         initMarketingCampaignDetailCalendar(component);
     }
 
-    document.addEventListener('DOMContentLoaded', () => bootMarketingCampaignDetailCalendar());
-    document.addEventListener('livewire:navigated', () => bootMarketingCampaignDetailCalendar());
-    queueMicrotask(() => bootMarketingCampaignDetailCalendar());
+    document.addEventListener('livewire:navigated', () => bootMarketingCampaignDetailCalendar(), { once: true });
 </script>
 @endpush

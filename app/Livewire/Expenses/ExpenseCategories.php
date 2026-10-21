@@ -3,6 +3,7 @@
 namespace App\Livewire\Expenses;
 
 use App\Domain\Finance\Actions\SaveExpenseCategory;
+use App\Domain\Finance\Actions\DeleteExpenseCategory;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use Livewire\Attributes\Locked;
@@ -55,9 +56,18 @@ class ExpenseCategories extends Component
     {
         $this->authorize('create', Expense::class);
         return view('livewire.expenses.expense-categories', [
-            'categories' => ExpenseCategory::with('parent')->when($this->search !== '', fn ($query) => $query
+            'categories' => ExpenseCategory::with('parent')->withCount('children')->when($this->search !== '', fn ($query) => $query
                 ->where('name', 'like', '%'.$this->search.'%'))->orderBy('name')->paginate(20),
             'parents' => ExpenseCategory::whereNull('parent_id')->orderBy('name')->get(),
         ])->layout('layouts.app', ['title' => 'Categorie delle spese']);
+    }
+
+    public function delete(int $id): void
+    {
+        app(DeleteExpenseCategory::class)->execute($id);
+        if ($this->editingId === $id || (int) $this->parent_id === $id) $this->cancel();
+        $this->resetValidation('delete');
+        $this->resetPage();
+        session()->flash('success', 'Categoria eliminata.');
     }
 }

@@ -16,12 +16,12 @@
     <div class="filter-bar">
         @php $currentStatus = request('status'); @endphp
         <div class="pills u-m-0">
-            <a href="{{ route('tickets.index', array_filter(['search' => request('search')])) }}" class="pill {{ !$currentStatus ? 'on' : '' }}">Tutti</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'open', 'search' => request('search')])) }}" class="pill {{ $currentStatus === 'open' ? 'on' : '' }}">Aperti</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'in_progress', 'search' => request('search')])) }}" class="pill {{ $currentStatus === 'in_progress' ? 'on' : '' }}">In carico</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'waiting', 'search' => request('search')])) }}" class="pill {{ $currentStatus === 'waiting' ? 'on' : '' }}">In attesa</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'resolved', 'search' => request('search')])) }}" class="pill {{ $currentStatus === 'resolved' ? 'on' : '' }}">Risolti</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'closed', 'search' => request('search')])) }}" class="pill {{ $currentStatus === 'closed' ? 'on' : '' }}">Chiusi</a>
+            <a href="{{ route('tickets.index', array_filter(['search' => request('search')])) }}" wire:navigate class="pill {{ !$currentStatus ? 'on' : '' }}">Tutti</a>
+            <a href="{{ route('tickets.index', array_filter(['status' => 'open', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'open' ? 'on' : '' }}">Aperti</a>
+            <a href="{{ route('tickets.index', array_filter(['status' => 'in_progress', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'in_progress' ? 'on' : '' }}">In carico</a>
+            <a href="{{ route('tickets.index', array_filter(['status' => 'waiting', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'waiting' ? 'on' : '' }}">In attesa</a>
+            <a href="{{ route('tickets.index', array_filter(['status' => 'resolved', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'resolved' ? 'on' : '' }}">Risolti</a>
+            <a href="{{ route('tickets.index', array_filter(['status' => 'closed', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'closed' ? 'on' : '' }}">Chiusi</a>
         </div>
         <form method="GET" action="{{ route('tickets.index') }}" class="u-flex u-gap-sm filter-form u-ml-auto">
             @if($currentStatus)

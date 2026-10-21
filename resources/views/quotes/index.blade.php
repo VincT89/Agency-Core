@@ -5,7 +5,7 @@
             <x-slot:actions>
                 <nav class="tab-switcher u-m-0" aria-label="Visualizzazione offerte">
                     @foreach(['list' => 'Lista', 'kanban' => 'Kanban'] as $mode => $label)
-                        <a href="{{ route('quotes.index', array_replace($filters, ['view' => $mode])) }}"
+                        <a href="{{ route('quotes.index', array_replace($filters, ['view' => $mode])) }}" wire:navigate
                            @class(['tab-btn', 'active' => $viewMode === $mode]) @if($viewMode === $mode) aria-current="page" @endif>{{ $label }}</a>
                     @endforeach
                 </nav>
@@ -34,12 +34,12 @@
         </form>
 
         <nav class="pills quote-status-filters" aria-label="Filtra offerte per stato">
-            <a href="{{ route('quotes.index', array_diff_key($filters, ['status' => true])) }}"
+            <a href="{{ route('quotes.index', array_diff_key($filters, ['status' => true])) }}" wire:navigate
                @class(['pill', 'on' => !isset($filters['status'])]) @if(!isset($filters['status'])) aria-current="page" @endif>
                 Tutte <span>{{ $statusCounts->sum() }}</span>
             </a>
             @foreach($statuses as $status => $label)
-                <a href="{{ route('quotes.index', array_replace($filters, ['status' => $status])) }}"
+                <a href="{{ route('quotes.index', array_replace($filters, ['status' => $status])) }}" wire:navigate
                    @class(['pill', 'on' => ($filters['status'] ?? null) === $status]) @if(($filters['status'] ?? null) === $status) aria-current="page" @endif>
                     {{ ['draft' => 'Bozze', 'presented' => 'Presentate', 'accepted' => 'Accettate', 'rejected' => 'Rifiutate'][$status] }}
                     <span>{{ $statusCounts[$status] ?? 0 }}</span>

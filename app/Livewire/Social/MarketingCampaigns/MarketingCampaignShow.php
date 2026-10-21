@@ -6,6 +6,7 @@ use App\Domain\Social\Actions\ArchiveMarketingCampaignPostAction;
 use App\Domain\Social\Actions\RestoreMarketingCampaignPostAction;
 use App\Domain\Social\Exceptions\MarketingCampaignPostArchiveException;
 use Livewire\Component;
+use Livewire\Attributes\Renderless;
 use Livewire\WithFileUploads;
 use App\Models\MarketingCampaign;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -87,8 +88,12 @@ class MarketingCampaignShow extends Component
     // --------------------------------------
 
 
+    /** Restituisce solo gli eventi: una risposta tardiva non deve ricreare il calendario dopo la navigazione. */
+    #[Renderless]
     public function fetchEvents()
     {
+        $this->authorize('view', $this->campaign);
+
         $posts = $this->campaign->posts()
             ->with(['currentVersion', 'successfulPublications'])
             ->notArchived()

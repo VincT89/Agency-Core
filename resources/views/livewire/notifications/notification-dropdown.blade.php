@@ -1,4 +1,4 @@
-<div class="dropdown" wire:poll.30s.visible x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="if(open){ open = false; $nextTick(() => $refs.notificationsTrigger.focus()) }">
+<div class="dropdown" wire:poll.30s.visible x-data="{ open: false }" x-on:livewire:navigating.window="open = false" @click.outside="open = false" @keydown.escape.window="if(open){ open = false; $nextTick(() => $refs.notificationsTrigger.focus()) }">
   <button
     id="notifications-trigger"
     type="button"

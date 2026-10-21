@@ -118,9 +118,11 @@
     </div>
 </div>
 
-@push('scripts')
+@push('page-assets')
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/it.global.min.js"></script>
+@endpush
+@push('scripts')
 <script>
     function cleanupMarketingGlobalCalendar() {
         if (window.marketingGlobalCalendar) {
@@ -137,6 +139,8 @@
 
     function initMarketingGlobalCalendar(component) {
         cleanupMarketingGlobalCalendar();
+        let active = true;
+        window.marketingGlobalUnsubscribers.push(() => { active = false; });
 
         const jsErr = document.getElementById('js-error');
         if (jsErr) {
@@ -202,8 +206,9 @@
             eventDisplay: 'block',
             events: function(fetchInfo, successCallback, failureCallback) {
                 component.fetchEvents().then(events => {
-                    successCallback(events);
+                    if (active && calendarEl.isConnected) successCallback(events);
                 }).catch(err => {
+                    if (!active || !calendarEl.isConnected) return;
                     console.error("Errore caricamento eventi:", err);
                     failureCallback(err);
                 });
@@ -263,7 +268,7 @@
         );
     }
 
-    document.addEventListener('livewire:navigating', cleanupMarketingGlobalCalendar);
+    document.addEventListener('livewire:navigating', cleanupMarketingGlobalCalendar, { once: true });
 
     document.addEventListener('livewire:navigated', function() {
         const calendarEl = document.getElementById('marketing-global-calendar');
@@ -278,7 +283,7 @@
                 jsErr.hidden = false;
             }
         }
-    });
+    }, { once: true });
 </script>
 
 

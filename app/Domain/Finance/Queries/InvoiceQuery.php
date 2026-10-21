@@ -30,6 +30,16 @@ class InvoiceQuery
         if (! empty($filters['client_id'])) {
             $query->where('client_id', $filters['client_id']);
         }
+        $query->when(filled($filters['project_id'] ?? null), fn ($q) => $q->where('project_id', $filters['project_id']))
+            ->when(filled($filters['min_amount'] ?? null), fn ($q) => $q->where('total', '>=', $filters['min_amount']))
+            ->when(filled($filters['max_amount'] ?? null), fn ($q) => $q->where('total', '<=', $filters['max_amount']));
+        if (filled($filters['hosting_service_id'] ?? null) || filled($filters['service_type'] ?? null)) {
+            $services = fn ($services) => $services
+                ->when(filled($filters['hosting_service_id'] ?? null), fn ($q) => $q->where('hosting_services.id', $filters['hosting_service_id']))
+                ->when(filled($filters['service_type'] ?? null), fn ($q) => $q->withServiceType($filters['service_type']));
+            $query->where(fn ($q) => $q->whereHas('hostingService', $services)
+                ->orWhereHas('items.hostingService', $services)->orWhereHas('importedServiceLinks.hostingService', $services));
+        }
         if (! empty($filters['start_date'])) {
             $query->whereDate('issue_date', '>=', $filters['start_date']);
         }

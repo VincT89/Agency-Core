@@ -10,6 +10,7 @@ class InvoiceItem extends Model
 {
     protected $fillable = [
         'invoice_id',
+        'hosting_service_id',
         'billable_type',
         'billable_id',
         'description',
@@ -41,5 +42,10 @@ class InvoiceItem extends Model
     public function billable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function hostingService(): BelongsTo
+    {
+        return $this->belongsTo(HostingService::class)->withTrashed();
     }
 }

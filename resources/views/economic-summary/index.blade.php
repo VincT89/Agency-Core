@@ -1,263 +1,97 @@
-<x-app-layout title="Riepiloghi Economici">
-    <x-page-header
-        eyebrow="Finance"
-        
-        meta="Dashboard sintetica dei flussi di cassa"
-    >
-    <x-slot:title>Riepiloghi Economici</x-slot:title>
-        <x-slot:actions>
-            <form method="GET" action="{{ route('economic-summary.index') }}" class="finance-filter-form">
-                <label for="economic-from" class="sr-only">Data iniziale</label>
-                <input id="economic-from" type="date" name="from" value="{{ old('from', $from ?? '') }}"
-                       class="form-in finance-date-input @error('from') is-invalid @enderror">
-                <span class="finance-filter-sep">-</span>
-                <label for="economic-to" class="sr-only">Data finale</label>
-                <input id="economic-to" type="date" name="to" value="{{ old('to', $to ?? '') }}"
-                       class="form-in finance-date-input @error('to') is-invalid @enderror">
-                <button type="submit" class="btn btn-p finance-btn-sm">Applica</button>
-                @if($from || $to)
-                    <a href="{{ route('economic-summary.index') }}" class="btn btn-g finance-btn-sm">Reset</a>
-                @endif
-            </form>
-        </x-slot:actions>
+<x-app-layout :title="$subject ? 'Riepilogo: '.$subject->name : 'Riepiloghi economici'">
+    @php
+        $money = fn ($value) => '€ '.number_format((float) $value, 2, ',', '.');
+        $pageUrl = $subject ? route('economic-summary.show', ['group' => $subject instanceof \App\Models\Client ? 'clients' : 'projects', 'id' => $subject->id]) : route('economic-summary.index');
+        $drillUrl = $pageUrl.'?'.http_build_query(array_replace($baseFilters, ['documents' => 1]));
+        $metrics = ['total_invoiced' => 'Fatturato netto (IVA esclusa)', 'total_collected' => 'Incassato', 'total_outstanding' => 'Da incassare (IVA 22%)'];
+        $directorySorts = $group === 'categories'
+            ? ['costs_desc' => 'Costi decrescenti', 'name_asc' => 'Nome A–Z', 'name_desc' => 'Nome Z–A']
+            : ['turnover_desc' => 'Fatturato decrescente', 'turnover_asc' => 'Fatturato crescente', 'name_asc' => 'Nome A–Z', 'name_desc' => 'Nome Z–A', 'pending_desc' => 'Da incassare decrescente', 'costs_desc' => 'Costi decrescenti'];
+    @endphp
+    @if($subject)<p class="u-mb-md"><a class="btn btn-g btn-sm" href="{{ route('economic-summary.index', \Illuminate\Support\Arr::except($baseFilters, ['client_id', 'project_id', 'documents'])) }}">Torna al riepilogo</a></p>@endif
+    <x-page-header><x-slot:title>{{ $subject?->name ?? 'Riepiloghi economici' }}</x-slot:title>
+        <x-slot:meta>{{ $subject ? 'Dettaglio economico e documenti collegati' : 'Consulta clienti, progetti e categorie delle spese' }}</x-slot:meta>
     </x-page-header>
-
-    @if($errors->any())
-        <div class="u-alert-error u-mb-md" role="alert">
-            Controlla il periodo: la data finale non può precedere quella iniziale.
+    <form method="GET" action="{{ $pageUrl }}" class="finance-report-filters">
+        <input type="hidden" name="group" value="{{ $group }}">
+        @if($subject)<input type="hidden" name="{{ $subject instanceof \App\Models\Client ? 'client_id' : 'project_id' }}" value="{{ $subject->id }}">@endif
+        <div class="finance-filter-grid">
+            <x-form-group label="Dal" name="from" for="economic-from"><input id="economic-from" type="date" name="from" value="{{ old('from', $from) }}" class="form-in"></x-form-group>
+            <x-form-group label="Al" name="to" for="economic-to"><input id="economic-to" type="date" name="to" value="{{ old('to', $to) }}" class="form-in"></x-form-group>
+            <x-form-group label="Raggruppamento grafici" name="interval"><select id="field-interval" name="interval" class="form-sel">@foreach(['month' => 'Mensile', 'quarter' => 'Trimestrale', 'year' => 'Annuale'] as $value => $label)<option value="{{ $value }}" @selected(($filters['interval'] ?? 'month') === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
+            <div class="finance-filter-actions"><button type="submit" class="btn btn-p">Applica</button><a href="{{ $pageUrl }}" class="btn btn-g">Azzera filtri</a></div>
         </div>
-    @endif
-
+        <details class="finance-advanced" @if(collect($filters)->except(['from','to','group','page','documents_page','interval'])->isNotEmpty()) open @endif>
+            <summary>Filtri avanzati e confronto periodi</summary>
+            <div class="finance-filter-grid">
+                @unless($subject instanceof \App\Models\Client)<x-finance-lookup type="clients" name="client_id" label="Cliente" :value="$filters['client_id'] ?? ''" :text="$clientLabel" />@endunless
+                @unless($subject instanceof \App\Models\Project)<x-finance-lookup type="projects" name="project_id" label="Progetto" :value="$filters['project_id'] ?? ''" :text="$projectLabel" :client="$filters['client_id'] ?? ''" />@endunless
+                <x-form-group label="Numero documento o descrizione" name="q"><input id="field-q" type="search" name="q" class="form-in" value="{{ $filters['q'] ?? '' }}" maxlength="100"></x-form-group>
+                <x-form-group label="Stato delle fatture" name="invoice_status"><select id="field-invoice-status" name="invoice_status" class="form-sel"><option value="">Tutte le fatture valide</option>@foreach(['issued' => 'Da incassare', 'partially_paid' => 'Parzialmente incassate', 'paid' => 'Incassate', 'overdue' => 'Scadute', 'credited' => 'Stornate'] as $value => $label)<option value="{{ $value }}" @selected(($filters['invoice_status'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
+                <x-form-group label="Importo documento minimo (IVA inclusa)" name="min_amount"><input id="field-min-amount" type="number" name="min_amount" class="form-in" min="0" step="0.01" value="{{ $filters['min_amount'] ?? '' }}"></x-form-group>
+                <x-form-group label="Importo documento massimo (IVA inclusa)" name="max_amount"><input id="field-max-amount" type="number" name="max_amount" class="form-in" min="0" step="0.01" value="{{ $filters['max_amount'] ?? '' }}"></x-form-group>
+                <x-form-group label="Categoria delle spese" name="category_id"><select id="field-category-id" name="category_id" class="form-sel" onchange="this.form.querySelector('[name=subcategory_id]').value='';this.form.requestSubmit()"><option value="">Tutte le categorie</option>@foreach($expenseCategories as $category)<option value="{{ $category->id }}" @selected(($filters['category_id'] ?? '') == $category->id)>{{ $category->name }}</option>@endforeach</select></x-form-group>
+                <x-form-group label="Sottocategoria delle spese" name="subcategory_id"><select id="field-subcategory-id" name="subcategory_id" class="form-sel"><option value="">Tutte le sottocategorie</option>@foreach($expenseSubcategories as $category)<option value="{{ $category->id }}" @selected(($filters['subcategory_id'] ?? '') == $category->id)>{{ $category->name }}</option>@endforeach</select></x-form-group>
+                <x-form-group label="Stato delle spese" name="expense_status"><select id="field-expense-status" name="expense_status" class="form-sel"><option value="">Da pagare e pagate</option><option value="pending" @selected(($filters['expense_status'] ?? '') === 'pending')>Da pagare</option><option value="paid" @selected(($filters['expense_status'] ?? '') === 'paid')>Pagate</option></select></x-form-group>
+                <x-form-group label="Confronta dal" name="compare_from"><input id="field-compare-from" type="date" name="compare_from" class="form-in" value="{{ $filters['compare_from'] ?? '' }}"></x-form-group>
+                <x-form-group label="Confronta al" name="compare_to"><input id="field-compare-to" type="date" name="compare_to" class="form-in" value="{{ $filters['compare_to'] ?? '' }}"></x-form-group>
+            </div>
+            <p class="u-text-meta">Categoria, sottocategoria e stato delle spese filtrano i costi. Lo stato delle fatture filtra anche i relativi pagamenti e le note collegate.</p>
+        </details>
+    </form>
+    @if($errors->any())<div class="u-alert-error u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
     <div class="g-3col u-mb-lg">
-        <x-panel padded>
-            <x-stat-card 
-                label="Fatturato netto (IVA esclusa)"
-                value="€ {{ number_format($globalSummary['total_invoiced'], 2, ',', '.') }}" 
-                sub="Da {{ $globalSummary['invoices_count'] }} fatture valide" 
-                color="var(--purple)"
-            />
-        </x-panel>
-        
-        <x-panel padded>
-            <x-stat-card 
-                label="Incassato" 
-                value="€ {{ number_format($globalSummary['total_collected'], 2, ',', '.') }}" 
-                sub="Flusso cassa reale"
-                color="var(--teal)"
-            />
-        </x-panel>
-        
-        <x-panel padded>
-            <x-stat-card 
-                label="Da incassare (IVA 22%)"
-                value="€ {{ number_format($globalSummary['total_outstanding'], 2, ',', '.') }}" 
-                sub="Imponibile residuo al 22%, meno incassi"
-                color="var(--orange)"
-                :subAlert="$globalSummary['total_outstanding'] > 0"
-            />
-        </x-panel>
+        @foreach($metrics as $key => $label)
+            <x-panel padded><x-stat-card :label="$label" :value="$money($globalSummary[$key])" :sub="match($key) { 'total_invoiced' => 'Da '.$globalSummary['invoices_count'].' fatture valide', 'total_collected' => 'Flusso cassa reale', default => 'Fatturato netto × 1,22 − incassato' }" :color="match($key) { 'total_invoiced' => 'var(--purple)', 'total_collected' => 'var(--teal)', default => 'var(--orange)' }" />
+                @if($comparison)<p class="finance-comparison">Confronto: {{ $money($comparison[$key]) }}<br>Differenza: {{ $money($globalSummary[$key] - $comparison[$key]) }}</p>@endif
+            </x-panel>
+        @endforeach
     </div>
-
-    <div class="g-3col u-mb-lg">
-        <x-panel title="Trend Fatturato netto (IVA esclusa)" dot="var(--purple)" padded>
-            <div x-data="{
-                initChart() {
-                    const data = {{ $sparklineData }};
-                    if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
-                    const chartEl = this.$refs.fatturato;
-                    const isCompactChart = chartEl.getBoundingClientRect().width < 520;
-                    
-                    const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-                    const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
-                    
-                    const opt0 = {
-                        chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
-                        series: [{ name: 'Fatturato netto (IVA esclusa)', data: data.invoiced }],
-                        xaxis: {
-                            categories: data.labels,
-                            tickPlacement: 'on',
-                            tickAmount: isCompactChart ? 6 : undefined,
-                            labels: {
-                                trim: true,
-                                hideOverlappingLabels: true,
-                                rotate: isCompactChart ? -45 : 0,
-                                rotateAlways: isCompactChart,
-                                style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
-                                formatter: (val) => val
-                            }
-                        },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => Math.abs(value) >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, forceNiceScale: true },
-                        colors: ['var(--purple)'],
-                        stroke: { curve: 'smooth', width: 3 },
-                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
-                        markers: { size: 4, colors: ['var(--purple)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
-                        dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: isCompactChart ? 0 : 15, right: isCompactChart ? 8 : 28 } },
-                        tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
-                    };
-                    new window.ApexCharts(chartEl, opt0).render();
-                }
-            }" x-init="initChart()">
-                <div x-ref="fatturato" class="u-min-h-250"></div>
-            </div>
-        </x-panel>
-
-        <x-panel title="Trend Incassi" dot="var(--teal)" padded>
-            <div x-data="{
-                initChart() {
-                    const data = {{ $sparklineData }};
-                    if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
-                    const chartEl = this.$refs.spark1;
-                    const isCompactChart = chartEl.getBoundingClientRect().width < 520;
-                    
-                    const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-                    const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
-                    
-                    const opt1 = {
-                        chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
-                        series: [{ name: 'Incassato', data: data.collected }],
-                        xaxis: {
-                            categories: data.labels,
-                            tickPlacement: 'on',
-                            tickAmount: isCompactChart ? 6 : undefined,
-                            labels: {
-                                trim: true,
-                                hideOverlappingLabels: true,
-                                rotate: isCompactChart ? -45 : 0,
-                                rotateAlways: isCompactChart,
-                                style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
-                                formatter: (val) => val
-                            }
-                        },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
-                        colors: ['var(--teal)'],
-                        stroke: { curve: 'smooth', width: 3 },
-                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
-                        markers: { size: 4, colors: ['var(--teal)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
-                        dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: isCompactChart ? 0 : 15, right: isCompactChart ? 8 : 28 } },
-                        tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
-                    };
-                    new window.ApexCharts(chartEl, opt1).render();
-                }
-            }" x-init="initChart()">
-                <div x-ref="spark1" class="u-min-h-250"></div>
-            </div>
-        </x-panel>
-
-        <x-panel title="Trend Da incassare (IVA 22%)" dot="var(--orange)" padded>
-            <div x-data="{
-                initChart() {
-                    const data = {{ $sparklineData }};
-                    if (!window.ApexCharts) { setTimeout(() => this.initChart(), 200); return; }
-                    const chartEl = this.$refs.spark2;
-                    const isCompactChart = chartEl.getBoundingClientRect().width < 520;
-                    
-                    const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-                    const tooltipFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
-                    
-                    const opt2 = {
-                        chart: { type: 'area', height: isCompactChart ? 230 : 250, width: '100%', parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false }, selection: { enabled: false }, background: 'transparent', redrawOnParentResize: true, redrawOnWindowResize: true },
-                        series: [{ name: 'Da incassare (IVA 22%)', data: data.pending }],
-                        xaxis: {
-                            categories: data.labels,
-                            tickPlacement: 'on',
-                            tickAmount: isCompactChart ? 6 : undefined,
-                            labels: {
-                                trim: true,
-                                hideOverlappingLabels: true,
-                                rotate: isCompactChart ? -45 : 0,
-                                rotateAlways: isCompactChart,
-                                style: { colors: 'var(--text3)', fontFamily: 'var(--sans)', fontSize: isCompactChart ? '9px' : '11px' },
-                                formatter: (val) => val
-                            }
-                        },
-                        yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' }, min: 0, forceNiceScale: true },
-                        colors: ['var(--orange)'],
-                        stroke: { curve: 'smooth', width: 3 },
-                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
-                        markers: { size: 4, colors: ['var(--orange)'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
-                        dataLabels: { enabled: false },
-                        grid: { borderColor: 'var(--line)', strokeDashArray: 4, opacity: 0.5, padding: { left: isCompactChart ? 0 : 15, right: isCompactChart ? 8 : 28 } },
-                        tooltip: { theme: 'dark', y: { formatter: function (val) { return tooltipFormatter.format(val) } } }
-                    };
-                    new window.ApexCharts(chartEl, opt2).render();
-                }
-            }" x-init="initChart()">
-                <div x-ref="spark2" class="u-min-h-250"></div>
-            </div>
-        </x-panel>
-    </div>
-
-    {{-- Client Table --}}
-    <div class="u-mb-lg">
-        <x-panel title="Riepilogo per Cliente" dot="var(--blue)">
-            <div class="t-table-wrap" role="region" aria-label="Riepilogo per cliente, tabella scorrevole" tabindex="0">
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th class="text-right">Fatturato netto (IVA esclusa)</th>
-                        <th class="text-right">Incassato</th>
-                        <th class="text-right">Da incassare (IVA 22%)</th>
-                        <th class="text-center">Costi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($summaryByClient as $cRow)
-                    <tr>
-                        <td class="name-col">{{ $cRow->client_name }}</td>
-                        <td class="text-right mono-col">€ {{ number_format($cRow->total_invoiced, 2, ',', '.') }}</td>
-                        <td class="text-right mono-col u-text-green">€ {{ number_format($cRow->total_collected, 2, ',', '.') }}</td>
-                        <td class="text-right mono-col {{ $cRow->total_outstanding > 0 ? 'u-text-red' : '' }}">
-                            € {{ number_format($cRow->total_outstanding, 2, ',', '.') }}
-                        </td>
-                        <td class="text-center mono-col u-text-red">€ {{ number_format($cRow->total_expenses, 2, ',', '.') }}</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="u-empty-state-sm">Nessun dato economico nel perimetro.</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            </div>
-        </x-panel>
-    </div>
-
-    {{-- Project Table --}}
-    <x-panel title="Riepilogo per Progetto" dot="var(--teal)">
-        <div class="t-table-wrap" role="region" aria-label="Riepilogo per progetto, tabella scorrevole" tabindex="0">
-        <table class="t-table">
-            <thead>
-                <tr>
-                    <th>Progetto</th>
-                    <th>Cliente</th>
-                    <th class="text-right">Fatturato netto (IVA esclusa)</th>
-                    <th class="text-right">Incassato</th>
-                    <th class="text-right">Da incassare (IVA 22%)</th>
-                    <th class="text-center">Costi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($summaryByProject as $pRow)
-                <tr>
-                    <td class="name-col">{{ $pRow->project_name }}</td>
-                    <td class="u-text-muted">{{ $pRow->client_name }}</td>
-                    <td class="text-right mono-col">€ {{ number_format($pRow->total_invoiced, 2, ',', '.') }}</td>
-                    <td class="text-right mono-col u-text-green">€ {{ number_format($pRow->total_collected, 2, ',', '.') }}</td>
-                    <td class="text-right mono-col {{ $pRow->total_outstanding > 0 ? 'u-text-red' : '' }}">
-                        € {{ number_format($pRow->total_outstanding, 2, ',', '.') }}
-                    </td>
-                    <td class="text-center mono-col u-text-red">€ {{ number_format($pRow->total_expenses, 2, ',', '.') }}</td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="6" class="u-empty-state-sm">Nessun progetto con record economici.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <x-panel padded class="u-mb-lg">
+        <div x-data="{ metric: 0, plot: 'line' }">
+            <div class="finance-chart-heading"><h2>Andamento nel periodo</h2><div class="finance-chart-controls"><label for="report-metric" class="sr-only">Dato del grafico</label><select id="report-metric" class="form-sel" x-model.number="metric">@foreach($chartData['series'] as $i => $series)<option value="{{ $i }}">{{ $series['name'] }}</option>@endforeach</select><label for="report-chart-type" class="sr-only">Tipo di grafico</label><select id="report-chart-type" class="form-sel" x-model="plot"><option value="line">Linee</option><option value="bar">Colonne</option></select></div></div>
+            @foreach($chartData['series'] as $i => $series)
+                @foreach(['line', 'bar'] as $display)<template x-if="metric === {{ $i }} && plot === '{{ $display }}'"><div x-data="financeChart(@js($chartData), @js($trendCharts[$i]), @js($drillUrl), @js($display))"><div x-ref="chart" role="img" aria-label="{{ $series['name'] }} nel periodo"></div></div></template>@endforeach
+            @endforeach
+            @if($comparison)<p class="u-text-meta">Confronto {{ \Carbon\Carbon::parse($filters['compare_from'])->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($filters['compare_to'])->format('d/m/Y') }}. I punti sono affiancati per posizione nel periodo.</p>@endif
+            <details class="finance-advanced"><summary>Valori e documenti per periodo</summary>
+                <div class="t-table-wrap" tabindex="0" role="region" aria-label="Valori del grafico"><table class="t-table"><thead><tr><th>Periodo</th>@foreach($metrics as $label)<th>{{ $label }}</th>@endforeach<th>Spese</th></tr></thead><tbody>
+                    @foreach($chartData['labels'] as $i => $label)<tr><th><a href="{{ $pageUrl.'?'.http_build_query(array_replace($baseFilters, ['from' => max($from ?? '1900-01-01', $chartData['periods'][$i]['from']), 'to' => min($to ?? '2100-12-31', $chartData['periods'][$i]['to']), 'documents' => 1])) }}#report-documents">{{ $label }}</a></th>@foreach($chartData['series'] as $series)<td>{{ $money($series['data'][$i]) }}</td>@endforeach</tr>@endforeach
+                </tbody></table></div>
+            </details>
         </div>
     </x-panel>
+    <div class="finance-distributions u-mb-lg">
+        @foreach($distributionCharts as $chart)
+        <x-panel padded>
+            <h2 class="finance-chart-title">{{ $chart['title'] }}</h2>
+            @if($chart['entries'])
+                <div x-data="financeDistribution(@js($chart['options']), @js($chart['entries']), @js($chart['kind']))"><div x-ref="chart" role="img" aria-label="{{ $chart['title'] }}"></div></div>
+                <details class="finance-advanced"><summary>Valori e dettagli</summary><ul class="finance-chart-values">@foreach($chart['entries'] as $entry)<li>@if($entry['url'])<a href="{{ $entry['url'] }}">{{ $entry['name'] }}</a>@else<span>{{ $entry['name'] }}</span>@endif<strong>{{ $money($entry['amount']) }}</strong></li>@endforeach</ul></details>
+            @else<p class="u-text-meta u-p-md">Nessun dato con questi filtri.</p>@endif
+        </x-panel>
+        @endforeach
+    </div>
+    @unless($subject)
+    <x-finance-region region="report-directory">
+        @include('economic-summary.partials.directory')
+    </x-finance-region>
+    @endunless
+    @if($documents)
+    <x-panel padded class="u-mb-lg" id="report-documents">
+        <h2 class="u-mb-md">Documenti e movimenti</h2>
+        <p class="u-mb-md">Spese nel periodo: <strong>{{ $money($globalSummary['total_expenses']) }}</strong></p>
+        <div class="finance-directory">
+            @forelse($documents as $document)
+                @php
+                    $documentRoute = match($document->kind) { 'invoice' => 'invoices.show', 'credit_note' => 'credit-notes.show', 'payment' => 'payments.show', default => 'expenses.show' };
+                    $kindLabel = match($document->kind) { 'invoice' => 'Fattura', 'credit_note' => 'Nota di credito', 'payment' => 'Incasso', default => 'Spesa' };
+                    $amount = $document->kind === 'payment' ? $document->collected : ($document->kind === 'expense' ? $document->costs : $document->net);
+                @endphp
+                <div class="finance-directory-entry"><div><strong>{{ $kindLabel }} {{ $document->label }}</strong><p class="u-text-meta">{{ \Carbon\Carbon::parse($document->event_date)->format('d/m/Y') }} · {{ $money($amount) }}{{ in_array($document->kind, ['invoice','credit_note']) ? ' imponibile' : '' }}</p></div><a href="{{ route($documentRoute, $document->record_id) }}" class="btn btn-g btn-sm">Apri documento</a></div>
+            @empty<p>Nessun documento nel periodo selezionato.</p>@endforelse
+        </div>
+        {{ $documents->links() }}
+    </x-panel>
+    @else<p class="u-mb-lg"><a href="{{ $drillUrl }}#report-documents" class="btn btn-g">Consulta i documenti del periodo</a></p>@endif
 </x-app-layout>

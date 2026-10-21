@@ -86,7 +86,12 @@ class HostingServiceController extends Controller
         $this->authorize('view', $hostingService);
         $hostingService->load(['client', 'interventions.user']);
 
-        return view('hosting-services.show', compact('hostingService'));
+        $linkedInvoices = auth()->user()->canAccessFinance()
+            ? $hostingService->linkedInvoices()->with(['items' => fn ($q) => $q->where('hosting_service_id', $hostingService->id),
+                'importedServiceLinks' => fn ($q) => $q->where('hosting_service_id', $hostingService->id)])
+                ->orderByDesc('issue_date')->orderByDesc('id')->paginate(15, ['*'], 'invoices_page')->withQueryString()
+            : null;
+        return view('hosting-services.show', compact('hostingService', 'linkedInvoices'));
     }
 
     public function edit(HostingService $hostingService)

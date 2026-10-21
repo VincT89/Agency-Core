@@ -24,6 +24,7 @@ class GenerateRecurringExpenses
                     'recurrence_date' => $date,
                     'user_id' => $recurrence->user_id, 'title' => $recurrence->title,
                     'amount' => $recurrence->amount, 'category' => $recurrence->category,
+                    'category_id' => $recurrence->category_id, 'subcategory_id' => $recurrence->subcategory_id,
                     'supplier' => $recurrence->supplier, 'document_kind' => $recurrence->document_kind,
                     'expense_date' => $date, 'due_date' => $date,
                     'status' => $cancelMissingBefore && $date->lt($cancelMissingBefore) ? 'cancelled' : 'pending',
@@ -50,6 +51,6 @@ class GenerateRecurringExpenses
             (clone $future)->where('recurrence_date', '>', $recurrence->ends_on)->update(['status' => 'cancelled']);
             $future->where('recurrence_date', '<=', $recurrence->ends_on);
         }
-        $future->update(array_merge($recurrence->only(['title', 'amount', 'category', 'supplier', 'document_kind', 'notes']), ['status' => 'pending']));
+        $future->update(array_merge($recurrence->only(['title', 'amount', 'category', 'category_id', 'subcategory_id', 'supplier', 'document_kind', 'notes']), ['status' => 'pending']));
     }
 }

@@ -165,6 +165,26 @@
         </div>
         @endif
 
+        @if($linkedInvoices !== null)
+        <x-panel title="Fatture collegate" padded>
+            <div class="finance-directory">
+                @forelse($linkedInvoices as $linkedInvoice)
+                    @php
+                        $serviceTaxable = $linkedInvoice->hosting_service_id === $hostingService->id ? (float) $linkedInvoice->subtotal : (float) $linkedInvoice->items->sum('total')
+                            + $linkedInvoice->importedServiceLinks->sum(fn ($link) => (float) ($linkedInvoice->import_metadata['items'][$link->line_index]['total'] ?? 0));
+                    @endphp
+                    <div class="finance-directory-entry">
+                        <div><strong>{{ $linkedInvoice->display_number }}</strong><p class="u-text-meta">{{ $linkedInvoice->issue_date->format('d/m/Y') }} · {{ $linkedInvoice->status_label }}</p>
+                            <p>{{ $linkedInvoice->hosting_service_id === $hostingService->id ? 'Intera fattura' : 'Voci di questo servizio' }}: {{ number_format($serviceTaxable, 2, ',', '.') }} € imponibile</p>
+                        </div>
+                        <a class="btn btn-g btn-sm" href="{{ route('invoices.show', $linkedInvoice) }}">Apri fattura</a>
+                    </div>
+                @empty<p>Nessuna fattura collegata a questo servizio.</p>@endforelse
+            </div>
+            {{ $linkedInvoices->links() }}
+        </x-panel>
+        @endif
+
         {{-- Allegati --}}
         <div class="u-mt-lg">
             <x-panel title="Documenti e Credenziali" dot="var(--blue)" padded>

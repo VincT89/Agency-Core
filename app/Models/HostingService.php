@@ -150,6 +150,24 @@ class HostingService extends Model
         return $this->hasMany(HostingServiceIntervention::class);
     }
 
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function importedInvoiceLinks(): HasMany
+    {
+        return $this->hasMany(InvoiceImportedServiceLink::class);
+    }
+
+    public function linkedInvoices(): Builder
+    {
+        return Invoice::query()->where(fn ($query) => $query
+            ->where('hosting_service_id', $this->id)
+            ->orWhereHas('items', fn ($items) => $items->where('hosting_service_id', $this->id))
+            ->orWhereHas('importedServiceLinks', fn ($links) => $links->where('hosting_service_id', $this->id)));
+    }
+
     public function expenses(): MorphMany
     {
         return $this->morphMany(Expense::class, 'expenseable');

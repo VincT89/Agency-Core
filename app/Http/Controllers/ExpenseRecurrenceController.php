@@ -23,7 +23,8 @@ class ExpenseRecurrenceController extends Controller
     public function store(StoreExpenseRecurrenceRequest $request, GenerateRecurringExpenses $generator)
     {
         $recurrence = DB::transaction(function () use ($request, $generator) {
-            $recurrence = ExpenseRecurrence::create($request->validated() + ['user_id' => $request->user()->id]);
+            $data = app(\App\Domain\Finance\Services\ExpenseClassification::class)->resolve($request->validated());
+            $recurrence = ExpenseRecurrence::create($data + ['user_id' => $request->user()->id]);
             $generator->execute($recurrence);
 
             return $recurrence;
@@ -42,7 +43,8 @@ class ExpenseRecurrenceController extends Controller
         DB::transaction(function () use ($request, $recurrence, $generator) {
             $recurrence = ExpenseRecurrence::lockForUpdate()->findOrFail($recurrence->id);
             $resuming = ! $recurrence->active && $request->boolean('active');
-            $recurrence->update($request->validated());
+            $data = app(\App\Domain\Finance\Services\ExpenseClassification::class)->resolve($request->validated(), $recurrence->category_id, $recurrence->subcategory_id);
+            $recurrence->update($data);
             $generator->updateFuture($recurrence);
             $generator->execute($recurrence, cancelMissingBefore: $resuming ? CarbonImmutable::today() : null);
         });

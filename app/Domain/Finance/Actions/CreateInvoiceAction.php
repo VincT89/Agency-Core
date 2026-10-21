@@ -27,6 +27,7 @@ class CreateInvoiceAction
                     [
                         'billable_type' => null,
                         'billable_id' => null,
+                        'hosting_service_id' => $line['hosting_service_id'] ?? null,
                     ],
                 ));
             }

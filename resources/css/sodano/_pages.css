@@ -411,6 +411,30 @@
 .inv-list .t-table :is(th, td) { padding: 14px 18px; }
 .inv-list .t-table th,
 .inv-list .mono-col { white-space: nowrap; }
+.inv-list { scroll-margin-top: 88px; }
+.inv-list .t-table .inv-sort-heading { padding: 0; }
+.inv-sort-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 14px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+.inv-sort-link:hover,
+.inv-sort-link:focus-visible { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.inv-sort-link:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
+.inv-sort-indicator { display: grid; gap: 3px; flex: 0 0 10px; }
+.inv-sort-indicator::before,
+.inv-sort-indicator::after { content: ''; border-inline: 4px solid transparent; opacity: .4; }
+.inv-sort-indicator::before { border-bottom: 5px solid currentColor; }
+.inv-sort-indicator::after { border-top: 5px solid currentColor; }
+.inv-sort-heading[aria-sort="ascending"] .inv-sort-indicator::before,
+.inv-sort-heading[aria-sort="descending"] .inv-sort-indicator::after { opacity: 1; }
+.inv-sort-heading[aria-sort="ascending"] .inv-sort-indicator::after,
+.inv-sort-heading[aria-sort="descending"] .inv-sort-indicator::before { opacity: 0; }
 
 /* Badge voce manuale */
 .inv-type-badge.manual       { background: color-mix(in srgb, var(--purple) 12%, transparent);

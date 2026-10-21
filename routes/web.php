@@ -139,6 +139,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::get('invoices/import/archive', \App\Livewire\Invoices\InvoiceBatchImport::class)->name('invoices.import.archive');
     Route::get('invoices/{invoice}/document', [\App\Http\Controllers\InvoiceDocumentController::class, 'invoice'])->name('invoices.document');
     Route::get('invoices/{invoice}/status/edit', [\App\Http\Controllers\InvoiceStatusController::class, 'edit'])->name('invoices.status.edit');
+    Route::get('invoices/{invoice}/associations', [\App\Http\Controllers\InvoiceAssociationController::class, 'edit'])->name('invoices.associations.edit');
+    Route::patch('invoices/{invoice}/associations', [\App\Http\Controllers\InvoiceAssociationController::class, 'update'])->name('invoices.associations.update');
     Route::patch('invoices/{invoice}/status', [\App\Http\Controllers\InvoiceStatusController::class, 'update'])->name('invoices.status.update');
     Route::get('invoices/{invoice}/due-date/edit', [\App\Http\Controllers\InvoiceDueDateController::class, 'edit'])->name('invoices.due-date.edit');
     Route::patch('invoices/{invoice}/due-date', [\App\Http\Controllers\InvoiceDueDateController::class, 'update'])->name('invoices.due-date.update');
@@ -257,6 +259,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
     // AMMINISTRAZIONE - SPESE
     Route::prefix('expenses')->name('expenses.')->middleware('can:viewAny,App\Models\Expense')->group(function () {
+        Route::get('/categories', \App\Livewire\Expenses\ExpenseCategories::class)->name('categories');
         Route::get('/forecast', [\App\Http\Controllers\CashFlowController::class, 'index'])->name('forecast');
         Route::put('/forecast/balance', [\App\Http\Controllers\CashFlowController::class, 'updateBalance'])->name('forecast.balance');
         Route::resource('recurrences', \App\Http\Controllers\ExpenseRecurrenceController::class)->parameters(['recurrences' => 'recurrence'])->except(['show', 'destroy']);
@@ -297,6 +300,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         ->name('billing-profile.aruba.test');
     Route::resource('payments', PaymentController::class);
     Route::get('/economic-summary', EconomicSummaryController::class)->name('economic-summary.index');
+    Route::get('/economic-summary/{group}/{id}', [EconomicSummaryController::class, 'show'])->whereIn('group', ['clients', 'projects'])->whereNumber('id')->name('economic-summary.show');
+    Route::get('/finance/lookup', \App\Http\Controllers\FinanceLookupController::class)->name('finance.lookup');
 
     Route::post('/attachments', [AttachmentController::class, 'store'])
         ->name('attachments.store');

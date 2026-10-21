@@ -2,292 +2,30 @@
 
 namespace App\Services;
 
-use App\Domain\Finance\Services\CashAmount;
-use App\Models\Client;
-use App\Models\CreditNote;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Project;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class EconomicSummaryService
 {
-    protected array $includedStatuses = [
-        'issued',
-        'partially_paid',
-        'paid',
-        'overdue',
-        'credited',
-    ];
+    public function __construct(private FinanceReportQuery $reports) {}
 
-    // Applica il perimetro di autorizzazione per gli utenti Finance
-    protected function applyRolePerimeter(Builder $query, User $user): Builder
+    public function globalSummary(User $user, ?string $from = null, ?string $to = null, array $filters = []): array
     {
-        if ($user->canAccessFinance()) {
-            return $query;
+        if (! $user->canAccessFinance()) {
+            return ['total_invoiced' => 0, 'total_collected' => 0, 'total_outstanding' => 0, 'total_expenses' => 0, 'invoices_count' => 0, 'unallocated_credit' => 0];
         }
-
-        return $query->whereNull('id');
-    }
-    
-    protected function applyRolePerimeterSafe(Builder $query, User $user, string $tableName): Builder
-    {
-         if ($user->canAccessFinance()) {
-            return $query;
-        }
-
-        return $query->whereRaw('1 = 0');
-    }
-
-    // Applica il filtro temporale sulle date specificate
-    protected function applyPeriod(Builder $query, string $dateColumn, ?string $from, ?string $to): Builder
-    {
-        if ($from) {
-            $query->whereDate($dateColumn, '>=', $from);
-        }
-        if ($to) {
-            $query->whereDate($dateColumn, '<=', $to);
-        }
-        return $query;
-    }
-
-    public function globalSummary(User $user, ?string $from = null, ?string $to = null): array
-    {
-        /** Net turnover deducts each credit note's taxable amount on its issue date, independently of payment allocations. */
-        $invoicesQuery = Invoice::query()->whereIn('status', $this->includedStatuses);
-        $invoicesQuery = $this->applyRolePerimeterSafe($invoicesQuery, $user, 'invoices');
-        $invoicesQuery = $this->applyPeriod($invoicesQuery, 'issue_date', $from, $to);
-        
-        $invoiceStats = $invoicesQuery->selectRaw('
-            COUNT(id) as invoices_count,
-            SUM(subtotal) as total_invoiced,
-            SUM('.ReportInvoiceAmounts::outstandingSql().') as total_outstanding
-        ')->first();
-
-        $creditQuery = $this->applyRolePerimeterSafe(CreditNote::query(), $user, 'credit_notes');
-        $creditQuery = $this->applyPeriod($creditQuery, 'issue_date', $from, $to);
-        $totalCredited = (clone $creditQuery)->sum('subtotal');
-        $unallocatedCredit = (clone $creditQuery)->select(['id', 'payable_total'])->withSum('allocations', 'amount')->get()
-            ->sum(fn ($note) => max(0, \App\Domain\Finance\Services\CashAmount::cents($note->payable_total)
-                - \App\Domain\Finance\Services\CashAmount::cents($note->allocations_sum_amount ?? 0))) / 100;
-
-        // 2. INCASSATO (Su base pagamenti, filtrati per payment_date)
-        $paymentsQuery = Payment::query();
-        $paymentsQuery = $this->applyRolePerimeterSafe($paymentsQuery, $user, 'payments');
-        $paymentsQuery = $this->applyPeriod($paymentsQuery, 'payment_date', $from, $to);
-        
-        $totalCollected = (float) $paymentsQuery->sum('amount');
-
-        return [
-            'total_invoiced' => round((float) $invoiceStats->total_invoiced - (float) $totalCredited, 2),
-            'total_collected' => round($totalCollected, 2),
-            'total_outstanding' => round((float) $invoiceStats->total_outstanding, 2),
-            'invoices_count' => (int) $invoiceStats->invoices_count,
-            'unallocated_credit' => $unallocatedCredit,
-        ];
+        return $this->reports->totals(array_filter(array_replace($filters, compact('from', 'to')), fn ($value) => $value !== null));
     }
 
     public function summaryByClient(User $user, ?string $from = null, ?string $to = null): Collection
     {
-        // 1. INVOICES (Aggregate by client)
-        $invoicesQuery = Invoice::query()->whereIn('status', $this->includedStatuses);
-        $invoicesQuery = $this->applyRolePerimeterSafe($invoicesQuery, $user, 'invoices');
-        $invoicesQuery = $this->applyPeriod($invoicesQuery, 'issue_date', $from, $to);
-
-        $invoicesByClient = $invoicesQuery
-            ->selectRaw('
-                client_id,
-                COUNT(id) as invoices_count,
-                SUM(subtotal) as total_invoiced,
-                SUM('.ReportInvoiceAmounts::outstandingSql().') as total_outstanding
-            ')
-            ->groupBy('client_id')
-            ->get()
-            ->keyBy('client_id');
-
-        $creditQuery = $this->applyRolePerimeterSafe(CreditNote::query(), $user, 'credit_notes');
-        $creditsByClient = $this->applyPeriod($creditQuery, 'issue_date', $from, $to)
-            ->selectRaw('client_id, SUM(subtotal) as total_credited')
-            ->groupBy('client_id')->get()->keyBy('client_id');
-
-        // 2. PAYMENTS (Aggregate by client)
-        $paymentsQuery = Payment::query();
-        $paymentsQuery = $this->applyRolePerimeterSafe($paymentsQuery, $user, 'payments');
-        $paymentsQuery = $this->applyPeriod($paymentsQuery, 'payment_date', $from, $to);
-        
-        $paymentsByClient = $paymentsQuery
-            ->selectRaw('
-                client_id,
-                SUM(amount) as total_collected
-            ')
-            ->groupBy('client_id')
-            ->get()
-            ->keyBy('client_id');
-
-        // 3. EXPENSES (Aggregate by client directly + via projects)
-        $expensesQuery = \App\Models\Expense::query()->whereIn('expenses.status', ['pending', 'paid']);
-        $expensesQuery = $this->applyRolePerimeterSafe($expensesQuery, $user, 'expenses');
-        $expensesQuery = $this->applyPeriod($expensesQuery, 'expense_date', $from, $to);
-
-        $directClientExpenses = (clone $expensesQuery)
-            ->where('expenseable_type', Client::class)
-            ->selectRaw('expenseable_id as client_id, SUM(amount) as total_expenses')
-            ->groupBy('expenseable_id')
-            ->get()
-            ->keyBy('client_id');
-
-        $projectExpensesForClient = (clone $expensesQuery)
-            ->where('expenseable_type', Project::class)
-            ->join('projects', 'expenses.expenseable_id', '=', 'projects.id')
-            ->selectRaw('projects.client_id, SUM(expenses.amount) as total_expenses')
-            ->groupBy('projects.client_id')
-            ->get()
-            ->keyBy('client_id');
-
-        // 4. MERGE in PHP su aggregati piccolissimi
-        $clientIds = collect(array_keys($invoicesByClient->toArray()))
-            ->merge($creditsByClient->keys())
-            ->merge(array_keys($paymentsByClient->toArray()))
-            ->merge(array_keys($directClientExpenses->toArray()))
-            ->merge(array_keys($projectExpensesForClient->toArray()))
-            ->unique();
-
-        $clientNames = Client::query()
-            ->whereIn('id', $clientIds)
-            ->pluck('name', 'id');
-
-        return $clientIds->map(function ($clientId) use ($invoicesByClient, $creditsByClient, $paymentsByClient, $directClientExpenses, $projectExpensesForClient, $clientNames) {
-            $inv = $invoicesByClient->get($clientId);
-            $pay = $paymentsByClient->get($clientId);
-            $dirExp = $directClientExpenses->get($clientId);
-            $projExp = $projectExpensesForClient->get($clientId);
-
-            $totalExpenses = ($dirExp ? (float) $dirExp->total_expenses : 0.0) + ($projExp ? (float) $projExp->total_expenses : 0.0);
-
-            return (object) [
-                'client_id' => $clientId,
-                'client_name' => $clientNames->get($clientId, 'N/D'),
-                'invoices_count' => $inv ? (int) $inv->invoices_count : 0,
-                'total_invoiced' => round((float) ($inv?->total_invoiced ?? 0) - (float) ($creditsByClient->get($clientId)?->total_credited ?? 0), 2),
-                'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,
-                'total_collected' => $pay ? (float) $pay->total_collected : 0.0,
-                'total_expenses' => $totalExpenses,
-            ];
-        })->sortByDesc('total_invoiced')->values();
+        return $user->canAccessFinance() ? $this->reports->groups('clients', array_filter(compact('from', 'to')))
+            ->orderByDesc('total_invoiced')->get() : collect();
     }
 
     public function summaryByProject(User $user, ?string $from = null, ?string $to = null): Collection
     {
-        // 1. INVOICES
-        $invoicesQuery = Invoice::query()->whereIn('status', $this->includedStatuses);
-        $invoicesQuery = $this->applyRolePerimeterSafe($invoicesQuery, $user, 'invoices');
-        $invoicesQuery = $this->applyPeriod($invoicesQuery, 'issue_date', $from, $to);
-        
-        $invoicesByProject = $invoicesQuery
-            ->whereNotNull('project_id')
-            ->selectRaw('
-                project_id,
-                COUNT(id) as invoices_count,
-                SUM(subtotal) as total_invoiced,
-                SUM('.ReportInvoiceAmounts::outstandingSql().') as total_outstanding
-            ')
-            ->groupBy('project_id')
-            ->get()
-            ->keyBy('project_id');
-
-        $creditsByProject = $this->taxableCreditsByProject($user, $from, $to);
-
-        // 2. PAYMENTS
-        $paymentsQuery = Payment::query();
-        $paymentsQuery = $this->applyRolePerimeterSafe($paymentsQuery, $user, 'payments');
-        $paymentsQuery = $this->applyPeriod($paymentsQuery, 'payment_date', $from, $to);
-        
-        $paymentsByProject = $paymentsQuery
-            ->whereNotNull('project_id')
-            ->selectRaw('
-                project_id,
-                SUM(amount) as total_collected
-            ')
-            ->groupBy('project_id')
-            ->get()
-            ->keyBy('project_id');
-
-        // 3. EXPENSES
-        $expensesQuery = \App\Models\Expense::query()->whereIn('expenses.status', ['pending', 'paid']);
-        $expensesQuery = $this->applyRolePerimeterSafe($expensesQuery, $user, 'expenses');
-        $expensesQuery = $this->applyPeriod($expensesQuery, 'expense_date', $from, $to);
-
-        $expensesByProject = (clone $expensesQuery)
-            ->where('expenseable_type', Project::class)
-            ->selectRaw('expenseable_id as project_id, SUM(amount) as total_expenses')
-            ->groupBy('expenseable_id')
-            ->get()
-            ->keyBy('project_id');
-
-        // 4. MERGE
-        $projectIds = collect(array_keys($invoicesByProject->toArray()))
-            ->merge($creditsByProject->keys())
-            ->merge(array_keys($paymentsByProject->toArray()))
-            ->merge(array_keys($expensesByProject->toArray()))
-            ->unique();
-
-        $projectsInfo = Project::query()
-            ->whereIn('id', $projectIds)
-            ->with('client')
-            ->get()
-            ->keyBy('id');
-
-        return $projectIds->map(function ($projectId) use ($invoicesByProject, $creditsByProject, $paymentsByProject, $expensesByProject, $projectsInfo) {
-            $inv = $invoicesByProject->get($projectId);
-            $pay = $paymentsByProject->get($projectId);
-            $exp = $expensesByProject->get($projectId);
-            $proj = $projectsInfo->get($projectId);
-
-            return (object) [
-                'project_id' => $projectId,
-                'project_name' => $proj ? $proj->name : 'N/D',
-                'client_name' => $proj?->isInvoiceContainer() ? 'Tutti i clienti' : ($proj?->client?->name ?? 'N/D'),
-                'invoices_count' => $inv ? (int) $inv->invoices_count : 0,
-                'total_invoiced' => round((float) ($inv?->total_invoiced ?? 0) - ($creditsByProject->get($projectId, 0) / 100), 2),
-                'total_outstanding' => $inv ? (float) $inv->total_outstanding : 0.0,
-                'total_collected' => $pay ? (float) $pay->total_collected : 0.0,
-                'total_expenses' => $exp ? (float) $exp->total_expenses : 0.0,
-            ];
-        })->sortByDesc('total_invoiced')->values();
-    }
-
-    private function taxableCreditsByProject(User $user, ?string $from, ?string $to): Collection
-    {
-        $query = $this->applyRolePerimeterSafe(CreditNote::query(), $user, 'credit_notes');
-        $notes = $this->applyPeriod($query, 'issue_date', $from, $to)
-            ->whereHas('allocations.invoice', fn ($invoice) => $invoice->whereNotNull('project_id'))
-            ->with(['allocations' => fn ($allocations) => $allocations->orderBy('id'), 'allocations.invoice:id,project_id'])
-            ->get(['id', 'subtotal', 'payable_total']);
-        $credits = collect();
-
-        /** Confirmed links distribute taxable credit proportionally; cumulative rounding preserves cents across projects. */
-        foreach ($notes as $note) {
-            $payable = CashAmount::cents($note->payable_total);
-            if ($payable <= 0) {
-                continue;
-            }
-
-            $taxable = CashAmount::cents($note->subtotal);
-            $allocated = 0;
-            $allocatedTaxable = 0;
-            foreach ($note->allocations as $allocation) {
-                $allocated += CashAmount::cents($allocation->amount);
-                $nextTaxable = (int) round($taxable * ($allocated / $payable));
-                $projectId = $allocation->invoice?->project_id;
-                if ($projectId !== null) {
-                    $credits->put($projectId, $credits->get($projectId, 0) + $nextTaxable - $allocatedTaxable);
-                }
-                $allocatedTaxable = $nextTaxable;
-            }
-        }
-
-        return $credits;
+        return $user->canAccessFinance() ? $this->reports->groups('projects', array_filter(compact('from', 'to')))
+            ->orderByDesc('total_invoiced')->get() : collect();
     }
 }

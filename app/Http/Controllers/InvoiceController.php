@@ -24,7 +24,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 class InvoiceController extends Controller
 {
-    public function index(Request $request, \App\Domain\Finance\Queries\InvoiceQuery $invoiceQuery, InvoiceDocumentQuery $documentQuery): View
+    public function index(Request $request, \App\Domain\Finance\Queries\InvoiceQuery $invoiceQuery, InvoiceDocumentQuery $documentQuery): View|JsonResponse
     {
         $this->authorize('viewAny', Invoice::class);
         $this->authorize('viewAny', CreditNote::class);
@@ -36,9 +36,20 @@ class InvoiceController extends Controller
             'fiscal_status' => ['nullable', Rule::enum(InvoiceFiscalStatus::class)],
             'client_id' => ['nullable', 'integer', 'min:1'],
             'start_date' => ['nullable', 'date_format:Y-m-d'],
-            'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'end_date' => ['nullable', 'date_format:Y-m-d', ...($request->filled('start_date') ? ['after_or_equal:start_date'] : [])],
             'page' => ['nullable', 'integer', 'min:1'],
+            'sort' => ['nullable', Rule::in(['date_desc', 'date_asc', 'number_asc', 'number_desc', 'type_asc', 'type_desc', 'amount_asc', 'amount_desc'])],
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'service_type' => ['nullable', Rule::in(['domain', 'hosting'])],
+            'hosting_service_id' => ['nullable', 'integer', 'exists:hosting_services,id'],
+            'min_amount' => ['nullable', 'numeric', 'min:0'],
+            'max_amount' => ['nullable', 'numeric', 'min:0', ...($request->filled('min_amount') ? ['gte:min_amount'] : [])],
         ]);
+
+        $documents = $documentQuery->paginate($filters);
+        if ($request->header('X-Finance-Partial') === 'invoice-list') {
+            return response()->json(['html' => view('invoices.partials.document-list', compact('documents'))->render(), 'document_count' => $documents->total()]);
+        }
 
         // Calcola i KPI globali applicando automaticamente il ProjectSupremacyScope
         $globalQuery = $invoiceQuery->forIndex([]);
@@ -51,8 +62,6 @@ class InvoiceController extends Controller
             ->awaitingPayment()
             ->get()
             ->sum(fn($i) => $i->residual);
-
-        $documents = $documentQuery->paginate($filters);
 
         return view('invoices.index', compact(
             'documents',
@@ -108,9 +117,11 @@ class InvoiceController extends Controller
         $invoice->load([
             'client',
             'project',
+            'hostingService',
             'marketingCampaign',
             'creator',
-            'items',
+            'items.hostingService',
+            'importedServiceLinks.hostingService',
             'payments',
             'creditAllocations.creditNote',
             'auditLogs.user',
@@ -171,7 +182,7 @@ class InvoiceController extends Controller
     public function edit(Invoice $invoice, \App\Domain\Core\Queries\ClientQuery $clientQuery): View
     {
         $this->authorize('update', $invoice);
-        $invoice->load(['client', 'project', 'marketingCampaign', 'items']);
+        $invoice->load(['client', 'project', 'hostingService', 'marketingCampaign', 'items.hostingService:id,name']);
         $clients = $clientQuery->forInvoiceDropdown()->get();
 
         return view('invoices.edit', [
@@ -192,9 +203,13 @@ class InvoiceController extends Controller
         $this->authorize('update', $invoice);
         $data = $request->validated();
 
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($invoice, $data, $amounts) {
+        $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
+        $this->authorize('update', $invoice);
         $data['total'] = (float) $data['subtotal'] + (float) $data['tax_amount'];
 
         $invoice->update($data);
+        $invoice->payments()->update(['project_id' => $invoice->project_id]);
 
         $incomingItems = collect($data['items'] ?? []);
         $incomingIds   = $incomingItems->pluck('id')->filter()->map(fn($id) => (int) $id);
@@ -230,11 +245,13 @@ class InvoiceController extends Controller
                     ]));
                 }
 
+                $attrs['hosting_service_id'] = array_key_exists('hosting_service_id', $line) ? ($line['hosting_service_id'] ?: null) : $item?->hosting_service_id;
                 $item?->update($attrs);
             } else {
                 $invoice->items()->create(array_merge($attrs, [
                     'billable_type' => null,
                     'billable_id'   => null,
+                    'hosting_service_id' => $line['hosting_service_id'] ?? null,
                 ]));
             }
         }
@@ -249,6 +266,7 @@ class InvoiceController extends Controller
         return redirect()
             ->route('invoices.show', $invoice)
             ->with('success', 'Fattura aggiornata correttamente.');
+        });
     }
 
     public function destroy(Invoice $invoice): RedirectResponse

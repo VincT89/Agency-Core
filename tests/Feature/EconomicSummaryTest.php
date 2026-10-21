@@ -134,7 +134,7 @@ class EconomicSummaryTest extends TestCase
         ]);
 
         // CASO A: Filtro GENNAIO 
-        /** The report adds a fixed 22% to the taxable amount before deducting the actual payment. */
+        /** The report applies its formula to turnover and receipts within the same selected period. */
         $responseJan = $this->actingAs($this->admin)->get(route('economic-summary.index', [
             'from' => '2026-01-01',
             'to' => '2026-01-31'
@@ -145,16 +145,17 @@ class EconomicSummaryTest extends TestCase
         $responseJan->assertSee('2.000,00');
         // Incassato: '0,00'
         $responseJan->assertSee('0,00');
-        $responseJan->assertSee('1.940,00');
+        $responseJan->assertSee('2.440,00');
 
         // CASO B: Filtro FEBBRAIO
-        // Mi aspetto: Fatturato = 0, Incassato = 500, Da Incassare = 0 (nessuna fattura emessa a feb)
+        /** February has only a receipt, so the report balance is negative while invoice records remain unchanged. */
         $responseFeb = $this->actingAs($this->admin)->get(route('economic-summary.index', [
             'from' => '2026-02-01',
             'to' => '2026-02-28'
         ]));
         
         $responseFeb->assertOk();
+        $responseFeb->assertSee('-500,00');
         $responseFeb->assertSee('500,00'); // Incasso
         $responseFeb->assertSee('0,00');   // Fatturato
     }

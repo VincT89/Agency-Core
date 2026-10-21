@@ -24,6 +24,7 @@
                 @can('changeDueDate', $invoice)
                     <a href="{{ route('invoices.due-date.edit', $invoice) }}" class="btn btn-g">Modifica scadenza</a>
                 @endcan
+                @can('manageAssociations', $invoice)<a href="{{ route('invoices.associations.edit', $invoice) }}" class="btn btn-g">Modifica collegamento</a>@endcan
                 @can('create', App\Models\Payment::class)
                     @if($invoice->residual > 0 && ! in_array($invoice->status, ['draft', 'cancelled'], true))
                         <a href="{{ route('payments.create', ['invoice_id' => $invoice->id]) }}" class="btn {{ $previewAvailable ? 'btn-g' : 'btn-p' }}">Registra pagamento</a>
@@ -51,10 +52,15 @@
                         <div><dt>Data fattura</dt><dd>{{ $invoice->issue_date?->format('d/m/Y') ?? 'Non indicata' }}</dd></div>
                         <div><dt>Scadenza</dt><dd class="{{ $invoice->is_overdue ? 'invoice-overdue' : '' }}">{{ $invoice->due_date?->format('d/m/Y') ?? 'Non indicata' }}@if($invoice->is_overdue) <x-badge status="overdue" label="Scaduta" />@endif</dd></div>
                         <div><dt>Tipo documento</dt><dd>{{ $invoice->fiscal_document_type ?: 'Non indicato' }}</dd></div>
-                        <div><dt>{{ $invoice->marketingCampaign ? 'Campagna' : 'Progetto' }}</dt><dd>
+                        <div><dt>{{ $invoice->hostingService ? ($invoice->hostingService->hasServiceType('domain') ? 'Dominio' : 'Hosting') : ($invoice->marketingCampaign ? 'Campagna' : 'Progetto') }}</dt><dd>
+                            @if($invoice->hostingService)
+                                @if($invoice->hostingService->trashed()){{ $invoice->hostingService->name }} (archiviato)
+                                @else<a href="{{ route('hosting-services.show', $invoice->hostingService) }}">{{ $invoice->hostingService->name }}</a>@endif
+                            @else
                             @if($invoice->project)<a href="{{ route('projects.show', $invoice->project) }}">{{ $invoice->project->name }}</a>
                             @elseif($invoice->marketingCampaign)<a href="{{ route('marketing-campaigns.show', $invoice->marketingCampaign) }}">{{ $invoice->marketingCampaign->name }}</a>
                             @else<span class="invoice-detail-muted">Nessun progetto associato</span>@endif
+                            @endif
                         </dd></div>
                     </dl>
                     @if($imported)
@@ -70,6 +76,7 @@
                 </x-panel>
 
                 <x-panel class="invoice-detail-items">
+                    @include('invoices.partials.linked-services')
                     <x-slot:title><h2>Voci della fattura</h2></x-slot:title>
                     @can('update', $invoice)
                         <x-slot:headerActions><a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-g btn-sm">Modifica voci e IVA</a></x-slot:headerActions>

@@ -16,6 +16,7 @@ class Expense extends Model
         'description',
         'amount',
         'category',
+        'category_id', 'subcategory_id',
         'supplier',
         'expense_date',
         'due_date',
@@ -36,6 +37,16 @@ class Expense extends Model
     ];
 
     // Relations
+    public function categoryGroup()
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'category_id');
+    }
+
+    public function subcategory()
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'subcategory_id');
+    }
+
     public function recurrence()
     {
         return $this->belongsTo(ExpenseRecurrence::class, 'expense_recurrence_id');

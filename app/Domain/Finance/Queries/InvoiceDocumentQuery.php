@@ -13,10 +13,20 @@ class InvoiceDocumentQuery
 
     public function paginate(array $filters): LengthAwarePaginator
     {
-        $invoices = $this->invoiceQuery->forIndex($filters)->withoutEagerLoads()->reorder()
-            ->select(['invoices.id', 'invoices.issue_date'])->selectRaw("'invoice' as record_kind");
-        $notes = CreditNote::query()->select(['credit_notes.id', 'credit_notes.issue_date'])
-            ->selectRaw("'credit_note' as record_kind");
+        $invoices = $this->invoiceQuery->forIndex($filters)->withoutEagerLoads()->reorder();
+        $number = $invoices->getQuery()->getGrammar()->wrap('invoices.import_metadata->number');
+        $invoices->select(['invoices.id', 'invoices.issue_date', 'invoices.total', 'invoices.fiscal_document_type'])
+            ->selectRaw("'invoice' as record_kind, COALESCE($number, invoices.fiscal_number, invoices.number) AS document_number");
+        $notes = CreditNote::query()->select(['credit_notes.id', 'credit_notes.issue_date', 'credit_notes.total', 'credit_notes.fiscal_document_type'])
+            ->selectRaw("'credit_note' as record_kind, number AS document_number");
+        foreach (['min_amount' => '>=', 'max_amount' => '<='] as $field => $operator) {
+            $notes->when(filled($filters[$field] ?? null), fn ($q) => $q->where('total', $operator, $filters[$field]));
+        }
+        if (filled($filters['project_id'] ?? null) || filled($filters['hosting_service_id'] ?? null) || filled($filters['service_type'] ?? null)) {
+            $matchingInvoices = $this->invoiceQuery->forIndex(collect($filters)->only(['project_id', 'hosting_service_id', 'service_type'])->all())
+                ->withoutEagerLoads()->reorder()->select('invoices.id');
+            $notes->whereHas('allocations', fn ($q) => $q->whereIn('invoice_id', $matchingInvoices));
+        }
 
         if (($filters['document_type'] ?? '') === 'TD04') {
             $invoices->whereRaw('1 = 0');
@@ -50,10 +60,29 @@ class InvoiceDocumentQuery
         }
 
         /** Paginate the combined identities in SQL before loading models, preserving separate records and bounded memory. */
-        $documents = DB::query()->fromSub($invoices->toBase()->unionAll($notes->toBase()), 'invoice_documents')
-            ->orderByDesc('issue_date')->orderBy('record_kind')->orderByDesc('id')->paginate(15)->withQueryString();
+        $sort = $filters['sort'] ?? 'date_desc';
+        $column = match ($sort) { 'number_asc', 'number_desc' => 'document_number', 'type_asc', 'type_desc' => 'fiscal_document_type', 'amount_asc', 'amount_desc' => 'total', default => 'issue_date' };
+        $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
+        $ordered = DB::query()->fromSub($invoices->toBase()->unionAll($notes->toBase()), 'invoice_documents');
+        if ($column === 'document_number') {
+            /** Aruba prefixes retain their original text while their sequence is ordered numerically (2 before 10). */
+            $aruba = "(UPPER(document_number) LIKE 'FPA %/%' OR UPPER(document_number) LIKE 'FPR %/%')";
+            $sequence = DB::connection()->getDriverName() === 'sqlite'
+                ? 'CAST(SUBSTR(document_number, 5, INSTR(document_number, \'/\') - 5) AS INTEGER)'
+                : "CAST(SUBSTRING_INDEX(SUBSTRING(document_number, 5), '/', 1) AS UNSIGNED)";
+            $year = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y', issue_date)" : 'YEAR(issue_date)';
+            $ordered->orderByRaw("CASE WHEN $aruba THEN SUBSTR(document_number, 1, 3) ELSE document_number END $direction")
+                ->orderByRaw("CASE WHEN $aruba THEN $year ELSE NULL END $direction")
+                ->orderByRaw("CASE WHEN $aruba THEN $sequence ELSE NULL END $direction");
+        } else {
+            $ordered->orderBy($column, $direction);
+            if ($column === 'fiscal_document_type') {
+                $ordered->orderByDesc('issue_date');
+            }
+        }
+        $documents = $ordered->orderBy('record_kind')->orderByDesc('id')->paginate(15)->withQueryString();
         $rows = $documents->getCollection();
-        $invoiceModels = Invoice::with(['client', 'project'])->whereKey($rows->where('record_kind', 'invoice')->pluck('id'))->get()->keyBy('id');
+        $invoiceModels = Invoice::with(['client', 'project', 'hostingService'])->whereKey($rows->where('record_kind', 'invoice')->pluck('id'))->get()->keyBy('id');
         $noteModels = CreditNote::with(['client', 'allocations.invoice'])->whereKey($rows->where('record_kind', 'credit_note')->pluck('id'))->get()->keyBy('id');
         $documents->setCollection($rows->map(fn ($row) => $row->record_kind === 'invoice'
             ? $invoiceModels->get($row->id) : $noteModels->get($row->id))->filter()->values());

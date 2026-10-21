@@ -50,7 +50,7 @@
 
             <div class="form-row">
                 <x-form-group label="Cliente" name="client_id" required>
-                    <select name="client_id" id="client_sel"
+                    <select name="client_id" id="client_sel" @change="$dispatch('invoice-client-changed', $event.target.value)"
                             class="form-sel @error('client_id') is-invalid @enderror" required
                             data-client-select data-project-select="project_sel"
                             data-project-url="{{ url('/api/invoice-clients/{client}/projects') }}"
@@ -65,7 +65,13 @@
                     </select>
                 </x-form-group>
 
-                @if($invoice->marketing_campaign_id)
+                @if($invoice->hostingService)
+                    <div class="form-g">
+                        <div class="form-lbl">Dominio o hosting collegato</div>
+                        <input class="form-in" value="{{ $invoice->hostingService->name }}" readonly>
+                        <a href="{{ route('invoices.associations.edit', $invoice) }}">Modifica collegamento</a>
+                    </div>
+                @elseif($invoice->marketing_campaign_id)
                     <div class="form-g">
                         <div class="form-lbl">Campagna collegata</div>
                         <input class="form-in"
@@ -243,6 +249,8 @@
                     lines: existingLines.map((line, index) => ({
                         key: line.id ? `stored-${line.id}` : `old-${index}`,
                         id: line.id ?? null,
+                        hosting_service_id: line.hosting_service_id ?? '',
+                        service_name: line.hosting_service?.name ?? line.service_name ?? '',
                         billable_type: line.billable_type ?? '',
                         linked: Boolean(line.billable_type),
                         description: line.description ?? '',
@@ -263,6 +271,8 @@
                         this.lines.push({
                             key: `new-${this.nextKey++}`,
                             id: null,
+                            hosting_service_id: '',
+                            service_name: '',
                             billable_type: '',
                             linked: false,
                             description: '',

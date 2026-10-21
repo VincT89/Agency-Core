@@ -44,6 +44,12 @@ class InvoicePolicy
         return $this->recordPayment($user, $invoice);
     }
 
+    public function manageAssociations(User $user, Invoice $invoice): bool
+    {
+        /** Internal attribution never unlocks or changes the fiscal document. */
+        return $user->canAccessFinance();
+    }
+
     public function delete(User $user, Invoice $invoice): bool
     {
         return $user->canAccessFinance()

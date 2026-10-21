@@ -21,6 +21,11 @@ class ExpenseForm extends Component
     public $description = '';
     public $amount = '';
     public $category = '';
+    public $category_id = '';
+    public $subcategory_id = '';
+    public string $newCategory = '';
+    public string $newSubcategory = '';
+    public string $categorySearch = '';
     public $supplier = '';
     public $expense_date = '';
     public $due_date = '';
@@ -54,6 +59,8 @@ class ExpenseForm extends Component
             $this->description = $expense->description;
             $this->amount = $expense->amount;
             $this->category = $expense->category;
+            $this->category_id = $expense->category_id ?? '';
+            $this->subcategory_id = $expense->subcategory_id ?? '';
             $this->supplier = $expense->supplier;
             $this->expense_date = $expense->expense_date ? $expense->expense_date->format('Y-m-d') : '';
             $this->due_date = $expense->due_date ? $expense->due_date->format('Y-m-d') : '';
@@ -167,6 +174,8 @@ class ExpenseForm extends Component
             'due_date' => 'nullable|date',
             'status' => 'required|in:pending,paid,cancelled',
             'category' => 'nullable|string|max:255',
+            'category_id' => 'nullable|integer|exists:expense_categories,id',
+            'subcategory_id' => 'nullable|integer|exists:expense_categories,id',
             'supplier' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
@@ -188,6 +197,8 @@ class ExpenseForm extends Component
             'description' => $this->description,
             'amount' => $this->amount,
             'category' => $this->category,
+            'category_id' => $this->category_id ?: null,
+            'subcategory_id' => $this->subcategory_id ?: null,
             'supplier' => $this->supplier,
             'expense_date' => $this->expense_date,
             'due_date' => $this->due_date ?: null,
@@ -222,7 +233,47 @@ class ExpenseForm extends Component
     public function render()
     {
         abort_unless(auth()->user()->canAccessFinance(), 403);
-        return view('livewire.expenses.expense-form', ['documents' => ExpenseDocument::orderByDesc('document_date')->get(['id', 'kind', 'issuer', 'number', 'amount'])])
+        return view('livewire.expenses.expense-form', [
+            'documents' => ExpenseDocument::orderByDesc('document_date')->get(['id', 'kind', 'issuer', 'number', 'amount']),
+            'categories' => \App\Models\ExpenseCategory::whereNull('parent_id')
+                ->where(fn ($q) => $q->where('active', true)->orWhere('id', $this->expense?->category_id))
+                ->when($this->categorySearch, fn ($q) => $q->where(fn ($q) => $q->where('name', 'like', '%'.$this->categorySearch.'%')->orWhere('id', $this->category_id)))
+                ->orderBy('name')->get(),
+            'subcategories' => \App\Models\ExpenseCategory::whereNotNull('parent_id')->where('parent_id', $this->category_id ?: 0)
+                ->where(fn ($q) => $q->where('active', true)->orWhere('id', $this->expense?->subcategory_id))->orderBy('name')->get(),
+        ])
             ->layout('layouts.app', ['title' => $this->expense ? 'Modifica spesa' : 'Nuova spesa']);
+    }
+
+    public function updatedCategoryId(): void
+    {
+        $this->subcategory_id = '';
+    }
+
+    public function createCategory(bool $child = false): void
+    {
+        $this->authorize('create', Expense::class);
+        $field = $child ? 'newSubcategory' : 'newCategory';
+        $this->validate([$field => 'required|string|max:255']);
+        if ($child) {
+            $this->validate(['category_id' => 'required|integer|exists:expense_categories,id']);
+        }
+        try {
+            $category = app(\App\Domain\Finance\Actions\SaveExpenseCategory::class)->execute([
+                'name' => $this->$field, 'parent_id' => $child ? $this->category_id : null,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $this->addError($field, collect($exception->errors())->flatten()->first());
+            return;
+        }
+        if ($child) {
+            $this->subcategory_id = $category->id;
+        } else {
+            $this->category_id = $category->id;
+            $this->subcategory_id = '';
+            $this->categorySearch = '';
+        }
+        $this->$field = '';
+        $this->resetValidation($field);
     }
 }

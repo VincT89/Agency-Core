@@ -34,10 +34,31 @@
             </div>
 
             <div class="form-row">
-                <x-form-group label="Categoria" name="category">
-                    <input type="text" wire:model="category" class="form-in @error('category') is-invalid @enderror" placeholder="Es. Software, Cancelleria...">
-                    @error('category') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                <x-form-group label="Categoria" name="category_id">
+                    <input aria-label="Cerca categoria" type="search" class="form-in u-mb-xs" wire:model.live.debounce.300ms="categorySearch" placeholder="Cerca categoria">
+                    <select id="field-category-id" wire:model.live="category_id" class="form-sel">
+                        <option value="">Senza categoria</option>
+                        @foreach($categories as $entry)<option value="{{ $entry->id }}">{{ $entry->name }}{{ $entry->active ? '' : ' (archiviata)' }}</option>@endforeach
+                    </select>
+                    <details class="u-mt-sm"><summary>Crea categoria</summary>
+                        <label for="new-category" class="form-lbl">Nome della nuova categoria</label>
+                        <div class="finance-inline-form"><input id="new-category" wire:model="newCategory" class="form-in" maxlength="255"><button type="button" class="btn btn-g btn-sm" wire:click="createCategory">Crea categoria</button></div>
+                        @error('newCategory')<p class="form-err">{{ $message }}</p>@enderror
+                    </details>
                 </x-form-group>
+                <x-form-group label="Sottocategoria" name="subcategory_id">
+                    <select id="field-subcategory-id" wire:model="subcategory_id" class="form-sel" @disabled(!$category_id)>
+                        <option value="">Nessuna sottocategoria</option>
+                        @foreach($subcategories as $entry)<option value="{{ $entry->id }}">{{ $entry->name }}{{ $entry->active ? '' : ' (archiviata)' }}</option>@endforeach
+                    </select>
+                    @if($category_id)<details class="u-mt-sm"><summary>Crea sottocategoria</summary>
+                        <label for="new-subcategory" class="form-lbl">Nome della nuova sottocategoria</label>
+                        <div class="finance-inline-form"><input id="new-subcategory" wire:model="newSubcategory" class="form-in" maxlength="255"><button type="button" class="btn btn-g btn-sm" wire:click="createCategory(true)">Crea sottocategoria</button></div>
+                        @error('newSubcategory')<p class="form-err">{{ $message }}</p>@enderror
+                    </details>@endif
+                </x-form-group>
+            </div>
+            <div class="form-row">
                 <x-form-group label="Fornitore" name="supplier">
                     <input type="text" wire:model="supplier" class="form-in @error('supplier') is-invalid @enderror" placeholder="Es. Adobe, Aruba...">
                     @error('supplier') <div class="invalid-feedback">{{ $message }}</div> @enderror

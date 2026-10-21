@@ -241,7 +241,7 @@ class InvoiceCreditNoteImportTest extends TestCase
         $this->assertSame($payment, $invoice->payments()->sole()->getRawOriginal());
         $summary = app(EconomicSummaryService::class)->globalSummary(auth()->user());
         $this->assertEquals(0, $summary['total_invoiced']);
-        $this->assertEquals(0, $summary['total_outstanding']);
+        $this->assertEquals(-122, $summary['total_outstanding']);
         $this->assertEquals(122, $summary['total_collected']);
         $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('Credito cliente');
         $receipt = $invoice->payments()->sole();
@@ -261,8 +261,9 @@ class InvoiceCreditNoteImportTest extends TestCase
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '122.00');
         $service = app(EconomicSummaryService::class);
         $this->assertEquals(100, $service->globalSummary(auth()->user(), '2026-10-01', '2026-10-31')['total_invoiced']);
-        $this->assertEquals(0, $service->globalSummary(auth()->user(), '2026-10-01', '2026-10-31')['total_outstanding']);
+        $this->assertEquals(122, $service->globalSummary(auth()->user(), '2026-10-01', '2026-10-31')['total_outstanding']);
         $this->assertEquals(-100, $service->globalSummary(auth()->user(), '2026-11-01', '2026-11-30')['total_invoiced']);
+        $this->assertEquals(-122, $service->globalSummary(auth()->user(), '2026-11-01', '2026-11-30')['total_outstanding']);
         $this->assertEquals(-100, $service->summaryByClient(auth()->user(), '2026-11-01', '2026-11-30')->sole()->total_invoiced);
         $this->assertEquals(-100, $service->summaryByProject(auth()->user(), '2026-11-01', '2026-11-30')->sole()->total_invoiced);
         $monthly = app(FinancialSummaryService::class)->getMonthlyData()['series'][0]['data'];

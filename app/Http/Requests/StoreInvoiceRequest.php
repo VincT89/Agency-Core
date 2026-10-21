@@ -15,6 +15,7 @@ class StoreInvoiceRequest extends FormRequest
 {
     use ValidatesInvoiceLines;
     use ValidatesProjectOwnership;
+    use \App\Http\Requests\Concerns\ValidatesInvoiceServices;
 
     public function authorize(): bool
     {
@@ -45,6 +46,7 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.quantity' => ['required_with:items', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['required_with:items', 'numeric', 'min:0'],
             'items.*.unit_of_measure' => ['nullable', 'string', 'max:10'],
+            'items.*.hosting_service_id' => ['nullable', 'integer'],
             'items.*.vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.vat_nature' => ['nullable', Rule::enum(VatNature::class)],
             'items.*.vat_reference' => ['nullable', 'string', 'max:255'],
@@ -59,6 +61,7 @@ class StoreInvoiceRequest extends FormRequest
             function (Validator $validator) {
                 $this->withProjectOwnershipCheck($validator, allowInvoiceContainer: true);
                 $this->addInvoiceLineTaxErrors($validator);
+                $this->validateInvoiceServices($validator);
 
                 if ($this->input('marketing_campaign_id') && $this->input('client_id')) {
                     $exists = MarketingCampaign::query()

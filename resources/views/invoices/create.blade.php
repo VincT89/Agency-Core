@@ -40,7 +40,7 @@
 
             <div class="form-row">
                 <x-form-group label="Cliente" name="client_id" required>
-                    <select name="client_id" id="client_sel"
+                    <select name="client_id" id="client_sel" @change="$dispatch('invoice-client-changed', $event.target.value)"
                             class="form-sel @error('client_id') is-invalid @enderror" required
                             data-client-select data-project-select="project_sel"
                             data-project-url="{{ url('/api/invoice-clients/{client}/projects') }}"
@@ -203,6 +203,8 @@
                     lines: existingLines.map((line, index) => ({
                         key: line.id ? `stored-${line.id}` : `old-${index}`,
                         id: line.id ?? null,
+                        hosting_service_id: line.hosting_service_id ?? '',
+                        service_name: line.hosting_service?.name ?? line.service_name ?? '',
                         description: line.description ?? '',
                         quantity: parseFloat(line.quantity ?? 1),
                         unit_price: line.unit_price ?? '',
@@ -221,6 +223,8 @@
                         this.lines.push({
                             key: `new-${this.nextKey++}`,
                             id: null,
+                            hosting_service_id: '',
+                            service_name: '',
                             description: '',
                             quantity: 1,
                             unit_price: '',

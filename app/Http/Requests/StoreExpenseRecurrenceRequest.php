@@ -23,6 +23,8 @@ class StoreExpenseRecurrenceRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'between:0.01,99999999.99'],
             'category' => ['nullable', 'string', 'max:255'],
+            'category_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
+            'subcategory_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
             'supplier' => ['nullable', 'string', 'max:255'],
             'document_kind' => ['required', Rule::in(array_keys(ExpenseDocument::KINDS))],
             'frequency' => ['required', Rule::in($recurrence ? [$recurrence->frequency] : array_keys(ExpenseRecurrence::FREQUENCIES))],

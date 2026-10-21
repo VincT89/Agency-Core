@@ -143,57 +143,8 @@ class FinancialSummaryService
 
     public function getReportMonthlyData(?string $from = null, ?string $to = null): array
     {
-        $period = fn ($query, string $column) => $query
-            ->when($from, fn ($q) => $q->whereDate($column, '>=', $from))
-            ->when($to, fn ($q) => $q->whereDate($column, '<=', $to));
-        $monthExpression = fn (string $column) => DB::connection()->getDriverName() === 'sqlite'
-            ? "strftime('%Y-%m', {$column})" : "DATE_FORMAT({$column}, '%Y-%m')";
-        $invoiceMonth = $monthExpression('issue_date');
-        $paymentMonth = $monthExpression('payment_date');
-        $invoices = $period(Invoice::query(), 'issue_date')
-            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
-            ->selectRaw("{$invoiceMonth} as month, SUM(subtotal) as invoiced, SUM(".ReportInvoiceAmounts::outstandingSql().') as pending')
-            ->groupBy('month')->get()->keyBy('month');
-        $credits = $period(CreditNote::query(), 'issue_date')
-            ->selectRaw("{$invoiceMonth} as month, SUM(subtotal) as total")
-            ->groupBy('month')->get()->keyBy('month');
-        /** Receipts follow their payment date, including payments for invoices issued outside the selected period. */
-        $payments = $period(Payment::query(), 'payment_date')
-            ->selectRaw("{$paymentMonth} as month, SUM(amount) as total")->groupBy('month')->get()->keyBy('month');
-        $keys = $invoices->keys()->merge($credits->keys())->merge($payments->keys())->unique()->sort()->values();
-        $first = CarbonImmutable::parse($from ?: ($keys->first() ? $keys->first().'-01' : ($to ?: now()->startOfYear()->toDateString())))->startOfMonth();
-        $last = CarbonImmutable::parse($to ?: ($keys->last() ? $keys->last().'-01' : ($from ?: now()->endOfYear()->toDateString())))->startOfMonth();
-        $labels = [];
-        $invoicedData = [];
-        $collectedData = [];
-        $pendingData = [];
-        for ($date = $first; $date->lte($last); $date = $date->addMonth()) {
-            $key = $date->format('Y-m');
-            $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
-            $invoicedData[] = round((float) ($invoices->get($key)?->invoiced ?? 0) - (float) ($credits->get($key)?->total ?? 0), 2);
-            $collectedData[] = round((float) ($payments->get($key)?->total ?? 0), 2);
-            $pendingData[] = round((float) ($invoices->get($key)?->pending ?? 0), 2);
-        }
-
-        return [
-            'labels' => $labels,
-            'series' => [
-                [
-                    'name' => 'Fatturato netto (IVA esclusa)',
-                    'data' => $invoicedData
-                ],
-                [
-                    'name' => 'Incassato',
-                    'data' => $collectedData
-                ],
-                [
-                    'name' => 'Da incassare (IVA 22%)',
-                    'data' => $pendingData
-                ]
-            ]
-        ];
+        return app(FinanceReportQuery::class)->monthly(array_filter(compact('from', 'to')));
     }
-
     /**
      * Get Sparkline Data for the last 6 months
      */

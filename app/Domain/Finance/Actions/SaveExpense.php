@@ -18,6 +18,7 @@ class SaveExpense
 
         return DB::transaction(function () use ($data, $expense) {
             $expense = $expense ? Expense::lockForUpdate()->findOrFail($expense->id) : new Expense(['user_id' => auth()->id()]);
+            $data = app(\App\Domain\Finance\Services\ExpenseClassification::class)->resolve($data, $expense->category_id, $expense->subcategory_id);
             $documentId = $data['expense_document_id'] ?? $expense->expense_document_id;
             if (array_key_exists('expense_document_id', $data)) {
                 $documentId = $data['expense_document_id'] ?: null;

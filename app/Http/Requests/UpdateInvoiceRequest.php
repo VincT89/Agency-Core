@@ -16,6 +16,7 @@ class UpdateInvoiceRequest extends FormRequest
 {
     use ValidatesInvoiceLines;
     use ValidatesProjectOwnership;
+    use \App\Http\Requests\Concerns\ValidatesInvoiceServices;
 
     public function authorize(): bool
     {
@@ -50,7 +51,8 @@ class UpdateInvoiceRequest extends FormRequest
             'paid_total' => ['nullable', 'numeric', 'min:0'],
 
             'items' => ['nullable', 'array'],
-            'items.*.id' => ['nullable', 'integer', 'exists:invoice_items,id'],
+            'items.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('invoice_items', 'id')->where('invoice_id', $invoice->id)],
+            'items.*.hosting_service_id' => ['nullable', 'integer'],
             'items.*.description' => ['required_with:items', 'string', 'max:255'],
             'items.*.quantity' => ['required_with:items', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['required_with:items', 'numeric', 'min:0'],
@@ -69,6 +71,15 @@ class UpdateInvoiceRequest extends FormRequest
             function (Validator $validator) {
                 $this->withProjectOwnershipCheck($validator, allowInvoiceContainer: true);
                 $this->addInvoiceLineTaxErrors($validator);
+                $this->validateInvoiceServices($validator);
+                $currentInvoice = $this->route('invoice');
+                if ($currentInvoice->hosting_service_id && ($this->filled('project_id') || $this->filled('marketing_campaign_id'))) {
+                    $validator->errors()->add('project_id', 'La fattura è collegata a un dominio o hosting. Usa Modifica collegamento per scegliere un progetto.');
+                }
+                if ($currentInvoice->client_id !== (int) $this->input('client_id')
+                    && ($currentInvoice->hosting_service_id || $currentInvoice->items()->whereNotNull('hosting_service_id')->exists() || $currentInvoice->importedServiceLinks()->exists() || $currentInvoice->payments()->exists())) {
+                    $validator->errors()->add('client_id', 'La fattura ha pagamenti o servizi collegati: il cliente non può essere cambiato.');
+                }
 
                 if ($this->input('marketing_campaign_id') && $this->input('client_id')) {
                     $exists = MarketingCampaign::query()

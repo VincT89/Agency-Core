@@ -10,7 +10,7 @@ class ExpenseRecurrence extends Model
 {
     public const FREQUENCIES = ['weekly' => 'Settimanale', 'monthly' => 'Mensile', 'quarterly' => 'Trimestrale', 'semiannual' => 'Semestrale', 'yearly' => 'Annuale'];
 
-    protected $fillable = ['user_id', 'title', 'amount', 'category', 'supplier', 'document_kind', 'frequency', 'starts_on', 'ends_on', 'active', 'notes'];
+    protected $fillable = ['user_id', 'title', 'amount', 'category', 'category_id', 'subcategory_id', 'supplier', 'document_kind', 'frequency', 'starts_on', 'ends_on', 'active', 'notes'];
 
     protected $casts = ['amount' => 'decimal:2', 'starts_on' => 'immutable_date', 'ends_on' => 'immutable_date', 'active' => 'boolean'];
 

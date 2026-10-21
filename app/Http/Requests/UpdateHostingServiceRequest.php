@@ -78,4 +78,17 @@ class UpdateHostingServiceRequest extends FormRequest
             'context' => ['nullable', Rule::in(['domain', 'hosting'])],
         ];
     }
+
+    public function after(): array
+    {
+        return [function (\Illuminate\Validation\Validator $validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+            $service = $this->route('hosting_service');
+            if ($service->client_id !== (int) $this->input('client_id') && $service->linkedInvoices()->exists()) {
+                $validator->errors()->add('client_id', 'Questo servizio è collegato a fatture: rimuovi prima i collegamenti per cambiare cliente.');
+            }
+        }];
+    }
 }

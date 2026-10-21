@@ -11,7 +11,22 @@
                 <x-form-group label="Importo previsto per scadenza (EUR)" name="amount" required><input id="field-amount" name="amount" type="number" min="0.01" max="99999999.99" step="0.01" class="form-in" value="{{ old('amount', $recurrence->amount) }}" required></x-form-group>
             </div>
             <div class="form-row">
-                <x-form-group label="Categoria" name="category"><input id="field-category" name="category" class="form-in" value="{{ old('category', $recurrence->category) }}" maxlength="255"></x-form-group>
+                <x-form-group label="Categoria e sottocategoria" name="category_id">
+                    @php
+                        $categoryOptions = \App\Models\ExpenseCategory::where(fn ($q) => $q->where('active', true)->orWhereIn('id', [$recurrence->category_id, $recurrence->subcategory_id]))->orderBy('name')->get(['id','name','parent_id']);
+                    @endphp
+                    <div x-data="{ root: @js((string) old('category_id', $recurrence->category_id)), child: @js((string) old('subcategory_id', $recurrence->subcategory_id)), entries: @js($categoryOptions) }">
+                        <select id="field-category-id" name="category_id" x-model="root" @change="child = ''" class="form-sel u-mb-sm"><option value="">Senza categoria</option>
+                            @foreach($categoryOptions->whereNull('parent_id') as $entry)<option value="{{ $entry->id }}">{{ $entry->name }}</option>@endforeach
+                        </select>
+                        <label class="form-lbl" for="recurrence-subcategory">Sottocategoria</label>
+                        <select id="recurrence-subcategory" name="subcategory_id" x-model="child" class="form-sel"><option value="">Nessuna sottocategoria</option>
+                            <template x-for="entry in entries.filter(e => e.parent_id && String(e.parent_id) === root)" :key="entry.id"><option :value="String(entry.id)" x-text="entry.name"></option></template>
+                        </select>
+                        @error('subcategory_id')<p class="form-err">{{ $message }}</p>@enderror
+                    </div>
+                    <a href="{{ route('expenses.categories') }}" target="_blank" rel="noopener">Gestisci categorie in una nuova scheda</a>
+                </x-form-group>
                 <x-form-group label="Fornitore / beneficiario" name="supplier"><input id="field-supplier" name="supplier" class="form-in" value="{{ old('supplier', $recurrence->supplier) }}" maxlength="255"></x-form-group>
             </div>
             <div class="form-row">

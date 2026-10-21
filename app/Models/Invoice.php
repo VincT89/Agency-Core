@@ -31,6 +31,7 @@ class Invoice extends Model
     protected $fillable = [
         'client_id',
         'project_id',
+        'hosting_service_id',
         'marketing_campaign_id',
         'created_by',
         'number',
@@ -157,6 +158,11 @@ class Invoice extends Model
         return $this->belongsTo(Project::class);
     }
 
+    public function hostingService(): BelongsTo
+    {
+        return $this->belongsTo(HostingService::class)->withTrashed();
+    }
+
     public function marketingCampaign(): BelongsTo
     {
         return $this->belongsTo(MarketingCampaign::class);
@@ -165,6 +171,11 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function importedServiceLinks(): HasMany
+    {
+        return $this->hasMany(InvoiceImportedServiceLink::class);
     }
 
     public function creator(): BelongsTo

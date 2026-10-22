@@ -295,8 +295,8 @@
 
         @if(auth()->user()->canAccessFinance())
           <x-nav-item href="{{ route('invoices.index') }}" icon="file-text" label="Fatture"
-            :active="request()->routeIs('invoices.*')" :badge="$outstandingInvoices ?? null"
-            :badge-label="'Fatture ancora da incassare: '.($outstandingInvoices ?? 0)" />
+            :active="request()->routeIs('invoices.*')" :badge="$invoicesCount ?? null"
+            :badge-label="'Fatture presenti: '.($invoicesCount ?? 0)" />
           <x-nav-item href="{{ route('billing-profile.edit') }}" icon="landmark" label="Dati fiscali"
             :active="request()->routeIs('billing-profile.*')" />
           <x-nav-item href="{{ route('expenses.index') }}" wire:navigate icon="receipt" label="Spese"

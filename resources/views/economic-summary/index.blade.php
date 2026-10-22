@@ -3,7 +3,7 @@
         $money = fn ($value) => '€ '.number_format((float) $value, 2, ',', '.');
         $pageUrl = $subject ? route('economic-summary.show', ['group' => $subject instanceof \App\Models\Client ? 'clients' : 'projects', 'id' => $subject->id]) : route('economic-summary.index');
         $drillUrl = $pageUrl.'?'.http_build_query(array_replace($baseFilters, ['documents' => 1]));
-        $metrics = ['total_invoiced' => 'Fatturato netto (IVA esclusa)', 'total_collected' => 'Incassato', 'actual_outstanding' => 'Da incassare', 'total_outstanding' => 'Saldo del riepilogo'];
+        $metrics = ['total_invoiced' => 'Fatturato netto (IVA esclusa)', 'total_collected' => 'Incassato', 'actual_outstanding' => 'Da incassare'];
         $directorySorts = $group === 'categories'
             ? ['costs_desc' => 'Costi decrescenti', 'name_asc' => 'Nome A–Z', 'name_desc' => 'Nome Z–A']
             : ['turnover_desc' => 'Fatturato decrescente', 'turnover_asc' => 'Fatturato crescente', 'name_asc' => 'Nome A–Z', 'name_desc' => 'Nome Z–A', 'pending_desc' => 'Da incassare decrescente', 'costs_desc' => 'Costi decrescenti'];
@@ -40,7 +40,7 @@
         </details>
     </form>
     @if($errors->any())<div class="u-alert-error u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
-    <div class="g-4col u-mb-lg">
+    <div class="g-3col u-mb-lg">
         @foreach($metrics as $key => $label)
             <x-panel padded><x-stat-card :label="$label" :value="$money($globalSummary[$key])" :sub="match($key) { 'total_invoiced' => 'Da '.$globalSummary['invoices_count'].' fatture valide', 'total_collected' => 'Flusso cassa reale', 'actual_outstanding' => 'Residuo effettivo delle fatture', default => 'Fatturato netto × 1,22 − incassato' }" :color="match($key) { 'total_invoiced' => 'var(--blue-text)', 'total_collected' => 'var(--teal)', 'actual_outstanding' => 'var(--orange)', default => 'var(--text2)' }" />
                 @if($comparison)<p class="finance-comparison">Confronto: {{ $money($comparison[$key]) }}<br>Differenza: {{ $money($globalSummary[$key] - $comparison[$key]) }}</p>@endif

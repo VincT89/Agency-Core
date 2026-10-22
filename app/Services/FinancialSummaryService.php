@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -33,7 +32,7 @@ class FinancialSummaryService
             $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
         }
 
-        /** Net turnover uses taxable amounts and deducts credit notes in their issue month, including unallocated notes. */
+        /** Turnover includes only invoice taxable amounts, consistently with the economic summary. */
         $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
         $invoices = Invoice::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
@@ -44,15 +43,6 @@ class FinancialSummaryService
         foreach ($invoices as $inv) {
             if (isset($monthsArray[$inv->month])) {
                 $monthsArray[$inv->month]['issued'] = (float) $inv->total;
-            }
-        }
-
-        $credits = CreditNote::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
-            ->selectRaw("{$dateFormat} as month, SUM(subtotal) as total")
-            ->groupBy('month')->get();
-        foreach ($credits as $credit) {
-            if (isset($monthsArray[$credit->month])) {
-                $monthsArray[$credit->month]['issued'] = round($monthsArray[$credit->month]['issued'] - (float) $credit->total, 2);
             }
         }
 

@@ -118,7 +118,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($user->isCommercial()) {
                     $view->with([
-                        'clientsCount' => Client::visibleTo($user)->count(), 'projectsCount' => 0, 'outstandingInvoices' => 0,
+                        'clientsCount' => Client::visibleTo($user)->count(), 'projectsCount' => 0, 'invoicesCount' => 0,
                         'openTasks' => Task::query()->open()->count(), 'marketingProjectsCount' => 0,
                         'activeAvailabilityUsersCount' => 0, 'newTickets' => 0,
                         'openTickets' => Ticket::query()->open()->count(),
@@ -138,9 +138,9 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 });
 
-                /** Read the finance counter afresh so payments and credit allocations appear on the next page load. */
-                $outstandingInvoices = $user->canAccessFinance()
-                    ? Invoice::query()->awaitingPayment()->count()
+                /** Count every stored invoice, including settled ones, without caching newly created documents. */
+                $invoicesCount = $user->canAccessFinance()
+                    ? Invoice::query()->count()
                     : 0;
 
                 $activeAvailabilityUsersCount = 0;
@@ -170,7 +170,7 @@ class AppServiceProvider extends ServiceProvider
                     'clientsCount'    => $counts['clientsCount'],
                     'projectsCount'   => $counts['projectsCount'],
                     'openTickets'     => $counts['openTickets'],
-                    'outstandingInvoices' => $outstandingInvoices,
+                    'invoicesCount' => $invoicesCount,
                     'openTasks'       => $counts['openTasks'],
                     'marketingProjectsCount' => $counts['marketingProjectsCount'],
                     'activeAvailabilityUsersCount' => $activeAvailabilityUsersCount,

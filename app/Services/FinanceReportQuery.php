@@ -19,9 +19,6 @@ class FinanceReportQuery
 {
     public const STATUSES = ['issued', 'partially_paid', 'paid', 'overdue', 'credited'];
 
-    /** Turnover includes only invoice taxable amounts; credit notes remain available in document details. */
-    private const TURNOVER_SQL = "CASE WHEN kind = 'invoice' THEN net ELSE 0 END";
-
     private function invoiceScope($query, array $filters)
     {
         $query->whereIn('invoices.status', self::STATUSES);
@@ -117,7 +114,7 @@ class FinanceReportQuery
 
     public function totals(array $filters = []): array
     {
-        $row = $this->events($filters)->selectRaw('COALESCE(SUM('.self::TURNOVER_SQL.'), 0) AS net, COALESCE(SUM(collected), 0) AS collected,
+        $row = $this->events($filters)->selectRaw('COALESCE(SUM(net), 0) AS net, COALESCE(SUM(collected), 0) AS collected,
             COALESCE(SUM(costs), 0) AS costs, COALESCE(SUM(invoice_count), 0) AS invoices_count')->first();
         $net = round((float) $row->net, 2);
         $collected = round((float) $row->collected, 2);
@@ -161,9 +158,8 @@ class FinanceReportQuery
     {
         $project = $type === 'projects';
         $column = $project ? 'project_id' : 'client_id';
-        $turnover = self::TURNOVER_SQL;
         $metrics = $this->events($filters, $project)->whereNotNull($column)
-            ->selectRaw("$column, ROUND(SUM($turnover), 2) AS total_invoiced, ROUND(SUM(collected), 2) AS total_collected,
+            ->selectRaw("$column, ROUND(SUM(net), 2) AS total_invoiced, ROUND(SUM(collected), 2) AS total_collected,
                 ROUND(SUM(costs), 2) AS total_expenses, SUM(invoice_count) AS invoices_count")->groupBy($column);
         $actual = $this->receivables($filters)->whereNotNull($column)
             ->selectRaw("$column, SUM(".Invoice::OUTSTANDING_SQL.') AS actual_outstanding, COUNT(*) AS open_invoices')
@@ -201,8 +197,7 @@ class FinanceReportQuery
     public function monthly(array $filters = []): array
     {
         $expression = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', event_date)" : "DATE_FORMAT(event_date, '%Y-%m')";
-        $turnover = self::TURNOVER_SQL;
-        $rows = $this->events($filters)->selectRaw("$expression AS month, SUM($turnover) AS net, SUM(collected) AS collected, SUM(costs) AS costs")
+        $rows = $this->events($filters)->selectRaw("$expression AS month, SUM(net) AS net, SUM(collected) AS collected, SUM(costs) AS costs")
             ->groupBy('month')->orderBy('month')->get()->keyBy('month');
         $invoiceMonth = str_replace('event_date', 'issue_date', $expression);
         $actual = $this->receivables($filters)->selectRaw("$invoiceMonth AS month, SUM(".Invoice::OUTSTANDING_SQL.') AS outstanding')

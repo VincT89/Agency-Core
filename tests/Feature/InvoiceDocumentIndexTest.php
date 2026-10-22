@@ -199,7 +199,7 @@ class InvoiceDocumentIndexTest extends TestCase
         $original = $split->fresh()->getAttributes();
 
         $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
-        $this->assertEquals(214, $summary['total_outstanding']);
+        $this->assertEquals(92, $summary['total_outstanding']);
         $this->assertEquals(192, $summary['actual_outstanding']);
         foreach ([[], ['status' => 'issued'], ['document_type' => 'TD04'], ['search' => 'nessun-documento']] as $filters) {
             $response = $this->get(route('invoices.index', $filters))->assertOk()
@@ -235,13 +235,13 @@ class InvoiceDocumentIndexTest extends TestCase
         }
     }
 
-    public function test_credit_only_documents_do_not_create_turnover_or_receivables(): void
+    public function test_credit_only_balance_is_separate_from_zero_actual_receivables(): void
     {
         $this->document('FPR 17/26', true);
         $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
         $response = $this->get(route('invoices.index'))->assertOk()->assertSee('EUR 0,00');
         $this->assertEquals(0, $response->viewData('unpaidTotal'));
-        $this->assertEquals(0, $summary['total_outstanding']);
+        $this->assertEquals(-122, $summary['total_outstanding']);
         $this->assertSame($summary['actual_outstanding'], $response->viewData('unpaidTotal'));
         $this->assertSame(0, $response->viewData('outstandingCount'));
     }

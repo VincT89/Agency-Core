@@ -91,7 +91,7 @@ class CashFlowReportAlignmentTest extends TestCase
             ->assertSee('Entrate attese')->assertSee('Uscite manuali');
     }
 
-    public function test_schedule_uses_actual_invoice_cents_and_unallocated_credits_do_not_change_turnover(): void
+    public function test_schedule_uses_actual_invoice_cents_and_keeps_unallocated_credit_in_the_separate_report_balance(): void
     {
         foreach (['2026-10-31', '2026-11-30', '2026-12-31'] as $due) { $this->invoice(.03, $due); }
         $forecast = app(CashFlowForecast::class)->calculate(6, null);
@@ -100,7 +100,7 @@ class CashFlowReportAlignmentTest extends TestCase
         $this->credit(100);
         $forecast = app(CashFlowForecast::class)->calculate(6, null);
         $this->assertSame(12, $forecast['totals']['expected']);
-        $this->assertSame(11, CashAmount::cents(app(FinanceReportQuery::class)->totals()['total_outstanding']));
+        $this->assertSame(-12189, CashAmount::cents(app(FinanceReportQuery::class)->totals()['total_outstanding']));
         $this->assertSame(CashAmount::cents(app(FinanceReportQuery::class)->totals()['actual_outstanding']), $forecast['totals']['expected']);
     }
 

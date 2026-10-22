@@ -35,7 +35,7 @@
     <div>
         <div class="mt-panel">
             <x-panel title="Andamento Finanziario" dot="var(--green)" padded>
-                <p class="u-text-sm u-text-muted">Fatturato delle fatture, IVA esclusa. Incassi e spese per gli importi effettivi.</p>
+                <p class="u-text-sm u-text-muted">Fatturato netto, IVA esclusa. Incassi e spese per gli importi effettivi.</p>
                 <div class="dashboard-chart-card">
                     <div id="financial-chart" class="dashboard-chart-body"></div>
                 </div>

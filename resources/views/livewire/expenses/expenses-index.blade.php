@@ -1,20 +1,22 @@
 <div>
+    @php($listRoute = $manualOnly ? 'expenses.manual.index' : 'expenses.index')
     <x-page-header 
         eyebrow="Amministrazione" 
         meta="Gestione delle spese e dei costi operativi">
-        <x-slot:title><strong>Spese</strong> Generali</x-slot:title>
+        <x-slot:title>@if($manualOnly)<strong>Uscite</strong> manuali @else<strong>Spese</strong> Generali @endif</x-slot:title>
         <x-slot:actions>
             <a href="{{ route('expenses.categories') }}" wire:navigate class="btn btn-g">Gestisci categorie</a>
-            <a href="{{ route('expenses.create') }}" wire:navigate class="btn btn-p">+ Nuova Spesa</a>
+            <a href="{{ route('expenses.create') }}" wire:navigate class="btn btn-p">{{ $manualOnly ? 'Nuova uscita' : '+ Nuova Spesa' }}</a>
         </x-slot:actions>
     </x-page-header>
 
     @include('expenses.partials.navigation')
+    @if($manualOnly)<p class="u-mb-md">Spese inserite manualmente. Le uscite generate dalle ricorrenze sono nella scheda Spese.</p>@endif
     @if($recurrence_id)
         <p class="u-mb-md">Stai visualizzando le scadenze di una ricorrenza. <a href="{{ route('expenses.index') }}">Mostra tutte le spese</a></p>
     @endif
 
-    <form method="GET" action="{{ route('expenses.index') }}" class="finance-report-filters">
+    <form method="GET" action="{{ route($listRoute) }}" class="finance-report-filters">
         @if($category_id)<input type="hidden" name="category_id" value="{{ $category_id }}">@endif
         @if($subcategory_id)<input type="hidden" name="subcategory_id" value="{{ $subcategory_id }}">@endif
         @if($recurrence_id)<input type="hidden" name="recurrence_id" value="{{ $recurrence_id }}">@endif
@@ -32,7 +34,7 @@
             <x-form-group label="Collegamento" name="expenseable_type"><select id="field-expenseable-type" name="expenseable_type" class="form-sel">@foreach(['' => 'Tutti', 'client' => 'Cliente', 'project' => 'Progetto', 'task' => 'Task', 'ticket' => 'Ticket', 'hosting_service' => 'Dominio o hosting'] as $value => $label)<option value="{{ $value }}" @selected($expenseable_type === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
             <x-form-group label="Ordine nelle sottocategorie" name="sort"><select id="field-sort" name="sort" class="form-sel">@foreach(['due_asc' => 'Scadenza crescente', 'date_desc' => 'Data decrescente', 'date_asc' => 'Data crescente', 'amount_desc' => 'Importo decrescente', 'amount_asc' => 'Importo crescente'] as $value => $label)<option value="{{ $value }}" @selected($sort === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
         </div></details>
-        <div class="u-flex u-gap-sm u-mt-md"><button type="submit" class="btn btn-p">Applica filtri</button><a href="{{ route('expenses.index') }}" class="btn btn-g">Azzera filtri</a></div>
+        <div class="u-flex u-gap-sm u-mt-md"><button type="submit" class="btn btn-p">Applica filtri</button><a href="{{ route($listRoute) }}" class="btn btn-g">Azzera filtri</a></div>
     </form>
     @if($groups->isNotEmpty() || $category_id !== '')
         <div class="finance-category-filters u-mb-md" x-data="expenseCategoryMenu" @resize.window="place()" @scroll.window.capture="place()">

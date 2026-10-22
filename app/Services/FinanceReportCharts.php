@@ -7,7 +7,7 @@ use Illuminate\Support\Arr;
 
 class FinanceReportCharts
 {
-    private const COLORS = ['#8870d9', '#18a88a', '#e97822', '#bd1034', '#5479b8', '#64748b'];
+    private const COLORS = ['#2459b8', '#18a88a', '#64748b', '#bd1034', '#e97822', '#5479b8'];
 
     public function trends(array $data, ?array $comparison): array
     {

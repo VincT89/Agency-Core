@@ -1,7 +1,7 @@
 <x-app-layout title="Previsione entrate e uscite">
     <x-page-header><x-slot:title>Previsione entrate e uscite</x-slot:title></x-page-header>
     @include('expenses.partials.navigation')
-    <p class="u-mb-md">Dal {{ $start->format('d/m/Y') }} al {{ $end->format('d/m/Y') }}. Gli importi sono in euro. Il saldo previsto considera incassi registrati, fatture ancora da incassare, entrate manuali e spese, comprese le ricorrenze.</p>
+    <p class="u-mb-md">Dal {{ $start->format('d/m/Y') }} al {{ $end->format('d/m/Y') }}. Gli importi sono in euro. Le entrate attese seguono il residuo effettivo delle fatture, come il «Da incassare» del riepilogo, distribuito per scadenza. Il saldo previsto considera anche incassi registrati, uscite manuali e ricorrenze.</p>
     <x-panel title="Saldo di partenza" padded>
         <form class="finance-form" method="POST" action="{{ route('expenses.forecast.balance') }}">
             @csrf @method('PUT')
@@ -21,16 +21,16 @@
     @if($overdue['incoming'] || $overdue['outgoing'])<p class="u-mb-md">Nel primo mese sono riportati anche gli importi ancora aperti con scadenza precedente alla data iniziale: {{ number_format($overdue['incoming'] / 100, 2, ',', '.') }} EUR da incassare e {{ number_format($overdue['outgoing'] / 100, 2, ',', '.') }} EUR da pagare. Le date originali restano nelle rispettive schede.</p>@endif
     @if($missingDueDates)<p class="u-mb-md">{{ $missingDueDates }} fatture da incassare non hanno una scadenza: sono incluse nel primo mese. Completa le date per una previsione più precisa.</p>@endif
     @if($excludedCurrencies)<p class="u-mb-md">Sono escluse {{ $excludedCurrencies }} fatture in valuta diversa dall’euro e i relativi incassi. Il prospetto non applica conversioni automatiche.</p>@endif
-    @if($unallocatedCredit > 0)<p class="u-mb-md">Note di credito ancora da collegare: <strong>{{ number_format($unallocatedCredit / 100, 2, ',', '.') }} EUR</strong>. Le entrate attese si riducono solo per le note collegate alle rispettive fatture. <a href="{{ route('invoices.index', ['document_type' => 'TD04']) }}">Verifica le note di credito</a>.</p>@endif
+    @php($forecastColumns = ['received', 'expected', ...($totals['other_expected'] !== 0 ? ['other_expected'] : []), 'paid', 'pending'])
     <x-panel>
         <div class="t-table-wrap" tabindex="0" role="region" aria-label="Previsione mensile, tabella scorrevole"><table class="t-table finance-table">
-            <thead><tr><th>Mese</th><th>Entrate registrate</th><th>Entrate attese</th><th>Uscite pagate</th><th>Uscite previste</th><th>Variazione</th><th>Saldo previsto</th></tr></thead>
+            <thead><tr><th>Mese</th><th>Entrate registrate</th><th>Entrate attese</th>@if($totals['other_expected'] !== 0)<th>Altre entrate attese</th>@endif<th>Uscite pagate</th><th>Uscite previste</th><th>Variazione</th><th>Saldo previsto</th></tr></thead>
             <tbody>@foreach($rows as $row)<tr>
                 <th scope="row">{{ ucfirst($row['month']->translatedFormat('F Y')) }}</th>
-                @foreach(['received','expected','paid','pending','net'] as $field)<td class="mono-col">{{ number_format($row[$field] / 100, 2, ',', '.') }}</td>@endforeach
+                @foreach([...$forecastColumns, 'net'] as $field)<td class="mono-col">{{ number_format($row[$field] / 100, 2, ',', '.') }}</td>@endforeach
                 <td class="mono-col {{ $row['closing_balance'] !== null && $row['closing_balance'] < 0 ? 'finance-balance-negative' : '' }}" @if($row['closing_balance'] !== null && $row['closing_balance'] < 0) aria-label="{{ number_format($row['closing_balance'] / 100, 2, ',', '.') }} euro, saldo negativo" @endif>{{ $row['closing_balance'] === null ? 'Non impostato' : number_format($row['closing_balance'] / 100, 2, ',', '.') }}</td>
             </tr>@endforeach</tbody>
-            <tfoot><tr><th scope="row">Totale periodo</th>@foreach(['received','expected','paid','pending'] as $field)<td class="mono-col">{{ number_format($totals[$field] / 100, 2, ',', '.') }}</td>@endforeach<td colspan="2"></td></tr></tfoot>
+            <tfoot><tr><th scope="row">Totale periodo</th>@foreach($forecastColumns as $field)<td class="mono-col">{{ number_format($totals[$field] / 100, 2, ',', '.') }}</td>@endforeach<td colspan="2"></td></tr></tfoot>
         </table></div>
     </x-panel>
     <p class="u-text-meta u-mt-md">La previsione segue le scadenze registrate: non conferma automaticamente incassi o pagamenti. Le fatture fornitori importate entrano nel calcolo quando le colleghi a una spesa.</p>

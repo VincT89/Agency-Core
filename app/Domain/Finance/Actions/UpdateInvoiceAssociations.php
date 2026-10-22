@@ -6,6 +6,7 @@ use App\Domain\Core\Actions\CreateProjectAction;
 use App\Enums\Finance\InvoiceFiscalStatus;
 use App\Models\HostingService;
 use App\Models\Invoice;
+use App\Models\MarketingCampaign;
 use App\Models\Project;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class UpdateInvoiceAssociations
             'assignment_type' => 'sometimes|required|in:project,new_project,domain,hosting,none,campaign',
             'project_id' => [isset($data['assignment_type']) ? 'required_if:assignment_type,project' : 'present', 'nullable', 'integer', 'exists:projects,id'],
             'hosting_service_id' => 'required_if:assignment_type,domain,hosting|nullable|integer',
+            'marketing_campaign_id' => 'required_if:assignment_type,campaign|nullable|integer',
             'new_project_name' => 'required_if:assignment_type,new_project|nullable|string|max:255',
             'new_project_description' => 'nullable|string|max:5000',
             'replace_campaign' => 'sometimes|boolean',
@@ -34,6 +36,7 @@ class UpdateInvoiceAssociations
             $mode = $data['assignment_type'] ?? null;
             $project = in_array($mode, [null, 'project'], true) && filled($data['project_id'] ?? null) ? Project::findOrFail($data['project_id']) : null;
             $service = null;
+            $campaign = null;
             if (in_array($mode, ['domain', 'hosting'], true)) {
                 $service = HostingService::withTrashed()->withServiceType($mode)->lockForUpdate()->find($data['hosting_service_id']);
                 if (! $service || $service->client_id !== $invoice->client_id
@@ -41,8 +44,11 @@ class UpdateInvoiceAssociations
                     throw ValidationException::withMessages(['hosting_service_id' => 'Seleziona un dominio o hosting esistente del cliente della fattura.']);
                 }
             }
-            if ($mode === 'campaign' && ! $invoice->marketing_campaign_id) {
-                throw ValidationException::withMessages(['assignment_type' => 'Questa fattura non ha una campagna collegata.']);
+            if ($mode === 'campaign') {
+                $campaign = MarketingCampaign::lockForUpdate()->find($data['marketing_campaign_id']);
+                if (! $campaign || $campaign->client_id !== $invoice->client_id) {
+                    throw ValidationException::withMessages(['marketing_campaign_id' => 'Seleziona un progetto marketing del cliente della fattura.']);
+                }
             }
             if ($mode === 'new_project') {
                 Gate::authorize('create', Project::class);
@@ -59,7 +65,8 @@ class UpdateInvoiceAssociations
             if ($project && ! $project->isInvoiceContainer() && $project->client_id !== $invoice->client_id) {
                 throw ValidationException::withMessages(['project_id' => 'Il progetto non appartiene al cliente della fattura.']);
             }
-            if ($invoice->marketing_campaign_id && ($project || $service || $mode === 'none') && ! ($data['replace_campaign'] ?? false)) {
+            if ($invoice->marketing_campaign_id && ($project || $service || $mode === 'none'
+                || ($campaign && $campaign->id !== $invoice->marketing_campaign_id)) && ! ($data['replace_campaign'] ?? false)) {
                 throw ValidationException::withMessages(['replace_campaign' => 'Conferma la sostituzione del collegamento alla campagna.']);
             }
             if ($mode === null && $invoice->hosting_service_id && ($project || ! empty($data['services']))) {
@@ -99,7 +106,9 @@ class UpdateInvoiceAssociations
                 $invoice->importedServiceLinks()->delete();
                 $invoice->items()->whereNotNull('hosting_service_id')->update(['hosting_service_id' => null]);
             }
-            if ($mode !== 'campaign' && ($data['replace_campaign'] ?? false)) {
+            if ($mode === 'campaign') {
+                $invoice->marketing_campaign_id = $campaign->id;
+            } elseif ($data['replace_campaign'] ?? false) {
                 $invoice->marketing_campaign_id = null;
             }
             $invoice->save();

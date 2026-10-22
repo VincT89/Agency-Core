@@ -15,6 +15,7 @@ class ExpenseIndexQuery
     public function query(array $filters, bool $categoryFilter = true): Builder
     {
         $query = Expense::query();
+        $query->when($filters['manual_only'] ?? false, fn ($query) => $query->whereNull('expense_recurrence_id'));
         foreach (['status', 'supplier', 'expense_recurrence_id'] as $field) {
             if (filled($filters[$field] ?? null)) {
                 $query->where($field, $filters[$field]);

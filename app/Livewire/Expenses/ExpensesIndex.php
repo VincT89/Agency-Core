@@ -9,6 +9,7 @@ use App\Models\ExpenseCategory;
 use App\Models\Project;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use Livewire\Attributes\Locked;
 use Livewire\WithPagination;
 
 class ExpensesIndex extends Component
@@ -28,6 +29,8 @@ class ExpensesIndex extends Component
     public $client_id = '';
     public $project_id = '';
     public $sort = 'due_asc';
+    #[Locked]
+    public bool $manualOnly = false;
 
     protected $queryString = [
         'status' => ['except' => ''], 'expenseable_type' => ['except' => ''], 'search' => ['except' => ''],
@@ -36,9 +39,10 @@ class ExpensesIndex extends Component
         'client_id' => ['except' => ''], 'project_id' => ['except' => ''], 'sort' => ['except' => 'due_asc'],
     ];
 
-    public function mount(): void
+    public function mount(bool $manualOnly = false): void
     {
         $this->authorize('viewAny', Expense::class);
+        $this->manualOnly = $manualOnly;
     }
 
     public function selectCategory(string $id): void
@@ -92,6 +96,7 @@ class ExpensesIndex extends Component
             'sort' => 'required|in:due_asc,date_desc,date_asc,amount_desc,amount_asc',
         ]);
         $filters['expense_recurrence_id'] = $this->recurrence_id;
+        $filters['manual_only'] = $this->manualOnly;
         $builder = app(ExpenseIndexQuery::class);
         $query = $builder->query($filters)->with(['expenseable', 'document', 'recurrence', 'categoryGroup', 'subcategory']);
         $query->leftJoin('expense_categories as root_category', 'root_category.id', '=', 'expenses.category_id')
@@ -127,6 +132,6 @@ class ExpensesIndex extends Component
             'selectedCategory' => $selectedCategory, 'subcategories' => $selectedCategory?->children ?? collect(),
             'clientLabel' => $this->client_id ? Client::find($this->client_id)?->name : '',
             'projectLabel' => $this->project_id ? Project::find($this->project_id)?->name : '',
-        ])->layout('layouts.app', ['title' => 'Spese']);
+        ])->layout('layouts.app', ['title' => $this->manualOnly ? 'Uscite manuali' : 'Spese']);
     }
 }

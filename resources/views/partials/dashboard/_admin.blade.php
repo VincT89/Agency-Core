@@ -275,7 +275,7 @@
                     }
                 },
                 yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k €' : value + ' €' } },
-                colors: ['var(--purple)', '#14b8a6', 'var(--orange)'],
+                colors: ['var(--blue)', '#14b8a6', 'var(--orange)'],
                 plotOptions: { bar: { columnWidth: '55%', borderRadius: 6, borderRadiusApplication: 'end' } },
                 dataLabels: { enabled: false },
                 stroke: { show: true, width: 2, colors: ['transparent'] },
@@ -337,10 +337,10 @@
                     }
                 },
                 yaxis: { labels: { style: { colors: 'var(--text3)', fontFamily: 'var(--mono)' }, formatter: (value) => value >= 1000 ? (value / 1000) + 'k' : value }, min: 0, forceNiceScale: true },
-                colors: ['var(--purple)', '#ec4899'],
+                colors: ['var(--blue)', '#ec4899'],
                 fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
                 stroke: { curve: 'smooth', width: 3, dashArray: [0, 5] },
-                markers: { size: 4, colors: ['var(--purple)', '#ec4899'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
+                markers: { size: 4, colors: ['var(--blue)', '#ec4899'], strokeColors: '#ffffff', strokeWidth: 2, hover: { size: 6 } },
                 dataLabels: { enabled: false },
                 tooltip: { theme: 'dark' },
                 grid: {

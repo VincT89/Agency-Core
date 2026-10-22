@@ -133,7 +133,7 @@ class InvoiceDocumentIndexTest extends TestCase
         $this->document('FPR 17/26', true);
         $response = $this->get(route('invoices.index', ['status' => 'issued']))->assertOk()->assertDontSee('FPR 17/26');
         $this->assertSame(1, $response->viewData('documents')->total());
-        $this->assertEquals(0, $response->viewData('unpaidTotal'));
+        $this->assertEquals(122, $response->viewData('unpaidTotal'));
         $response = $this->get(route('invoices.index', ['fiscal_status' => 'imported']))->assertOk();
         $this->assertSame(2, $response->viewData('documents')->total());
         $response = $this->get(route('invoices.index', ['fiscal_status' => 'ready']))->assertOk();
@@ -179,7 +179,7 @@ class InvoiceDocumentIndexTest extends TestCase
         $response = $this->get(route('invoices.index', ['document_type' => 'TD04']))->assertOk()
             ->assertSee('Collegata a')->assertSee(route('invoices.show', $invoice))->assertSee('Collegata parzialmente')
             ->assertSee('Credito da collegare')->assertSee('100,00');
-        $this->assertEquals(0, $response->viewData('unpaidTotal'));
+        $this->assertEquals(100, $response->viewData('unpaidTotal'));
         $this->assertDatabaseCount('payments', 0);
         $this->assertSame('122.00', $invoice->fresh()->total);
         $this->assertSame('122.00', $note->fresh()->total);
@@ -200,17 +200,18 @@ class InvoiceDocumentIndexTest extends TestCase
 
         $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
         $this->assertEquals(92, $summary['total_outstanding']);
+        $this->assertEquals(192, $summary['actual_outstanding']);
         foreach ([[], ['status' => 'issued'], ['document_type' => 'TD04'], ['search' => 'nessun-documento']] as $filters) {
             $response = $this->get(route('invoices.index', $filters))->assertOk()
-                ->assertSee('Da incassare (IVA 22%)')->assertSee('Fatturato netto × 1,22 − incassato');
-            $this->assertSame($summary['total_outstanding'], $response->viewData('unpaidTotal'));
+                ->assertSee('Da incassare')->assertSee('Residuo effettivo delle fatture');
+            $this->assertSame($summary['actual_outstanding'], $response->viewData('unpaidTotal'));
             $this->assertSame(2, $response->viewData('outstandingCount'));
         }
         $this->assertDatabaseCount('credit_note_allocations', 0);
         $this->assertSame($original, $split->fresh()->getAttributes());
         $this->assertSame(100.0, $split->fresh()->residual);
         app(AllocateCreditNote::class)->execute($note, $split->id, '22.00');
-        $this->assertEquals(92, $this->get(route('invoices.index'))->assertOk()->viewData('unpaidTotal'));
+        $this->assertEquals(170, $this->get(route('invoices.index'))->assertOk()->viewData('unpaidTotal'));
         $this->assertSame(78.0, $split->fresh()->residual);
     }
 
@@ -229,18 +230,19 @@ class InvoiceDocumentIndexTest extends TestCase
             $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
             $response = $this->get(route('invoices.index'))->assertOk();
             $this->assertEquals($expected, $response->viewData('unpaidTotal'));
-            $this->assertSame($summary['total_outstanding'], $response->viewData('unpaidTotal'));
+            $this->assertSame($summary['actual_outstanding'], $response->viewData('unpaidTotal'));
             $this->assertSame($count, $response->viewData('outstandingCount'));
         }
     }
 
-    public function test_outstanding_amount_preserves_the_summary_negative_credit_balance(): void
+    public function test_credit_only_balance_is_separate_from_zero_actual_receivables(): void
     {
         $this->document('FPR 17/26', true);
         $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
-        $response = $this->get(route('invoices.index'))->assertOk()->assertSee('EUR -122,00');
-        $this->assertEquals(-122, $response->viewData('unpaidTotal'));
-        $this->assertSame($summary['total_outstanding'], $response->viewData('unpaidTotal'));
+        $response = $this->get(route('invoices.index'))->assertOk()->assertSee('EUR 0,00');
+        $this->assertEquals(0, $response->viewData('unpaidTotal'));
+        $this->assertEquals(-122, $summary['total_outstanding']);
+        $this->assertSame($summary['actual_outstanding'], $response->viewData('unpaidTotal'));
         $this->assertSame(0, $response->viewData('outstandingCount'));
     }
 

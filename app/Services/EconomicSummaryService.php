@@ -12,7 +12,7 @@ class EconomicSummaryService
     public function globalSummary(User $user, ?string $from = null, ?string $to = null, array $filters = []): array
     {
         if (! $user->canAccessFinance()) {
-            return ['total_invoiced' => 0, 'total_collected' => 0, 'total_outstanding' => 0, 'total_expenses' => 0, 'invoices_count' => 0, 'unallocated_credit' => 0];
+            return ['total_invoiced' => 0, 'total_collected' => 0, 'total_outstanding' => 0, 'actual_outstanding' => 0, 'total_expenses' => 0, 'invoices_count' => 0, 'unallocated_credit' => 0];
         }
         return $this->reports->totals(array_filter(array_replace($filters, compact('from', 'to')), fn ($value) => $value !== null));
     }

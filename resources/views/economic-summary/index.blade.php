@@ -3,7 +3,7 @@
         $money = fn ($value) => '€ '.number_format((float) $value, 2, ',', '.');
         $pageUrl = $subject ? route('economic-summary.show', ['group' => $subject instanceof \App\Models\Client ? 'clients' : 'projects', 'id' => $subject->id]) : route('economic-summary.index');
         $drillUrl = $pageUrl.'?'.http_build_query(array_replace($baseFilters, ['documents' => 1]));
-        $metrics = ['total_invoiced' => 'Fatturato netto (IVA esclusa)', 'total_collected' => 'Incassato', 'total_outstanding' => 'Da incassare (IVA 22%)'];
+        $metrics = ['total_invoiced' => 'Fatturato netto (IVA esclusa)', 'total_collected' => 'Incassato', 'actual_outstanding' => 'Da incassare', 'total_outstanding' => 'Saldo del riepilogo'];
         $directorySorts = $group === 'categories'
             ? ['costs_desc' => 'Costi decrescenti', 'name_asc' => 'Nome A–Z', 'name_desc' => 'Nome Z–A']
             : ['turnover_desc' => 'Fatturato decrescente', 'turnover_asc' => 'Fatturato crescente', 'name_asc' => 'Nome A–Z', 'name_desc' => 'Nome Z–A', 'pending_desc' => 'Da incassare decrescente', 'costs_desc' => 'Costi decrescenti'];
@@ -40,9 +40,9 @@
         </details>
     </form>
     @if($errors->any())<div class="u-alert-error u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
-    <div class="g-3col u-mb-lg">
+    <div class="g-4col u-mb-lg">
         @foreach($metrics as $key => $label)
-            <x-panel padded><x-stat-card :label="$label" :value="$money($globalSummary[$key])" :sub="match($key) { 'total_invoiced' => 'Da '.$globalSummary['invoices_count'].' fatture valide', 'total_collected' => 'Flusso cassa reale', default => 'Fatturato netto × 1,22 − incassato' }" :color="match($key) { 'total_invoiced' => 'var(--purple)', 'total_collected' => 'var(--teal)', default => 'var(--orange)' }" />
+            <x-panel padded><x-stat-card :label="$label" :value="$money($globalSummary[$key])" :sub="match($key) { 'total_invoiced' => 'Da '.$globalSummary['invoices_count'].' fatture valide', 'total_collected' => 'Flusso cassa reale', 'actual_outstanding' => 'Residuo effettivo delle fatture', default => 'Fatturato netto × 1,22 − incassato' }" :color="match($key) { 'total_invoiced' => 'var(--blue-text)', 'total_collected' => 'var(--teal)', 'actual_outstanding' => 'var(--orange)', default => 'var(--text2)' }" />
                 @if($comparison)<p class="finance-comparison">Confronto: {{ $money($comparison[$key]) }}<br>Differenza: {{ $money($globalSummary[$key] - $comparison[$key]) }}</p>@endif
             </x-panel>
         @endforeach
@@ -55,7 +55,7 @@
             @endforeach
             @if($comparison)<p class="u-text-meta">Confronto {{ \Carbon\Carbon::parse($filters['compare_from'])->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($filters['compare_to'])->format('d/m/Y') }}. I punti sono affiancati per posizione nel periodo.</p>@endif
             <details class="finance-advanced"><summary>Valori e documenti per periodo</summary>
-                <div class="t-table-wrap" tabindex="0" role="region" aria-label="Valori del grafico"><table class="t-table"><thead><tr><th>Periodo</th>@foreach($metrics as $label)<th>{{ $label }}</th>@endforeach<th>Spese</th></tr></thead><tbody>
+                <div class="t-table-wrap" tabindex="0" role="region" aria-label="Valori del grafico"><table class="t-table"><thead><tr><th>Periodo</th>@foreach($chartData['series'] as $series)<th>{{ $series['name'] }}</th>@endforeach</tr></thead><tbody>
                     @foreach($chartData['labels'] as $i => $label)<tr><th><a href="{{ $pageUrl.'?'.http_build_query(array_replace($baseFilters, ['from' => max($from ?? '1900-01-01', $chartData['periods'][$i]['from']), 'to' => min($to ?? '2100-12-31', $chartData['periods'][$i]['to']), 'documents' => 1])) }}#report-documents">{{ $label }}</a></th>@foreach($chartData['series'] as $series)<td>{{ $money($series['data'][$i]) }}</td>@endforeach</tr>@endforeach
                 </tbody></table></div>
             </details>

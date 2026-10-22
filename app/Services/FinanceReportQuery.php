@@ -121,9 +121,29 @@ class FinanceReportQuery
         return [
             'total_invoiced' => $net, 'total_collected' => $collected,
             'total_outstanding' => ReportInvoiceAmounts::outstanding($net, $collected),
+            'actual_outstanding' => round((float) $this->receivables($filters)->sum(DB::raw(Invoice::OUTSTANDING_SQL)), 2),
             'total_expenses' => round((float) $row->costs, 2), 'invoices_count' => (int) $row->invoices_count,
             'unallocated_credit' => $this->unallocatedCredit($filters),
         ];
+    }
+
+    public function receivables(array $filters = []): \Illuminate\Database\Eloquent\Builder
+    {
+        /** Actual receivables follow invoice balances, including linked credits and split payment, irrespective of the report's fixed VAT calculation. */
+        $query = $this->invoiceScope(Invoice::query(), $filters)->where('currency', 'EUR')->awaitingPayment();
+        foreach (['client_id', 'project_id'] as $column) {
+            $query->when(filled($filters[$column] ?? null), fn ($q) => $q->where($column, $filters[$column]));
+        }
+        $query->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('issue_date', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('issue_date', '<=', $filters['to']))
+            ->when(filled($filters['min_amount'] ?? null), fn ($q) => $q->where('total', '>=', $filters['min_amount']))
+            ->when(filled($filters['max_amount'] ?? null), fn ($q) => $q->where('total', '<=', $filters['max_amount']));
+        if (filled($filters['q'] ?? null)) {
+            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($filters['q'])).'%';
+            $number = $query->getQuery()->getGrammar()->wrap('invoices.import_metadata->number');
+            $query->whereRaw("LOWER(COALESCE($number, fiscal_number, number)) LIKE ? ESCAPE '!'", [$term]);
+        }
+        return $query;
     }
 
     private function unallocatedCredit(array $filters): float
@@ -141,7 +161,11 @@ class FinanceReportQuery
         $metrics = $this->events($filters, $project)->whereNotNull($column)
             ->selectRaw("$column, ROUND(SUM(net), 2) AS total_invoiced, ROUND(SUM(collected), 2) AS total_collected,
                 ROUND(SUM(costs), 2) AS total_expenses, SUM(invoice_count) AS invoices_count")->groupBy($column);
-        $query = DB::query()->fromSub($metrics, 'metrics');
+        $actual = $this->receivables($filters)->whereNotNull($column)
+            ->selectRaw("$column, SUM(".Invoice::OUTSTANDING_SQL.') AS actual_outstanding, COUNT(*) AS open_invoices')
+            ->groupBy($column);
+        $query = DB::query()->fromSub($metrics, 'metrics')
+            ->leftJoinSub($actual, 'receivables', 'receivables.'.$column, '=', 'metrics.'.$column);
         if ($project) {
             $query->join('projects', 'projects.id', '=', 'metrics.project_id')->leftJoin('clients', 'clients.id', '=', 'projects.client_id')
                 ->select('metrics.*', 'projects.name as project_name')
@@ -149,7 +173,8 @@ class FinanceReportQuery
         } else {
             $query->join('clients', 'clients.id', '=', 'metrics.client_id')->select('metrics.*', 'clients.name as client_name');
         }
-        return $query->selectRaw('ROUND(ROUND(metrics.total_invoiced * 1.22, 2) - metrics.total_collected, 2) AS total_outstanding');
+        return $query->selectRaw('ROUND(ROUND(metrics.total_invoiced * 1.22, 2) - metrics.total_collected, 2) AS total_outstanding,
+            COALESCE(receivables.actual_outstanding, 0) AS actual_outstanding, COALESCE(receivables.open_invoices, 0) AS open_invoices');
     }
 
     public function categoryGroups(array $filters = []): Builder
@@ -174,6 +199,9 @@ class FinanceReportQuery
         $expression = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', event_date)" : "DATE_FORMAT(event_date, '%Y-%m')";
         $rows = $this->events($filters)->selectRaw("$expression AS month, SUM(net) AS net, SUM(collected) AS collected, SUM(costs) AS costs")
             ->groupBy('month')->orderBy('month')->get()->keyBy('month');
+        $invoiceMonth = str_replace('event_date', 'issue_date', $expression);
+        $actual = $this->receivables($filters)->selectRaw("$invoiceMonth AS month, SUM(".Invoice::OUTSTANDING_SQL.') AS outstanding')
+            ->groupBy('month')->get()->keyBy('month');
         $first = CarbonImmutable::parse($filters['from'] ?? ($rows->keys()->first() ? $rows->keys()->first().'-01' : ($filters['to'] ?? now()->startOfYear()->toDateString())))->startOfMonth();
         $last = CarbonImmutable::parse($filters['to'] ?? ($rows->keys()->last() ? $rows->keys()->last().'-01' : ($filters['from'] ?? now()->endOfYear()->toDateString())))->startOfMonth();
         $group = $filters['interval'] ?? 'month';
@@ -185,14 +213,15 @@ class FinanceReportQuery
         for ($date = $first; $date->lte($last); $date = $date->addMonth()) {
             $key = match ($group) { 'year' => $date->format('Y'), 'quarter' => $date->format('Y').'-T'.$date->quarter, default => $date->format('Y-m') };
             $row = $rows->get($date->format('Y-m'));
-            $buckets[$key] ??= ['net' => 0, 'collected' => 0, 'costs' => 0, 'from' => $date->toDateString(), 'to' => $date->endOfMonth()->toDateString()];
+            $buckets[$key] ??= ['net' => 0, 'collected' => 0, 'costs' => 0, 'actual' => 0, 'from' => $date->toDateString(), 'to' => $date->endOfMonth()->toDateString()];
+            $buckets[$key]['actual'] += (float) ($actual->get($date->format('Y-m'))?->outstanding ?? 0);
             foreach (['net', 'collected', 'costs'] as $metric) {
                 $buckets[$key][$metric] += (float) ($row?->$metric ?? 0);
             }
             $buckets[$key]['to'] = $date->endOfMonth()->toDateString();
         }
         $labels = [];
-        $data = [[], [], [], []];
+        $data = [[], [], [], [], []];
         foreach ($buckets as $key => $bucket) {
             $labels[] = $group === 'month' ? ucfirst(CarbonImmutable::parse($key.'-01')->isoFormat('MMM YYYY')) : $key;
             $net = round($bucket['net'], 2);
@@ -201,9 +230,10 @@ class FinanceReportQuery
             $data[1][] = $collected;
             $data[2][] = ReportInvoiceAmounts::outstanding($net, $collected);
             $data[3][] = round($bucket['costs'], 2);
+            $data[4][] = round($bucket['actual'], 2);
         }
         return ['labels' => $labels, 'periods' => array_values(array_map(fn ($b) => ['from' => $b['from'], 'to' => $b['to']], $buckets)),
             'series' => array_map(fn ($name, $index) => ['name' => $name, 'data' => $data[$index]],
-                ['Fatturato netto (IVA esclusa)', 'Incassato', 'Da incassare (IVA 22%)', 'Spese'], [0, 1, 2, 3])];
+                ['Fatturato netto (IVA esclusa)', 'Incassato', 'Saldo del riepilogo (IVA 22%)', 'Spese', 'Da incassare'], [0, 1, 2, 3, 4])];
     }
 }

@@ -79,7 +79,7 @@ class FinancialReportsTest extends TestCase
             $this->assertCount(1, $chart['labels']);
             $this->assertEquals([$invoiced], $chart['invoiced']);
             $this->assertEquals([$collected], $chart['collected']);
-            $this->assertEquals([$pending], $chart['pending']);
+            $this->assertEquals([$from === '2026-01-01' ? 1500 : 0], $chart['pending']);
             $this->assertEquals($invoiced, $response->viewData('globalSummary')['total_invoiced']);
             $this->assertEquals($collected, $response->viewData('globalSummary')['total_collected']);
             $this->assertEquals($pending, $response->viewData('globalSummary')['total_outstanding']);
@@ -100,7 +100,7 @@ class FinancialReportsTest extends TestCase
             $global = $response->viewData('globalSummary');
             $chart = json_decode($response->viewData('sparklineData'), true, flags: JSON_THROW_ON_ERROR);
             $clients = $response->viewData('summaryByClient');
-            foreach (['invoiced' => 'total_invoiced', 'collected' => 'total_collected', 'pending' => 'total_outstanding'] as $series => $metric) {
+            foreach (['invoiced' => 'total_invoiced', 'collected' => 'total_collected', 'pending' => 'actual_outstanding'] as $series => $metric) {
                 $this->assertEqualsWithDelta($global[$metric], array_sum($chart[$series]), 0.001);
                 $this->assertEqualsWithDelta($global[$metric], $clients->sum($metric), 0.001);
             }
@@ -127,7 +127,7 @@ class FinancialReportsTest extends TestCase
         $chart = json_decode($response->viewData('sparklineData'), true, flags: JSON_THROW_ON_ERROR);
         $this->assertEquals([-122], $chart['invoiced']);
         $this->assertEquals([0], $chart['collected']);
-        $this->assertEquals([-148.84], $chart['pending']);
+        $this->assertEquals([0], $chart['pending']);
         $this->assertEquals(92, $response->viewData('globalSummary')['unallocated_credit']);
         $this->assertEquals(-122, $response->viewData('globalSummary')['total_invoiced']);
         $this->assertEquals(-122, $response->viewData('summaryByClient')->sole()->total_invoiced);
@@ -220,7 +220,8 @@ class FinancialReportsTest extends TestCase
         $chart = json_decode($response->viewData('sparklineData'), true, flags: JSON_THROW_ON_ERROR);
         $this->assertEquals([2150.99], $chart['invoiced']);
         $this->assertEquals([244], $chart['collected']);
-        $this->assertEquals([2380.21], $chart['pending']);
+        $this->assertEquals([2195], $chart['pending']);
+        $this->assertEquals(2195, $global['actual_outstanding']);
         $dashboard = $this->get(route('dashboard'))->assertOk()->assertSee('Fatturato al netto di IVA e note di credito');
         $series = $dashboard->viewData('financialChartData')['series'];
         $this->assertSame('Fatturato netto (IVA esclusa)', $series[0]['name']);
@@ -266,7 +267,7 @@ class FinancialReportsTest extends TestCase
             $chart = json_decode($response->viewData('sparklineData'), true, flags: JSON_THROW_ON_ERROR);
             $this->assertEquals([$invoiced], $chart['invoiced']);
             $this->assertEquals([$collected], $chart['collected']);
-            $this->assertEquals([$pending], $chart['pending']);
+            $this->assertEquals([0], $chart['pending']);
         }
     }
 
@@ -323,13 +324,37 @@ class FinancialReportsTest extends TestCase
         $note = $this->credit('2026-10-15', 244, ['subtotal' => 200, 'tax_amount' => 44, 'payable_total' => 200]);
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '200.00');
         $this->payment($invoice, '2026-10-16', 300);
-        $response = $this->get(route('economic-summary.index'))->assertOk()->assertSee('Da incassare (IVA 22%)');
+        $response = $this->get(route('economic-summary.index'))->assertOk()->assertSee('Da incassare')->assertSee('Saldo del riepilogo');
         $this->assertEquals(800, $response->viewData('globalSummary')['total_invoiced']);
         $this->assertEquals(676, $response->viewData('globalSummary')['total_outstanding']);
         $this->assertEquals(676, $response->viewData('summaryByClient')->sole()->total_outstanding);
         $this->assertEquals(676, $response->viewData('summaryByProject')->sole()->total_outstanding);
-        $this->assertEquals([676], json_decode($response->viewData('sparklineData'), true)['pending']);
+        $this->assertEquals([500], json_decode($response->viewData('sparklineData'), true)['pending']);
+        $this->assertEquals(500, $response->viewData('globalSummary')['actual_outstanding']);
         $this->assertEquals(500, $invoice->fresh()->residual);
+    }
+
+    public function test_settled_invoices_have_zero_receivables_while_the_fixed_vat_balance_can_be_negative(): void
+    {
+        $invoice = $this->invoice('SETTLED-REGRESSION', '2026-10-15', 49766.24,
+            ['subtotal' => 40792, 'tax_amount' => 8974.24, 'payable_total' => 48055.74, 'due_date' => '2026-10-16']);
+        $this->credit('2026-10-16', 5856, ['subtotal' => 4800, 'tax_amount' => 1056]);
+        $this->payment($invoice, '2026-10-16', 48055.74);
+        $response = $this->get(route('economic-summary.index'))->assertOk()->assertSee('Saldo del riepilogo')->assertSee('-4.145,50');
+        $totals = $response->viewData('globalSummary');
+        $this->assertEquals(35992, $totals['total_invoiced']);
+        $this->assertEquals(48055.74, $totals['total_collected']);
+        $this->assertEquals(-4145.50, $totals['total_outstanding']);
+        $this->assertEquals(0, $totals['actual_outstanding']);
+        foreach (['summaryByClient', 'summaryByProject'] as $group) {
+            $this->assertEquals(0, $response->viewData($group)->sole()->actual_outstanding);
+        }
+        $this->get(route('invoices.index'))->assertOk()->assertViewHas('unpaidTotal', 0)->assertViewHas('outstandingCount', 0);
+        $this->assertSame(0, app(\App\Domain\Finance\Services\CashFlowForecast::class)->calculate(12, null)['totals']['expected']);
+        $this->assertEquals([0], json_decode($response->viewData('sparklineData'), true)['pending']);
+        $this->assertSame('paid', $invoice->fresh()->status);
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('credit_note_allocations', 0);
     }
 
     public function test_report_receivable_is_displayed_net_turnover_with_vat_even_before_credit_notes_are_linked(): void
@@ -342,7 +367,7 @@ class FinancialReportsTest extends TestCase
         $this->assertEquals(0, $summary['total_collected']);
         $this->assertEquals(43910.24, $summary['total_outstanding']);
         $this->assertEquals(43910.24, $response->viewData('summaryByClient')->sole()->total_outstanding);
-        $this->assertEquals([43910.24], json_decode($response->viewData('sparklineData'), true)['pending']);
+        $this->assertEquals([49766.24], json_decode($response->viewData('sparklineData'), true)['pending']);
         $this->assertDatabaseCount('credit_note_allocations', 0);
 
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '5856.00');

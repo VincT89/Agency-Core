@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\ManualIncome;
 use App\Models\Payment;
+use App\Services\FinanceReportQuery;
 use Carbon\CarbonImmutable;
 
 class CashFlowForecast
@@ -18,7 +19,7 @@ class CashFlowForecast
         $end = $start->startOfMonth()->addMonths($months - 1)->endOfMonth();
         $rows = [];
         for ($month = $start->startOfMonth(); $month->lte($end); $month = $month->addMonth()) {
-            $rows[$month->format('Y-m')] = ['month' => $month, 'received' => 0, 'expected' => 0, 'paid' => 0, 'pending' => 0];
+            $rows[$month->format('Y-m')] = ['month' => $month, 'received' => 0, 'expected' => 0, 'other_expected' => 0, 'paid' => 0, 'pending' => 0];
         }
         $overdue = ['incoming' => 0, 'outgoing' => 0];
         $missingDueDates = 0;
@@ -28,7 +29,7 @@ class CashFlowForecast
                 return;
             }
             if ($forecast && $date->lt($start)) {
-                $overdue[$type === 'expected' ? 'incoming' : 'outgoing'] += $amount;
+                $overdue[in_array($type, ['expected', 'other_expected'], true) ? 'incoming' : 'outgoing'] += $amount;
                 $date = $start;
             }
             $rows[$date->format('Y-m')][$type] += $amount;
@@ -38,12 +39,11 @@ class CashFlowForecast
         foreach (Payment::whereHas('invoice', fn ($query) => $query->where('currency', 'EUR'))->whereBetween('payment_date', [$start->toDateString(), $end->toDateString()])->cursor() as $payment) {
             $add($payment->payment_date, 'received', CashAmount::cents($payment->amount));
         }
-        foreach (Invoice::where('currency', 'EUR')->whereIn('status', ['issued', 'partially_paid', 'overdue'])->cursor() as $invoice) {
-            $residual = CashAmount::cents($invoice->residual);
-            if ($residual > 0 && ! $invoice->due_date) {
+        foreach ($this->invoiceReceivables($start) as $entry) {
+            if ($entry['missing_due_date']) {
                 $missingDueDates++;
             }
-            $add($invoice->due_date ?? $start, 'expected', $residual, true);
+            $add($entry['date'], 'expected', $entry['amount'], true);
         }
         foreach (Expense::whereIn('status', ['pending', 'paid'])->cursor() as $expense) {
             $paid = $expense->status === 'paid';
@@ -52,16 +52,16 @@ class CashFlowForecast
         }
         foreach (ManualIncome::whereIn('status', ['expected', 'received'])->cursor() as $income) {
             $received = $income->status === 'received';
-            $add($received ? $income->received_on : $income->expected_on, $received ? 'received' : 'expected', CashAmount::cents($income->amount), ! $received);
+            $add($received ? $income->received_on : $income->expected_on, $received ? 'received' : 'other_expected', CashAmount::cents($income->amount), ! $received);
         }
 
         $balance = $setting ? CashAmount::cents($setting->opening_balance) : null;
-        $totals = ['received' => 0, 'expected' => 0, 'paid' => 0, 'pending' => 0];
+        $totals = ['received' => 0, 'expected' => 0, 'other_expected' => 0, 'paid' => 0, 'pending' => 0];
         foreach ($rows as &$row) {
             foreach (array_keys($totals) as $field) {
                 $totals[$field] += $row[$field];
             }
-            $row['net'] = $row['received'] + $row['expected'] - $row['paid'] - $row['pending'];
+            $row['net'] = $row['received'] + $row['expected'] + $row['other_expected'] - $row['paid'] - $row['pending'];
             if ($balance !== null) {
                 $balance += $row['net'];
             }
@@ -69,10 +69,18 @@ class CashFlowForecast
         }
         unset($row);
 
-        /** Unconfirmed links must remain visible without silently reducing expected receipts. */
         $unallocatedCredit = CreditNote::where('currency', 'EUR')->select(['id', 'payable_total'])->withSum('allocations', 'amount')->get()
             ->sum(fn ($note) => max(0, CashAmount::cents($note->payable_total) - CashAmount::cents($note->allocations_sum_amount ?? 0)));
 
         return compact('rows', 'totals', 'start', 'end', 'overdue', 'missingDueDates', 'excludedCurrencies', 'unallocatedCredit');
+    }
+
+    private function invoiceReceivables(CarbonImmutable $start): \Generator
+    {
+        /** Schedule the same actual invoice balances shown in the summary, without turning its fixed-VAT balance into expected cash. */
+        foreach (app(FinanceReportQuery::class)->receivables()->orderBy('id')->cursor() as $invoice) {
+            $amount = CashAmount::cents($invoice->residual);
+            yield ['date' => $invoice->due_date ?? $start, 'amount' => $amount, 'missing_due_date' => $amount > 0 && ! $invoice->due_date];
+        }
     }
 }

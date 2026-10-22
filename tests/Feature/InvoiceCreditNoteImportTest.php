@@ -187,7 +187,7 @@ class InvoiceCreditNoteImportTest extends TestCase
         $this->assertDatabaseCount('invoices', 2);
     }
 
-    public function test_split_payment_uses_net_receivable_in_payments_summaries_and_forecast(): void
+    public function test_split_payment_preserves_actual_receivable_and_uses_fixed_vat_in_report_and_forecast(): void
     {
         $invoice = $this->import('FPA 1/26', split: true);
         $this->assertSame('122.00', $invoice->total);

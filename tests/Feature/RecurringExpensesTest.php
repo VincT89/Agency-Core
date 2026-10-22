@@ -188,7 +188,7 @@ class RecurringExpensesTest extends TestCase
         $data = ['title' => 'Rimborso di prova', 'amount' => '50.25', 'expected_on' => '2026-09-20', 'status' => 'expected'];
         $this->post(route('expenses.incomes.store'), $data)->assertSessionHasNoErrors();
         $income = ManualIncome::sole();
-        $this->assertSame(5025, app(CashFlowForecast::class)->calculate(6, null)['totals']['expected']);
+        $this->assertSame(5025, app(CashFlowForecast::class)->calculate(6, null)['totals']['other_expected']);
         $data['status'] = 'received';
         $this->put(route('expenses.incomes.update', $income), $data)->assertSessionHasErrors('received_on');
         $data['received_on'] = '2026-09-18';
@@ -225,7 +225,7 @@ class RecurringExpensesTest extends TestCase
         ManualIncome::create(['user_id' => $this->admin->id, 'title' => 'Rimborso', 'amount' => '7.05', 'expected_on' => '2026-10-01', 'status' => 'expected']);
         $setting = CashFlowSetting::create(['id' => 1, 'opening_balance' => '100.00', 'balance_date' => '2026-09-17', 'updated_by' => $this->admin->id]);
         $forecast = app(CashFlowForecast::class)->calculate(6, $setting);
-        $this->assertSame(['received' => 4010, 'expected' => 9245, 'paid' => 3020, 'pending' => 2010], $forecast['totals']);
+        $this->assertSame(['received' => 4010, 'expected' => 8540, 'other_expected' => 705, 'paid' => 3020, 'pending' => 2010], $forecast['totals']);
         $this->assertSame(['incoming' => 1520, 'outgoing' => 2010], $forecast['overdue']);
         $this->assertSame(11500, $forecast['rows']['2026-09']['closing_balance']);
         $this->assertSame(18225, $forecast['rows']['2026-10']['closing_balance']);
@@ -410,6 +410,6 @@ class RecurringExpensesTest extends TestCase
 
     private function invoice(array $overrides = []): Invoice
     {
-        return Invoice::create(array_replace(['client_id' => Client::factory()->create()->id, 'created_by' => $this->admin->id, 'number' => 'INV-TEST', 'status' => 'issued', 'issue_date' => '2026-09-01', 'due_date' => '2026-09-30', 'currency' => 'EUR', 'total' => '100.00', 'paid_total' => '0.00'], $overrides));
+        return Invoice::create(array_replace(['client_id' => Client::factory()->create()->id, 'created_by' => $this->admin->id, 'number' => 'INV-TEST', 'status' => 'issued', 'issue_date' => '2026-09-01', 'due_date' => '2026-09-30', 'currency' => 'EUR', 'subtotal' => $overrides['total'] ?? '100.00', 'tax_amount' => 0, 'total' => '100.00', 'paid_total' => '0.00'], $overrides));
     }
 }

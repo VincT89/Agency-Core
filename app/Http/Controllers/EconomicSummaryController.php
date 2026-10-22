@@ -31,7 +31,7 @@ class EconomicSummaryController extends Controller
         $group = $filters['group'] ?? 'clients';
         $partial = ! $subject && $request->header('X-Finance-Partial') === 'report-directory';
         $sort = $filters['sort'] ?? 'turnover_desc';
-        $sortColumn = match ($sort) { 'name_asc', 'name_desc' => $group === 'projects' ? 'project_name' : 'client_name', 'pending_desc' => 'total_outstanding', 'costs_desc' => 'total_expenses', default => 'total_invoiced' };
+        $sortColumn = match ($sort) { 'name_asc', 'name_desc' => $group === 'projects' ? 'project_name' : 'client_name', 'pending_desc' => 'actual_outstanding', 'costs_desc' => 'total_expenses', default => 'total_invoiced' };
         $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
         $directories = [];
         foreach (['clients', 'projects'] as $kind) {
@@ -86,7 +86,7 @@ class EconomicSummaryController extends Controller
             'expenseCategories' => ExpenseCategory::whereNull('parent_id')->orderBy('name')->get(['id', 'name']),
             'expenseSubcategories' => ExpenseCategory::whereNotNull('parent_id')->where('parent_id', $filters['category_id'] ?? 0)->orderBy('name')->get(['id', 'name']),
             'sparklineData' => json_encode(['labels' => $chartData['labels'], 'invoiced' => $chartData['series'][0]['data'],
-                'collected' => $chartData['series'][1]['data'], 'pending' => $chartData['series'][2]['data']], JSON_THROW_ON_ERROR),
+                'collected' => $chartData['series'][1]['data'], 'pending' => $chartData['series'][4]['data']], JSON_THROW_ON_ERROR),
         ]);
     }
 }

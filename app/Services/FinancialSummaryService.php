@@ -156,7 +156,7 @@ class FinancialSummaryService
             'labels' => $monthlyData['labels'],
             'invoiced' => $monthlyData['series'][0]['data'],
             'collected' => $monthlyData['series'][1]['data'],
-            'pending' => $monthlyData['series'][2]['data'],
+            'pending' => $monthlyData['series'][4]['data'],
         ];
     }
 }

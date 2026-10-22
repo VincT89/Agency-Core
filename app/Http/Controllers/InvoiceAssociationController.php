@@ -20,7 +20,7 @@ class InvoiceAssociationController extends Controller
 
     public function update(Request $request, Invoice $invoice, UpdateInvoiceAssociations $action)
     {
-        $action->execute($invoice, $request->only(['assignment_type', 'project_id', 'hosting_service_id',
+        $action->execute($invoice, $request->only(['assignment_type', 'project_id', 'marketing_campaign_id', 'hosting_service_id',
             'new_project_name', 'new_project_description', 'replace_campaign', 'services']));
         return redirect()->route('invoices.show', $invoice)->with('success', 'Collegamento della fattura aggiornato.');
     }

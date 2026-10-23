@@ -25,8 +25,9 @@ class ArchitecturalHardeningTest extends TestCase
         $countCustom = Project::count();
         $this->assertEquals(0, $countCustom, 'Il ProjectSupremacyScope non è fail-closed!');
 
-        // 2. Con bypass esplicito deve tornare 1
-        $countBypassed = Project::withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)->count();
+        /** Isola il progetto creato dal test dal contenitore condiviso delle fatture. */
+        $countBypassed = Project::withoutGlobalScope(\App\Models\Scopes\ProjectSupremacyScope::class)
+            ->whereKey($project->id)->count();
         $this->assertEquals(1, $countBypassed, 'Il bypass esplicito dello scope non funziona!');
     }
 

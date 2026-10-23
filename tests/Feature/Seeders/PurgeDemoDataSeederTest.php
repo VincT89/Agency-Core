@@ -10,6 +10,10 @@ use App\Models\BillingProfile;
 use App\Models\Client;
 use App\Models\ClientSocialAccount;
 use App\Models\ElectronicInvoiceTransmission;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
+use App\Models\ExpenseDocument;
+use App\Models\ExpenseRecurrence;
 use App\Models\Invoice;
 use App\Models\InvoiceNumberSequence;
 use App\Models\MarketingCampaign;
@@ -160,6 +164,45 @@ class PurgeDemoDataSeederTest extends TestCase
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseHas('users', ['id' => $firstAdmin->getKey()]);
         $this->assertDatabaseMissing('users', ['id' => $secondAdmin->getKey()]);
+    }
+
+    public function test_it_deletes_linked_expenses_and_nested_categories_with_foreign_keys_enabled(): void
+    {
+        $admin = $this->admin();
+        $owner = User::factory()->create(['role' => UserRole::Administration]);
+        $category = ExpenseCategory::create([
+            'name' => 'Categoria dimostrativa', 'identity_key' => ExpenseCategory::identity('Categoria dimostrativa', null),
+        ]);
+        $subcategory = ExpenseCategory::create([
+            'name' => 'Sottocategoria dimostrativa', 'parent_id' => $category->id,
+            'identity_key' => ExpenseCategory::identity('Sottocategoria dimostrativa', $category->id),
+        ]);
+        $recurrence = ExpenseRecurrence::create([
+            'user_id' => $owner->id, 'title' => 'Ricorrenza dimostrativa', 'amount' => '100.00',
+            'frequency' => 'monthly', 'starts_on' => '2026-10-01',
+            'category_id' => $category->id, 'subcategory_id' => $subcategory->id,
+        ]);
+        $document = ExpenseDocument::create([
+            'user_id' => $owner->id, 'kind' => 'invoice', 'issuer' => 'Fornitore dimostrativo',
+            'number' => 'DEMO-1', 'document_date' => '2026-10-01', 'amount' => '100.00',
+            'disk' => 'local', 'path' => 'demo.xml', 'original_name' => 'demo.xml',
+            'fingerprint' => hash('sha256', 'purge-expense-demo'),
+        ]);
+        Expense::create([
+            'user_id' => $owner->id, 'title' => 'Spesa dimostrativa', 'amount' => '100.00',
+            'expense_date' => '2026-10-01', 'expense_recurrence_id' => $recurrence->id,
+            'expense_document_id' => $document->id, 'category_id' => $category->id,
+            'subcategory_id' => $subcategory->id,
+        ]);
+
+        $this->runSeeder()->assertSuccessful();
+
+        foreach (['expenses', 'expense_recurrences', 'expense_documents', 'expense_categories'] as $table) {
+            $this->assertDatabaseCount($table, 0);
+        }
+        $this->assertDatabaseCount('users', 1);
+        $this->assertModelExists($admin);
+        $this->assertModelMissing($owner);
     }
 
     public function test_it_refuses_to_delete_a_real_aruba_transmission(): void

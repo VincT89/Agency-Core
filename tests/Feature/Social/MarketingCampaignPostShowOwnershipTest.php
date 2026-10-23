@@ -18,12 +18,12 @@ class MarketingCampaignPostShowOwnershipTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_non_owner_cannot_retry_or_force_fail_publication()
+    public function test_user_without_marketing_access_cannot_open_publication_controls()
     {
         Queue::fake();
 
         $owner = User::factory()->create(['role' => \App\Enums\UserRole::Marketing->value]);
-        $otherUser = User::factory()->create(['role' => \App\Enums\UserRole::Photographer->value]);
+        $otherUser = User::factory()->create(['role' => \App\Enums\UserRole::Commercial->value]);
 
         $client = Client::factory()->create();
         $campaign = MarketingCampaign::factory()->create(['client_id' => $client->id]);

@@ -7,7 +7,6 @@ use App\Enums\UserRole;
 use App\Livewire\Tasks\TaskComments;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -65,13 +64,10 @@ class TaskCommentDeletionTest extends TestCase
     {
         $otherTask = Task::factory()->create(['project_id' => null, 'created_by' => $this->author->id, 'assigned_to' => $this->author->id]);
         $comment = $otherTask->comments()->create(['user_id' => $this->author->id, 'body' => 'Nota su altra task', 'source' => CommentSource::Internal]);
-        $component = Livewire::test(TaskComments::class, ['task' => $this->task]);
-        $this->expectException(ModelNotFoundException::class);
-        try {
-            $component->call('deleteComment', $comment->id);
-        } finally {
-            $this->assertModelExists($comment);
-        }
+        Livewire::test(TaskComments::class, ['task' => $this->task])
+            ->call('deleteComment', $comment->id)
+            ->assertNotFound();
+        $this->assertModelExists($comment);
     }
 
     public function test_system_and_client_entries_cannot_be_deleted_as_own_comments(): void

@@ -53,6 +53,8 @@ class ClientRegistryWorkflowTest extends TestCase
 
     public function test_commercial_registers_a_complete_client_without_a_ticket_or_document_folder(): void
     {
+        $initialProjectCount = Project::withoutGlobalScopes()->count();
+
         $this->actingAs($this->commercial)->get(route('clients.create'))->assertOk()
             ->assertSee('Codice fiscale')->assertSee('Email fatturazione')->assertSee('Note commerciali')
             ->assertDontSee('name="commercial_user_id"', false)->assertDontSee('name="notes"', false)
@@ -75,9 +77,11 @@ class ClientRegistryWorkflowTest extends TestCase
             'province' => 'NA', 'country_code' => 'IT', 'nextcloud_folder_name' => null,
             'commercial_notes' => "Prima nota\nSeconda nota",
         ]);
-        foreach (['tickets', 'projects', 'quotes'] as $table) {
+        foreach (['tickets', 'quotes'] as $table) {
             $this->assertDatabaseCount($table, 0);
         }
+        $this->assertDatabaseCount('projects', $initialProjectCount);
+        $this->assertDatabaseMissing('projects', ['client_id' => $created->id]);
         $this->get(route('clients.show', $created))->assertOk()->assertSee('DEMO-CF')->assertSee('ABC1234');
         $this->getJson(route('api.clients.search', ['q' => 'Società dimostrativa']))
             ->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $created->id);

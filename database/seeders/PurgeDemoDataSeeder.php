@@ -62,6 +62,7 @@ class PurgeDemoDataSeeder extends Seeder
         'ticket_checklist_items',
         'ticket_comments',
         'quote_items',
+        'quote_services',
         'quotes',
         'ticket_requested_services',
         'tickets',
@@ -69,6 +70,9 @@ class PurgeDemoDataSeeder extends Seeder
         'electronic_invoice_events',
         'electronic_invoice_transmissions',
         'payments',
+        'credit_note_allocations',
+        'credit_notes',
+        'invoice_imported_service_links',
         'invoice_items',
         'marketing_campaign_extras',
         'marketing_campaign_periods',
@@ -76,6 +80,11 @@ class PurgeDemoDataSeeder extends Seeder
         'invoice_number_sequences',
         'billing_profiles',
         'expenses',
+        'expense_recurrences',
+        'expense_documents',
+        'expense_categories',
+        'manual_incomes',
+        'cash_flow_settings',
         'hosting_service_interventions',
         'hosting_services',
         'client_social_accounts',
@@ -241,6 +250,11 @@ class PurgeDemoDataSeeder extends Seeder
             DB::table('quotes')
                 ->whereNotNull('previous_quote_id')
                 ->update(['previous_quote_id' => null]);
+
+            /** Scioglie i legami fra categorie mantenendo attivi i vincoli delle chiavi esterne. */
+            DB::table('expense_categories')
+                ->whereNotNull('parent_id')
+                ->update(['parent_id' => null]);
 
             foreach (self::PURGE_TABLES as $table) {
                 DB::table($table)->delete();

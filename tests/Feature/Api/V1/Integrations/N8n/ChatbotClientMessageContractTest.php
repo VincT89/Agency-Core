@@ -7,22 +7,23 @@ use App\Models\Chatbot\ChatbotMarketingPost;
 use App\Models\Chatbot\ChatbotTicket;
 use App\Models\Client;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SignsN8nRequests;
 use Tests\TestCase;
 
 class ChatbotClientMessageContractTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsN8nRequests;
 
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.n8n.token' => 'secret-testing-token']);
     }
 
     protected function getHeaders(): array
     {
         return [
-            'Authorization' => 'Bearer secret-testing-token',
+            'Authorization' => 'Bearer '.$this->n8nToken,
         ];
     }
 
@@ -53,7 +54,7 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'approval',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(200);
     }
 
@@ -82,7 +83,7 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'comment',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(200);
     }
 
@@ -100,7 +101,7 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'comment',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(409);
     }
 
@@ -114,14 +115,14 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'comment',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(404);
     }
 
     public function test_marketing_session_not_found_returns_404()
     {
         $client = Client::factory()->create();
-        
+
         $payload = [
             'client_id' => $client->id,
             'session_type' => 'marketing',
@@ -130,14 +131,14 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'comment',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(404);
     }
 
     public function test_ticket_session_not_found_returns_404()
     {
         $client = Client::factory()->create();
-        
+
         $payload = [
             'client_id' => $client->id,
             'session_type' => 'ticket',
@@ -146,7 +147,7 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'comment',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(404);
     }
 
@@ -160,7 +161,7 @@ class ChatbotClientMessageContractTest extends TestCase
             'marketing_campaign_id' => $campaign->id,
             'status' => \App\Enums\Social\MarketingCampaignPostStatus::SentToClient->value,
         ]);
-        
+
         $chatbotPost = ChatbotMarketingPost::firstOrCreate([
             'chatbot_client_id' => $chatbotClient->id,
             'client_id' => $client->id,
@@ -180,9 +181,9 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'approval',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(200);
-            
+
         $this->assertEquals(\App\Enums\Social\MarketingCampaignPostStatus::ClientApproved->value, $post->refresh()->status->value);
     }
 
@@ -196,7 +197,7 @@ class ChatbotClientMessageContractTest extends TestCase
             'marketing_campaign_id' => $campaign->id,
             'status' => \App\Enums\Social\MarketingCampaignPostStatus::SentToClient->value,
         ]);
-        
+
         $chatbotPost = ChatbotMarketingPost::firstOrCreate([
             'chatbot_client_id' => $chatbotClient->id,
             'client_id' => $client->id,
@@ -216,9 +217,9 @@ class ChatbotClientMessageContractTest extends TestCase
             'type' => 'change_request',
         ];
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', $payload, $this->getHeaders())
             ->assertStatus(200);
-            
+
         $this->assertEquals(\App\Enums\Social\MarketingCampaignPostStatus::ClientChangesRequested->value, $post->refresh()->status->value);
     }
 }

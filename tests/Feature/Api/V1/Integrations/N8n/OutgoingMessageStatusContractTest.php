@@ -7,22 +7,23 @@ use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\TicketComment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SignsN8nRequests;
 use Tests\TestCase;
 
 class OutgoingMessageStatusContractTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsN8nRequests;
 
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.n8n.token' => 'secret-testing-token']);
     }
 
     protected function getHeaders(): array
     {
         return [
-            'Authorization' => 'Bearer secret-testing-token',
+            'Authorization' => 'Bearer '.$this->n8nToken,
         ];
     }
 
@@ -31,7 +32,7 @@ class OutgoingMessageStatusContractTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
         $ticket = Ticket::factory()->create(['client_id' => $client->id, 'project_id' => $project->id, 'title' => 'Test Ticket']);
-        
+
         $comment = TicketComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => \App\Models\User::factory()->create()->id,
@@ -45,7 +46,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'external_message_id' => 'msg-123',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
             ->assertStatus(200);
 
         $this->assertEquals('sent', $comment->refresh()->delivery_status);
@@ -57,7 +58,7 @@ class OutgoingMessageStatusContractTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
         $ticket = Ticket::factory()->create(['client_id' => $client->id, 'project_id' => $project->id, 'title' => 'Test Ticket']);
-        
+
         $comment = TicketComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => \App\Models\User::factory()->create()->id,
@@ -71,7 +72,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'error' => 'Network timeout',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
             ->assertStatus(200);
 
         $this->assertEquals('failed', $comment->refresh()->delivery_status);
@@ -84,7 +85,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'status' => 'sent',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/invalid_id_123/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/invalid_id_123/status", $payload, $this->getHeaders())
             ->assertStatus(400);
     }
 
@@ -94,7 +95,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'status' => 'sent',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_9999/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_9999/status", $payload, $this->getHeaders())
             ->assertStatus(404);
     }
 
@@ -103,7 +104,7 @@ class OutgoingMessageStatusContractTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
         $ticket = Ticket::factory()->create(['client_id' => $client->id, 'project_id' => $project->id, 'title' => 'Test Ticket']);
-        
+
         $comment = TicketComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => \App\Models\User::factory()->create()->id,
@@ -116,7 +117,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'status' => 'sent',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
             ->assertStatus(400);
     }
 
@@ -125,7 +126,7 @@ class OutgoingMessageStatusContractTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
         $ticket = Ticket::factory()->create(['client_id' => $client->id, 'project_id' => $project->id, 'title' => 'Test Ticket']);
-        
+
         $comment = TicketComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => \App\Models\User::factory()->create()->id,
@@ -138,7 +139,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'status' => 'sent',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/ticket_comment_{$comment->id}/status", $payload, $this->getHeaders())
             ->assertStatus(200); // Idempotente, nessuna eccezione
     }
 
@@ -147,7 +148,7 @@ class OutgoingMessageStatusContractTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
         $task = \App\Models\Task::factory()->create(['project_id' => $project->id, 'title' => 'Test Task']);
-        
+
         $comment = \App\Models\TaskComment::create([
             'task_id' => $task->id,
             'user_id' => \App\Models\User::factory()->create()->id,
@@ -161,7 +162,7 @@ class OutgoingMessageStatusContractTest extends TestCase
             'external_message_id' => 'msg-task-123',
         ];
 
-        $this->postJson("/api/v1/integrations/n8n/chatbot/outgoing-messages/task_comment_{$comment->id}/status", $payload, $this->getHeaders())
+        $this->signedN8nJson('POST', "/api/v1/integrations/n8n/chatbot/outgoing-messages/task_comment_{$comment->id}/status", $payload, $this->getHeaders())
             ->assertStatus(200);
 
         $this->assertEquals('sent', $comment->refresh()->delivery_status);

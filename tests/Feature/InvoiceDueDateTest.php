@@ -61,7 +61,7 @@ class InvoiceDueDateTest extends TestCase
     public function test_changing_the_deadline_preserves_originals_and_repeat_import_and_moves_only_the_forecast_month(): void
     {
         $invoice = $this->import();
-        $metadata = $invoice->import_metadata;
+        $metadata = $invoice->fresh()->import_metadata;
         $attachment = $invoice->attachments()->sole();
         $xml = Storage::disk('attachments')->get($attachment->path);
         $summary = app(EconomicSummaryService::class)->globalSummary(auth()->user());

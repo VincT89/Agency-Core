@@ -8,6 +8,8 @@ use App\Livewire\Shared\AttachmentManager;
 use App\Models\Client;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Database\Connection;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
@@ -120,15 +122,21 @@ class TaskAttachmentUploadTest extends TestCase
     {
         $component = Livewire::test(AttachmentManager::class, ['model' => $this->task])
             ->set('file', UploadedFile::fake()->createWithContent('DEMO-failure.txt', 'Contenuto dimostrativo'));
-        DB::statement("CREATE TRIGGER fail_test_attachment BEFORE INSERT ON attachments BEGIN SELECT RAISE(FAIL, 'Simulated insert failure'); END");
-        try {
-            $component->call('saveTaskAttachment')
-                ->assertReturned(['saved' => false, 'message' => 'Non è stato possibile salvare il file. Riprova.']);
-            $this->assertDatabaseCount('attachments', 0);
-            $this->assertSame([], Storage::disk('attachments')->allFiles('task/'.$this->task->id));
-        } finally {
-            DB::statement('DROP TRIGGER fail_test_attachment');
-        }
+        $filesBeforeFailure = [];
+        /** Simula il fallimento della query senza trigger specifici del motore o commit impliciti del DDL MySQL. */
+        DB::connection()->beforeExecuting(function (string $query, array $bindings, Connection $connection) use (&$filesBeforeFailure): void {
+            if (! str_starts_with($query, 'insert into '.$connection->getQueryGrammar()->wrapTable('attachments').' ')) {
+                return;
+            }
+
+            $filesBeforeFailure = Storage::disk('attachments')->allFiles('task/'.$this->task->id);
+            throw new QueryException($connection->getName(), $query, $bindings, new \PDOException('Simulated insert failure'));
+        });
+        $component->call('saveTaskAttachment')
+            ->assertReturned(['saved' => false, 'message' => 'Non è stato possibile salvare il file. Riprova.']);
+        $this->assertCount(1, $filesBeforeFailure);
+        $this->assertDatabaseCount('attachments', 0);
+        $this->assertSame([], Storage::disk('attachments')->allFiles('task/'.$this->task->id));
     }
 
     public function test_legacy_uploads_keep_their_limit_and_single_file_behavior(): void

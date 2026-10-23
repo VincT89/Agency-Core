@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class CashFlowSetting extends Model
 {
+    /** Il saldo usa un identificativo fisso, non generato dal database. */
+    public $incrementing = false;
+
     protected $fillable = ['id', 'opening_balance', 'balance_date', 'updated_by'];
 
     protected $casts = ['opening_balance' => 'decimal:2', 'balance_date' => 'immutable_date'];

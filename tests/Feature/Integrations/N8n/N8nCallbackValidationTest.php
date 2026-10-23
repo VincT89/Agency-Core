@@ -6,11 +6,13 @@ use App\Models\MarketingCampaign;
 use App\Models\MarketingCampaignPost;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SignsN8nRequests;
 use Tests\TestCase;
 
 class N8nCallbackValidationTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsN8nRequests;
 
     public function test_n8n_callback_fails_with_invalid_request_id()
     {
@@ -45,10 +47,9 @@ class N8nCallbackValidationTest extends TestCase
             'image_url' => 'https://example.com/image.jpg',
         ];
 
-        $token = 'test-token';
-        config(['services.n8n.token' => $token]);
+        $token = $this->n8nToken;
 
-        $response = $this->actingAs($user)->postJson(
+        $response = $this->actingAs($user)->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.result'),
             $payload,
             ['Authorization' => 'Bearer ' . $token]

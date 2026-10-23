@@ -58,7 +58,7 @@ class InvoiceStatusTest extends TestCase
     public function test_marking_paid_records_only_the_remaining_net_and_preserves_the_original_invoice(): void
     {
         $invoice = $this->import();
-        $metadata = $invoice->import_metadata;
+        $metadata = $invoice->fresh()->import_metadata;
         $attachment = $invoice->attachments()->sole();
         $xml = Storage::disk('attachments')->get($attachment->path);
         $this->get(route('invoices.status.edit', $invoice))->assertOk()->assertSee('Modifica stato')->assertSee('100,00 €');
@@ -106,7 +106,7 @@ class InvoiceStatusTest extends TestCase
     public function test_unpaid_invoice_can_be_cancelled_and_reopened_without_external_calls_or_overwriting_on_import(): void
     {
         $invoice = $this->import();
-        $metadata = $invoice->import_metadata;
+        $metadata = $invoice->fresh()->import_metadata;
         $this->patch(route('invoices.status.update', $invoice), $this->data($invoice, 'cancelled'))->assertSessionHasNoErrors();
         $this->assertSame('cancelled', $invoice->fresh()->status);
         $this->assertEquals(0, $invoice->fresh()->residual);

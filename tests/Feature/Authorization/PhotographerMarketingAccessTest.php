@@ -33,11 +33,13 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Tests\Concerns\SignsN8nRequests;
 use Tests\TestCase;
 
 class PhotographerMarketingAccessTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsN8nRequests;
 
     protected function setUp(): void
     {
@@ -224,7 +226,6 @@ class PhotographerMarketingAccessTest extends TestCase
 
     public function test_client_response_notifies_photographers_as_well_as_marketing(): void
     {
-        config(['services.n8n.token' => 'photographer-test-token']);
         $photographer = User::factory()->create(['role' => UserRole::Photographer]);
         $marketing = User::factory()->create(['role' => UserRole::Marketing]);
         $developer = User::factory()->create(['role' => UserRole::Developer]);
@@ -236,10 +237,10 @@ class PhotographerMarketingAccessTest extends TestCase
             'marketing_campaign_id' => $campaign->id, 'marketing_campaign_post_id' => $post->id, 'status' => 'sent_to_client',
         ]);
 
-        $this->postJson('/api/v1/integrations/n8n/chatbot/client-message', [
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/chatbot/client-message', [
             'client_id' => $campaign->client_id, 'session_type' => 'marketing', 'session_id' => $post->id,
             'message' => 'Approvato dal cliente', 'type' => 'approval',
-        ], ['Authorization' => 'Bearer photographer-test-token'])->assertOk();
+        ], ['Authorization' => 'Bearer '.$this->n8nToken])->assertOk();
 
         Notification::assertSentTo([$photographer, $marketing], ChatbotClientInteractionNotification::class);
         Notification::assertNotSentTo($developer, ChatbotClientInteractionNotification::class);

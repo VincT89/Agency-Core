@@ -10,16 +10,17 @@ use App\Models\MarketingCampaignPostVersion;
 use App\Support\Network\HostResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Tests\Concerns\SignsN8nRequests;
 use Tests\TestCase;
 
 class MarketingCampaignPostCallbackContractTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsN8nRequests;
 
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.n8n.token' => 'secret-testing-token']);
         Http::fake([
             'https://example.com/*' => Http::response(
                 file_get_contents(base_path('tests/Fixtures/valid.jpg')),
@@ -36,7 +37,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
     protected function getHeaders(): array
     {
         return [
-            'Authorization' => 'Bearer secret-testing-token',
+            'Authorization' => 'Bearer '.$this->n8nToken,
         ];
     }
 
@@ -53,7 +54,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'image_url' => 'https://example.com/img.jpg',
         ];
 
-        $response = $this->postJson(
+        $response = $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -94,7 +95,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'caption' => 'New text only',
         ];
 
-        $response = $this->postJson(
+        $response = $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -135,7 +136,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'image_url' => 'https://example.com/new.jpg',
         ];
 
-        $response = $this->postJson(
+        $response = $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -158,7 +159,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'images' => 'https://example.com/alias.jpg', // alias per image_urls (string converted to array)
         ];
 
-        $response = $this->postJson(
+        $response = $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -203,7 +204,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson(
+        $response = $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -225,7 +226,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'image_url' => 'https://example.com/img.jpg',
         ];
 
-        $response = $this->postJson(
+        $response = $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -248,7 +249,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'external_generation_id' => 'ext-123',
         ];
 
-        $this->postJson(
+        $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -257,7 +258,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
         $versionsCount = $post->versions()->count();
 
         // Invio di nuovo lo stesso
-        $this->postJson(
+        $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.versions.store', $post),
             $payload,
             $this->getHeaders()
@@ -277,7 +278,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'error' => 'Generation failed due to timeout',
         ];
 
-        $this->postJson(
+        $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
             $payload,
             $this->getHeaders()
@@ -297,7 +298,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'error' => 'Generation failed due to timeout',
         ];
 
-        $this->postJson(
+        $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
             $payload,
             $this->getHeaders()
@@ -315,7 +316,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             // missing error
         ];
 
-        $this->postJson(
+        $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
             $payload,
             $this->getHeaders()
@@ -333,7 +334,7 @@ class MarketingCampaignPostCallbackContractTest extends TestCase
             'error' => 'Generation failed late',
         ];
 
-        $this->postJson(
+        $this->signedN8nJson('POST',
             route('api.v1.integrations.n8n.marketing-campaign-posts.failed', $post),
             $payload,
             $this->getHeaders()

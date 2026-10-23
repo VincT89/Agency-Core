@@ -160,6 +160,7 @@ class CashFlowReportAlignmentTest extends TestCase
         Expense::create(['user_id' => auth()->id(), 'title' => 'Uscita finale', 'amount' => 200.25,
             'status' => 'pending', 'expense_date' => '2026-12-01', 'due_date' => '2026-12-31']);
         $setting = CashFlowSetting::create(['id' => 1, 'opening_balance' => 50.10, 'balance_date' => '2026-10-22', 'updated_by' => auth()->id()]);
+        $this->assertSame(1, $setting->getKey());
         $forecast = app(CashFlowForecast::class)->calculate(12, $setting);
         $this->assertSame(-7825, $forecast['totals']['net']);
         $this->assertSame(-2815, $forecast['totals']['closing_balance']);

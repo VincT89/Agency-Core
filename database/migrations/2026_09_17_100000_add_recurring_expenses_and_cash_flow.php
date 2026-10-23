@@ -83,11 +83,12 @@ return new class extends Migration
         Schema::dropIfExists('cash_flow_settings');
         Schema::dropIfExists('manual_incomes');
         Schema::table('expenses', function (Blueprint $table) {
+            /** MySQL richiede di rimuovere il vincolo prima dell'indice che lo sostiene. */
+            $table->dropForeign(['expense_recurrence_id']);
+            $table->dropForeign(['expense_document_id']);
             $table->dropUnique('expense_recurrence_date_unique');
             $table->dropIndex(['status', 'due_date']);
-            $table->dropConstrainedForeignId('expense_recurrence_id');
-            $table->dropConstrainedForeignId('expense_document_id');
-            $table->dropColumn(['recurrence_date', 'recurrence_overridden', 'document_kind']);
+            $table->dropColumn(['expense_recurrence_id', 'expense_document_id', 'recurrence_date', 'recurrence_overridden', 'document_kind']);
         });
         Schema::dropIfExists('expense_documents');
         Schema::dropIfExists('expense_recurrences');

@@ -6,16 +6,17 @@ use App\Models\Client;
 use App\Models\Project;
 use App\Models\Ticket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SignsN8nRequests;
 use Tests\TestCase;
 
 class CreateTicketFromN8nTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsN8nRequests;
 
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.n8n.token' => 'test-token']);
     }
 
     public function test_creates_ticket_with_project_id()
@@ -23,7 +24,7 @@ class CreateTicketFromN8nTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
 
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'project_id' => $project->id,
             'title' => 'Test Ticket',
             'description' => 'Test Desc',
@@ -31,7 +32,7 @@ class CreateTicketFromN8nTest extends TestCase
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-123',
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ]);
 
         $response->assertStatus(201)
@@ -54,23 +55,23 @@ class CreateTicketFromN8nTest extends TestCase
         $client = Client::factory()->create();
 
         // First request
-        $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'client_id' => $client->id,
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-unique',
             'title' => 'First Request'
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ])->assertStatus(201);
 
         // Second request with same source + execution id
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'client_id' => $client->id,
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-unique',
             'title' => 'Second Request'
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ]);
 
         $response->assertStatus(200)
@@ -84,11 +85,11 @@ class CreateTicketFromN8nTest extends TestCase
 
     public function test_fails_if_no_client_id_and_no_project_id()
     {
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-fail',
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ]);
 
         $response->assertStatus(422)
@@ -99,7 +100,7 @@ class CreateTicketFromN8nTest extends TestCase
     {
         $client = Client::factory()->create();
 
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'client_id' => $client->id,
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-123',
@@ -116,13 +117,13 @@ class CreateTicketFromN8nTest extends TestCase
         $client2 = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client1->id]);
 
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'client_id' => $client2->id, // Mismatch!
             'project_id' => $project->id,
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-mismatch',
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ]);
 
         $response->assertStatus(422)
@@ -134,13 +135,13 @@ class CreateTicketFromN8nTest extends TestCase
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
 
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'client_id' => $client->id,
             'project_id' => $project->id,
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-matching',
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ]);
 
         $response->assertStatus(201)
@@ -152,13 +153,13 @@ class CreateTicketFromN8nTest extends TestCase
     {
         $client = Client::factory()->create();
 
-        $response = $this->postJson('/api/v1/integrations/n8n/tickets', [
+        $response = $this->signedN8nJson('POST', '/api/v1/integrations/n8n/tickets', [
             'client_id' => $client->id,
             'title' => 'Client Only Ticket',
             'source' => 'whatsapp',
             'n8n_execution_id' => 'exec-client-only',
         ], [
-            'Authorization' => 'Bearer test-token'
+            'Authorization' => 'Bearer '.$this->n8nToken
         ]);
 
         $response->assertStatus(201)
@@ -170,7 +171,7 @@ class CreateTicketFromN8nTest extends TestCase
             'project_id' => null,
             'external_id' => 'exec-client-only',
         ]);
-        
+
         $this->assertNotNull(Ticket::withoutGlobalScopes()->where('external_id', 'exec-client-only')->first()->opened_at);
     }
 }

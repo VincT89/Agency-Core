@@ -7,6 +7,8 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "@emnapi/core": "^1.11.3",
+        "@emnapi/runtime": "^1.11.3",
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/vite": "^4.0.0",
         "alpinejs": "^3.4.2",

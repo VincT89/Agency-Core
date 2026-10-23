@@ -25,6 +25,7 @@ class FinanceReportRequest extends FormRequest
             'project_id' => 'nullable|integer|exists:projects,id',
             'q' => 'nullable|string|max:100',
             'directory_search' => 'nullable|string|max:100',
+            'pending_only' => 'nullable|boolean',
             'invoice_status' => ['nullable', Rule::in(FinanceReportQuery::STATUSES)],
             'expense_status' => 'nullable|in:pending,paid',
             'min_amount' => 'nullable|numeric|min:0|max:999999999.99',

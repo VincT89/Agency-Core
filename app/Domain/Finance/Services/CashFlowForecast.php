@@ -68,6 +68,9 @@ class CashFlowForecast
             $row['closing_balance'] = $balance;
         }
         unset($row);
+        $totals['net'] = array_sum(array_column($rows, 'net'));
+        /** A closing balance is the amount available at period end, not the sum of monthly balances. */
+        $totals['closing_balance'] = $balance;
 
         $unallocatedCredit = CreditNote::where('currency', 'EUR')->select(['id', 'payable_total'])->withSum('allocations', 'amount')->get()
             ->sum(fn ($note) => max(0, CashAmount::cents($note->payable_total) - CashAmount::cents($note->allocations_sum_amount ?? 0)));

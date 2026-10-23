@@ -16,7 +16,6 @@
         <div class="kpi-cell">
             <div class="kpi-label-t">Da incassare</div>
             <div class="kpi-val-t">EUR {{ number_format($unpaidTotal, 2, ',', '.') }}</div>
-            <div class="kpi-delta-t">Residuo effettivo delle fatture</div>
             <div class="kpi-delta-t">{{ $outstandingCount }} {{ $outstandingCount === 1 ? 'fattura con residuo aperto' : 'fatture con residuo aperto' }}</div>
         </div>
         <div class="kpi-cell {{ $overdueCount > 0 ? 'accent-line' : '' }}">

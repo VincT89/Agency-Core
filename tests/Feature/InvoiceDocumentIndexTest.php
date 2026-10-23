@@ -199,11 +199,11 @@ class InvoiceDocumentIndexTest extends TestCase
         $original = $split->fresh()->getAttributes();
 
         $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
-        $this->assertEquals(92, $summary['total_outstanding']);
+        $this->assertEquals(192, $summary['total_outstanding']);
         $this->assertEquals(192, $summary['actual_outstanding']);
         foreach ([[], ['status' => 'issued'], ['document_type' => 'TD04'], ['search' => 'nessun-documento']] as $filters) {
             $response = $this->get(route('invoices.index', $filters))->assertOk()
-                ->assertSee('Da incassare')->assertSee('Residuo effettivo delle fatture');
+                ->assertSee('Da incassare')->assertDontSee('Residuo effettivo delle fatture');
             $this->assertSame($summary['actual_outstanding'], $response->viewData('unpaidTotal'));
             $this->assertSame(2, $response->viewData('outstandingCount'));
         }
@@ -241,7 +241,7 @@ class InvoiceDocumentIndexTest extends TestCase
         $summary = $this->get(route('economic-summary.index'))->assertOk()->viewData('globalSummary');
         $response = $this->get(route('invoices.index'))->assertOk()->assertSee('EUR 0,00');
         $this->assertEquals(0, $response->viewData('unpaidTotal'));
-        $this->assertEquals(-122, $summary['total_outstanding']);
+        $this->assertEquals(0, $summary['total_outstanding']);
         $this->assertSame($summary['actual_outstanding'], $response->viewData('unpaidTotal'));
         $this->assertSame(0, $response->viewData('outstandingCount'));
     }

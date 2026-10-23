@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -33,9 +32,9 @@ class FinancialSummaryService
             $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
         }
 
-        /** Net turnover uses taxable amounts and deducts credit notes in their issue month, including unallocated notes. */
+        /** Turnover includes invoice taxable amounts only; credit notes remain available in document lists. */
         $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
-        $invoices = Invoice::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
+        $invoices = Invoice::withoutCreditNotes()->whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
             ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
             ->selectRaw("{$dateFormat} as month, SUM(subtotal) as total")
             ->groupBy('month')
@@ -44,15 +43,6 @@ class FinancialSummaryService
         foreach ($invoices as $inv) {
             if (isset($monthsArray[$inv->month])) {
                 $monthsArray[$inv->month]['issued'] = (float) $inv->total;
-            }
-        }
-
-        $credits = CreditNote::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
-            ->selectRaw("{$dateFormat} as month, SUM(subtotal) as total")
-            ->groupBy('month')->get();
-        foreach ($credits as $credit) {
-            if (isset($monthsArray[$credit->month])) {
-                $monthsArray[$credit->month]['issued'] = round($monthsArray[$credit->month]['issued'] - (float) $credit->total, 2);
             }
         }
 
@@ -119,13 +109,9 @@ class FinancialSummaryService
     {
         $startDate = now()->startOfYear();
 
-        $invoices = Invoice::whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
-            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
-            ->selectRaw('SUM(paid_total) as collected, SUM('.Invoice::OUTSTANDING_SQL.') as pending')
-            ->first();
-
-        $collected = (float) ($invoices->collected ?? 0);
-        $pending = (float) ($invoices->pending ?? 0);
+        $totals = app(FinanceReportQuery::class)->totals(['from' => $startDate->toDateString(), 'to' => $startDate->copy()->endOfYear()->toDateString()]);
+        $collected = $totals['total_collected'];
+        $pending = $totals['actual_outstanding'];
 
         return [
             'labels' => ['Incassato', 'Da Incassare'],
@@ -156,7 +142,7 @@ class FinancialSummaryService
             'labels' => $monthlyData['labels'],
             'invoiced' => $monthlyData['series'][0]['data'],
             'collected' => $monthlyData['series'][1]['data'],
-            'pending' => $monthlyData['series'][4]['data'],
+            'pending' => $monthlyData['series'][2]['data'],
         ];
     }
 }

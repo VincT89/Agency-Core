@@ -21,7 +21,7 @@ class FinanceReportQuery
 
     private function invoiceScope($query, array $filters)
     {
-        $query->whereIn('invoices.status', self::STATUSES);
+        $query->withoutCreditNotes()->whereIn('invoices.status', self::STATUSES);
         if (filled($filters['invoice_status'] ?? null)) {
             $filters['invoice_status'] === 'overdue'
                 ? $query->pastDue()
@@ -114,14 +114,16 @@ class FinanceReportQuery
 
     public function totals(array $filters = []): array
     {
-        $row = $this->events($filters)->selectRaw('COALESCE(SUM(net), 0) AS net, COALESCE(SUM(collected), 0) AS collected,
+        /** Credit notes stay in document lists; summary metrics include invoices, payments and expenses only. */
+        $row = $this->events($filters)->where('kind', '!=', 'credit_note')->selectRaw('COALESCE(SUM(net), 0) AS net, COALESCE(SUM(collected), 0) AS collected,
             COALESCE(SUM(costs), 0) AS costs, COALESCE(SUM(invoice_count), 0) AS invoices_count')->first();
         $net = round((float) $row->net, 2);
         $collected = round((float) $row->collected, 2);
+        $outstanding = round((float) $this->receivables($filters)->sum(DB::raw(Invoice::OUTSTANDING_SQL)), 2);
         return [
             'total_invoiced' => $net, 'total_collected' => $collected,
-            'total_outstanding' => ReportInvoiceAmounts::outstanding($net, $collected),
-            'actual_outstanding' => round((float) $this->receivables($filters)->sum(DB::raw(Invoice::OUTSTANDING_SQL)), 2),
+            'total_outstanding' => $outstanding, 'actual_outstanding' => $outstanding,
+            'theoretical_outstanding' => ReportInvoiceAmounts::outstanding($net, $collected),
             'total_expenses' => round((float) $row->costs, 2), 'invoices_count' => (int) $row->invoices_count,
             'unallocated_credit' => $this->unallocatedCredit($filters),
         ];
@@ -129,7 +131,7 @@ class FinanceReportQuery
 
     public function receivables(array $filters = []): \Illuminate\Database\Eloquent\Builder
     {
-        /** Actual receivables follow invoice balances, including linked credits and split payment, irrespective of the report's fixed VAT calculation. */
+        /** Reuse invoice balances so collections reflect linked credits, recorded payments and split payment. */
         $query = $this->invoiceScope(Invoice::query(), $filters)->where('currency', 'EUR')->awaitingPayment();
         foreach (['client_id', 'project_id'] as $column) {
             $query->when(filled($filters[$column] ?? null), fn ($q) => $q->where($column, $filters[$column]));
@@ -146,6 +148,20 @@ class FinanceReportQuery
         return $query;
     }
 
+    public function receivableClients(array $filters = []): Builder
+    {
+        /** Aggregate the entire filtered invoice set before displaying clients; the directory page must not hide debtors. */
+        $balances = $this->receivables($filters)->whereNotNull('client_id')
+            ->selectRaw('client_id, ROUND(SUM('.Invoice::OUTSTANDING_SQL.'), 2) AS outstanding, COUNT(*) AS open_invoices,
+                SUM(CASE WHEN due_date < ? THEN 1 ELSE 0 END) AS overdue_invoices', [now()->toDateString()])
+            ->groupBy('client_id');
+
+        return DB::query()->fromSub($balances, 'balances')->join('clients', 'clients.id', '=', 'balances.client_id')
+            ->select('balances.*')->selectRaw("COALESCE(NULLIF(clients.company_name, ''), clients.name) AS client_name")
+            ->orderByRaw('CASE WHEN balances.overdue_invoices > 0 THEN 0 ELSE 1 END')
+            ->orderByDesc('balances.outstanding')->orderBy('client_name')->orderBy('clients.id');
+    }
+
     private function unallocatedCredit(array $filters): float
     {
         $notes = $this->events($filters)->where('kind', 'credit_note')->select('record_id');
@@ -158,11 +174,11 @@ class FinanceReportQuery
     {
         $project = $type === 'projects';
         $column = $project ? 'project_id' : 'client_id';
-        $metrics = $this->events($filters, $project)->whereNotNull($column)
+        $metrics = $this->events($filters, $project)->where('kind', '!=', 'credit_note')->whereNotNull($column)
             ->selectRaw("$column, ROUND(SUM(net), 2) AS total_invoiced, ROUND(SUM(collected), 2) AS total_collected,
                 ROUND(SUM(costs), 2) AS total_expenses, SUM(invoice_count) AS invoices_count")->groupBy($column);
         $actual = $this->receivables($filters)->whereNotNull($column)
-            ->selectRaw("$column, SUM(".Invoice::OUTSTANDING_SQL.') AS actual_outstanding, COUNT(*) AS open_invoices')
+            ->selectRaw("$column, ROUND(SUM(".Invoice::OUTSTANDING_SQL.'), 2) AS actual_outstanding, COUNT(*) AS open_invoices')
             ->groupBy($column);
         $query = DB::query()->fromSub($metrics, 'metrics')
             ->leftJoinSub($actual, 'receivables', 'receivables.'.$column, '=', 'metrics.'.$column);
@@ -173,7 +189,8 @@ class FinanceReportQuery
         } else {
             $query->join('clients', 'clients.id', '=', 'metrics.client_id')->select('metrics.*', 'clients.name as client_name');
         }
-        return $query->selectRaw('ROUND(ROUND(metrics.total_invoiced * 1.22, 2) - metrics.total_collected, 2) AS total_outstanding,
+        return $query->selectRaw('ROUND(ROUND(metrics.total_invoiced * 1.22, 2) - metrics.total_collected, 2) AS theoretical_outstanding,
+            COALESCE(receivables.actual_outstanding, 0) AS total_outstanding,
             COALESCE(receivables.actual_outstanding, 0) AS actual_outstanding, COALESCE(receivables.open_invoices, 0) AS open_invoices');
     }
 
@@ -197,7 +214,7 @@ class FinanceReportQuery
     public function monthly(array $filters = []): array
     {
         $expression = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', event_date)" : "DATE_FORMAT(event_date, '%Y-%m')";
-        $rows = $this->events($filters)->selectRaw("$expression AS month, SUM(net) AS net, SUM(collected) AS collected, SUM(costs) AS costs")
+        $rows = $this->events($filters)->where('kind', '!=', 'credit_note')->selectRaw("$expression AS month, SUM(net) AS net, SUM(collected) AS collected, SUM(costs) AS costs")
             ->groupBy('month')->orderBy('month')->get()->keyBy('month');
         $invoiceMonth = str_replace('event_date', 'issue_date', $expression);
         $actual = $this->receivables($filters)->selectRaw("$invoiceMonth AS month, SUM(".Invoice::OUTSTANDING_SQL.') AS outstanding')
@@ -221,19 +238,18 @@ class FinanceReportQuery
             $buckets[$key]['to'] = $date->endOfMonth()->toDateString();
         }
         $labels = [];
-        $data = [[], [], [], [], []];
+        $data = [[], [], [], []];
         foreach ($buckets as $key => $bucket) {
             $labels[] = $group === 'month' ? ucfirst(CarbonImmutable::parse($key.'-01')->isoFormat('MMM YYYY')) : $key;
             $net = round($bucket['net'], 2);
             $collected = round($bucket['collected'], 2);
             $data[0][] = $net;
             $data[1][] = $collected;
-            $data[2][] = ReportInvoiceAmounts::outstanding($net, $collected);
+            $data[2][] = round($bucket['actual'], 2);
             $data[3][] = round($bucket['costs'], 2);
-            $data[4][] = round($bucket['actual'], 2);
         }
         return ['labels' => $labels, 'periods' => array_values(array_map(fn ($b) => ['from' => $b['from'], 'to' => $b['to']], $buckets)),
             'series' => array_map(fn ($name, $index) => ['name' => $name, 'data' => $data[$index]],
-                ['Fatturato netto (IVA esclusa)', 'Incassato', 'Saldo del riepilogo (IVA 22%)', 'Spese', 'Da incassare'], [0, 1, 2, 3, 4])];
+                ['Fatturato netto (IVA esclusa)', 'Incassato', 'Da incassare', 'Spese'], [0, 1, 2, 3])];
     }
 }

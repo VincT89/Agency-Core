@@ -225,7 +225,7 @@ class RecurringExpensesTest extends TestCase
         ManualIncome::create(['user_id' => $this->admin->id, 'title' => 'Rimborso', 'amount' => '7.05', 'expected_on' => '2026-10-01', 'status' => 'expected']);
         $setting = CashFlowSetting::create(['id' => 1, 'opening_balance' => '100.00', 'balance_date' => '2026-09-17', 'updated_by' => $this->admin->id]);
         $forecast = app(CashFlowForecast::class)->calculate(6, $setting);
-        $this->assertSame(['received' => 4010, 'expected' => 8540, 'other_expected' => 705, 'paid' => 3020, 'pending' => 2010], $forecast['totals']);
+        $this->assertSame(['received' => 4010, 'expected' => 8540, 'other_expected' => 705, 'paid' => 3020, 'pending' => 2010, 'net' => 8225, 'closing_balance' => 18225], $forecast['totals']);
         $this->assertSame(['incoming' => 1520, 'outgoing' => 2010], $forecast['overdue']);
         $this->assertSame(11500, $forecast['rows']['2026-09']['closing_balance']);
         $this->assertSame(18225, $forecast['rows']['2026-10']['closing_balance']);

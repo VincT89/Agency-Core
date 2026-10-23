@@ -25,6 +25,7 @@ class Expense extends Model
         'notes',
         'expense_recurrence_id', 'recurrence_date', 'recurrence_overridden',
         'expense_document_id', 'document_kind',
+        'import_fingerprint', 'import_metadata',
     ];
 
     protected $casts = [
@@ -34,6 +35,7 @@ class Expense extends Model
         'amount' => 'decimal:2',
         'recurrence_date' => 'date',
         'recurrence_overridden' => 'boolean',
+        'import_metadata' => 'array',
     ];
 
     // Relations

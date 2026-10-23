@@ -134,7 +134,7 @@ class EconomicSummaryTest extends TestCase
         ]);
 
         // CASO A: Filtro GENNAIO 
-        /** The report applies its formula to turnover and receipts within the same selected period. */
+        /** Receipts follow payment dates; outstanding follows current balances of invoices issued in the period. */
         $responseJan = $this->actingAs($this->admin)->get(route('economic-summary.index', [
             'from' => '2026-01-01',
             'to' => '2026-01-31'
@@ -145,17 +145,17 @@ class EconomicSummaryTest extends TestCase
         $responseJan->assertSee('2.000,00');
         // Incassato: '0,00'
         $responseJan->assertSee('0,00');
-        $responseJan->assertSee('2.440,00');
+        $responseJan->assertViewHas('globalSummary', fn ($totals) => $totals['total_outstanding'] === 1500.0);
 
         // CASO B: Filtro FEBBRAIO
-        /** February has only a receipt, so the report balance is negative while invoice records remain unchanged. */
+        /** February contains a receipt but no issued invoice with an open balance. */
         $responseFeb = $this->actingAs($this->admin)->get(route('economic-summary.index', [
             'from' => '2026-02-01',
             'to' => '2026-02-28'
         ]));
         
         $responseFeb->assertOk();
-        $responseFeb->assertSee('-500,00');
+        $responseFeb->assertViewHas('globalSummary', fn ($totals) => $totals['total_outstanding'] === 0.0);
         $responseFeb->assertSee('500,00'); // Incasso
         $responseFeb->assertSee('0,00');   // Fatturato
     }

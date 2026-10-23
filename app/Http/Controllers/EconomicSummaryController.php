@@ -30,7 +30,7 @@ class EconomicSummaryController extends Controller
         }
         $group = $filters['group'] ?? 'clients';
         $partial = ! $subject && $request->header('X-Finance-Partial') === 'report-directory';
-        $sort = $filters['sort'] ?? 'turnover_desc';
+        $sort = $filters['sort'] ?? (($filters['pending_only'] ?? false) ? 'pending_desc' : 'turnover_desc');
         $sortColumn = match ($sort) { 'name_asc', 'name_desc' => $group === 'projects' ? 'project_name' : 'client_name', 'pending_desc' => 'actual_outstanding', 'costs_desc' => 'total_expenses', default => 'total_invoiced' };
         $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
         $directories = [];
@@ -39,6 +39,9 @@ class EconomicSummaryController extends Controller
                 continue;
             }
             $query = $reports->groups($kind, $filters);
+            if ($filters['pending_only'] ?? false) {
+                $query->where('receivables.actual_outstanding', '>', 0);
+            }
             $nameColumn = $kind === 'projects' ? 'projects.name' : 'clients.name';
             if (filled($filters['directory_search'] ?? null)) {
                 $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($filters['directory_search'])).'%';
@@ -70,14 +73,20 @@ class EconomicSummaryController extends Controller
         $comparison = $comparisonFilters ? $reports->totals($comparisonFilters) : null;
         $comparisonChart = $comparisonFilters ? $reports->monthly($comparisonFilters) : null;
         $charts = app(\App\Services\FinanceReportCharts::class);
+        $expenseSeries = fn (array $data) => array_replace($data, ['series' => [$data['series'][3]]]);
+        $monthly = ($filters['interval'] ?? 'month') === 'month';
+        $expenseChartData = $expenseSeries($monthly ? $chartData : $reports->monthly(array_replace($filters, ['interval' => 'month'])));
+        $expenseComparisonChart = $comparisonFilters ? $expenseSeries($monthly ? $comparisonChart : $reports->monthly(array_replace($comparisonFilters, ['interval' => 'month']))) : null;
         $documents = ($subject || $request->boolean('documents')) ? $reports->documents($filters)->paginate(20, ['*'], 'documents_page')->withQueryString() : null;
         $baseFilters = Arr::except($filters, ['page', 'documents_page']);
         return view('economic-summary.index', [
             'filters' => $filters, 'baseFilters' => $baseFilters, 'subject' => $subject,
             'from' => $filters['from'] ?? null, 'to' => $filters['to'] ?? null, 'group' => $group,
             'globalSummary' => $reports->totals($filters), 'chartData' => $chartData,
+            'receivableClients' => $subject ? collect() : $reports->receivableClients($filters)->get(),
             'comparison' => $comparison, 'comparisonChart' => $comparisonChart,
             'trendCharts' => $charts->trends($chartData, $comparisonChart),
+            'expenseChartData' => $expenseChartData, 'expenseTrendChart' => $charts->trends($expenseChartData, $expenseComparisonChart)[0],
             'distributionCharts' => $charts->distributions($reports, $filters, $group, (bool) $subject),
             'directory' => $categories ?? $directories[$group], 'documents' => $documents,
             'summaryByClient' => $directories['clients']->getCollection(), 'summaryByProject' => $directories['projects']->getCollection(),
@@ -86,7 +95,7 @@ class EconomicSummaryController extends Controller
             'expenseCategories' => ExpenseCategory::whereNull('parent_id')->orderBy('name')->get(['id', 'name']),
             'expenseSubcategories' => ExpenseCategory::whereNotNull('parent_id')->where('parent_id', $filters['category_id'] ?? 0)->orderBy('name')->get(['id', 'name']),
             'sparklineData' => json_encode(['labels' => $chartData['labels'], 'invoiced' => $chartData['series'][0]['data'],
-                'collected' => $chartData['series'][1]['data'], 'pending' => $chartData['series'][4]['data']], JSON_THROW_ON_ERROR),
+                'collected' => $chartData['series'][1]['data'], 'pending' => $chartData['series'][2]['data']], JSON_THROW_ON_ERROR),
         ]);
     }
 }

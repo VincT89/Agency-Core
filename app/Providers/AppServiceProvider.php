@@ -140,7 +140,7 @@ class AppServiceProvider extends ServiceProvider
 
                 /** Count every stored invoice, including settled ones, without caching newly created documents. */
                 $invoicesCount = $user->canAccessFinance()
-                    ? Invoice::query()->count()
+                    ? Invoice::withoutCreditNotes()->count()
                     : 0;
 
                 $activeAvailabilityUsersCount = 0;

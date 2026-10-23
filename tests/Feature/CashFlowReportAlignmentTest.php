@@ -91,7 +91,7 @@ class CashFlowReportAlignmentTest extends TestCase
             ->assertSee('Entrate attese')->assertSee('Uscite manuali');
     }
 
-    public function test_schedule_uses_actual_invoice_cents_and_keeps_unallocated_credit_in_the_separate_report_balance(): void
+    public function test_schedule_uses_actual_invoice_cents_and_excludes_unallocated_credits(): void
     {
         foreach (['2026-10-31', '2026-11-30', '2026-12-31'] as $due) { $this->invoice(.03, $due); }
         $forecast = app(CashFlowForecast::class)->calculate(6, null);
@@ -100,7 +100,7 @@ class CashFlowReportAlignmentTest extends TestCase
         $this->credit(100);
         $forecast = app(CashFlowForecast::class)->calculate(6, null);
         $this->assertSame(12, $forecast['totals']['expected']);
-        $this->assertSame(-12189, CashAmount::cents(app(FinanceReportQuery::class)->totals()['total_outstanding']));
+        $this->assertSame(12, CashAmount::cents(app(FinanceReportQuery::class)->totals()['total_outstanding']));
         $this->assertSame(CashAmount::cents(app(FinanceReportQuery::class)->totals()['actual_outstanding']), $forecast['totals']['expected']);
     }
 
@@ -152,5 +152,33 @@ class CashFlowReportAlignmentTest extends TestCase
         $this->assertSame(0, $forecast['totals']['other_expected']);
         $this->actingAs(User::factory()->create(['role' => 'developer', 'password_changed_at' => now()]));
         $this->get(route('expenses.manual.index'))->assertForbidden();
+    }
+
+    public function test_forecast_footer_sums_period_movements_and_uses_only_the_final_balance(): void
+    {
+        $this->invoice(100, '2026-11-30');
+        Expense::create(['user_id' => auth()->id(), 'title' => 'Uscita finale', 'amount' => 200.25,
+            'status' => 'pending', 'expense_date' => '2026-12-01', 'due_date' => '2026-12-31']);
+        $setting = CashFlowSetting::create(['id' => 1, 'opening_balance' => 50.10, 'balance_date' => '2026-10-22', 'updated_by' => auth()->id()]);
+        $forecast = app(CashFlowForecast::class)->calculate(12, $setting);
+        $this->assertSame(-7825, $forecast['totals']['net']);
+        $this->assertSame(-2815, $forecast['totals']['closing_balance']);
+        $this->assertSame($forecast['rows']['2027-09']['closing_balance'], $forecast['totals']['closing_balance']);
+        $this->assertNotEquals(array_sum(array_column($forecast['rows'], 'closing_balance')), $forecast['totals']['closing_balance']);
+        $response = $this->get(route('expenses.forecast'))->assertOk();
+        $dom = new \DOMDocument();
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $cells = (new \DOMXPath($dom))->query('//tfoot/tr/td');
+        $this->assertSame('-78,25', trim($cells->item($cells->length - 2)->textContent));
+        $this->assertSame('-28,15', trim($cells->item($cells->length - 1)->textContent));
+        $this->assertStringContainsString('finance-balance-negative', $cells->item($cells->length - 1)->getAttribute('class'));
+        $setting->delete();
+        $forecast = app(CashFlowForecast::class)->calculate(12, null);
+        $this->assertSame(-7825, $forecast['totals']['net']);
+        $this->assertNull($forecast['totals']['closing_balance']);
+        $response = $this->get(route('expenses.forecast'))->assertOk();
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $cells = (new \DOMXPath($dom))->query('//tfoot/tr/td');
+        $this->assertSame('Non impostato', trim($cells->item($cells->length - 1)->textContent));
     }
 }

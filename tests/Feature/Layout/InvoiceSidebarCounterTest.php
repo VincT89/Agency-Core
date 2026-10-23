@@ -48,6 +48,7 @@ class InvoiceSidebarCounterTest extends TestCase
         $this->invoice(['payable_total' => '100.00', 'paid_total' => '100.00']);
         $this->invoice(['credited_total' => '122.00']);
         foreach (['draft', 'paid', 'credited', 'cancelled'] as $status) $this->invoice(['status' => $status]);
+        $this->invoice(['fiscal_document_type' => 'TD04']);
 
         foreach ([UserRole::Admin, UserRole::Administration] as $role) {
             $user = User::factory()->create(['role' => $role, 'password_changed_at' => now()]);

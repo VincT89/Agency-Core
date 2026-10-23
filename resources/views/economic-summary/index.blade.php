@@ -42,11 +42,14 @@
     @if($errors->any())<div class="u-alert-error u-mb-md" role="alert">@foreach($errors->all() as $message)<p>{{ $message }}</p>@endforeach</div>@endif
     <div class="g-3col u-mb-lg">
         @foreach($metrics as $key => $label)
-            <x-panel padded><x-stat-card :label="$label" :value="$money($globalSummary[$key])" :sub="match($key) { 'total_invoiced' => 'Da '.$globalSummary['invoices_count'].' fatture valide', 'total_collected' => 'Flusso cassa reale', 'actual_outstanding' => 'Residuo effettivo delle fatture', default => 'Fatturato netto × 1,22 − incassato' }" :color="match($key) { 'total_invoiced' => 'var(--blue-text)', 'total_collected' => 'var(--teal)', 'actual_outstanding' => 'var(--orange)', default => 'var(--text2)' }" />
+            <x-panel padded><x-stat-card :label="$label" :value="$money($globalSummary[$key])" :color="match($key) { 'total_invoiced' => 'var(--accent)', 'total_collected' => 'var(--green-text)', 'actual_outstanding' => 'var(--orange-text)', default => 'var(--text2)' }" />
                 @if($comparison)<p class="finance-comparison">Confronto: {{ $money($comparison[$key]) }}<br>Differenza: {{ $money($globalSummary[$key] - $comparison[$key]) }}</p>@endif
             </x-panel>
         @endforeach
     </div>
+    @unless($subject)
+        @include('economic-summary.partials.receivables')
+    @endunless
     <x-panel padded class="u-mb-lg">
         <div x-data="{ metric: 0, plot: 'line' }">
             <div class="finance-chart-heading"><h2>Andamento nel periodo</h2><div class="finance-chart-controls"><label for="report-metric" class="sr-only">Dato del grafico</label><select id="report-metric" class="form-sel" x-model.number="metric">@foreach($chartData['series'] as $i => $series)<option value="{{ $i }}">{{ $series['name'] }}</option>@endforeach</select><label for="report-chart-type" class="sr-only">Tipo di grafico</label><select id="report-chart-type" class="form-sel" x-model="plot"><option value="line">Linee</option><option value="bar">Colonne</option></select></div></div>
@@ -63,13 +66,17 @@
     </x-panel>
     <div class="finance-distributions u-mb-lg">
         @foreach($distributionCharts as $chart)
+        @if($chart['kind'] === 'expenses')
+            @include('economic-summary.partials.expenses')
+        @else
         <x-panel padded>
             <h2 class="finance-chart-title">{{ $chart['title'] }}</h2>
             @if($chart['entries'])
-                <div x-data="financeDistribution(@js($chart['options']), @js($chart['entries']), @js($chart['kind']))"><div x-ref="chart" role="img" aria-label="{{ $chart['title'] }}"></div></div>
+                <div x-data="financeDistribution(@js($chart['options']), @js($chart['entries']))"><div x-ref="chart" role="img" aria-label="{{ $chart['title'] }}"></div></div>
                 <details class="finance-advanced"><summary>Valori e dettagli</summary><ul class="finance-chart-values">@foreach($chart['entries'] as $entry)<li>@if($entry['url'])<a href="{{ $entry['url'] }}">{{ $entry['name'] }}</a>@else<span>{{ $entry['name'] }}</span>@endif<strong>{{ $money($entry['amount']) }}</strong></li>@endforeach</ul></details>
             @else<p class="u-text-meta u-p-md">Nessun dato con questi filtri.</p>@endif
         </x-panel>
+        @endif
         @endforeach
     </div>
     @unless($subject)

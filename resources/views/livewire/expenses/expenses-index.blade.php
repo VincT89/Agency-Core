@@ -5,6 +5,7 @@
         meta="Gestione delle spese e dei costi operativi">
         <x-slot:title>@if($manualOnly)<strong>Uscite</strong> manuali @else<strong>Spese</strong> Generali @endif</x-slot:title>
         <x-slot:actions>
+            <a href="{{ route('expenses.import') }}" wire:navigate class="btn btn-g">Importa spese</a>
             <a href="{{ route('expenses.categories') }}" wire:navigate class="btn btn-g">Gestisci categorie</a>
             <a href="{{ route('expenses.create') }}" wire:navigate class="btn btn-p">{{ $manualOnly ? 'Nuova uscita' : '+ Nuova Spesa' }}</a>
         </x-slot:actions>

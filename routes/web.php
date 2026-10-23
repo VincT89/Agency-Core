@@ -259,6 +259,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
     // AMMINISTRAZIONE - SPESE
     Route::prefix('expenses')->name('expenses.')->middleware('can:viewAny,App\Models\Expense')->group(function () {
+        Route::get('/import', \App\Livewire\Expenses\ExpenseImport::class)->name('import');
         Route::get('/manual', ExpensesIndex::class)->defaults('manualOnly', true)->name('manual.index');
         Route::get('/categories', \App\Livewire\Expenses\ExpenseCategories::class)->name('categories');
         Route::get('/forecast', [\App\Http\Controllers\CashFlowController::class, 'index'])->name('forecast');

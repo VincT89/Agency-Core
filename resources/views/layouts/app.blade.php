@@ -358,7 +358,7 @@
     </nav>
 
     {{-- MAIN --}}
-    <main class="main">
+    <main class="main {{ request()->routeIs('invoices.*', 'credit-notes.*', 'payments.*', 'expenses.*', 'economic-summary.*') ? 'finance-workspace' : '' }}">
       <div class="content page-transition-root" id="content-area" tabindex="-1">
         {{-- Flash messages --}}
         @if(session('success'))

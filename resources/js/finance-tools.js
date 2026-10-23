@@ -127,7 +127,7 @@ export function financeChart(data, options, drillUrl, display = 'line') {
     };
 }
 
-export function financeDistribution(options, entries, kind) {
+export function financeDistribution(options, entries) {
     return {
         chart: null,
         init() {
@@ -137,23 +137,23 @@ export function financeDistribution(options, entries, kind) {
                 return;
             }
             const money = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+            const compactMoney = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', notation: 'compact', maximumFractionDigits: 1 });
             this.chart = new window.ApexCharts(this.$refs.chart, {
                 ...options,
                 chart: { ...options.chart, background: 'transparent', toolbar: { show: false },
                     animations: { enabled: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 240 },
                     events: { dataPointSelection: (_, __, selected) => {
-                        const entry = entries[kind === 'expenses' ? selected.seriesIndex : selected.dataPointIndex];
+                        const entry = entries[selected.dataPointIndex];
                         if (entry?.url) location.assign(entry.url);
                     } } },
-                stroke: { width: kind === 'expenses' ? 3 : 0 },
+                stroke: { width: 0 },
                 fill: { type: 'solid', opacity: 1 },
-                plotOptions: kind === 'expenses'
-                    ? { pie: { donut: { size: '72%', labels: { show: true, name: { show: false },
-                        value: { formatter: value => money.format(Number(value)) },
-                        total: { show: true, showAlways: true, label: 'Spese', formatter: () => money.format(entries.reduce((sum, entry) => sum + entry.amount, 0)) } } } } }
-                    : { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
-                xaxis: kind === 'expenses' ? options.xaxis : { ...options.xaxis, labels: { formatter: value => money.format(Number(value)) } },
-                yaxis: kind === 'expenses' ? options.yaxis : { labels: { maxWidth: 180, formatter: value => String(value).length > 24 ? String(value).slice(0, 22) + '…' : String(value) } },
+                plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
+                xaxis: { ...options.xaxis, labels: { formatter: value => money.format(Number(value)) } },
+                yaxis: { labels: { maxWidth: 180, formatter: value => String(value).length > 24 ? String(value).slice(0, 22) + '…' : String(value) } },
+                responsive: [...(options.responsive ?? []), { breakpoint: 767, options: {
+                    xaxis: { tickAmount: 2, labels: { hideOverlappingLabels: true, formatter: value => compactMoney.format(Number(value)) } },
+                } }],
                 legend: { ...options.legend, position: 'bottom', fontSize: '12px' },
                 tooltip: { y: { formatter: value => money.format(value) } },
                 grid: { borderColor: '#dfe3ea', strokeDashArray: 4 },

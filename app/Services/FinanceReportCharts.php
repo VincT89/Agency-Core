@@ -7,7 +7,7 @@ use Illuminate\Support\Arr;
 
 class FinanceReportCharts
 {
-    private const COLORS = ['#2459b8', '#18a88a', '#64748b', '#bd1034', '#e97822', '#5479b8'];
+    private const COLORS = ['#c8102e', '#147a52', '#a33b00', '#6b7280', '#8f2337', '#b46d54'];
 
     public function trends(array $data, ?array $comparison): array
     {
@@ -19,8 +19,8 @@ class FinanceReportCharts
                 )];
             }
             $chart = (new LarapexChart)->lineChart()->setHeight(330)->setXAxis($data['labels'])
-                ->setDataset($datasets)->setColors([self::COLORS[$index], '#64748b'])
-                ->setStroke(3, [self::COLORS[$index], '#64748b'])->setMarkers([], 4, 6)->setGrid()
+                ->setDataset($datasets)->setColors([self::COLORS[$index], '#4b5563'])
+                ->setStroke(3, [self::COLORS[$index], '#4b5563'])->setMarkers([], 4, 6)->setGrid()
                 ->setToolbar(true)->setShowLegend((bool) $comparison);
 
             return $this->options($chart);
@@ -45,7 +45,7 @@ class FinanceReportCharts
                 'kind' => 'ranking', 'options' => $this->options($chart), 'entries' => $entries->all()];
         }
         $totals = $reports->categoryGroups($filters);
-        $categories = (clone $totals)->orderByDesc('total_expenses')->orderBy('expenses.category_id')->limit(5)->get();
+        $categories = (clone $totals)->orderByDesc('total_expenses')->orderBy('expenses.category_id')->get();
         $entries = $categories->map(fn ($row) => ['name' => $row->name, 'amount' => round((float) $row->total_expenses, 2),
             'url' => route('expenses.index', array_filter([
                 'category_id' => $row->category_id ?? 'none', 'from' => $filters['from'] ?? null, 'to' => $filters['to'] ?? null,
@@ -53,14 +53,7 @@ class FinanceReportCharts
                 'subcategory_id' => $filters['subcategory_id'] ?? null, 'status' => $filters['expense_status'] ?? null,
                 'search' => $filters['q'] ?? null, 'min_amount' => $filters['min_amount'] ?? null, 'max_amount' => $filters['max_amount'] ?? null,
             ], fn ($value) => filled($value)))])->values();
-        $overall = (float) \Illuminate\Support\Facades\DB::query()->fromSub($totals, 'category_totals')->sum('total_expenses');
-        $remaining = round($overall - $entries->sum('amount'), 2);
-        if ($remaining > 0) {
-            $entries->push(['name' => 'Altre categorie', 'amount' => $remaining, 'url' => null]);
-        }
-        $chart = (new LarapexChart)->donutChart()->setHeight(330)->setLabels($entries->pluck('name')->map(fn ($value) => e($value))->all())
-            ->setDataset($entries->pluck('amount')->all())->setColors(self::COLORS)->setShowLegend(true)->setDataLabels(false);
-        $result[] = ['title' => 'Distribuzione delle spese', 'kind' => 'expenses', 'options' => $this->options($chart), 'entries' => $entries->all()];
+        $result[] = ['title' => 'Spese per categoria', 'kind' => 'expenses', 'entries' => $entries->all()];
 
         return $result;
     }

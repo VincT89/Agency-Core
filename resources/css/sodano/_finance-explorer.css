@@ -13,6 +13,31 @@
 .finance-directory-entry h3 { font-size: 15px; line-height: 1.5; margin: 0 0 5px; }
 .finance-directory-entry > a, .finance-directory-entry > button { flex-shrink: 0; }
 .finance-directory-search { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 260px) auto; gap: 14px; align-items: end; margin: 20px 0; }
+.finance-directory-receivables { grid-template-columns: minmax(180px, 1fr) minmax(140px, 200px) minmax(160px, 220px) auto; }
+.finance-receivables-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.finance-receivables-heading h2 { font-size: 20px; line-height: 1.3; margin: 0; }
+.finance-receivables-search { width: 280px; max-width: 100%; }
+.finance-receivables-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; list-style: none; padding: 0; margin: 0; }
+.finance-receivables-list li { min-width: 0; }
+.finance-receivable-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 20px; height: 100%; padding: 18px; background: var(--bg1); border: 1px solid var(--line2); border-left: 3px solid var(--line2); border-radius: 8px; color: var(--text); text-decoration: none; }
+.finance-receivable-link.is-overdue { border-left-color: var(--accent); }
+.finance-receivable-link:hover { border-color: var(--line3); }
+.finance-receivable-link.is-overdue:hover { border-left-color: var(--accent); }
+.finance-receivable-link:hover .finance-receivable-name { text-decoration: underline; text-underline-offset: 4px; }
+.finance-receivable-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.finance-receivable-name { font-size: 16px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.finance-receivable-amount { color: var(--red-text); font-size: 24px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.finance-receivable-footer { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.finance-receivable-status { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--text2); font-size: 13px; }
+.finance-receivable-action { flex-shrink: 0; font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.finance-workspace .stat-card.color-accent .stat-val { color: var(--accent); }
+.finance-workspace .stat-card.color-green-text .stat-val { color: var(--green-text); }
+.finance-workspace .stat-card.color-orange-text .stat-val { color: var(--orange-text); }
+.finance-workspace .badge.bb, .finance-workspace .badge.badge-info, .finance-workspace .badge.bp { color: #a40d27; background: #fce9ed; border-color: #ebbbc4; }
+.finance-workspace .badge.bg, .finance-workspace .badge.badge-success { color: #146c43; background: #e6f4ec; border-color: #b7d8c5; }
+.finance-workspace .badge.ba, .finance-workspace .badge.badge-warning { color: #8a4d08; background: #fff3dc; border-color: #ead2a3; }
+.finance-workspace .badge.br, .finance-workspace .badge.badge-error, .finance-workspace .badge.badge-danger { color: #a51d25; background: #fbe9e9; border-color: #e7b8bc; }
+.finance-workspace .badge.bd, .finance-workspace .badge.badge-gray { color: #4b5563; background: #e9ecef; border-color: #cdd2d8; }
 .finance-report-tabs { display: flex; flex-wrap: wrap; gap: 12px 24px; border-bottom: 1px solid var(--line); }
 .finance-report-tabs a { display: block; padding: 12px 0; color: inherit; text-decoration: none; border-bottom: 2px solid transparent; }
 .finance-report-tabs a[aria-current=page] { border-color: var(--accent); font-weight: 700; }
@@ -32,6 +57,20 @@
 .finance-chart-values li { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); padding: 10px 0; }
 .finance-chart-values li > a, .finance-chart-values li > span { min-width: 0; overflow-wrap: anywhere; }
 .finance-chart-values strong { white-space: nowrap; }
+.finance-expense-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.finance-expense-heading h2 { font-size: 17px; margin: 0; }
+.finance-expense-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.finance-expense-controls .form-sel { width: auto; min-width: 125px; }
+.finance-expense-bars { list-style: none; margin: 0; padding: 0; }
+.finance-expense-bars li + li { margin-top: 20px; }
+.finance-expense-bars a { display: block; color: var(--text); text-decoration: none; }
+.finance-expense-bars a:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 2px; }
+.finance-expense-bar-label { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 8px; font-size: 14px; }
+.finance-expense-bar-label > span { min-width: 0; overflow-wrap: anywhere; }
+.finance-expense-bar-label strong { flex-shrink: 0; font-size: 16px; font-variant-numeric: tabular-nums; }
+.finance-expense-bars a:hover .finance-expense-bar-label > span { text-decoration: underline; text-underline-offset: 3px; }
+.finance-expense-bar-track { display: block; height: 12px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.finance-expense-bar-track > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
 .finance-comparison { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; color: var(--text2); font-size: 12px; }
 .finance-lookup { position: relative; min-width: 0; }
 .finance-lookup .finance-inline-form > button { min-height: var(--control-h); }
@@ -78,6 +117,12 @@
     .finance-filter-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
     .finance-filter-actions > * { flex: 1; text-align: center; }
     .finance-directory-search { grid-template-columns: minmax(0, 1fr); }
+    .finance-receivables-heading { align-items: stretch; flex-direction: column; }
+    .finance-receivables-search { width: 100%; }
+    .finance-receivables-list { grid-template-columns: minmax(0, 1fr); }
+    .finance-receivable-link { gap: 14px 12px; padding: 14px; }
+    .finance-receivable-amount { font-size: 20px; }
+    .finance-expense-controls, .finance-expense-controls .form-sel { width: 100%; }
     .finance-lookup .finance-inline-form > button, .finance-lookup .finance-inline-form > input, .finance-lookup-results button, .invoice-column-menu .invoice-column-order { min-height: var(--control-h-touch); }
     .finance-lookup .finance-lookup-toggle { min-width: var(--control-h-touch); }
     .finance-directory-entry { align-items: flex-start; flex-direction: column; gap: 10px; }

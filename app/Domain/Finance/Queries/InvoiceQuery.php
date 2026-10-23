@@ -17,7 +17,7 @@ class InvoiceQuery
 
         if (! empty($filters['status'])) {
             if ($filters['status'] === 'pending') {
-                $query->whereIn('status', ['issued', 'partially_paid']);
+                $query->withoutCreditNotes()->awaitingPayment()->where('currency', 'EUR');
             } elseif ($filters['status'] === 'overdue') {
                 $query->pastDue();
             } else {

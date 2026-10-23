@@ -87,6 +87,12 @@ class Invoice extends Model
         return $query->whereIn('status', self::OUTSTANDING_STATUSES)->whereRaw(self::OUTSTANDING_SQL.' > 0');
     }
 
+    public function scopeWithoutCreditNotes(Builder $query): Builder
+    {
+        return $query->where(fn ($documents) => $documents->whereNull('invoices.fiscal_document_type')
+            ->orWhere('invoices.fiscal_document_type', '!=', 'TD04'));
+    }
+
     public function scopePastDue(Builder $query): Builder
     {
         /** Deadline indicators must work before the scheduled job updates stored invoice statuses. */

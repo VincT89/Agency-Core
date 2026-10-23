@@ -341,7 +341,7 @@ class FinanceWorkspaceTest extends TestCase
         $this->get(route('invoices.index', ['sort' => 'untrusted_sql']))->assertSessionHasErrors('sort');
     }
 
-    public function test_larapex_charts_preserve_filtered_totals_and_group_minor_expense_categories(): void
+    public function test_charts_preserve_filtered_totals_and_show_every_expense_category_with_its_amount(): void
     {
         for ($i = 1; $i <= 7; $i++) {
             $category = app(SaveExpenseCategory::class)->execute(['name' => 'Categoria '.$i]);
@@ -353,15 +353,35 @@ class FinanceWorkspaceTest extends TestCase
         $charts = $response->viewData('distributionCharts');
         $this->assertSame('bar', $charts[0]['options']['chart']['type']);
         $this->assertEquals([100], $charts[0]['options']['series'][0]->data);
-        $this->assertSame('donut', $charts[1]['options']['chart']['type']);
-        $this->assertCount(6, $charts[1]['entries']);
-        $this->assertEquals(280, array_sum($charts[1]['options']['series']));
-        $this->assertEquals('Altre categorie', $charts[1]['entries'][5]['name']);
-        $this->assertEquals(30, $charts[1]['entries'][5]['amount']);
+        $this->assertCount(7, $charts[1]['entries']);
+        $this->assertEquals(280, array_sum(array_column($charts[1]['entries'], 'amount')));
+        $this->assertEquals('Categoria 1', $charts[1]['entries'][6]['name']);
+        $this->assertEquals(10, $charts[1]['entries'][6]['amount']);
+        $response->assertSee('Spese per categoria')->assertSee('Andamento mensile')->assertSee('€ 10,00')->assertDontSee('Altre categorie');
         $this->assertEquals([280], $response->viewData('trendCharts')[3]['series'][0]->data);
         $filtered = $this->get(route('economic-summary.index', ['max_amount' => 40]))->assertOk();
-        $this->assertEquals(100, array_sum($filtered->viewData('distributionCharts')[1]['options']['series']));
+        $this->assertEquals(100, array_sum(array_column($filtered->viewData('distributionCharts')[1]['entries'], 'amount')));
+        $this->assertEquals([100], $filtered->viewData('expenseTrendChart')['series'][0]->data);
         $this->assertEquals(0, $filtered->viewData('globalSummary')['total_invoiced']);
+    }
+
+    public function test_expense_trend_keeps_monthly_values_and_filters_when_the_main_chart_is_quarterly(): void
+    {
+        $category = app(SaveExpenseCategory::class)->execute(['name' => 'Servizi & assistenza <prova>']);
+        foreach ([['2026-10-01', 10.01], ['2026-11-01', 20.02], ['2026-12-01', 30.03]] as [$date, $amount]) {
+            app(SaveExpense::class)->execute(['title' => 'Spesa mensile', 'amount' => $amount, 'expense_date' => $date,
+                'status' => 'pending', 'category_id' => $category->id, 'document_kind' => 'invoice']);
+        }
+        app(SaveExpense::class)->execute(['title' => 'Spesa fuori filtro', 'amount' => 99, 'expense_date' => '2026-11-01',
+            'status' => 'pending', 'document_kind' => 'invoice']);
+        $response = $this->get(route('economic-summary.index', ['from' => '2026-10-01', 'to' => '2026-12-31',
+            'category_id' => $category->id, 'interval' => 'quarter']))->assertOk();
+        $this->assertEquals([60.06], $response->viewData('chartData')['series'][3]['data']);
+        $this->assertEquals([10.01, 20.02, 30.03], $response->viewData('expenseChartData')['series'][0]['data']);
+        $this->assertEquals([10.01, 20.02, 30.03], $response->viewData('expenseTrendChart')['series'][0]->data);
+        $this->assertCount(1, $response->viewData('distributionCharts')[1]['entries']);
+        $this->assertEquals(60.06, $response->viewData('distributionCharts')[1]['entries'][0]['amount']);
+        $response->assertSee('Servizi &amp; assistenza &lt;prova&gt;', false)->assertDontSee('Servizi & assistenza <prova>', false);
     }
 
     public function test_recurring_expenses_keep_the_selected_category_and_subcategory(): void

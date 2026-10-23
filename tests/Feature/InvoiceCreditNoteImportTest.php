@@ -187,13 +187,13 @@ class InvoiceCreditNoteImportTest extends TestCase
         $this->assertDatabaseCount('invoices', 2);
     }
 
-    public function test_split_payment_preserves_actual_receivable_and_uses_fixed_vat_in_report_and_forecast(): void
+    public function test_split_payment_preserves_actual_receivable_in_report_and_forecast(): void
     {
         $invoice = $this->import('FPA 1/26', split: true);
         $this->assertSame('122.00', $invoice->total);
         $this->assertSame('100.00', $invoice->payable_total);
         $this->assertEquals(100, $invoice->residual);
-        $this->assertEquals(122, app(EconomicSummaryService::class)->globalSummary(auth()->user())['total_outstanding']);
+        $this->assertEquals(100, app(EconomicSummaryService::class)->globalSummary(auth()->user())['total_outstanding']);
         $this->assertEquals([0, 100], app(FinancialSummaryService::class)->getYearlyDonutData()['series']);
         $this->assertSame(10000, app(CashFlowForecast::class)->calculate(3, null)['totals']['expected']);
         $data = ['invoice_id' => $invoice->id, 'amount' => '100.01', 'payment_date' => '2026-10-16', 'method' => 'bank_transfer'];
@@ -240,8 +240,8 @@ class InvoiceCreditNoteImportTest extends TestCase
         $this->assertEquals(122, $invoice->fresh()->customer_credit);
         $this->assertSame($payment, $invoice->payments()->sole()->getRawOriginal());
         $summary = app(EconomicSummaryService::class)->globalSummary(auth()->user());
-        $this->assertEquals(0, $summary['total_invoiced']);
-        $this->assertEquals(-122, $summary['total_outstanding']);
+        $this->assertEquals(100, $summary['total_invoiced']);
+        $this->assertEquals(0, $summary['total_outstanding']);
         $this->assertEquals(122, $summary['total_collected']);
         $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('Credito cliente');
         $receipt = $invoice->payments()->sole();
@@ -251,7 +251,7 @@ class InvoiceCreditNoteImportTest extends TestCase
         $this->put(route('payments.update', $receipt), array_replace($data, ['amount' => '123.00']))->assertSessionHasErrors('amount');
     }
 
-    public function test_credit_notes_reduce_net_turnover_in_their_issue_period_while_links_reduce_receivables(): void
+    public function test_credit_notes_do_not_reduce_turnover_while_links_reduce_actual_receivables(): void
     {
         $project = Project::factory()->create(['client_id' => $this->client->id]);
         $invoice = $this->import();
@@ -261,14 +261,14 @@ class InvoiceCreditNoteImportTest extends TestCase
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '122.00');
         $service = app(EconomicSummaryService::class);
         $this->assertEquals(100, $service->globalSummary(auth()->user(), '2026-10-01', '2026-10-31')['total_invoiced']);
-        $this->assertEquals(122, $service->globalSummary(auth()->user(), '2026-10-01', '2026-10-31')['total_outstanding']);
-        $this->assertEquals(-100, $service->globalSummary(auth()->user(), '2026-11-01', '2026-11-30')['total_invoiced']);
-        $this->assertEquals(-122, $service->globalSummary(auth()->user(), '2026-11-01', '2026-11-30')['total_outstanding']);
-        $this->assertEquals(-100, $service->summaryByClient(auth()->user(), '2026-11-01', '2026-11-30')->sole()->total_invoiced);
-        $this->assertEquals(-100, $service->summaryByProject(auth()->user(), '2026-11-01', '2026-11-30')->sole()->total_invoiced);
+        $this->assertEquals(0, $service->globalSummary(auth()->user(), '2026-10-01', '2026-10-31')['total_outstanding']);
+        $this->assertEquals(0, $service->globalSummary(auth()->user(), '2026-11-01', '2026-11-30')['total_invoiced']);
+        $this->assertEquals(0, $service->globalSummary(auth()->user(), '2026-11-01', '2026-11-30')['total_outstanding']);
+        $this->assertTrue($service->summaryByClient(auth()->user(), '2026-11-01', '2026-11-30')->isEmpty());
+        $this->assertTrue($service->summaryByProject(auth()->user(), '2026-11-01', '2026-11-30')->isEmpty());
         $monthly = app(FinancialSummaryService::class)->getMonthlyData()['series'][0]['data'];
         $this->assertEquals(100, $monthly[9]);
-        $this->assertEquals(-100, $monthly[10]);
+        $this->assertEquals(0, $monthly[10]);
     }
 
     public function test_allocation_rejects_wrong_clients_drafts_excesses_and_foreign_allocation_ids(): void

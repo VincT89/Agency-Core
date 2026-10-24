@@ -12,7 +12,11 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="kpi-strip u-grid-3 inv-summary">
+    <div class="kpi-strip g-4col inv-summary">
+        <div class="kpi-cell accent-line">
+            <div class="kpi-label-t">Fatturato netto (IVA esclusa)</div>
+            <div class="kpi-val-t">EUR {{ number_format($invoicedTotal, 2, ',', '.') }}</div>
+        </div>
         <div class="kpi-cell">
             <div class="kpi-label-t">Da incassare</div>
             <div class="kpi-val-t">EUR {{ number_format($unpaidTotal, 2, ',', '.') }}</div>

@@ -108,11 +108,11 @@ class FinancialReportsTest extends TestCase
                 $this->assertCount(2, $chart['labels']);
                 $this->assertStringContainsString('2025', $chart['labels'][0]);
                 $this->assertStringContainsString('2026', $chart['labels'][1]);
-                $this->assertEquals(720, $global['total_invoiced']);
+                $this->assertEquals(690, $global['total_invoiced']);
             }
         }
         $partial = app(FinancialSummaryService::class)->getReportMonthlyData('2026-01-10', '2026-01-17');
-        $this->assertEquals([200], $partial['series'][0]['data']);
+        $this->assertEquals([170], $partial['series'][0]['data']);
         $this->assertEquals([40], $partial['series'][1]['data']);
         $this->assertEquals([200], $partial['series'][2]['data']);
     }
@@ -125,13 +125,13 @@ class FinancialReportsTest extends TestCase
         $response = $this->get(route('economic-summary.index', ['from' => '2026-03-01', 'to' => '2026-03-31']))
             ->assertOk()->assertDontSee('Note di credito ancora da collegare');
         $chart = json_decode($response->viewData('sparklineData'), true, flags: JSON_THROW_ON_ERROR);
-        $this->assertEquals([0], $chart['invoiced']);
+        $this->assertEquals([-122], $chart['invoiced']);
         $this->assertEquals([0], $chart['collected']);
         $this->assertEquals([0], $chart['pending']);
         $this->assertEquals(92, $response->viewData('globalSummary')['unallocated_credit']);
-        $this->assertEquals(0, $response->viewData('globalSummary')['total_invoiced']);
-        $this->assertEmpty($response->viewData('summaryByClient'));
-        $this->assertEmpty($response->viewData('summaryByProject'));
+        $this->assertEquals(-122, $response->viewData('globalSummary')['total_invoiced']);
+        $this->assertEquals(-122, $response->viewData('summaryByClient')->sole()->total_invoiced);
+        $this->assertEquals(-30, $response->viewData('summaryByProject')->sole()->total_invoiced);
         $this->get(route('economic-summary.index', ['from' => '2026-03-01', 'to' => '2026-03-31', 'documents' => 1]))
             ->assertOk()->assertSee('NC-REPORT-1')->assertSee('-122,00');
         $forecast = app(\App\Domain\Finance\Services\CashFlowForecast::class)->calculate(12, null);
@@ -168,7 +168,7 @@ class FinancialReportsTest extends TestCase
         $this->assertEquals([100, 200], $service->getYearlyDonutData()['series']);
         $monthly = $service->getMonthlyData();
         $this->assertCount(12, $monthly['labels']);
-        $this->assertEquals(300, array_sum($monthly['series'][0]['data']));
+        $this->assertEquals(290, array_sum($monthly['series'][0]['data']));
         $this->assertEquals(100, array_sum($monthly['series'][1]['data']));
         $this->assertEquals(200, array_sum($service->getIncassatoVsDaIncassareMonthlyData()['series'][2]['data']));
     }
@@ -208,10 +208,10 @@ class FinancialReportsTest extends TestCase
             ->assertOk()->assertSee('Fatturato netto (IVA esclusa)')->assertDontSee('finance-note-panel', false)
             ->assertDontSee('Fatturato (IVA inclusa)');
         $global = $response->viewData('globalSummary');
-        $this->assertEquals(2250.99, $global['total_invoiced']);
+        $this->assertEquals(2150.99, $global['total_invoiced']);
         $this->assertEquals(244, $global['total_collected']);
         $this->assertEquals(2195, $global['total_outstanding']);
-        $this->assertEquals(2502.21, $global['theoretical_outstanding']);
+        $this->assertEquals(2380.21, $global['theoretical_outstanding']);
         $this->assertSame(7, $global['invoices_count']);
         $this->assertEquals(0, $global['unallocated_credit']);
         foreach (['summaryByClient', 'summaryByProject'] as $group) {
@@ -221,14 +221,14 @@ class FinancialReportsTest extends TestCase
             }
         }
         $chart = json_decode($response->viewData('sparklineData'), true, flags: JSON_THROW_ON_ERROR);
-        $this->assertEquals([2250.99], $chart['invoiced']);
+        $this->assertEquals([2150.99], $chart['invoiced']);
         $this->assertEquals([244], $chart['collected']);
         $this->assertEquals([2195], $chart['pending']);
         $this->assertEquals(2195, $global['actual_outstanding']);
         $dashboard = $this->get(route('dashboard'))->assertOk()->assertSee('Fatturato netto, IVA esclusa');
         $series = $dashboard->viewData('financialChartData')['series'];
         $this->assertSame('Fatturato netto (IVA esclusa)', $series[0]['name']);
-        $this->assertEquals(2250.99, $series[0]['data'][9]);
+        $this->assertEquals(2150.99, $series[0]['data'][9]);
         $this->assertEquals(244, $series[1]['data'][9]);
         $this->assertEquals([244, 2195], app(FinancialSummaryService::class)->getYearlyDonutData()['series']);
         $forecast = app(\App\Domain\Finance\Services\CashFlowForecast::class)->calculate(12, null);
@@ -237,7 +237,7 @@ class FinancialReportsTest extends TestCase
         $this->assertSame($before, $snapshot());
     }
 
-    public function test_an_unallocated_credit_note_is_listed_without_affecting_turnover_or_creating_payments(): void
+    public function test_an_unallocated_credit_note_reduces_turnover_without_creating_payments_or_project_amounts(): void
     {
         $this->credit('2026-08-15', 122);
         $response = $this->get(route('economic-summary.index', ['from' => '2026-08-01', 'to' => '2026-08-31']))->assertOk();
@@ -246,12 +246,12 @@ class FinancialReportsTest extends TestCase
             $this->assertEquals(0, $global[$metric]);
         }
         $this->assertEquals(122, $global['unallocated_credit']);
-        $this->assertEquals(0, $global['total_invoiced']);
+        $this->assertEquals(-122, $global['total_invoiced']);
         $this->assertEquals(0, $global['total_outstanding']);
-        $this->assertEmpty($response->viewData('summaryByClient'));
+        $this->assertEquals(-122, $response->viewData('summaryByClient')->sole()->total_invoiced);
         $this->assertEmpty($response->viewData('summaryByProject'));
-        $this->assertEquals([0], json_decode($response->viewData('sparklineData'), true)['invoiced']);
-        $this->assertEquals(0, array_sum(app(FinancialSummaryService::class)->getMonthlyData()['series'][0]['data']));
+        $this->assertEquals([-122], json_decode($response->viewData('sparklineData'), true)['invoiced']);
+        $this->assertEquals(-122, array_sum(app(FinancialSummaryService::class)->getMonthlyData()['series'][0]['data']));
         $this->get(route('invoices.index'))->assertOk()->assertSee('NC-REPORT-1');
         $this->assertDatabaseCount('invoices', 0);
         $this->assertDatabaseCount('payments', 0);
@@ -274,25 +274,25 @@ class FinancialReportsTest extends TestCase
         }
     }
 
-    public function test_linking_credits_preserves_invoice_turnover_and_reduces_only_real_receivables(): void
+    public function test_linking_credits_assigns_project_turnover_without_deducting_global_or_client_turnover_twice(): void
     {
         $invoice = $this->invoice('VAT10', '2026-10-15', 1100, ['subtotal' => 1000, 'tax_amount' => 100]);
         $split = $this->invoice('SPLIT', '2026-10-15', 610, ['subtotal' => 500, 'tax_amount' => 110, 'payable_total' => 500]);
         $note = $this->credit('2026-10-16', 220, ['subtotal' => 200, 'tax_amount' => 20]);
         $splitNote = $this->credit('2026-10-16', 122, ['subtotal' => 100, 'tax_amount' => 22, 'payable_total' => 100]);
         $service = app(EconomicSummaryService::class);
-        $this->assertEquals(1500, $service->globalSummary($this->admin)['total_invoiced']);
+        $this->assertEquals(1200, $service->globalSummary($this->admin)['total_invoiced']);
         $this->assertEquals(1500, $service->summaryByProject($this->admin)->sole()->total_invoiced);
 
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '110.00');
         app(AllocateCreditNote::class)->execute($splitNote, $split->id, '100.00');
-        $this->assertEquals(1500, $service->globalSummary($this->admin)['total_invoiced']);
-        $this->assertEquals(1500, $service->summaryByClient($this->admin)->sole()->total_invoiced);
-        $this->assertEquals(1500, $service->summaryByProject($this->admin)->sole()->total_invoiced);
+        $this->assertEquals(1200, $service->globalSummary($this->admin)['total_invoiced']);
+        $this->assertEquals(1200, $service->summaryByClient($this->admin)->sole()->total_invoiced);
+        $this->assertEquals(1300, $service->summaryByProject($this->admin)->sole()->total_invoiced);
         $this->assertEquals(1390, $service->globalSummary($this->admin)['total_outstanding']);
         $this->assertEquals(1390, $service->summaryByClient($this->admin)->sole()->total_outstanding);
         $this->assertEquals(1390, $service->summaryByProject($this->admin)->sole()->total_outstanding);
-        $this->assertEquals([1500], app(FinancialSummaryService::class)->getReportMonthlyData()['series'][0]['data']);
+        $this->assertEquals([1200], app(FinancialSummaryService::class)->getReportMonthlyData()['series'][0]['data']);
         $this->assertDatabaseCount('payments', 0);
 
         $developer = User::factory()->create(['role' => UserRole::Developer, 'password_changed_at' => now()]);
@@ -302,7 +302,7 @@ class FinancialReportsTest extends TestCase
         $this->assertEmpty($service->summaryByProject($developer));
     }
 
-    public function test_allocated_credit_cents_affect_receivables_but_not_project_turnover(): void
+    public function test_allocated_taxable_credit_cents_are_deducted_once_across_project_groups(): void
     {
         $note = $this->credit('2026-10-15', 0.03, ['subtotal' => 0.02, 'tax_amount' => 0.01]);
         foreach ([null, $this->project->id, $this->project->id] as $index => $projectId) {
@@ -310,12 +310,12 @@ class FinancialReportsTest extends TestCase
             app(AllocateCreditNote::class)->execute($note, $invoice->id, '0.01');
         }
         $service = app(EconomicSummaryService::class);
-        $this->assertEquals(3, $service->globalSummary($this->admin)['total_invoiced']);
-        $this->assertEquals(3, $service->summaryByClient($this->admin)->sole()->total_invoiced);
-        $this->assertEquals(2, $service->summaryByProject($this->admin)->sole()->total_invoiced);
+        $this->assertEquals(2.98, $service->globalSummary($this->admin)['total_invoiced']);
+        $this->assertEquals(2.98, $service->summaryByClient($this->admin)->sole()->total_invoiced);
+        $this->assertEquals(1.99, $service->summaryByProject($this->admin)->sole()->total_invoiced);
 
         Invoice::where('number', 'ROUND-0')->update(['project_id' => $this->project->id]);
-        $this->assertEquals(3, $service->summaryByProject($this->admin)->sole()->total_invoiced);
+        $this->assertEquals(2.98, $service->summaryByProject($this->admin)->sole()->total_invoiced);
         $this->assertEquals(2.97, $service->globalSummary($this->admin)['total_outstanding']);
         $this->assertEquals(2.97, $service->summaryByProject($this->admin)->sole()->total_outstanding);
     }
@@ -328,17 +328,17 @@ class FinancialReportsTest extends TestCase
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '200.00');
         $this->payment($invoice, '2026-10-16', 300);
         $response = $this->get(route('economic-summary.index'))->assertOk()->assertSee('Da incassare')->assertDontSee('Saldo del riepilogo');
-        $this->assertEquals(1000, $response->viewData('globalSummary')['total_invoiced']);
+        $this->assertEquals(800, $response->viewData('globalSummary')['total_invoiced']);
         $this->assertEquals(500, $response->viewData('globalSummary')['total_outstanding']);
         $this->assertEquals(500, $response->viewData('summaryByClient')->sole()->total_outstanding);
         $this->assertEquals(500, $response->viewData('summaryByProject')->sole()->total_outstanding);
-        $this->assertEquals(920, $response->viewData('globalSummary')['theoretical_outstanding']);
+        $this->assertEquals(676, $response->viewData('globalSummary')['theoretical_outstanding']);
         $this->assertEquals([500], json_decode($response->viewData('sparklineData'), true)['pending']);
         $this->assertEquals(500, $response->viewData('globalSummary')['actual_outstanding']);
         $this->assertEquals(500, $invoice->fresh()->residual);
     }
 
-    public function test_settled_invoices_have_zero_receivables_and_credits_do_not_reduce_turnover(): void
+    public function test_settled_invoices_have_zero_receivables_while_unallocated_credits_reduce_turnover(): void
     {
         $invoice = $this->invoice('SETTLED-REGRESSION', '2026-10-15', 49766.24,
             ['subtotal' => 40792, 'tax_amount' => 8974.24, 'payable_total' => 48055.74, 'due_date' => '2026-10-16']);
@@ -346,10 +346,10 @@ class FinancialReportsTest extends TestCase
         $this->payment($invoice, '2026-10-16', 48055.74);
         $response = $this->get(route('economic-summary.index'))->assertOk()->assertDontSee('Saldo del riepilogo');
         $totals = $response->viewData('globalSummary');
-        $this->assertEquals(40792, $totals['total_invoiced']);
+        $this->assertEquals(35992, $totals['total_invoiced']);
         $this->assertEquals(48055.74, $totals['total_collected']);
         $this->assertEquals(0, $totals['total_outstanding']);
-        $this->assertEquals(1710.50, $totals['theoretical_outstanding']);
+        $this->assertEquals(-4145.50, $totals['theoretical_outstanding']);
         $this->assertEquals(0, $totals['actual_outstanding']);
         foreach (['summaryByClient', 'summaryByProject'] as $group) {
             $this->assertEquals(0, $response->viewData($group)->sole()->actual_outstanding);
@@ -368,7 +368,7 @@ class FinancialReportsTest extends TestCase
         $note = $this->credit('2026-10-16', 5856, ['subtotal' => 4800, 'tax_amount' => 1056]);
         $response = $this->get(route('economic-summary.index'))->assertOk()->assertSee('49.766,24');
         $summary = $response->viewData('globalSummary');
-        $this->assertEquals(40792, $summary['total_invoiced']);
+        $this->assertEquals(35992, $summary['total_invoiced']);
         $this->assertEquals(0, $summary['total_collected']);
         $this->assertEquals(49766.24, $summary['total_outstanding']);
         $this->assertEquals(49766.24, $response->viewData('summaryByClient')->sole()->total_outstanding);
@@ -378,7 +378,7 @@ class FinancialReportsTest extends TestCase
         app(AllocateCreditNote::class)->execute($note, $invoice->id, '5856.00');
         $this->assertEquals(43910.24, app(EconomicSummaryService::class)->globalSummary($this->admin)['total_outstanding']);
         $project = app(EconomicSummaryService::class)->summaryByProject($this->admin)->sole();
-        $this->assertEquals(40792, $project->total_invoiced);
+        $this->assertEquals(35992, $project->total_invoiced);
         $this->assertEquals(43910.24, $project->total_outstanding);
         $this->payment($invoice, '2026-10-17', 1000);
         $this->assertEquals(42910.24, app(EconomicSummaryService::class)->globalSummary($this->admin)['total_outstanding']);
@@ -398,7 +398,7 @@ class FinancialReportsTest extends TestCase
         }
     }
 
-    public function test_verified_production_totals_exclude_credit_notes_from_turnover(): void
+    public function test_credited_invoice_and_unallocated_note_each_reduce_turnover_once(): void
     {
         $invoice = $this->invoice('AGGREGATE-DEMONSTRATION', '2026-10-15', 49766.24,
             ['subtotal' => 40792, 'tax_amount' => 8974.24, 'payable_total' => 48055.74]);
@@ -408,12 +408,51 @@ class FinancialReportsTest extends TestCase
         app(AllocateCreditNote::class)->execute($note, $credited->id, '427.00');
         $this->payment($invoice, '2026-10-16', 48055.74);
         $totals = app(EconomicSummaryService::class)->globalSummary($this->admin);
-        $this->assertEquals(41142, $totals['total_invoiced']);
+        $this->assertEquals(35992, $totals['total_invoiced']);
         $this->assertEquals(48055.74, $totals['total_collected']);
         $this->assertEquals(0, $totals['actual_outstanding']);
-        $this->assertEquals(2137.50, $totals['theoretical_outstanding']);
+        $this->assertEquals(-4145.50, $totals['theoretical_outstanding']);
         $this->get(route('invoices.index'))->assertOk()->assertSee('NC-REPORT-1')->assertSee('NC-REPORT-2');
         $this->assertDatabaseCount('credit_note_allocations', 1);
+    }
+
+    public function test_reported_60442_turnover_becomes_55292_in_invoice_page_summary_and_charts(): void
+    {
+        $invoice = $this->invoice('TURNOVER-DEMO', '2026-01-15', 73312.24, ['subtotal' => 60092, 'tax_amount' => 13220.24]);
+        $credited = $this->invoice('CREDITED-DEMO', '2026-07-15', 427, ['subtotal' => 350, 'tax_amount' => 77]);
+        $firstNote = $this->credit('2026-02-18', 5856, ['subtotal' => 4800, 'tax_amount' => 1056]);
+        $secondNote = $this->credit('2026-07-20', 427, ['subtotal' => 350, 'tax_amount' => 77]);
+        app(AllocateCreditNote::class)->execute($firstNote, $invoice->id, '5856.00');
+        app(AllocateCreditNote::class)->execute($secondNote, $credited->id, '427.00');
+        $this->payment($invoice, '2026-10-16', 1220);
+
+        $snapshot = fn () => collect(['invoices', 'credit_notes', 'credit_note_allocations', 'payments'])
+            ->mapWithKeys(fn ($table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()])->all();
+        $before = $snapshot();
+        $response = $this->get(route('economic-summary.index', ['from' => '2026-01-01', 'to' => '2026-12-31']))
+            ->assertOk()->assertSee('55.292,00');
+        $totals = $response->viewData('globalSummary');
+        $this->assertEquals(55292, $totals['total_invoiced']);
+        $this->assertEquals(1220, $totals['total_collected']);
+        $this->assertEquals(66236.24, $totals['actual_outstanding']);
+        $this->assertSame(2, $totals['invoices_count']);
+        foreach (['summaryByClient', 'summaryByProject'] as $group) {
+            $this->assertEquals(55292, $response->viewData($group)->sole()->total_invoiced);
+        }
+        $chart = $response->viewData('chartData');
+        $this->assertEquals(55292, array_sum($chart['series'][0]['data']));
+        $this->assertEquals(-4800, $chart['series'][0]['data'][1]);
+        $this->assertEquals(0, $chart['series'][0]['data'][6]);
+        $this->assertEquals(55292, array_sum($response->viewData('trendCharts')[0]['series'][0]->data));
+        $this->assertEquals(55292, $response->viewData('distributionCharts')[0]['entries'][0]['amount']);
+        $this->assertEquals([55292], $response->viewData('distributionCharts')[0]['options']['series'][0]->data);
+        $dashboard = $this->get(route('dashboard'))->assertOk();
+        $this->assertEquals($chart['series'][0]['data'], $dashboard->viewData('financialChartData')['series'][0]['data']);
+        $this->get(route('invoices.index'))->assertOk()->assertSee('Fatturato netto (IVA esclusa)')->assertSee('EUR 55.292,00')
+            ->assertSee('NC-REPORT-1')->assertSee('NC-REPORT-2')
+            ->assertViewHas('invoicedTotal', $totals['total_invoiced'])->assertViewHas('unpaidTotal', $totals['actual_outstanding']);
+        $this->assertSame('credited', $credited->fresh()->status);
+        $this->assertSame($before, $snapshot());
     }
 
     public function test_receivable_directory_search_pagination_and_invoice_links_preserve_filters(): void

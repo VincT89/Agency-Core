@@ -59,8 +59,10 @@ class InvoiceController extends Controller
         $outstandingCount = (clone $globalQuery)->awaitingPayment()->count();
         $draftCount   = (clone $globalQuery)->where('status', 'draft')->count();
         $readyFiscalCount = (clone $globalQuery)->where('fiscal_status', 'ready')->count();
-        /** Il totale generale coincide con il residuo effettivo mostrato nel Riepilogo. */
-        $unpaidTotal = $reports->totals()['actual_outstanding'];
+        /** Gli importi generali condividono il calcolo del Riepilogo, indipendentemente dai filtri della lista. */
+        $totals = $reports->totals();
+        $invoicedTotal = $totals['total_invoiced'];
+        $unpaidTotal = $totals['actual_outstanding'];
 
         return view('invoices.index', compact(
             'documents',
@@ -68,6 +70,7 @@ class InvoiceController extends Controller
             'outstandingCount',
             'draftCount',
             'readyFiscalCount',
+            'invoicedTotal',
             'unpaidTotal',
         ));
     }

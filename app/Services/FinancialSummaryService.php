@@ -2,11 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Invoice;
 use App\Models\Expense;
 use App\Models\Payment;
-use Carbon\CarbonImmutable;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FinancialSummaryService
@@ -32,17 +29,18 @@ class FinancialSummaryService
             $labels[] = ucfirst($date->isoFormat('MMM YYYY'));
         }
 
-        /** Turnover includes invoice taxable amounts only; credit notes remain available in document lists. */
-        $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', issue_date)" : "DATE_FORMAT(issue_date, '%Y-%m')";
-        $invoices = Invoice::withoutCreditNotes()->whereBetween('issue_date', [$startDate, $startDate->copy()->endOfYear()])
-            ->whereIn('status', ['issued', 'partially_paid', 'paid', 'overdue', 'credited'])
-            ->selectRaw("{$dateFormat} as month, SUM(subtotal) as total")
+        /** Use the same signed taxable amounts as the reports, including credits on their own issue date. */
+        $dateFormat = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', event_date)" : "DATE_FORMAT(event_date, '%Y-%m')";
+        $turnover = app(FinanceReportQuery::class)->events([
+            'from' => $startDate->toDateString(), 'to' => $startDate->copy()->endOfYear()->toDateString(),
+        ])->whereIn('kind', ['invoice', 'credit_note'])
+            ->selectRaw("{$dateFormat} as month, SUM(net) as total")
             ->groupBy('month')
             ->get();
 
-        foreach ($invoices as $inv) {
-            if (isset($monthsArray[$inv->month])) {
-                $monthsArray[$inv->month]['issued'] = (float) $inv->total;
+        foreach ($turnover as $row) {
+            if (isset($monthsArray[$row->month])) {
+                $monthsArray[$row->month]['issued'] = round((float) $row->total, 2);
             }
         }
 

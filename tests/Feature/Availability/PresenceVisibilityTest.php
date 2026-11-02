@@ -80,7 +80,7 @@ class PresenceVisibilityTest extends TestCase
         $firstSession = $this->present($first);
         $this->present($second);
         Livewire::actingAs($first)->test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'userId' => $second->id])
-            ->assertViewHas('sessions', fn ($rows) => $rows->total() === 1 && $rows->sole()->id === $firstSession->id);
+            ->assertViewHas('days', fn ($rows) => $rows->total() === 1 && $rows->sole()['sessions']->sole()->id === $firstSession->id);
         Livewire::test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'team' => true])->assertForbidden();
         $response = $this->getJson(route('presence.state'))->assertOk();
         $response->assertJsonPath('session_id', $firstSession->id)->assertDontSee($second->name);
@@ -94,12 +94,12 @@ class PresenceVisibilityTest extends TestCase
         $this->present($second);
         $admin = User::factory()->create(['role' => UserRole::Admin, 'status' => 'active']);
         Livewire::actingAs($admin)->test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'team' => true])
-            ->assertViewHas('sessions', fn ($rows) => $rows->total() === 2)
+            ->assertViewHas('days', fn ($rows) => $rows->total() === 2)
             ->assertSee('&lt;script&gt;presence-demo&lt;/script&gt;', false)->assertDontSee('<script>presence-demo</script>', false);
         Livewire::test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'team' => true, 'userId' => $first->id])
-            ->assertViewHas('sessions', fn ($rows) => $rows->total() === 1 && $rows->sole()->id === $firstSession->id);
+            ->assertViewHas('days', fn ($rows) => $rows->total() === 1 && $rows->sole()['sessions']->sole()->id === $firstSession->id);
         Livewire::test(PresenceHistory::class, ['weekStart' => '2026-10-26', 'team' => true])
-            ->assertViewHas('sessions', fn ($rows) => $rows->total() === 0);
+            ->assertViewHas('days', fn ($rows) => $rows->total() === 0);
     }
 
     public function test_history_and_presence_are_available_to_commercial_users_without_admin_permissions(): void
@@ -108,7 +108,7 @@ class PresenceVisibilityTest extends TestCase
         $session = $this->present($user);
         $this->actingAs($user)->get(route('availability.index'))->assertOk()->assertSee('Storico presenze');
         Livewire::test(PresenceHistory::class, ['weekStart' => '2026-11-02'])
-            ->assertViewHas('sessions', fn ($rows) => $rows->total() === 1 && $rows->sole()->id === $session->id);
+            ->assertViewHas('days', fn ($rows) => $rows->total() === 1 && $rows->sole()['sessions']->sole()->id === $session->id);
         $this->get(route('admin.availability.index'))->assertForbidden();
     }
 
@@ -122,5 +122,22 @@ class PresenceVisibilityTest extends TestCase
         $history = Livewire::test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'team' => true])->assertOk();
         $admin->update(['role' => UserRole::Developer]);
         $history->call('$refresh')->assertForbidden();
+    }
+
+    public function test_every_non_admin_role_sees_only_its_own_daily_history(): void
+    {
+        $other = $this->operator('Operatore riservato dimostrativo');
+        $this->present($other);
+        foreach (UserRole::cases() as $role) {
+            if ($role === UserRole::Admin) {
+                continue;
+            }
+            $user = User::factory()->create(['role' => $role, 'status' => 'active']);
+            $own = $this->present($user);
+            Livewire::actingAs($user)->test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'userId' => $other->id])
+                ->assertViewHas('days', fn ($days) => $days->total() === 1 && $days->sole()['sessions']->sole()->id === $own->id)
+                ->assertDontSee($other->name);
+            Livewire::test(PresenceHistory::class, ['weekStart' => '2026-11-02', 'team' => true])->assertForbidden();
+        }
     }
 }

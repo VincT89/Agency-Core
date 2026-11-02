@@ -18,6 +18,8 @@ Più schede della stessa sessione non creano presenze duplicate. Un’altra sess
 
 Date e fasce sono visualizzate nel fuso del gestionale, attualmente Europe/Rome. Gli istanti e i conteggi usano secondi UTC. I totali sono mostrati in ore e minuti, arrotondando per difetto i secondi residui.
 
+Lo storico raggruppa le presenze per operatore e giorno: ogni riga mostra il primo ingresso, l’ultima uscita e i totali di disponibilità, pause e tempo oltre fascia. Lo stato si riferisce alla presenza più recente del giorno. Il dettaglio delle fasce conserva tutti gli ingressi, le uscite e gli intervalli, anche in caso di più collegamenti nella stessa fascia. I totali sommano i secondi confermati prima dell’arrotondamento; le ore tra una fascia e l’altra non vengono aggiunte. La paginazione mantiene sempre insieme tutte le presenze della giornata.
+
 ## Rilascio
 
 Questa funzionalità richiede la nuova migrazione `2026_11_02_100000_create_user_presence_tables.php`, che aggiunge soltanto le tabelle delle presenze e degli intervalli. Dopo il deploy eseguire `php artisan migrate --force` con il PHP corretto del sito e compilare gli asset con la procedura di rilascio del progetto. Sono necessari backup e normale verifica delle migrazioni prima dell’esecuzione in produzione.

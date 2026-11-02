@@ -101,6 +101,32 @@ final class PresenceSummary
         ];
     }
 
+    public function historyDay(Collection $sessions): array
+    {
+        $sessions = $sessions->sortBy([['started_at', 'asc'], ['id', 'asc']])->values();
+        $first = $sessions->first();
+        $latest = $this->historyRow($sessions->last());
+        $totals = ['available' => 0, 'paused' => 0, 'extra' => 0];
+        /** Sum confirmed seconds before formatting, excluding gaps between sessions and preserving partial minutes. */
+        foreach ($sessions as $session) {
+            $durations = $session->durations();
+            foreach (array_keys($totals) as $key) {
+                $totals[$key] += $durations[$key];
+            }
+        }
+
+        return ['key' => $first->user_id.'-'.$first->date->toDateString(),
+            'user_id' => $first->user_id, 'name' => $first->user->name, 'date' => $first->date,
+            'sessions' => $sessions, 'slot_count' => $sessions->map(fn ($session) => $this->range($session))->unique()->count(),
+            'started' => UserPresenceSession::localTime($first->started_at)->format('H:i'),
+            'ended' => $latest['ended'], 'estimated_end' => $latest['estimated_end'],
+            'state' => $latest['state'], 'reason' => $latest['reason'],
+            'available' => UserPresenceSession::durationLabel($totals['available']),
+            'paused' => UserPresenceSession::durationLabel($totals['paused']),
+            'extra' => UserPresenceSession::durationLabel($totals['extra']),
+        ];
+    }
+
     private function range(UserPresenceSession $session): string
     {
         return UserPresenceSession::localTime($session->scheduled_start_at)->format('H:i').'–'.UserPresenceSession::localTime($session->scheduled_end_at)->format('H:i');

@@ -41,8 +41,22 @@
 .presence-operator-times dd { margin: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .presence-history-wrap { overflow-x: auto; }
 .presence-history-table { min-width: 800px; }
+.presence-history-wrap > .presence-history-table { display: table; max-width: none; overflow: visible; }
 .presence-history-table td { vertical-align: top; }
 .presence-history-table small { display: inline-block; margin-top: 5px; color: var(--text2); }
+.presence-history-table > tbody > .presence-day-row > th { padding: var(--table-cell-y) var(--table-cell-x); border-bottom: 1px solid var(--line); font-size: 12px; text-align: left; vertical-align: top; }
+.presence-day-toggle { display: block; min-height: 30px; padding: 3px 0; border: 0; background: none; color: var(--text2); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.presence-day-toggle:hover, .presence-day-toggle[aria-expanded="true"] { color: var(--accent); }
+.presence-day-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.presence-history-table .presence-day-total { color: var(--text); font-variant-numeric: tabular-nums; }
+.presence-history-table > tbody > .presence-day-detail > td { padding: 12px 20px 20px; background: var(--bg2); }
+.presence-slots-table { width: 100%; border-collapse: collapse; text-align: left; }
+.presence-slots-table caption { padding: 4px 0 12px; color: var(--text2); font-size: 12px; text-align: left; }
+.presence-history-table .presence-slots-table thead th { padding: 10px 12px; border-radius: 0; background: var(--bg1); color: var(--text2); font-size: 10px; }
+.presence-history-table .presence-slots-table tbody th,
+.presence-history-table .presence-slots-table tbody td { padding: 12px; border-bottom: 1px solid var(--line); border-radius: 0; font-size: 12px; vertical-align: top; }
+.presence-history-table .presence-slots-table tbody tr:last-child th,
+.presence-history-table .presence-slots-table tbody tr:last-child td { border-bottom: 0; }
 .presence-intervals { margin-top: 8px; font-size: 12px; }
 .presence-intervals summary { cursor: pointer; text-decoration: underline; }
 .presence-intervals ul { margin: 8px 0 0; padding-left: 16px; }
@@ -57,6 +71,7 @@
   .presence-operator-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
+  .presence-day-toggle { min-height: 44px; }
   .presence-control { padding: 12px; }
   .presence-control-info { flex-direction: column; align-items: flex-start; }
   .presence-control-actions { width: 100%; }

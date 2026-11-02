@@ -479,6 +479,50 @@ class FinancialReportsTest extends TestCase
             ->assertViewHas('directory', fn ($rows) => $rows->total() === 22 && $rows->count() === 2);
     }
 
+    public function test_da_incassare_filter_includes_overdue_and_partial_balances_in_reports_charts_and_invoice_links(): void
+    {
+        $amounts = ['subtotal' => 100, 'tax_amount' => 22, 'payable_total' => 122, 'due_date' => '2026-10-31'];
+        $open = $this->invoice('OPEN-FILTER', '2026-10-15', 122, $amounts);
+        $overdue = $this->invoice('OVERDUE-FILTER', '2026-10-15', 122, array_replace($amounts, ['status' => 'overdue', 'due_date' => '2026-10-17']));
+        $late = $this->invoice('LATE-FILTER', '2026-10-15', 122, array_replace($amounts, ['due_date' => '2026-10-17']));
+        $partial = $this->invoice('PARTIAL-FILTER', '2026-10-15', 122, $amounts);
+        $this->payment($partial, '2026-10-16', 30);
+        app(AllocateCreditNote::class)->execute($this->credit('2026-10-16', 20), $partial->id, '20.00');
+        foreach ([['status' => 'paid'], ['status' => 'draft'], ['status' => 'cancelled'], ['status' => 'credited'],
+            ['paid_total' => 122], ['credited_total' => 122], ['payable_total' => 100, 'paid_total' => 100],
+            ['fiscal_document_type' => 'TD04'], ['currency' => 'USD']] as $index => $excluded) {
+            $this->invoice('EXCLUDED-FILTER-'.$index, '2026-10-15', 122, array_replace($amounts, $excluded));
+        }
+        $this->invoice('OTHER-PERIOD-FILTER', '2026-09-15', 122, $amounts);
+        $before = Invoice::orderBy('id')->get()->map->getAttributes()->all();
+        $filters = ['invoice_status' => 'issued', 'from' => '2026-10-01', 'to' => '2026-10-31', 'documents' => 1];
+        $response = $this->get(route('economic-summary.index', $filters))->assertOk();
+        $expectedIds = [$open->id, $overdue->id, $late->id, $partial->id];
+        $this->assertEqualsCanonicalizing($expectedIds, $response->viewData('documents')->getCollection()->where('kind', 'invoice')->pluck('record_id')->all());
+        $totals = $response->viewData('globalSummary');
+        $this->assertSame(4, $totals['invoices_count']);
+        $this->assertEquals(380, $totals['total_invoiced']);
+        $this->assertEquals(30, $totals['total_collected']);
+        $this->assertEquals(438, $totals['actual_outstanding']);
+        $this->assertEquals([438], $response->viewData('chartData')['series'][2]['data']);
+        $client = $response->viewData('receivableClients')->sole();
+        $this->assertEquals(438, $client->outstanding);
+        $this->assertEquals(4, $client->open_invoices);
+        $this->assertEquals(2, $client->overdue_invoices);
+        foreach (['issued', 'pending'] as $status) {
+            $link = route('invoices.index', ['client_id' => $this->client->id, 'status' => $status, 'start_date' => $filters['from'], 'end_date' => $filters['to']]);
+            if ($status === 'issued') {
+                $response->assertSee($link);
+            }
+            $invoices = $this->get($link)->assertOk()->viewData('documents');
+            $this->assertEqualsCanonicalizing($expectedIds, $invoices->pluck('id')->all());
+            $this->assertEquals(438, $invoices->sum('residual'));
+        }
+        $this->get(route('invoices.index', ['status' => 'partially_paid']))->assertOk()
+            ->assertViewHas('documents', fn ($rows) => $rows->total() === 1 && $rows->first()->id === $partial->id);
+        $this->assertSame($before, Invoice::orderBy('id')->get()->map->getAttributes()->all());
+    }
+
     public function test_clients_to_settle_are_all_visible_before_charts_independently_of_directory_pagination(): void
     {
         $this->client->update(['name' => 'Cliente dimostrativo scaduto', 'company_name' => null]);

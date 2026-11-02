@@ -8,6 +8,7 @@ import { financeRegion, invoiceColumnFilter } from './finance-navigation.js';
 import expenseCategoryMenu from './expense-category-menu.js';
 import quoteEditor from './quote-editor.js';
 import taskAttachmentUploads from './task-attachment-uploads.js';
+import presenceControl from './presence-control.js';
 import './password-fields.js';
 import './form-fields.js';
 import './dialog-accessibility.js';
@@ -27,6 +28,7 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('financeDistribution', financeDistribution);
     window.Alpine.data('quoteEditor', quoteEditor);
     window.Alpine.data('taskAttachmentUploads', taskAttachmentUploads);
+    window.Alpine.data('presenceControl', presenceControl);
 });
 
 import { initBgCanvas } from './bg-canvas.js';

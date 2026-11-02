@@ -23,9 +23,14 @@ class FinanceReportQuery
     {
         $query->withoutCreditNotes()->whereIn('invoices.status', self::STATUSES);
         if (filled($filters['invoice_status'] ?? null)) {
-            $filters['invoice_status'] === 'overdue'
-                ? $query->pastDue()
-                : $query->where('invoices.status', $filters['invoice_status']);
+            /** “Da incassare” includes every open balance, regardless of its deadline or partial payments. */
+            if ($filters['invoice_status'] === 'issued') {
+                $query->awaitingPayment()->where('currency', 'EUR');
+            } elseif ($filters['invoice_status'] === 'overdue') {
+                $query->pastDue();
+            } else {
+                $query->where('invoices.status', $filters['invoice_status']);
+            }
         }
         return $query;
     }

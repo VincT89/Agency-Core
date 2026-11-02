@@ -368,6 +368,9 @@
           <div class="flash flash-error" data-flash-toast="error">{{ session('error') }}</div>
         @endif
 
+        @if(auth()->user()->status === 'active' && auth()->user()->password_changed_at !== null)
+          <x-presence-control />
+        @endif
         {{ $slot }}
       </div>
     </main>

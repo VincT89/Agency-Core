@@ -193,4 +193,5 @@
                 @endforeach
             </div>
     </x-panel>
+    <livewire:availability.presence-history :week-start="$weekStartDate->toDateString()" :key="'my-presence-'.$weekStartDate->toDateString()" />
 </div>

@@ -208,6 +208,12 @@
             @livewire('admin.dashboard.shooting-overview')
         </div>
 
+        @can('system.admin')
+            <div class="mt-panel">
+                <livewire:admin.availability.team-presence />
+            </div>
+        @endcan
+
     </div>
 
     @if(auth()->user()->canViewAuditLogs())

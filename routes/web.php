@@ -201,6 +201,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::get('/availability', MyAvailability::class)->name('availability.index');
 
+    Route::get('/presence', [\App\Http\Controllers\PresenceController::class, 'state'])->name('presence.state')->middleware('throttle:120,1');
+    Route::post('/presence', [\App\Http\Controllers\PresenceController::class, 'update'])->name('presence.update')->middleware('throttle:120,1');
+
     Route::get('/admin/availability', TeamAvailability::class)
         ->middleware('can:system.admin')
         ->name('admin.availability.index');

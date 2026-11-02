@@ -124,6 +124,11 @@ class User extends Authenticatable
         return $this->hasMany(UserAvailability::class);
     }
 
+    public function presenceSessions(): HasMany
+    {
+        return $this->hasMany(UserPresenceSession::class);
+    }
+
     public function visibleNotifications(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         $notifications = $this->notifications();

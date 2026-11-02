@@ -19,7 +19,7 @@
             <x-form-group label="Dal" name="from" for="economic-from"><input id="economic-from" type="date" name="from" value="{{ old('from', $from) }}" class="form-in"></x-form-group>
             <x-form-group label="Al" name="to" for="economic-to"><input id="economic-to" type="date" name="to" value="{{ old('to', $to) }}" class="form-in"></x-form-group>
             <x-form-group label="Raggruppamento grafici" name="interval"><select id="field-interval" name="interval" class="form-sel">@foreach(['month' => 'Mensile', 'quarter' => 'Trimestrale', 'year' => 'Annuale'] as $value => $label)<option value="{{ $value }}" @selected(($filters['interval'] ?? 'month') === $value)>{{ $label }}</option>@endforeach</select></x-form-group>
-            <div class="finance-filter-actions"><button type="submit" class="btn btn-p">Applica</button><a href="{{ $pageUrl }}" class="btn btn-g">Azzera filtri</a></div>
+            <div class="finance-filter-actions"><button type="submit" class="btn btn-p btn-sm">Applica</button><a href="{{ $pageUrl }}" class="btn btn-g btn-sm">Azzera filtri</a></div>
         </div>
         <details class="finance-advanced" @if(collect($filters)->except(['from','to','group','page','documents_page','interval'])->isNotEmpty()) open @endif>
             <summary>Filtri avanzati e confronto periodi</summary>

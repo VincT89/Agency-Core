@@ -16,7 +16,7 @@ class InvoiceQuery
             ->latest('issue_date');
 
         if (! empty($filters['status'])) {
-            if ($filters['status'] === 'pending') {
+            if (in_array($filters['status'], ['pending', 'issued'], true)) {
                 $query->withoutCreditNotes()->awaitingPayment()->where('currency', 'EUR');
             } elseif ($filters['status'] === 'overdue') {
                 $query->pastDue();

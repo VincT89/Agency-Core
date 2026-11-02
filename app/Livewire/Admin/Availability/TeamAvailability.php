@@ -36,6 +36,7 @@ class TeamAvailability extends Component
 
     public function render()
     {
+        abort_unless(auth()->user()?->canManageSystem(), 403);
         $weekStart = $this->weekStartDate();
         $weekEnd = $weekStart->endOfWeek();
         $days = collect(range(0, 6))->map(

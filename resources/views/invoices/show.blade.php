@@ -13,7 +13,7 @@
             <x-slot:meta>
                 <div class="invoice-detail-status">
                     <span>{{ $invoice->fiscal_status_label }}</span>
-                    <x-badge :status="$invoice->status" :label="$invoice->status_label" />
+                    <x-badge :status="$invoice->status === 'issued' ? 'pending' : $invoice->status" :label="$invoice->status_label" />
                 </div>
             </x-slot:meta>
             <x-slot:actions>

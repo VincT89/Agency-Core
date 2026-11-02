@@ -9,6 +9,8 @@ Artisan::command('inspire', function () {
 
 Schedule::command('expenses:generate-recurring')->dailyAt('01:00')->withoutOverlapping(60)->onOneServer();
 
+Schedule::command('presence:expire')->everyMinute()->withoutOverlapping(5)->onOneServer();
+
 Schedule::command('notify:overdue-invoices')
     ->dailyAt('08:00')
     ->name('mark-overdue-invoices')

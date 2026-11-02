@@ -355,31 +355,32 @@
 }
 .inv-filter-stack {
   display: grid;
-  gap: 24px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 .inv-filter-groups {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 24px 40px;
+  gap: 16px 24px;
 }
 .inv-filter-group {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
   flex: 1 1 320px;
 }
 .inv-filter-group:first-child { flex-basis: 520px; }
 .inv-filter-group .pills {
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   overflow: visible;
 }
 .inv-filter-group .pill {
-  min-height: 36px;
-  padding: 6px 14px;
+  min-height: 30px;
+  padding: 4px 10px;
   font-size: 12px;
+  letter-spacing: normal;
   text-decoration: none;
 }
 .inv-search-form {
@@ -404,6 +405,7 @@
 }
 .inv-search-field .form-in,
 .inv-search-actions .btn { min-height: 40px; }
+.inv-search-actions .btn-sm { min-height: var(--control-h-sm); }
 .inv-document-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .inv-document-filters .inv-search-field { max-width: none; }
 .inv-document-filters .inv-search-actions { align-self: end; }

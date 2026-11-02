@@ -100,4 +100,5 @@
             </table>
         </div>
     </x-panel>
+    <livewire:availability.presence-history :week-start="$weekStartDate->toDateString()" :team="true" :user-id="$selectedUserId !== '' ? (int) $selectedUserId : null" :key="'team-presence-'.$weekStartDate->toDateString().'-'.$selectedUserId" />
 </div>

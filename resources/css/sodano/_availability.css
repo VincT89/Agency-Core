@@ -4,6 +4,68 @@
   gap: 16px;
 }
 
+.presence-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r);
+  background: var(--bg2);
+}
+.presence-control-info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; }
+.presence-control-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.presence-details-link { color: var(--text2); text-decoration: underline; font-size: 12px; }
+.presence-status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; line-height: 1.5; }
+.presence-dot { display: inline-block; flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: #6b7280; }
+.presence-status[data-state="available"] .presence-dot { background: #147a52; }
+.presence-status[data-state="paused"] .presence-dot,
+.presence-status[data-state="awaiting_confirmation"] .presence-dot { background: #a33b00; }
+.presence-status[data-state="expected"] .presence-dot,
+.presence-status[data-state="offline"] .presence-dot,
+.presence-status[data-state="disconnected"] .presence-dot { background: #c8102e; }
+.presence-control-message, .presence-control-error { flex-basis: 100%; margin: 0; font-size: 13px; line-height: 1.5; }
+.presence-control-error { color: var(--red); }
+.presence-team { margin-bottom: 20px; container-type: inline-size; }
+.presence-team-list { max-height: 430px; overflow: auto; }
+.presence-operator { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(0, 3fr); gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.presence-operator:last-child { border-bottom: 0; }
+.presence-operator-person { display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.presence-operator-person strong { font-size: 14px; }
+.presence-operator-times { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.presence-operator-times dt { font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+.presence-operator-times dd { margin: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.presence-history-wrap { overflow-x: auto; }
+.presence-history-table { min-width: 800px; }
+.presence-history-table td { vertical-align: top; }
+.presence-history-table small { display: inline-block; margin-top: 5px; color: var(--text2); }
+.presence-intervals { margin-top: 8px; font-size: 12px; }
+.presence-intervals summary { cursor: pointer; text-decoration: underline; }
+.presence-intervals ul { margin: 8px 0 0; padding-left: 16px; }
+.presence-empty { padding: 20px; margin: 0; color: var(--text2); }
+@media (max-width: 1199px) {
+  .presence-operator { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 900px) {
+  .presence-operator { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 600px) {
+  .presence-operator-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .presence-control { padding: 12px; }
+  .presence-control-info { flex-direction: column; align-items: flex-start; }
+  .presence-control-actions { width: 100%; }
+  .presence-control-actions .btn { min-height: 40px; }
+  .presence-operator { padding: 14px; }
+  .presence-operator-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .presence-team .panel-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+}
+
 .availability-controls-panel,
 .availability-week-panel,
 .availability-summary-panel {

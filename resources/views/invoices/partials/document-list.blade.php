@@ -1,5 +1,5 @@
     @php
-        $currentStatus = request('status');
+        $currentStatus = request('status') === 'pending' ? 'issued' : request('status');
         $currentFiscalStatus = request('fiscal_status');
         $currentDocumentType = request('document_type');
         $currentSort = request('sort') ?: 'date_desc';
@@ -75,9 +75,9 @@
             <x-finance-lookup type="projects" name="project_id" label="Progetto" :value="request('project_id')" :text="\App\Models\Project::find(request('project_id'))?->name" :client="request('client_id')" />
             @if(request('hosting_service_id'))<input type="hidden" name="hosting_service_id" value="{{ request('hosting_service_id') }}">@endif
             <div class="inv-search-actions">
-                <button type="submit" class="btn btn-p">Cerca</button>
+                <button type="submit" class="btn btn-p btn-sm">Cerca</button>
                 @if($baseFilters)
-                    <a data-finance-link href="{{ route('invoices.index') }}" class="btn btn-g">Azzera filtri</a>
+                    <a data-finance-link href="{{ route('invoices.index') }}" class="btn btn-g btn-sm">Azzera filtri</a>
                 @endif
             </div>
         </form>
@@ -95,7 +95,6 @@
                         <th>Cliente</th>
                         <x-invoice-column-filter column="amount" label="Totale" :filters="$baseFilters" :sort="$currentSort" />
                         <th>Residuo / credito</th>
-                        <th>Stato fiscale</th>
                         <th>Incasso / collegamento</th>
                     </tr>
                 </thead>
@@ -145,20 +144,16 @@
                                 @if($isCredit)<div class="u-text-meta">Credito da collegare</div>@endif
                             </td>
                             <td>
-                                <x-badge :status="$isCredit ? 'issued' : $document->fiscal_badge_status"
-                                         :label="$isCredit ? \App\Enums\Finance\InvoiceFiscalStatus::Imported->label() : $document->fiscal_status_label" />
-                            </td>
-                            <td>
                                 @if($isCredit)
                                     {{ $remaining <= 0 ? 'Collegata' : ($document->allocations->isEmpty() ? 'Da collegare' : 'Collegata parzialmente') }}
                                 @else
-                                    <x-badge :status="$document->status" :label="$document->status_label" />
+                                    <x-badge :status="$document->status === 'issued' ? 'pending' : $document->status" :label="$document->status_label" />
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="u-empty-state">Nessun documento trovato</td>
+                            <td colspan="8" class="u-empty-state">Nessun documento trovato</td>
                         </tr>
                     @endforelse
                 </tbody>

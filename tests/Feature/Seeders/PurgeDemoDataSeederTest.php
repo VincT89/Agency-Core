@@ -47,13 +47,17 @@ class PurgeDemoDataSeederTest extends TestCase
 
     public function test_it_preserves_only_one_admin_while_deleting_all_application_data(): void
     {
+        $this->travelTo(now()->setTime(9, 0));
         $admin = $this->admin(['remember_token' => 'previous-remember-token']);
         $otherUser = User::factory()->create(['role' => UserRole::Marketing]);
-        UserAvailability::factory()->for($otherUser)->create([
+        $availability = UserAvailability::factory()->for($otherUser)->create([
             'date' => today()->toDateString(),
             'starts_at' => '08:00:00',
             'ends_at' => '14:00:00',
         ]);
+        app(\App\Domain\Availability\Actions\RecordPresence::class)->execute(
+            $otherUser, hash('sha256', 'demo-presence'), 'start', availabilityId: $availability->id
+        );
         $billingProfile = $this->billingProfile();
         InvoiceNumberSequence::create([
             'billing_profile_id' => $billingProfile->getKey(),

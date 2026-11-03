@@ -2,6 +2,7 @@
 
 namespace App\Domain\Availability\Queries;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserAvailability;
 use App\Models\UserPresenceSession;
@@ -10,19 +11,22 @@ use Illuminate\Support\Collection;
 
 final class PresenceSummary
 {
-    public function personal(User $user, string $connectionHash): array
+    public function personal(User $user, string $connectionHash, ?int $loginAt = null, bool $loginPrompt = false): array
     {
         $now = CarbonImmutable::now();
-        $slot = UserAvailability::where('user_id', $user->id)->activeAt($now)->first();
+        $slot = UserAvailability::where('user_id', $user->id)->currentOrNextAt($now)->first();
+        $withinSlot = $slot !== null && $slot->starts_at <= $now->format('H:i:s');
         $session = UserPresenceSession::where('user_id', $user->id)
             ->where(fn ($q) => $q->whereNotNull('active_user_id')->orWhereDate('date', $now->toDateString()))
             ->with('intervals')->latest('id')->first();
-        $state = $session?->effectiveState($now->timestamp) ?? ($slot ? 'expected' : 'outside');
+        $state = $session?->effectiveState($now->timestamp) ?? ($withinSlot ? 'expected' : 'outside');
         $open = in_array($state, ['available', 'paused', 'awaiting_confirmation'], true);
         $owned = $session && hash_equals($session->connection_hash, $connectionHash);
         $metrics = $session?->durations() ?? ['available' => 0, 'paused' => 0, 'extra' => 0];
 
         return [
+            'accessed' => UserPresenceSession::localTime($loginAt)?->format('H:i'),
+            'login_prompt' => $loginPrompt,
             'show' => $slot !== null || $session !== null,
             'state' => $state, 'label' => UserPresenceSession::stateLabel($state),
             'session_id' => $session?->id, 'slot_id' => $slot?->id,
@@ -30,7 +34,8 @@ final class PresenceSummary
             'started' => UserPresenceSession::localTime($session?->started_at)?->format('H:i'),
             'available' => UserPresenceSession::durationLabel($metrics['available']),
             'extra' => UserPresenceSession::durationLabel($metrics['extra']),
-            'open' => $open, 'owned' => (bool) $owned, 'can_start' => $slot !== null && ! $open,
+            'open' => $open, 'owned' => (bool) $owned, 'can_start' => $withinSlot && ! $open,
+            'can_start_early' => $slot !== null && ! $withinSlot && ! $open,
             'extra_confirmed' => $session?->extra_confirmed_at !== null,
             'heartbeat_seconds' => UserPresenceSession::HEARTBEAT_SECONDS,
         ];
@@ -43,8 +48,13 @@ final class PresenceSummary
             'availabilities' => fn ($q) => $q->whereDate('date', $now->toDateString())->orderBy('starts_at'),
             'presenceSessions' => fn ($q) => $q->whereDate('date', $now->toDateString())->with('intervals')->orderBy('id'),
         ])->orderBy('name')->get();
+        $logins = AuditLog::query()->where('action', 'login')->where('auditable_type', (new User)->getMorphClass())
+            ->whereIn('user_id', $users->modelKeys())
+            ->where('created_at', '>=', $now->startOfDay()->toDateTimeString())
+            ->where('created_at', '<', $now->startOfDay()->addDay()->toDateTimeString())
+            ->selectRaw('user_id, MAX(created_at) as created_at')->groupBy('user_id')->get()->keyBy('user_id');
 
-        return $users->map(function (User $user) use ($now) {
+        return $users->map(function (User $user) use ($now, $logins) {
             $slot = $user->availabilities->first(fn ($slot) => $slot->starts_at <= $now->format('H:i:s') && $slot->ends_at > $now->format('H:i:s'));
             $latest = $user->presenceSessions->last();
             $state = $latest?->effectiveState($now->timestamp) ?? ($slot ? 'expected' : 'outside');
@@ -66,7 +76,12 @@ final class PresenceSummary
             }
 
             return ['id' => $user->id, 'name' => $user->name, 'state' => $state,
-                'label' => $state === 'offline' ? 'Scollegato durante la fascia' : UserPresenceSession::stateLabel($state),
+                'label' => match (true) {
+                    $state === 'offline' => 'Scollegato durante la fascia',
+                    $state === 'expected' && $logins->has($user->id) => 'Accesso registrato, disponibilità da confermare',
+                    default => UserPresenceSession::stateLabel($state),
+                },
+                'accessed' => $logins->get($user->id)?->created_at?->format('H:i'),
                 'slots' => $user->availabilities->map(fn ($slot) => $slot->timeRangeLabel())->all(),
                 'started' => UserPresenceSession::localTime($latest?->started_at)?->format('H:i'),
                 'ended' => UserPresenceSession::localTime($latest?->effectiveEnd($now->timestamp))?->format('H:i'),

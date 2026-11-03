@@ -30,13 +30,19 @@
 .presence-status[data-state="disconnected"] .presence-dot { background: #c8102e; }
 .presence-control-message, .presence-control-error { flex-basis: 100%; margin: 0; font-size: 13px; line-height: 1.5; }
 .presence-control-error { color: var(--red); }
+.presence-login-dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 24px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--bg1); color: var(--text); }
+.presence-login-dialog::backdrop { background: rgba(0, 0, 0, .55); }
+.presence-login-dialog h2 { margin: 0 0 16px; font-size: 21px; }
+.presence-login-dialog p { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
+.presence-login-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.presence-login-actions .btn { min-height: 44px; }
 .presence-team { margin-bottom: 20px; container-type: inline-size; }
 .presence-team-list { max-height: 430px; overflow: auto; }
 .presence-operator { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(0, 3fr); gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
 .presence-operator:last-child { border-bottom: 0; }
 .presence-operator-person { display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
 .presence-operator-person strong { font-size: 14px; }
-.presence-operator-times { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.presence-operator-times { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 0; }
 .presence-operator-times dt { font-size: 11px; color: var(--text2); margin-bottom: 5px; }
 .presence-operator-times dd { margin: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .presence-history-wrap { overflow-x: auto; }

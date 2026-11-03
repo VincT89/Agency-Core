@@ -34,14 +34,6 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        try {
-            if ($user) {
-                app(\App\Services\AuditLogService::class)->log('login', $user, null, null, null, $user->id);
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to log login: " . $e->getMessage());
-        }
-
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

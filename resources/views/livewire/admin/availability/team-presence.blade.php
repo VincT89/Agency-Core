@@ -12,7 +12,8 @@
                     </div>
                     <dl class="presence-operator-times">
                         <div><dt>Fascia prevista</dt><dd>{{ implode(', ', $operator['slots']) ?: 'Non indicata' }}</dd></div>
-                        <div><dt>Ultimo ingresso</dt><dd>{{ $operator['started'] ?? 'Non registrato' }}</dd></div>
+                        <div><dt>Ultimo accesso</dt><dd>{{ $operator['accessed'] ?? 'Non registrato' }}</dd></div>
+                        <div><dt>Disponibile dalle</dt><dd>{{ $operator['started'] ?? 'Non confermata' }}</dd></div>
                         <div><dt>{{ $operator['estimated_end'] ? 'Ultimo segnale' : 'Uscita' }}</dt><dd>{{ $operator['ended'] ?? 'Non registrata' }}</dd></div>
                         <div><dt>Disponibilità oggi</dt><dd>{{ $operator['available'] }}</dd></div>
                         <div><dt>Oltre fascia</dt><dd>{{ $operator['extra'] }}</dd></div>

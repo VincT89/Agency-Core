@@ -22,14 +22,21 @@ final class RecordPresence
                 $this->settle($session, $now->timestamp);
             }
 
-            if ($action === 'start') {
+            if (in_array($action, ['start', 'start_early'], true)) {
                 if ($session && $session->ended_at === null) {
                     $this->requireConnection($session, $connectionHash);
                     return;
                 }
-                $slot = UserAvailability::where('user_id', $owner->id)->whereKey($availabilityId)->activeAt($now)->first();
+                $slot = $action === 'start_early'
+                    ? UserAvailability::where('user_id', $owner->id)->currentOrNextAt($now)->first()
+                    : UserAvailability::where('user_id', $owner->id)->whereKey($availabilityId)->activeAt($now)->first();
+                if ($slot && $slot->id !== $availabilityId) {
+                    $slot = null;
+                }
                 if (! $slot) {
-                    throw ValidationException::withMessages(['presence' => 'Puoi confermare soltanto una tua fascia attualmente in corso.']);
+                    throw ValidationException::withMessages(['presence' => $action === 'start_early'
+                        ? 'Puoi anticipare soltanto la tua prossima fascia di oggi, senza saltare una fascia già in corso.'
+                        : 'Puoi confermare soltanto una tua fascia attualmente in corso.']);
                 }
                 $start = CarbonImmutable::parse($slot->date->toDateString().' '.$slot->starts_at)->timestamp;
                 $end = CarbonImmutable::parse($slot->date->toDateString().' '.$slot->ends_at)->timestamp;

@@ -41,6 +41,13 @@ class UserAvailability extends Model
             ->where('ends_at', '>', $time);
     }
 
+    public function scopeCurrentOrNextAt(Builder $query, CarbonInterface $moment): Builder
+    {
+        /** An active slot takes priority; an early confirmation can only target the next slot of the same local day. */
+        return $query->whereDate('date', $moment->toDateString())
+            ->where('ends_at', '>', $moment->format('H:i:s'))->orderBy('starts_at')->orderBy('id');
+    }
+
     public function startsAtForInput(): string
     {
         return substr((string) $this->starts_at, 0, 5);

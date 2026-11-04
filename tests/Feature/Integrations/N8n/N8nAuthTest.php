@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class N8nAuthTest extends TestCase
@@ -99,6 +100,82 @@ class N8nAuthTest extends TestCase
         $this->withHeaders($headers)
             ->get('/api/v1/integrations/n8n/health')
             ->assertStatus(409);
+    }
+
+    #[DataProvider('firstSignatureEncodingProvider')]
+    public function test_signature_replay_is_rejected_across_encodings_and_idempotency_keys(int $firstEncoding): void
+    {
+        $token = bin2hex(random_bytes(32));
+        Config::set('services.n8n.token', $token);
+        Config::set('services.n8n.signing_secret', self::SIGNING_SECRET);
+        Config::set('services.n8n.require_signature', true);
+        Config::set('services.n8n.require_idempotency_key', true);
+
+        Route::post('/testing/n8n-signed-replay', fn () => response()->json([
+            'calls' => Cache::increment('testing:n8n-signed-handler-calls'),
+        ], 201))->middleware(['n8n.auth', 'n8n.idempotency']);
+
+        $target = '/testing/n8n-signed-replay';
+        $payload = ['message' => 'hello'];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+        $timestamp = (string) now()->timestamp;
+        $signature = $this->signature($timestamp, 'POST', $target, $body);
+        $mixedSignature = strtr($signature, 'abcdef', 'AbCdEf');
+        $encodings = [
+            $signature,
+            strtoupper($signature),
+            $mixedSignature,
+            'sha256='.$signature,
+            'sha256='.strtoupper($signature),
+            'sha256='.$mixedSignature,
+        ];
+        $headers = [
+            'Authorization' => 'Bearer '.$token,
+            'X-N8N-Timestamp' => $timestamp,
+            'X-N8N-Signature' => $encodings[$firstEncoding],
+            'Idempotency-Key' => 'signed-original-request',
+        ];
+
+        $this->withHeaders($headers)->postJson($target, $payload)
+            ->assertCreated()
+            ->assertJson(['calls' => 1]);
+
+        foreach ($encodings as $index => $encoding) {
+            $this->withHeaders(array_replace($headers, [
+                'X-N8N-Signature' => $encoding,
+                'Idempotency-Key' => 'signed-replay-attempt-'.$index,
+            ]))->postJson($target, $payload)
+                ->assertStatus(409)
+                ->assertJson([
+                    'ok' => false,
+                    'message' => 'Conflict: Request signature already used',
+                ]);
+        }
+
+        /** Un retry firmato nuovamente deve poter recuperare l'esito senza ripetere gli effetti. */
+        $retryTimestamp = (string) ((int) $timestamp + 1);
+        $this->withHeaders(array_replace($headers, [
+            'X-N8N-Timestamp' => $retryTimestamp,
+            'X-N8N-Signature' => 'sha256='.$this->signature($retryTimestamp, 'POST', $target, $body),
+        ]))->postJson($target, $payload)
+            ->assertCreated()
+            ->assertHeader('X-Idempotent-Replay', 'true')
+            ->assertJson(['calls' => 1]);
+
+        $this->assertSame(1, Cache::get('testing:n8n-signed-handler-calls'));
+        $this->assertDatabaseCount('integration_idempotency_keys', 1);
+    }
+
+    public static function firstSignatureEncodingProvider(): array
+    {
+        return [
+            'lowercase without prefix' => [0],
+            'uppercase without prefix' => [1],
+            'mixed case without prefix' => [2],
+            'lowercase with prefix' => [3],
+            'uppercase with prefix' => [4],
+            'mixed case with prefix' => [5],
+        ];
     }
 
     public function test_signed_request_rejects_tampering_and_expired_timestamp(): void

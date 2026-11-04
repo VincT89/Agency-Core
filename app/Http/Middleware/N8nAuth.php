@@ -86,6 +86,8 @@ class N8nAuth
         $providedSignature = str_starts_with($signature, 'sha256=')
             ? substr($signature, 7)
             : $signature;
+        /** La stessa firma deve usare una sola chiave anti-replay anche se cambia la codifica esadecimale. */
+        $providedSignature = strtolower($providedSignature);
         $expectedSignature = hash_hmac(
             'sha256',
             $this->signaturePayload($request, $timestamp),
@@ -93,7 +95,7 @@ class N8nAuth
         );
 
         if (preg_match('/^[a-f0-9]{64}$/i', $providedSignature) !== 1
-            || ! hash_equals($expectedSignature, strtolower($providedSignature))) {
+            || ! hash_equals($expectedSignature, $providedSignature)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Forbidden: Invalid request signature',

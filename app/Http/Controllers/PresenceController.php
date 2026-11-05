@@ -13,7 +13,8 @@ class PresenceController extends Controller
     public function state(Request $request, PresenceSummary $summary): JsonResponse
     {
         return response()->json($summary->personal($request->user(), hash('sha256', $request->session()->getId()),
-            $request->session()->get('presence.login_at'), (bool) $request->session()->get('presence.login_prompt', false)))
+            $request->session()->get('presence.login_at'), (bool) $request->session()->get('presence.login_prompt', false),
+            $request->session()->get('presence.prompt_answered_on')))
             ->header('Cache-Control', 'no-store, private');
     }
 
@@ -26,6 +27,7 @@ class PresenceController extends Controller
         ]);
         if ($data['action'] === 'defer') {
             $request->session()->forget('presence.login_prompt');
+            $request->session()->put('presence.prompt_answered_on', now()->toDateString());
 
             return $this->state($request, $summary);
         }
@@ -34,6 +36,7 @@ class PresenceController extends Controller
             isset($data['availability_id']) ? (int) $data['availability_id'] : null);
         if (in_array($data['action'], ['start', 'start_early'], true)) {
             $request->session()->forget('presence.login_prompt');
+            $request->session()->put('presence.prompt_answered_on', now()->toDateString());
         }
 
         return $this->state($request, $summary);

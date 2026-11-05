@@ -117,6 +117,40 @@ class PresenceLoginTest extends TestCase
         $this->assertDatabaseCount('user_presence_sessions', 0);
     }
 
+    public function test_an_existing_authenticated_session_prompts_before_the_slot_without_a_new_login(): void
+    {
+        $this->slot();
+        $this->travelTo(now()->setTime(8, 0));
+        $this->actingAs($this->operator);
+
+        $this->getJson(route('presence.state'))->assertOk()
+            ->assertJsonPath('login_prompt', true)->assertJsonPath('can_start_early', true)
+            ->assertJsonPath('accessed', null)->assertJsonPath('available', '0 min');
+        $this->assertSame(0, AuditLog::where('action', 'login')->count());
+        $this->assertDatabaseCount('user_presence_sessions', 0);
+    }
+
+    public function test_a_previous_days_answer_does_not_suppress_the_prompt_before_todays_slot(): void
+    {
+        $this->travelTo(now()->subDay());
+        $this->signIn();
+        $this->postJson(route('presence.update'), ['action' => 'defer'])->assertOk()
+            ->assertJsonPath('login_prompt', false);
+        $this->travelTo(CarbonImmutable::parse('2026-11-03 08:00:00', 'Europe/Rome'));
+        $this->slot();
+
+        $this->getJson(route('presence.state'))->assertOk()
+            ->assertJsonPath('login_prompt', true)->assertJsonPath('can_start_early', true)
+            ->assertJsonPath('accessed', null)->assertJsonPath('available', '0 min');
+        $this->postJson(route('presence.update'), ['action' => 'defer'])->assertOk()
+            ->assertJsonPath('login_prompt', false);
+        $this->get(route('availability.index'))->assertOk();
+        $this->getJson(route('presence.state'))->assertOk()->assertJsonPath('login_prompt', false);
+        $this->assertSame(1, AuditLog::where('action', 'login')->count());
+        $this->assertDatabaseCount('user_presence_sessions', 0);
+        $this->assertDatabaseCount('user_presence_intervals', 0);
+    }
+
     public function test_failed_or_suspended_logins_do_not_record_an_access_or_prompt(): void
     {
         $this->post(route('login'), ['email' => $this->operator->email, 'password' => 'wrong-password'])

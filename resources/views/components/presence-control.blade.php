@@ -1,5 +1,5 @@
 @php
-    $presence = app(\App\Domain\Availability\Queries\PresenceSummary::class)->personal(auth()->user(), hash('sha256', session()->getId()), session('presence.login_at'), (bool) session('presence.login_prompt', false));
+    $presence = app(\App\Domain\Availability\Queries\PresenceSummary::class)->personal(auth()->user(), hash('sha256', session()->getId()), session('presence.login_at'), (bool) session('presence.login_prompt', false), session('presence.prompt_answered_on'));
 @endphp
 <div x-data="presenceControl(@js($presence), @js(route('presence.state')), @js(route('presence.update')))">
 <section class="presence-control" aria-label="La tua disponibilità" x-show="state.show || error" x-cloak>
@@ -26,7 +26,7 @@
 <dialog class="presence-login-dialog" x-ref="loginPrompt" aria-labelledby="presence-login-title" aria-describedby="presence-login-description" @cancel.prevent="postpone()" @keydown.tab="trapLoginFocus($event)">
     <h2 id="presence-login-title">Sei disponibile?</h2>
     <div id="presence-login-description">
-        <p>Accesso registrato alle <strong x-text="state.accessed"></strong>.</p>
+        <p x-show="state.accessed">Accesso registrato alle <strong x-text="state.accessed"></strong>.</p>
         <p x-show="state.can_start">Conferma per iniziare la disponibilità nella fascia <strong x-text="state.slot"></strong>.</p>
         <p x-show="state.can_start_early">Puoi iniziare ora: il tempo prima della fascia <strong x-text="state.slot"></strong> viene contato come oltre fascia.</p>
         <p x-show="!state.can_start && !state.can_start_early && !state.open">Non hai altre fasce previste per oggi. Puoi impostarle nelle tue disponibilità.</p>

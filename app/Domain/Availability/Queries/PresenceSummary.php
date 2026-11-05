@@ -11,9 +11,15 @@ use Illuminate\Support\Collection;
 
 final class PresenceSummary
 {
-    public function personal(User $user, string $connectionHash, ?int $loginAt = null, bool $loginPrompt = false): array
-    {
+    public function personal(
+        User $user,
+        string $connectionHash,
+        ?int $loginAt = null,
+        bool $loginPrompt = false,
+        ?string $promptAnsweredOn = null,
+    ): array {
         $now = CarbonImmutable::now();
+        $accessedAt = UserPresenceSession::localTime($loginAt);
         $slot = UserAvailability::where('user_id', $user->id)->currentOrNextAt($now)->first();
         $withinSlot = $slot !== null && $slot->starts_at <= $now->format('H:i:s');
         $session = UserPresenceSession::where('user_id', $user->id)
@@ -25,8 +31,9 @@ final class PresenceSummary
         $metrics = $session?->durations() ?? ['available' => 0, 'paused' => 0, 'extra' => 0];
 
         return [
-            'accessed' => UserPresenceSession::localTime($loginAt)?->format('H:i'),
-            'login_prompt' => $loginPrompt,
+            'accessed' => $accessedAt?->isSameDay($now) ? $accessedAt->format('H:i') : null,
+            /** A retained login must still ask on a new day, while today's answer survives navigation. */
+            'login_prompt' => $loginPrompt || (! $open && $promptAnsweredOn !== $now->toDateString()),
             'show' => $slot !== null || $session !== null,
             'state' => $state, 'label' => UserPresenceSession::stateLabel($state),
             'session_id' => $session?->id, 'slot_id' => $slot?->id,

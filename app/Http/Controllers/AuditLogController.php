@@ -49,7 +49,7 @@ class AuditLogController extends Controller
         ],
         'password_reset' => ['label' => 'Reimpostazioni password', 'actions' => ['password_reset']],
         'deleted' => ['label' => 'Eliminazioni', 'actions' => ['deleted']],
-        'presences' => ['label' => 'Registrazioni e correzioni presenze', 'actions' => ['presence_created', 'presence_corrected']],
+        'presences' => ['label' => 'Gestione presenze', 'actions' => ['presence_created', 'presence_corrected', 'presence_deleted']],
     ];
 
     public function index(Request $request): View
@@ -91,10 +91,15 @@ class AuditLogController extends Controller
             ->whereIn('id', AuditLog::query()->select('user_id')->whereNotNull('user_id'))
             ->orderBy('name')
             ->get(['id', 'name']);
+        $presenceType = (new \App\Models\UserPresenceSession)->getMorphClass();
+        $presenceUserIds = $logs->getCollection()->where('auditable_type', $presenceType)
+            ->map(fn ($log) => $log->old_values['user_id'] ?? $log->new_values['user_id'] ?? null)->filter()->unique();
+        $presenceUsers = User::whereIn('id', $presenceUserIds)->pluck('name', 'id');
 
         return view('audit-logs.index', [
             'logs' => $logs,
             'users' => $users,
+            'presenceUsers' => $presenceUsers,
             'entityFilters' => self::ENTITY_FILTERS,
             'actionFilters' => self::ACTION_FILTERS,
             'activeFiltersCount' => collect($filters)->filter(fn ($value) => filled($value))->count(),

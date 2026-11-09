@@ -79,7 +79,7 @@
         @endif
     </div>
 
-    <x-audit-timeline :logs="$logs" title="Attività registrate" />
+    <x-audit-timeline :logs="$logs" title="Attività registrate" :show-presence-details="true" :presence-users="$presenceUsers" />
 
     @if($logs->hasPages())
         <div class="u-mt-md">

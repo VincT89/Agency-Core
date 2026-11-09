@@ -42,7 +42,10 @@ final class SaveManualPresence
         return DB::transaction(function () use ($actor, $data, $sessionId, $revision) {
             /** Share the operator lock with heartbeat, expiry and scheduling so corrections cannot race with them. */
             $owner = User::whereKey($data['user_id'])->lockForUpdate()->firstOrFail();
-            $session = $sessionId === null ? null : UserPresenceSession::with('intervals')->lockForUpdate()->findOrFail($sessionId);
+            $session = $sessionId === null ? null : UserPresenceSession::with('intervals')->lockForUpdate()->find($sessionId);
+            if ($sessionId !== null && $session === null) {
+                throw ValidationException::withMessages(['presence' => 'La presenza è stata eliminata. I dati precedenti sono consultabili nel registro attività.']);
+            }
             $now = CarbonImmutable::now();
             $day = CarbonImmutable::parse($data['date'])->startOfDay();
             $before = null;

@@ -1,6 +1,8 @@
 @props([
     'logs' => [],
     'title' => 'Attività recenti',
+    'showPresenceDetails' => false,
+    'presenceUsers' => [],
 ])
 
 @can('system.admin')
@@ -26,6 +28,9 @@
                                     <strong>{{ $log->user?->name ?? 'Sistema' }}</strong>
                                     {{ $log->display_action_text }}
                                 </div>
+                                @if($showPresenceDetails && in_array($log->action, ['presence_created', 'presence_corrected', 'presence_deleted'], true))
+                                    @include('audit-logs.presence-details')
+                                @endif
                             </div>
                         </article>
                     @endforeach

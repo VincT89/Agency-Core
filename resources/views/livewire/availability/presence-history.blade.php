@@ -7,7 +7,7 @@
             @if($successMessage)<p class="presence-editor-message" role="status">{{ $successMessage }}</p>@endif
             @error('presence')<p class="presence-editor-message presence-control-error" role="alert">{{ $message }}</p>@enderror
             @if($editorOpen)
-                @include('livewire.availability.presence-editor')
+                @include($deletingPresence ? 'livewire.availability.presence-delete' : 'livewire.availability.presence-editor')
             @endif
         @endif
         <div class="presence-history-wrap" role="region" aria-label="Storico delle presenze confermate" tabindex="0">
@@ -71,6 +71,10 @@
                                                             @disabled($row['ended'] === null) wire:loading.attr="disabled"
                                                             aria-label="Modifica e storico della presenza di {{ $day['name'] }} del {{ $day['date']->format('d/m/Y') }} alle {{ $row['started'] }}">
                                                             Modifica e storico
+                                                        </button>
+                                                        <button type="button" wire:click="beginDelete({{ $session->id }})" class="btn btn-g btn-sm presence-edit-button" wire:loading.attr="disabled"
+                                                            aria-label="Elimina la presenza di {{ $day['name'] }} del {{ $day['date']->format('d/m/Y') }} alle {{ $row['started'] }}">
+                                                            Elimina presenza
                                                         </button>
                                                         @if($row['ended'] === null)<small>Modificabile dopo la conclusione o la disconnessione.</small>@endif
                                                     @endif

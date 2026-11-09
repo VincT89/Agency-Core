@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Availability;
 
+use App\Domain\Availability\Actions\DeletePresence;
 use App\Domain\Availability\Actions\SaveManualPresence;
 use App\Domain\Availability\Queries\PresenceSummary;
 use App\Models\User;
@@ -29,6 +30,8 @@ class PresenceHistory extends Component
     public ?int $editingPresenceId = null;
     #[Locked]
     public ?string $editingRevision = null;
+    #[Locked]
+    public bool $deletingPresence = false;
     #[Locked]
     public int $editorVersion = 0;
     public bool $editorOpen = false;
@@ -82,6 +85,41 @@ class PresenceHistory extends Component
         }
     }
 
+    public function beginDelete(int $presenceId, DeletePresence $action): void
+    {
+        $this->requireAdministrator();
+        $from = CarbonImmutable::parse($this->weekStart)->startOfWeek();
+        $session = UserPresenceSession::with('intervals')
+            ->whereBetween('date', [$from->toDateString(), $from->endOfWeek()->toDateString()])
+            ->when($this->userId !== null, fn ($query) => $query->where('user_id', $this->userId))->findOrFail($presenceId);
+        $this->closeEditor();
+        $this->editingPresenceId = $session->id;
+        $this->editingRevision = $action->revision($session);
+        $this->deletingPresence = true;
+        $this->form = ['reason' => ''];
+        $this->editorOpen = true;
+        $this->editorVersion++;
+        $this->successMessage = null;
+    }
+
+    public function deletePresence(DeletePresence $action): void
+    {
+        $this->requireAdministrator();
+        abort_unless($this->editorOpen && $this->deletingPresence && $this->editingPresenceId !== null, 403);
+        try {
+            $deleted = $action->execute(auth()->user(), $this->editingPresenceId, $this->form['reason'] ?? null, $this->editingRevision ?? '');
+        } catch (ValidationException $exception) {
+            $errors = [];
+            foreach ($exception->errors() as $field => $messages) {
+                $errors['form.'.$field] = $messages;
+            }
+            throw ValidationException::withMessages($errors);
+        }
+        $this->closeEditor();
+        $this->successMessage = $deleted ? 'Presenza eliminata. Totali aggiornati e dati conservati nel registro attività.' : 'La presenza era già stata eliminata. Totali aggiornati.';
+        $this->resetPage('presencePage');
+    }
+
     public function addInterval(): void
     {
         $this->requireAdministrator();
@@ -101,14 +139,14 @@ class PresenceHistory extends Component
     public function closeEditor(): void
     {
         $this->requireAdministrator();
-        $this->reset('editingPresenceId', 'editingRevision', 'editorOpen', 'form');
+        $this->reset('editingPresenceId', 'editingRevision', 'deletingPresence', 'editorOpen', 'form');
         $this->resetValidation();
     }
 
     public function savePresence(SaveManualPresence $action): void
     {
         $this->requireAdministrator();
-        abort_unless($this->editorOpen, 403);
+        abort_unless($this->editorOpen && ! $this->deletingPresence, 403);
         $from = CarbonImmutable::parse($this->weekStart)->startOfWeek();
         try {
             Validator::make($this->form, [
@@ -171,8 +209,13 @@ class PresenceHistory extends Component
             $this->requireAdministrator();
             $editorUsers = User::query()->when($this->userId !== null, fn ($query) => $query->whereKey($this->userId))->orderBy('name')->get(['id', 'name']);
             if ($this->editingPresenceId !== null) {
-                $editingSession = UserPresenceSession::with('user:id,name')->findOrFail($this->editingPresenceId);
-                $corrections = $editingSession->corrections()->with('user:id,name')->latest('id')->get();
+                $editingSession = UserPresenceSession::with(['user:id,name', 'intervals'])->find($this->editingPresenceId);
+                if (! $editingSession) {
+                    $this->closeEditor();
+                    $this->successMessage = 'La presenza è stata eliminata. I dati precedenti sono consultabili nel registro attività.';
+                } elseif (! $this->deletingPresence) {
+                    $corrections = $editingSession->corrections()->with('user:id,name')->latest('id')->get();
+                }
             } elseif (is_numeric($this->form['user_id'] ?? null) && is_string($this->form['date'] ?? null)) {
                 $editorSlots = UserAvailability::where('user_id', $this->form['user_id'])
                     ->whereDate('date', $this->form['date'])->orderBy('starts_at')->get();

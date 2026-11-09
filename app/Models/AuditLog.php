@@ -25,6 +25,7 @@ class AuditLog extends Model
         'logout',
         'presence_created',
         'presence_corrected',
+        'presence_deleted',
     ];
 
     public $timestamps = false;
@@ -79,6 +80,7 @@ class AuditLog extends Model
             'logout' => "ha terminato la sessione.",
             'presence_created' => 'ha inserito manualmente una presenza.',
             'presence_corrected' => 'ha corretto una presenza.',
+            'presence_deleted' => 'ha eliminato una presenza.',
             default => "ha aggiornato {$entity}.",
         };
     }
@@ -97,6 +99,7 @@ class AuditLog extends Model
             'logout' => 'Uscita',
             'presence_created' => 'Inserimento presenza',
             'presence_corrected' => 'Correzione presenza',
+            'presence_deleted' => 'Eliminazione presenza',
             default => 'Aggiornamento',
         };
     }

@@ -87,6 +87,9 @@
 .presence-corrections h4 { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
 .presence-correction-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .presence-correction-values ul { padding-left: 18px; line-height: 1.6; }
+.presence-audit-details { margin-top: 10px; font-size: 13px; overflow-wrap: anywhere; }
+.presence-audit-details summary { cursor: pointer; text-decoration: underline; min-height: 24px; }
+.presence-audit-details p { margin-block: 8px; }
 @media (max-width: 700px) {
   .presence-editor { padding: 16px; }
   .presence-editor-fields, .presence-correction-values { grid-template-columns: minmax(0, 1fr); }
@@ -94,6 +97,7 @@
   .presence-editor-interval .form-g:first-of-type { grid-column: 1 / -1; }
   .presence-editor-interval > button { grid-column: 1 / -1; justify-self: start; }
   .presence-editor .btn, .presence-corrections summary { min-height: 44px; }
+  .presence-audit-details summary { min-height: 44px; }
 }
 @media (max-width: 1199px) {
   .presence-operator { grid-template-columns: minmax(0, 1fr); }

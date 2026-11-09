@@ -1,8 +1,18 @@
 <div wire:poll.20s>
     <x-panel title="Storico presenze">
+        @if($team)
+            <x-slot:headerActions>
+                <button type="button" wire:click="beginCreate" class="btn btn-p btn-sm" wire:loading.attr="disabled" @disabled($from->isFuture())>Aggiungi presenza</button>
+            </x-slot:headerActions>
+            @if($successMessage)<p class="presence-editor-message" role="status">{{ $successMessage }}</p>@endif
+            @error('presence')<p class="presence-editor-message presence-control-error" role="alert">{{ $message }}</p>@enderror
+            @if($editorOpen)
+                @include('livewire.availability.presence-editor')
+            @endif
+        @endif
         <div class="presence-history-wrap" role="region" aria-label="Storico delle presenze confermate" tabindex="0">
             <table class="t-table presence-history-table">
-                <caption class="sr-only">Totali giornalieri per operatore, con dettaglio delle singole fasce.</caption>
+                <caption class="sr-only">Totali giornalieri per operatore, con dettaglio delle singole presenze.</caption>
                 <thead><tr>
                     @if($team)<th scope="col">Operatore</th>@endif
                     <th scope="col">Giorno</th><th scope="col">Primo ingresso</th><th scope="col">Ultima uscita</th>
@@ -17,7 +27,11 @@
                                 <button type="button" class="presence-day-toggle" @click="expanded = !expanded"
                                     :aria-expanded="expanded.toString()" aria-controls="presence-day-details-{{ $day['key'] }}"
                                     aria-label="Dettaglio fasce del {{ $day['date']->format('d/m/Y') }} per {{ $day['name'] }}">
-                                    {{ $day['slot_count'] }} {{ $day['slot_count'] === 1 ? 'fascia' : 'fasce' }}
+                                    @if($day['slot_count'] > 0)
+                                        {{ $day['slot_count'] }} {{ $day['slot_count'] === 1 ? 'fascia' : 'fasce' }}
+                                    @else
+                                        Dettaglio presenze
+                                    @endif
                                 </button>
                             </td>
                             <td>{{ $day['started'] }}</td>
@@ -29,7 +43,7 @@
                         <tr id="presence-day-details-{{ $day['key'] }}" class="presence-day-detail" x-show="expanded" x-cloak>
                             <td colspan="{{ $team ? 8 : 7 }}">
                                 <table class="presence-slots-table">
-                                    <caption>Fasce del {{ $day['date']->format('d/m/Y') }} per {{ $day['name'] }}</caption>
+                                    <caption>Presenze del {{ $day['date']->format('d/m/Y') }} per {{ $day['name'] }}</caption>
                                     <thead><tr>
                                         <th scope="col">Fascia</th><th scope="col">Ingresso</th><th scope="col">Uscita</th>
                                         <th scope="col">Disponibilità</th><th scope="col">Pause</th><th scope="col">Oltre fascia</th><th scope="col">Stato e intervalli</th>
@@ -52,6 +66,14 @@
                                                             </li>
                                                         @endforeach</ul>
                                                     </details>
+                                                    @if($team)
+                                                        <button type="button" wire:click="editPresence({{ $session->id }})" class="btn btn-g btn-sm presence-edit-button"
+                                                            @disabled($row['ended'] === null) wire:loading.attr="disabled"
+                                                            aria-label="Modifica e storico della presenza di {{ $day['name'] }} del {{ $day['date']->format('d/m/Y') }} alle {{ $row['started'] }}">
+                                                            Modifica e storico
+                                                        </button>
+                                                        @if($row['ended'] === null)<small>Modificabile dopo la conclusione o la disconnessione.</small>@endif
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach

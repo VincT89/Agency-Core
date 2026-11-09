@@ -29,6 +29,7 @@ class AuditLogController extends Controller
         'invoices' => ['label' => 'Fatture', 'model' => Invoice::class],
         'payments' => ['label' => 'Pagamenti', 'model' => Payment::class],
         'users' => ['label' => 'Utenti', 'model' => User::class],
+        'presences' => ['label' => 'Presenze', 'model' => \App\Models\UserPresenceSession::class],
     ];
 
     private const ACTION_FILTERS = [
@@ -48,6 +49,7 @@ class AuditLogController extends Controller
         ],
         'password_reset' => ['label' => 'Reimpostazioni password', 'actions' => ['password_reset']],
         'deleted' => ['label' => 'Eliminazioni', 'actions' => ['deleted']],
+        'presences' => ['label' => 'Registrazioni e correzioni presenze', 'actions' => ['presence_created', 'presence_corrected']],
     ];
 
     public function index(Request $request): View

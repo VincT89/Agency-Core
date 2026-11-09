@@ -24,7 +24,7 @@ final class PresenceSummary
         $withinSlot = $slot !== null && $slot->starts_at <= $now->format('H:i:s');
         $session = UserPresenceSession::where('user_id', $user->id)
             ->where(fn ($q) => $q->whereNotNull('active_user_id')->orWhereDate('date', $now->toDateString()))
-            ->with('intervals')->latest('id')->first();
+            ->with('intervals')->orderByDesc('started_at')->latest('id')->first();
         $state = $session?->effectiveState($now->timestamp) ?? ($withinSlot ? 'expected' : 'outside');
         $open = in_array($state, ['available', 'paused', 'awaiting_confirmation'], true);
         $owned = $session && hash_equals($session->connection_hash, $connectionHash);
@@ -53,7 +53,7 @@ final class PresenceSummary
         $now = CarbonImmutable::now();
         $users = User::where('status', 'active')->with([
             'availabilities' => fn ($q) => $q->whereDate('date', $now->toDateString())->orderBy('starts_at'),
-            'presenceSessions' => fn ($q) => $q->whereDate('date', $now->toDateString())->with('intervals')->orderBy('id'),
+            'presenceSessions' => fn ($q) => $q->whereDate('date', $now->toDateString())->with('intervals')->orderBy('started_at')->orderBy('id'),
         ])->orderBy('name')->get();
         $logins = AuditLog::query()->where('action', 'login')->where('auditable_type', (new User)->getMorphClass())
             ->whereIn('user_id', $users->modelKeys())
@@ -109,6 +109,7 @@ final class PresenceSummary
         $durations = $session->durations();
         $reason = match ($session->end_reason) {
             'manual' => 'Uscita confermata', 'logout' => 'Logout', 'account_inactive' => 'Account disattivato',
+            'admin_created' => 'Inserita dall’admin', 'admin_corrected' => 'Corretta dall’admin',
             'next_boundary' => 'Fine giornata o nuova fascia', default => UserPresenceSession::stateLabel($state),
         };
 
@@ -119,7 +120,7 @@ final class PresenceSummary
             'available' => UserPresenceSession::durationLabel($durations['available']),
             'paused' => UserPresenceSession::durationLabel($durations['paused']),
             'extra' => UserPresenceSession::durationLabel($durations['extra']),
-            'extra_confirmed' => UserPresenceSession::localTime($session->extra_confirmed_at)?->format('H:i'),
+            'extra_confirmed' => $session->isManuallyRecorded() ? null : UserPresenceSession::localTime($session->extra_confirmed_at)?->format('H:i'),
         ];
     }
 
@@ -139,7 +140,8 @@ final class PresenceSummary
 
         return ['key' => $first->user_id.'-'.$first->date->toDateString(),
             'user_id' => $first->user_id, 'name' => $first->user->name, 'date' => $first->date,
-            'sessions' => $sessions, 'slot_count' => $sessions->map(fn ($session) => $this->range($session))->unique()->count(),
+            'sessions' => $sessions, 'slot_count' => $sessions->filter(fn ($session) => $session->scheduled_end_at > $session->scheduled_start_at)
+                ->map(fn ($session) => $this->range($session))->unique()->count(),
             'started' => UserPresenceSession::localTime($first->started_at)->format('H:i'),
             'ended' => $latest['ended'], 'estimated_end' => $latest['estimated_end'],
             'state' => $latest['state'], 'reason' => $latest['reason'],
@@ -151,6 +153,9 @@ final class PresenceSummary
 
     private function range(UserPresenceSession $session): string
     {
+        if ($session->scheduled_start_at === $session->scheduled_end_at) {
+            return 'Senza fascia programmata';
+        }
         return UserPresenceSession::localTime($session->scheduled_start_at)->format('H:i').'–'.UserPresenceSession::localTime($session->scheduled_end_at)->format('H:i');
     }
 }

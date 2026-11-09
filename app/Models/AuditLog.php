@@ -23,6 +23,8 @@ class AuditLog extends Model
         'password_reset',
         'login',
         'logout',
+        'presence_created',
+        'presence_corrected',
     ];
 
     public $timestamps = false;
@@ -75,6 +77,8 @@ class AuditLog extends Model
             'password_reset' => "ha reimpostato la password per {$entity}.",
             'login' => "ha effettuato l'accesso.",
             'logout' => "ha terminato la sessione.",
+            'presence_created' => 'ha inserito manualmente una presenza.',
+            'presence_corrected' => 'ha corretto una presenza.',
             default => "ha aggiornato {$entity}.",
         };
     }
@@ -91,6 +95,8 @@ class AuditLog extends Model
             'password_reset' => 'Sicurezza',
             'login' => 'Accesso',
             'logout' => 'Uscita',
+            'presence_created' => 'Inserimento presenza',
+            'presence_corrected' => 'Correzione presenza',
             default => 'Aggiornamento',
         };
     }
@@ -101,6 +107,7 @@ class AuditLog extends Model
         $type = $this->auditable_type;
 
         return match (true) {
+            is_a($type, UserPresenceSession::class, true) => 'la presenza selezionata',
             is_a($type, \App\Models\Shooting\Shoot::class, true) => $model?->title
                 ? "lo shooting \"{$model->title}\""
                 : 'lo shooting selezionato',

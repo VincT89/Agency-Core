@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class UserPresenceSession extends Model
 {
@@ -30,6 +31,16 @@ class UserPresenceSession extends Model
     public function intervals(): HasMany
     {
         return $this->hasMany(UserPresenceInterval::class, 'presence_session_id');
+    }
+
+    public function corrections(): MorphMany
+    {
+        return $this->morphMany(AuditLog::class, 'auditable')->whereIn('action', ['presence_created', 'presence_corrected']);
+    }
+
+    public function isManuallyRecorded(): bool
+    {
+        return in_array($this->end_reason, ['admin_created', 'admin_corrected'], true);
     }
 
     public static function localTime(?int $timestamp): ?CarbonImmutable
@@ -87,6 +98,10 @@ class UserPresenceSession extends Model
 
     public function confirmedUntil(): int
     {
+        /** An audited administrator correction confirms its closed intervals independently of the operator's live confirmation. */
+        if ($this->isManuallyRecorded()) {
+            return min($this->ended_at, $this->extension_deadline_at);
+        }
         /** Only confirmed time is counted; a lost connection never accrues the timeout itself. */
         return min($this->ended_at ?? $this->last_seen_at, $this->extension_deadline_at,
             $this->extra_confirmed_at === null ? $this->scheduled_end_at : PHP_INT_MAX);

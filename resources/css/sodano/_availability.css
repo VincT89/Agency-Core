@@ -67,6 +67,34 @@
 .presence-intervals summary { cursor: pointer; text-decoration: underline; }
 .presence-intervals ul { margin: 8px 0 0; padding-left: 16px; }
 .presence-empty { padding: 20px; margin: 0; color: var(--text2); }
+.presence-edit-button { margin-top: 10px; }
+.presence-editor { padding: 20px; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.presence-editor h3 { margin: 0; font-size: 17px; }
+.presence-editor p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.presence-editor-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.presence-editor-intervals { margin-block: 16px; }
+.presence-editor-interval { display: grid; grid-template-columns: minmax(140px, 1fr) repeat(2, minmax(0, 1fr)) auto; gap: 12px; align-items: end; border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.presence-editor-interval .form-g { margin: 0; min-width: 0; }
+.presence-editor-reason { margin-top: 20px; }
+.presence-editor textarea { resize: vertical; min-height: 90px; }
+.presence-editor-message { padding: 16px 20px; margin: 0; font-size: 13px; }
+.presence-editor .presence-control-error, .presence-editor-message.presence-control-error { color: var(--red-text); }
+.presence-editor [role="alert"] { margin-bottom: 16px; }
+.presence-editor [role="alert"] ul { margin: 0; padding-left: 18px; }
+.presence-corrections { margin-top: 24px; font-size: 13px; }
+.presence-corrections summary { cursor: pointer; text-decoration: underline; min-height: 32px; }
+.presence-corrections article { padding-block: 16px; border-top: 1px solid var(--line); }
+.presence-corrections h4 { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.presence-correction-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.presence-correction-values ul { padding-left: 18px; line-height: 1.6; }
+@media (max-width: 700px) {
+  .presence-editor { padding: 16px; }
+  .presence-editor-fields, .presence-correction-values { grid-template-columns: minmax(0, 1fr); }
+  .presence-editor-interval { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .presence-editor-interval .form-g:first-of-type { grid-column: 1 / -1; }
+  .presence-editor-interval > button { grid-column: 1 / -1; justify-self: start; }
+  .presence-editor .btn, .presence-corrections summary { min-height: 44px; }
+}
 @media (max-width: 1199px) {
   .presence-operator { grid-template-columns: minmax(0, 1fr); }
 }

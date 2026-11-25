@@ -45,6 +45,8 @@ class SaveQuoteAction
                 $quote->items()->create($item);
             }
             $quote->update(['total' => QuoteAmounts::decimal($total)]);
+            /** Item-only edits must advance the offer timestamp even when its total stays the same. */
+            $quote->touch();
 
             return $quote;
         });

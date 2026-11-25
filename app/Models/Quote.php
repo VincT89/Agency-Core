@@ -60,6 +60,17 @@ class Quote extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    public function scopeIndexOrder(Builder $query, bool $recentlyUpdated = false): Builder
+    {
+        /** Keep the workflow order across every offer shortcut, including recent changes. */
+        $query->orderByRaw('CASE quotes.status WHEN ? THEN 0 WHEN ? THEN 1 WHEN ? THEN 2 ELSE 3 END', ['draft', 'presented', 'accepted']);
+        if ($recentlyUpdated) {
+            return $query->orderByRaw('COALESCE(quotes.updated_at, quotes.created_at) DESC')->orderByDesc('quotes.id');
+        }
+
+        return $query->orderByDesc('quotes.created_at')->orderByDesc('quotes.id');
+    }
+
     public function scopeCommercialOrder(Builder $query): Builder
     {
         return $query->orderByRaw('CASE WHEN quotes.status = ? THEN 1 ELSE 0 END', ['rejected'])

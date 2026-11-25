@@ -15,21 +15,23 @@
 
     <div class="filter-bar">
         @php $currentStatus = request('status'); @endphp
-        <div class="pills u-m-0">
-            <a href="{{ route('tickets.index', array_filter(['search' => request('search')])) }}" wire:navigate class="pill {{ !$currentStatus ? 'on' : '' }}">Tutti</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'open', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'open' ? 'on' : '' }}">Aperti</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'in_progress', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'in_progress' ? 'on' : '' }}">In carico</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'waiting', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'waiting' ? 'on' : '' }}">In attesa</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'resolved', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'resolved' ? 'on' : '' }}">Risolti</a>
-            <a href="{{ route('tickets.index', array_filter(['status' => 'closed', 'search' => request('search')])) }}" wire:navigate class="pill {{ $currentStatus === 'closed' ? 'on' : '' }}">Chiusi</a>
-        </div>
+        <nav class="pills u-m-0" aria-label="Viste e stati dei ticket">
+            <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => null, 'page' => null]) }}" wire:navigate class="pill {{ !$currentStatus && !$recentlyUpdated ? 'on' : '' }}" @if(!$currentStatus && !$recentlyUpdated) aria-current="page" @endif>Tutti</a>
+            <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => 'updated', 'page' => null]) }}" wire:navigate class="pill {{ $recentlyUpdated ? 'on' : '' }}" @if($recentlyUpdated) aria-current="page" @endif>Ultime modifiche</a>
+            @foreach(['open' => 'Aperti', 'in_progress' => 'In carico', 'waiting' => 'In attesa', 'resolved' => 'Risolti', 'closed' => 'Chiusi'] as $status => $label)
+                <a href="{{ request()->fullUrlWithQuery(['status' => $status, 'sort' => null, 'page' => null]) }}" wire:navigate class="pill {{ $currentStatus === $status && !$recentlyUpdated ? 'on' : '' }}" @if($currentStatus === $status && !$recentlyUpdated) aria-current="page" @endif>{{ $label }}</a>
+            @endforeach
+        </nav>
         <form method="GET" action="{{ route('tickets.index') }}" class="u-flex u-gap-sm filter-form u-ml-auto">
+            @if($recentlyUpdated)
+                <input type="hidden" name="sort" value="updated">
+            @endif
             @if($currentStatus)
                 <input type="hidden" name="status" value="{{ $currentStatus }}">
             @endif
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cerca ticket, cliente..." class="form-in form-in-sm filter-search">
             @if(request('search') || $currentStatus)
-                <a href="{{ route('tickets.index') }}" class="btn btn-g btn-sm">Reset</a>
+                <a href="{{ route('tickets.index', $recentlyUpdated ? ['sort' => 'updated'] : []) }}" class="btn btn-g btn-sm">Reset</a>
             @endif
         </form>
     </div>
@@ -53,6 +55,9 @@
                     <td class="mono-col">{{ $ticket->code }}</td>
                     <td>
                         <div class="name-col {{ in_array($ticket->status, ['resolved', 'closed']) ? 'u-text-strike' : '' }}">{{ $ticket->title }}</div>
+                        @if($recentlyUpdated)
+                            <div class="u-text-meta u-mt-xs">Ultima modifica: {{ $ticket->last_activity_at?->format('d/m/Y H:i') ?? 'Non disponibile' }}</div>
+                        @endif
                         <div class="u-text-meta u-mt-xs">
                             {{ $ticket->type_label }}
                             @if($ticket->due_date)

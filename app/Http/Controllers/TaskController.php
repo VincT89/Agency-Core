@@ -23,6 +23,9 @@ class TaskController extends Controller
     {
         $this->authorize('viewAny', Task::class);
 
+        $request->validate(['sort' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['updated'])]]);
+        $recentlyUpdated = $request->query('sort') === 'updated';
+
         if ($request->user()->isCommercial()) {
             $query = $taskQuery->forIndex($request->all())->with('commercialShoot');
             if ($request->filled('client_id')) {
@@ -31,6 +34,7 @@ class TaskController extends Controller
             return view('tasks.commercial.index', [
                 'tasks' => $query->paginate(20)->withQueryString(),
                 'clients' => Client::visibleTo($request->user())->orderBy('name')->get(['id', 'name']),
+                'recentlyUpdated' => $recentlyUpdated,
             ]);
         }
 
@@ -48,7 +52,7 @@ class TaskController extends Controller
         $projects = Project::where('status', 'active')->orderBy('name')->get(['id', 'name']);
         $users    = User::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
-        return view('tasks.index', compact('viewMode', 'taskList', 'kanbanTasks', 'projects', 'users'));
+        return view('tasks.index', compact('viewMode', 'taskList', 'kanbanTasks', 'projects', 'users', 'recentlyUpdated'));
     }
 
     public function create(Request $request): View

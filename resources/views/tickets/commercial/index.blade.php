@@ -3,7 +3,14 @@
         <x-slot:title>I miei ticket</x-slot:title>
         <x-slot:actions><a href="{{ route('tickets.create') }}" class="btn btn-p">Apri ticket</a></x-slot:actions>
     </x-page-header>
+    <nav class="pills" aria-label="Viste dei ticket">
+        <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => null, 'page' => null]) }}" wire:navigate class="pill {{ !$recentlyUpdated && !request('status') ? 'on' : '' }}" @if(!$recentlyUpdated && !request('status')) aria-current="page" @endif>Tutti</a>
+        <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => 'updated', 'page' => null]) }}" wire:navigate class="pill {{ $recentlyUpdated ? 'on' : '' }}" @if($recentlyUpdated) aria-current="page" @endif>Ultime modifiche</a>
+    </nav>
     <form method="GET" action="{{ route('tickets.index') }}" class="ticket-search-form">
+        @if($recentlyUpdated)
+            <input type="hidden" name="sort" value="updated">
+        @endif
         <x-form-group label="Cerca nei tuoi ticket" name="search">
             <input name="search" class="form-in" value="{{ request('search') }}" placeholder="Oggetto, codice o cliente">
         </x-form-group>
@@ -17,7 +24,7 @@
         </x-form-group>
         <button class="btn btn-g" type="submit">Cerca</button>
         @if(request('search') || request('status'))
-            <a href="{{ route('tickets.index') }}" class="btn btn-g">Azzera filtri</a>
+            <a href="{{ route('tickets.index', $recentlyUpdated ? ['sort' => 'updated'] : []) }}" class="btn btn-g">Azzera filtri</a>
         @endif
     </form>
     <x-panel padded>

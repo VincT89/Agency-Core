@@ -18,6 +18,7 @@
 
         <form method="GET" action="{{ route('quotes.index') }}" class="quote-list-filters" role="search" aria-label="Cerca offerte commerciali">
             <input type="hidden" name="view" value="{{ $viewMode }}">
+            @if($recentlyUpdated)<input type="hidden" name="sort" value="updated">@endif
             @if(isset($filters['status']))<input type="hidden" name="status" value="{{ $filters['status'] }}">@endif
             <x-form-group label="Cerca offerta" name="q">
                 <input id="field-q" type="search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-in" placeholder="Titolo, cliente o numero offerta" maxlength="160">
@@ -28,18 +29,22 @@
             <div class="quote-filter-actions">
                 <button class="btn btn-p" type="submit">Cerca</button>
                 @if(isset($filters['q']) || isset($filters['client_id']) || isset($filters['status']))
-                    <a href="{{ route('quotes.index', ['view' => $viewMode]) }}" class="btn btn-g">Azzera filtri</a>
+                    <a href="{{ route('quotes.index', array_intersect_key($filters, ['view' => true, 'sort' => true])) }}" class="btn btn-g">Azzera filtri</a>
                 @endif
             </div>
         </form>
 
-        <nav class="pills quote-status-filters" aria-label="Filtra offerte per stato">
-            <a href="{{ route('quotes.index', array_diff_key($filters, ['status' => true])) }}" wire:navigate
-               @class(['pill', 'on' => !isset($filters['status'])]) @if(!isset($filters['status'])) aria-current="page" @endif>
+        <nav class="pills quote-status-filters" aria-label="Viste e stati delle offerte">
+            <a href="{{ route('quotes.index', array_diff_key($filters, ['status' => true, 'sort' => true])) }}" wire:navigate
+               @class(['pill', 'on' => !isset($filters['status']) && !$recentlyUpdated]) @if(!isset($filters['status']) && !$recentlyUpdated) aria-current="page" @endif>
                 Tutte <span>{{ $statusCounts->sum() }}</span>
             </a>
+            <a href="{{ route('quotes.index', array_replace(array_diff_key($filters, ['status' => true]), ['sort' => 'updated'])) }}" wire:navigate
+               @class(['pill', 'on' => $recentlyUpdated && !isset($filters['status'])]) @if($recentlyUpdated && !isset($filters['status'])) aria-current="page" @endif>
+                Ultime modifiche
+            </a>
             @foreach($statuses as $status => $label)
-                <a href="{{ route('quotes.index', array_replace($filters, ['status' => $status])) }}" wire:navigate
+                <a href="{{ route('quotes.index', array_replace(array_diff_key($filters, ['sort' => true]), ['status' => $status])) }}" wire:navigate
                    @class(['pill', 'on' => ($filters['status'] ?? null) === $status]) @if(($filters['status'] ?? null) === $status) aria-current="page" @endif>
                     {{ ['draft' => 'Bozze', 'presented' => 'Presentate', 'accepted' => 'Accettate', 'rejected' => 'Rifiutate'][$status] }}
                     <span>{{ $statusCounts[$status] ?? 0 }}</span>

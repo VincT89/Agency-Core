@@ -1,7 +1,14 @@
 <x-app-layout title="Task dei miei clienti">
     <x-page-header><x-slot:title>Task dei miei clienti</x-slot:title></x-page-header>
     <p class="ticket-create-note">Segui le attività dei tuoi clienti e quelle assegnate a te, comprese le attività completate.</p>
+    <nav class="pills" aria-label="Viste dei task">
+        <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => null, 'page' => null]) }}" wire:navigate class="pill {{ !$recentlyUpdated && !request('status') ? 'on' : '' }}" @if(!$recentlyUpdated && !request('status')) aria-current="page" @endif>Tutti</a>
+        <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => 'updated', 'page' => null]) }}" wire:navigate class="pill {{ $recentlyUpdated ? 'on' : '' }}" @if($recentlyUpdated) aria-current="page" @endif>Ultime modifiche</a>
+    </nav>
     <form method="GET" class="ticket-search-form">
+        @if($recentlyUpdated)
+            <input type="hidden" name="sort" value="updated">
+        @endif
         <x-form-group label="Cliente" name="client_id">
             <select name="client_id" class="form-sel">
                 <option value="">Tutti i miei clienti</option>
@@ -19,7 +26,7 @@
             </select>
         </x-form-group>
         <button class="btn btn-p" type="submit">Filtra</button>
-        <a href="{{ route('tasks.index') }}" class="btn btn-g">Azzera filtri</a>
+        <a href="{{ route('tasks.index', $recentlyUpdated ? ['sort' => 'updated'] : []) }}" class="btn btn-g">Azzera filtri</a>
     </form>
     <x-panel padded>
         @forelse($tasks as $task)
@@ -30,6 +37,9 @@
                     <div><dt>Stato</dt><dd>{{ $task->status_label }}</dd></div>
                     <div><dt>Referente</dt><dd>{{ $task->assignee?->name ?? 'Non assegnato' }}</dd></div>
                     <div><dt>Scadenza</dt><dd>{{ $task->due_date?->format('d/m/Y') ?? 'Non indicata' }}</dd></div>
+                    @if($recentlyUpdated)
+                        <div><dt>Ultima modifica</dt><dd>{{ $task->last_activity_at?->format('d/m/Y H:i') ?? 'Non disponibile' }}</dd></div>
+                    @endif
                 </dl>
             </article>
         @empty

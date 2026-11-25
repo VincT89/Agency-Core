@@ -13,12 +13,25 @@ class TaskQuery
         $query = Task::query()
             ->with(['project.client', 'assignee', 'creator'])
             ->orderByRaw("
-                CASE
-                    WHEN status = 'done' THEN 1
-                    ELSE 0
+                CASE tasks.status
+                    WHEN 'todo' THEN 0
+                    WHEN 'in_progress' THEN 1
+                    WHEN 'waiting' THEN 2
+                    WHEN 'review' THEN 3
+                    WHEN 'done' THEN 5
+                    WHEN 'cancelled' THEN 6
+                    ELSE 4
                 END
-            ")
-            ->latest();
+            ");
+
+        if (($filters['sort'] ?? null) === 'updated') {
+            /** I commenti interni dei task restano riservati anche nell'ordinamento destinato ai commerciali. */
+            RecentActivity::apply($query, ! auth()->user()?->isCommercial())
+                ->orderByDesc('last_activity_at');
+        } else {
+            $query->latest('tasks.created_at');
+        }
+        $query->orderByDesc('tasks.id');
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -39,7 +52,11 @@ class TaskQuery
     // Costruisce la query ottimizzata per la vista Kanban
     public function forKanban(array $filters): Builder
     {
-        return $this->forIndex($filters)->reorder()->orderByRaw('due_date IS NULL, due_date ASC');
+        $query = $this->forIndex($filters);
+
+        return ($filters['sort'] ?? null) === 'updated'
+            ? $query
+            : $query->reorder()->orderByRaw('due_date IS NULL, due_date ASC')->orderByDesc('tasks.id');
     }
 
     public function forSidebar(int $projectId): Builder

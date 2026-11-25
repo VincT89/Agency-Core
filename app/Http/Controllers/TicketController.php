@@ -17,13 +17,16 @@ class TicketController extends Controller
     {
         $this->authorize('viewAny', Ticket::class);
 
+        $request->validate(['sort' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['updated'])]]);
+        $recentlyUpdated = $request->query('sort') === 'updated';
+
         $user = auth()->user();
         $user->update(['last_tickets_viewed_at' => now()]);
         \Illuminate\Support\Facades\Cache::forget('sidebar_counts_' . $user->id);
         
         $tickets = $ticketQuery->forIndex($request->all())->paginate(15)->withQueryString();
 
-        return view($user->isCommercial() ? 'tickets.commercial.index' : 'tickets.index', compact('tickets'));
+        return view($user->isCommercial() ? 'tickets.commercial.index' : 'tickets.index', compact('tickets', 'recentlyUpdated'));
     }
 
     public function create(\App\Domain\Core\Queries\ClientQuery $clientQuery): View
@@ -118,6 +121,8 @@ class TicketController extends Controller
                 foreach (array_values($request->validated('requested_services', [])) as $index => $service) {
                     $ticket->requestedServices()->create($service + ['sort_order' => $index]);
                 }
+                /** Anche le modifiche ai soli servizi richiesti devono aggiornare l'attività del ticket. */
+                $ticket->touch();
             }
         });
 

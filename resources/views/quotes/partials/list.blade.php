@@ -5,13 +5,14 @@
                 <th scope="col" role="columnheader">Offerta</th>
                 <th scope="col" role="columnheader">Cliente</th>
                 <th scope="col" role="columnheader">Importo</th>
-                <th scope="col" role="columnheader">Data</th>
+                <th scope="col" role="columnheader">{{ $recentlyUpdated ? 'Ultima modifica' : 'Data' }}</th>
                 <th scope="col" role="columnheader">Stato</th>
                 <th scope="col" role="columnheader">Azioni</th>
             </tr>
         </thead>
         <tbody role="rowgroup">
             @foreach($quotes as $offer)
+                @php($offerDate = $recentlyUpdated ? ($offer->updated_at ?? $offer->created_at) : ($offer->presented_at ?? $offer->created_at))
                 <tr @class(['quote-list-row', 'js-clickable-row', 'is-rejected' => $offer->status === 'rejected']) data-href="{{ route('quotes.show', $offer) }}" role="row">
                     <td class="name-col quote-title-cell" role="cell">
                         <a class="commercial-offer-title" href="{{ route('quotes.show', $offer) }}">{{ $offer->title }}</a>
@@ -19,7 +20,13 @@
                     </td>
                     <td class="quote-client-cell" role="cell" data-label="Cliente">{{ $offer->client?->name ?? $offer->client_snapshot['name'] ?? 'Cliente non disponibile' }}</td>
                     <td class="quote-amount-cell" role="cell" data-label="Importo"><span class="commercial-offer-total">{{ number_format((float) $offer->total, 2, ',', '.') }} €</span></td>
-                    <td class="quote-date-cell" role="cell" data-label="Data"><time datetime="{{ ($offer->presented_at ?? $offer->created_at)->toDateString() }}">{{ ($offer->presented_at ?? $offer->created_at)->format('d/m/Y') }}</time></td>
+                    <td class="quote-date-cell" role="cell" data-label="{{ $recentlyUpdated ? 'Ultima modifica' : 'Data' }}">
+                        @if($offerDate)
+                            <time datetime="{{ $recentlyUpdated ? $offerDate->toIso8601String() : $offerDate->toDateString() }}">{{ $offerDate->format($recentlyUpdated ? 'd/m/Y H:i' : 'd/m/Y') }}</time>
+                        @else
+                            Non disponibile
+                        @endif
+                    </td>
                     <td class="quote-status-cell" role="cell" data-label="Stato"><x-badge :status="$offer->status" :label="$offer->status_label" /></td>
                     <td class="quote-actions-cell" role="cell">@include('quotes.partials.quick-actions')</td>
                 </tr>

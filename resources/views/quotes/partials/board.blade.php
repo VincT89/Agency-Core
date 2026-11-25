@@ -6,13 +6,18 @@
                 <span>{{ $offers->total() }}</span>
             </h2>
             @forelse($offers as $offer)
+                @php($offerDate = $recentlyUpdated ? ($offer->updated_at ?? $offer->created_at) : ($offer->presented_at ?? $offer->created_at))
                 <article @class(['k-card', 'quote-card', 'js-clickable-row', 'is-rejected' => $status === 'rejected']) data-href="{{ route('quotes.show', $offer) }}">
                     <div class="quote-reference">#{{ $offer->id }} · Revisione {{ $offer->revision }}</div>
                     <h3 class="k-card-title"><a class="commercial-offer-title" href="{{ route('quotes.show', $offer) }}">{{ $offer->title }}</a></h3>
                     <p class="quote-card-client">{{ $offer->client?->name ?? $offer->client_snapshot['name'] ?? 'Cliente non disponibile' }}</p>
                     <div class="quote-card-details">
                         <strong class="commercial-offer-total">{{ number_format((float) $offer->total, 2, ',', '.') }} €</strong>
-                        <time datetime="{{ ($offer->presented_at ?? $offer->created_at)->toDateString() }}">{{ ($offer->presented_at ?? $offer->created_at)->format('d/m/Y') }}</time>
+                        @if($offerDate)
+                            <time datetime="{{ $recentlyUpdated ? $offerDate->toIso8601String() : $offerDate->toDateString() }}">@if($recentlyUpdated)Ultima modifica @endif{{ $offerDate->format($recentlyUpdated ? 'd/m/Y H:i' : 'd/m/Y') }}</time>
+                        @else
+                            <span>Data non disponibile</span>
+                        @endif
                     </div>
                     @include('quotes.partials.quick-actions')
                 </article>

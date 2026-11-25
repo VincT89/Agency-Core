@@ -13,7 +13,7 @@
                     <div><dt>Cliente</dt><dd>{{ $requestTicket->client?->name }}</dd></div>
                     <div><dt>Progetto</dt><dd>{{ $requestTicket->project?->name ?? 'Non collegato' }}</dd></div>
                     <div><dt>Referente</dt><dd>{{ $requestTicket->assignee?->name ?? 'Non assegnato' }}</dd></div>
-                    <div><dt>Ultimo aggiornamento</dt><dd>{{ $requestTicket->updated_at?->format('d/m/Y H:i') }}</dd></div>
+                    <div><dt>{{ ($recentlyUpdated ?? false) ? 'Ultima modifica' : 'Ultimo aggiornamento' }}</dt><dd>{{ (($recentlyUpdated ?? false) ? $requestTicket->last_activity_at : $requestTicket->updated_at)?->format('d/m/Y H:i') ?? 'Non disponibile' }}</dd></div>
                 </dl>
             </li>
         @endforeach

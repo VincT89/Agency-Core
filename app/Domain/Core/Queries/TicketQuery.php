@@ -13,12 +13,22 @@ class TicketQuery
         $query = Ticket::query()
             ->with(['client', 'project', 'creator', 'assignee', 'attachments'])
             ->orderByRaw("
-                CASE
-                    WHEN status IN ('resolved', 'closed') THEN 1
-                    ELSE 0
+                CASE tickets.status
+                    WHEN 'open' THEN 0
+                    WHEN 'in_progress' THEN 1
+                    WHEN 'waiting' THEN 2
+                    WHEN 'resolved' THEN 4
+                    WHEN 'closed' THEN 5
+                    ELSE 3
                 END
-            ")
-            ->latest();
+            ");
+
+        if (($filters['sort'] ?? null) === 'updated') {
+            RecentActivity::apply($query)->orderByDesc('last_activity_at');
+        } else {
+            $query->latest('tickets.created_at');
+        }
+        $query->orderByDesc('tickets.id');
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);

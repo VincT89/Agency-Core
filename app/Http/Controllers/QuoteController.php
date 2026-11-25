@@ -30,15 +30,18 @@ class QuoteController extends Controller
             'client_id' => ['nullable', 'integer', 'min:1'],
             'status' => ['nullable', Rule::in(array_keys(Quote::STATUSES))],
             'view' => ['nullable', Rule::in(['list', 'kanban'])],
+            'sort' => ['nullable', Rule::in(['updated'])],
             'page' => ['nullable', 'integer', 'min:1'],
             ...array_fill_keys($pageNames, ['nullable', 'integer', 'min:1']),
         ]);
         $viewMode = $input['view'] ?? 'list';
+        $recentlyUpdated = ($input['sort'] ?? null) === 'updated';
         $filters = array_filter([
             'q' => trim($input['q'] ?? ''),
             'client_id' => $input['client_id'] ?? null,
             'status' => $input['status'] ?? null,
             'view' => $viewMode,
+            'sort' => $recentlyUpdated ? 'updated' : null,
         ], fn ($value) => filled($value));
         $selectedClient = isset($filters['client_id'])
             ? Client::visibleTo($request->user())->findOrFail($filters['client_id'])
@@ -74,17 +77,17 @@ class QuoteController extends Controller
                 }
                 $pageName = $status.'_page';
                 $page = min($input[$pageName] ?? 1, max(1, (int) ceil(($statusCounts[$status] ?? 0) / 10)));
-                $columns[$status] = (clone $query)->where('quotes.status', $status)->commercialOrder()
+                $columns[$status] = (clone $query)->where('quotes.status', $status)->indexOrder($recentlyUpdated)
                     ->paginate(10, ['*'], $pageName, $page)
                     ->appends($filters + array_intersect_key($input, array_flip($pageNames)))
                     ->fragment('offers-'.$status);
             }
         } else {
             $quotes = $query->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('quotes.status', $status))
-                ->commercialOrder()->paginate(20)->appends($filters);
+                ->indexOrder($recentlyUpdated)->paginate(20)->appends($filters);
         }
 
-        return view('quotes.index', compact('quotes', 'columns', 'viewMode', 'filters', 'selectedClient', 'statuses', 'statusCounts', 'total'));
+        return view('quotes.index', compact('quotes', 'columns', 'viewMode', 'filters', 'selectedClient', 'statuses', 'statusCounts', 'total', 'recentlyUpdated'));
     }
 
     public function create(Request $request): View

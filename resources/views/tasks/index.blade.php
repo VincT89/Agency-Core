@@ -26,22 +26,23 @@
         @endphp
 
         {{-- Status pills --}}
-        <div class="pills u-m-0">
-            <a href="{{ request()->fullUrlWithQuery(['status' => null, 'page' => null]) }}" wire:navigate
-               class="pill {{ !$currentStatus ? 'on' : '' }}">Tutti</a>
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'todo', 'page' => null]) }}" wire:navigate
-               class="pill {{ $currentStatus==='todo' ? 'on' : '' }}">Da fare</a>
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'in_progress', 'page' => null]) }}" wire:navigate
-               class="pill {{ $currentStatus==='in_progress' ? 'on' : '' }}">In corso</a>
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'waiting', 'page' => null]) }}" wire:navigate
-               class="pill {{ $currentStatus==='waiting' ? 'on' : '' }}">In attesa</a>
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'done', 'page' => null]) }}" wire:navigate
-               class="pill {{ $currentStatus==='done' ? 'on' : '' }}">Completati</a>
-        </div>
+        <nav class="pills u-m-0" aria-label="Viste e stati dei task">
+            <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => null, 'page' => null]) }}" wire:navigate
+               class="pill {{ !$currentStatus && !$recentlyUpdated ? 'on' : '' }}" @if(!$currentStatus && !$recentlyUpdated) aria-current="page" @endif>Tutti</a>
+            <a href="{{ request()->fullUrlWithQuery(['status' => null, 'sort' => 'updated', 'page' => null]) }}" wire:navigate
+               class="pill {{ $recentlyUpdated ? 'on' : '' }}" @if($recentlyUpdated) aria-current="page" @endif>Ultime modifiche</a>
+            @foreach(['todo' => 'Da fare', 'in_progress' => 'In corso', 'waiting' => 'In attesa', 'done' => 'Completati'] as $status => $label)
+                <a href="{{ request()->fullUrlWithQuery(['status' => $status, 'sort' => null, 'page' => null]) }}" wire:navigate
+                   class="pill {{ $currentStatus === $status && !$recentlyUpdated ? 'on' : '' }}" @if($currentStatus === $status && !$recentlyUpdated) aria-current="page" @endif>{{ $label }}</a>
+            @endforeach
+        </nav>
 
         {{-- Filtri aggiuntivi select --}}
         <form method="GET" action="{{ route('tasks.index') }}" class="u-flex u-gap-sm filter-form u-ml-auto">
             <input type="hidden" name="view" value="{{ $viewMode }}">
+            @if($recentlyUpdated)
+                <input type="hidden" name="sort" value="updated">
+            @endif
             @if($currentStatus)
                 <input type="hidden" name="status" value="{{ $currentStatus }}">
             @endif
@@ -65,7 +66,7 @@
                 <option value="low"    {{ $currentPriority==='low'    ? 'selected' : '' }}>Bassa</option>
             </select>
             @if($currentStatus || $currentPriority || $currentProject || $currentUser)
-                <a href="{{ route('tasks.index') }}" class="btn btn-g btn-sm">Reset</a>
+                <a href="{{ route('tasks.index', array_filter(['view' => $viewMode, 'sort' => $recentlyUpdated ? 'updated' : null])) }}" class="btn btn-g btn-sm">Reset</a>
             @endif
         </form>
     </div>
@@ -89,6 +90,9 @@
                         <div class="k-card-meta u-mb-xs">
                             {{ $task->project?->name ?? 'Nessun progetto' }}
                         </div>
+                        @if($recentlyUpdated)
+                            <div class="k-card-meta u-mb-xs">Ultima modifica: {{ $task->last_activity_at?->format('d/m/Y H:i') ?? 'Non disponibile' }}</div>
+                        @endif
                         <div class="u-flex-between">
                             <div class="u-flex u-items-center u-gap-xs">
                                 <span class="k-card-meta">{{ $task->assignee?->name ?? 'Non assegnato' }}</span>
@@ -122,8 +126,11 @@
                 <tbody>
                     @forelse($taskList as $task)
                     <tr data-href="{{ route('tasks.show', $task) }}" class="js-clickable-row u-cursor-pointer hover-bg {{ $task->status === 'done' ? 'task-row-done' : '' }}">
-                        <td class="name-col task-title" style="border-left: 6px solid {{ $task->assignee ? $task->assignee->role->color() : 'transparent' }};">
-                            {{ $task->title }}
+                        <td class="name-col" style="border-left: 6px solid {{ $task->assignee ? $task->assignee->role->color() : 'transparent' }};">
+                            <div class="task-title">{{ $task->title }}</div>
+                            @if($recentlyUpdated)
+                                <div class="u-text-meta u-mt-xs">Ultima modifica: {{ $task->last_activity_at?->format('d/m/Y H:i') ?? 'Non disponibile' }}</div>
+                            @endif
                         </td>
                         <td>
                             @if($task->project)
@@ -216,6 +223,11 @@
                                     }
                                     
                                     const responseData = await res.json();
+
+                                    if (@js($recentlyUpdated)) {
+                                        window.Livewire.navigate(window.location.href);
+                                        return;
+                                    }
 
                                     // Update styling if task is moved to 'done' or from 'done'
                                     if (newStatus === 'done') {
